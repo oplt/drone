@@ -8,6 +8,7 @@ from backend.modules.warehouse.routers.map_setups import router as map_setups_ro
 from backend.modules.warehouse.routers.maps import router as maps_router
 from backend.modules.warehouse.routers.operations import router as operations_router
 from backend.modules.warehouse.routers.preflight import router as preflight_router
+from backend.modules.warehouse.routers.rack_templates import router as rack_templates_router
 from backend.modules.warehouse.routers.scan_targets import router as scan_targets_router
 from backend.modules.warehouse.routers.scanned_maps import router as scanned_maps_router
 from backend.modules.warehouse.routers.sensor_rigs import router as sensor_rigs_router
@@ -23,6 +24,7 @@ __all__ = [
     "maps_router",
     "operations_router",
     "preflight_router",
+    "rack_templates_router",
     "scan_targets_router",
     "scanned_maps_router",
     "sensor_rigs_router",

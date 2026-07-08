@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import struct
 from pathlib import Path
+import json
 
 import pytest
 
+from backend.modules.warehouse.service import live_map_manifest
 from backend.modules.warehouse.service import live_map_replay
 from backend.modules.warehouse.service.live_map_storage import WarehouseLiveMapChunkStorage
 from backend.modules.warehouse.service.live_map_stream import (
@@ -139,6 +141,60 @@ def test_build_disk_live_map_snapshot_returns_all_manifest_chunks(
 
     snapshot = live_map_replay.build_disk_live_map_snapshot(flight_id, mode="full")
     assert len(snapshot.updates[0].changed_chunks) == 5
+
+
+def test_disk_live_map_snapshot_preserves_manifest_coverage_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flight_id = "flight_manifest_coverage_snapshot"
+    flight_dir = tmp_path / flight_id
+    flight_dir.mkdir()
+    payload = struct.pack("<ffffff", 1.0, 0.0, 0.0, 2.0, 0.0, 0.0)
+    payload += bytes([255, 0, 0, 255, 0, 0])
+    (flight_dir / "rgbd_000001-deadbeefcafebabe.xyzrgb32").write_bytes(payload)
+    (flight_dir / "rgbd_000001-deadbeefcafebabe.meta.json").write_text(
+        json.dumps(
+            {
+                "source": "rgbd_colored",
+                "layer": "rgbd_colored",
+                "frame_id": "warehouse_map",
+                "point_count": 2,
+                "has_rgb": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (flight_dir / "live_map_manifest.json").write_text(
+        json.dumps(
+            {
+                "flight_id": flight_id,
+                "generated_at": "2026-01-01T00:00:00+00:00",
+                "map_quality": "rgbd_colored",
+                "rgbd_colored_available": True,
+                "rgbd_cloud_available": True,
+                "rgbd_has_rgb": True,
+                "chunk_counts": {"rgbd_colored": 1},
+                "point_counts": {"rgbd_colored": 2},
+                "source_quality": {"rgbd_colored": {"points_per_m2": 25.0}},
+                "chunk_quality": [{"chunk_id": "rgbd_000001", "rack_face_id": "A-01-L"}],
+                "rack_face_coverage": {"uncovered_face_count": 1},
+                "coverage_repair": {"extra_pass_waypoints": [{"rack_face_id": "A-01-L"}]},
+            }
+        ),
+        encoding="utf-8",
+    )
+    storage = WarehouseLiveMapChunkStorage(root=tmp_path)
+    monkeypatch.setattr(live_map_replay, "warehouse_live_map_chunk_storage", storage)
+    monkeypatch.setattr(live_map_manifest, "warehouse_live_map_chunk_storage", storage)
+
+    snapshot = live_map_replay.build_disk_live_map_snapshot(flight_id)
+
+    assert snapshot.manifest is not None
+    assert snapshot.manifest.source_quality["rgbd_colored"]["points_per_m2"] == 25.0
+    assert snapshot.manifest.chunk_quality[0]["rack_face_id"] == "A-01-L"
+    assert snapshot.manifest.rack_face_coverage["uncovered_face_count"] == 1
+    assert snapshot.manifest.coverage_repair["extra_pass_waypoints"][0]["rack_face_id"] == "A-01-L"
 
 
 def test_build_disk_live_map_snapshot_preview_keeps_latest_chunk_per_source(

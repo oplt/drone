@@ -191,6 +191,9 @@ class WarehouseScanTargetBase(BaseModel):
     scan_pose_local_json: WarehouseLocalPose
     sensor_aim_json: WarehouseSensorAim | None = None
     shelf_normal_local_json: WarehouseShelfNormal | None = None
+    scanner_metadata_json: dict[str, Any] = Field(default_factory=dict)
+    path_validation_json: dict[str, Any] = Field(default_factory=dict)
+    failure_reason: str | None = Field(default=None, max_length=255)
     standoff_m: float = Field(default=1.2, gt=0.0, le=20.0)
     hover_time_s: float = Field(default=3.0, ge=0.0, le=300.0)
     scan_timeout_s: float = Field(default=8.0, gt=0.0, le=300.0)
@@ -248,6 +251,9 @@ class WarehouseScanTargetUpdate(BaseModel):
     scan_pose_local_json: WarehouseLocalPose | None = None
     sensor_aim_json: WarehouseSensorAim | None = None
     shelf_normal_local_json: WarehouseShelfNormal | None = None
+    scanner_metadata_json: dict[str, Any] | None = None
+    path_validation_json: dict[str, Any] | None = None
+    failure_reason: str | None = Field(default=None, max_length=255)
     standoff_m: float | None = Field(default=None, gt=0.0, le=20.0)
     hover_time_s: float | None = Field(default=None, ge=0.0, le=300.0)
     scan_timeout_s: float | None = Field(default=None, gt=0.0, le=300.0)
@@ -431,12 +437,20 @@ class WarehouseStructureExtractIn(BaseModel):
     shelf_min_spacing_m: float | None = Field(default=None, gt=0.0, le=10.0)
     max_shelf_levels: int | None = Field(default=None, ge=1, le=12)
     max_bins_per_rack_face: int | None = Field(default=None, ge=1, le=80)
+    min_surface_points: int | None = Field(default=None, ge=0, le=20_000_000)
+    barcode_scan_expected: bool | None = None
     min_target_spacing_m: float | None = Field(default=None, gt=0.0, le=20.0)
     review_clearance_m: float | None = Field(default=None, ge=0.0, le=20.0)
+    rack_template_version_id: int | None = Field(default=None, ge=1)
+    rack_template_bin_count: int | None = Field(default=None, ge=1, le=80)
+    rack_template_bay_width_m: float | None = Field(default=None, gt=0.0, le=20.0)
+    rack_template_shelf_levels_m: list[float] | None = Field(
+        default=None, min_length=1, max_length=12
+    )
     axis_deg: float | None = Field(default=None, ge=-180.0, le=180.0)
 
-    def to_params_payload(self) -> dict[str, float]:
-        payload: dict[str, float] = {}
+    def to_params_payload(self) -> dict[str, float | int | bool | list[float]]:
+        payload: dict[str, float | int | bool | list[float]] = {}
         for name in (
             "voxel_m",
             "grid_res_m",
@@ -448,13 +462,23 @@ class WarehouseStructureExtractIn(BaseModel):
             "shelf_min_spacing_m",
             "max_shelf_levels",
             "max_bins_per_rack_face",
+            "min_surface_points",
             "min_target_spacing_m",
             "review_clearance_m",
+            "rack_template_version_id",
+            "rack_template_bin_count",
+            "rack_template_bay_width_m",
             "axis_deg",
         ):
             value = getattr(self, name)
             if value is not None:
                 payload[name] = float(value)
+        if self.barcode_scan_expected is not None:
+            payload["barcode_scan_expected"] = bool(self.barcode_scan_expected)
+        if self.rack_template_shelf_levels_m is not None:
+            payload["rack_template_shelf_levels_m"] = [
+                float(value) for value in self.rack_template_shelf_levels_m
+            ]
         return payload
 
 
@@ -510,5 +534,13 @@ class WarehouseStructureSummaryOut(BaseModel):
     target_counts: dict[str, int] = Field(default_factory=dict)
     quality_status: Literal["ready", "needs_review", "failed"] | None = None
     quality_reasons: list[str] = Field(default_factory=list)
+    failure_reason_codes: list[str] = Field(default_factory=list)
     confidence: float | None = None
+    debug_artifact_url: str | None = None
+    debug_artifact_path: str | None = None
     summary: dict[str, object] = Field(default_factory=dict)
+
+
+class WarehouseStructureDryRunOut(WarehouseStructureSummaryOut):
+    status: Literal["ready", "needs_review", "failed"] = "needs_review"
+    coordinate_frame_id: int | None = None

@@ -11,6 +11,7 @@ from backend.modules.warehouse.service.scan_to_layout import (
     displacement_m,
     extraction_confidence,
     geometry_anchor,
+    review_reasons,
 )
 
 
@@ -22,6 +23,36 @@ def test_displacement_review_uses_metric_geometry_anchor() -> None:
     assert displacement_m(reference, observed) == pytest.approx(0.5)
     assert candidate_status(displacement=0.5, threshold_m=0.25) == "needs_review"
     assert candidate_status(displacement=0.1, threshold_m=0.25) == "provisional"
+
+
+def test_candidate_review_reasons_capture_manual_confirmation_rules() -> None:
+    geometry = {
+        "evidence": {"occupancy_available": False, "esdf_available": False},
+        "template": {"bin_count": 4},
+        "observed_bin_count": 3,
+    }
+
+    reasons = review_reasons(
+        entity_kind="rack",
+        confidence=0.7,
+        geometry=geometry,
+        displacement=0.5,
+    )
+
+    assert "large_displacement" in reasons
+    assert "low_confidence" in reasons
+    assert "missing_esdf_or_occupancy_evidence" in reasons
+    assert "bin_count_mismatch_vs_template" in reasons
+    assert "new_rack_row" not in reasons
+
+
+def test_new_rack_candidate_requires_review_without_reference() -> None:
+    assert candidate_status(
+        entity_kind="rack",
+        confidence=0.95,
+        geometry={},
+        displacement=None,
+    ) == "needs_review"
 
 
 def test_extraction_confidence_falls_back_to_clearance_state() -> None:

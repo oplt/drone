@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { server } from "../../../test/msw/server";
 import { createTestQueryWrapper } from "../../../test/renderWithProviders";
 
@@ -9,10 +9,6 @@ import {
   warehousePreflightPassed,
   warehousePreflightPollIntervalMs,
 } from "../hooks/useRunWarehousePreflight";
-
-vi.mock("../../mission-runtime/api/telemetryConnectApi", () => ({
-  connectDroneTelemetry: vi.fn(() => Promise.reject(new Error("offline"))),
-}));
 
 describe("warehousePreflightPassed", () => {
   it("rejects ready_to_fly when rgb_depth_imu panel shows FAIL", () => {

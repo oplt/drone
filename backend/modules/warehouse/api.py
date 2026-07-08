@@ -38,6 +38,7 @@ from backend.modules.warehouse.routers import (
     maps_router,
     operations_router,
     preflight_router,
+    rack_templates_router,
     scan_targets_router,
     scanned_maps_router,
     sensor_rigs_router,
@@ -63,6 +64,7 @@ router.include_router(scan_targets_router)
 router.include_router(docks_router)
 router.include_router(sensor_rigs_router)
 router.include_router(settings_router)
+router.include_router(rack_templates_router)
 router.include_router(scanned_maps_router)
 router.include_router(preflight_router)
 router.include_router(operations_router)

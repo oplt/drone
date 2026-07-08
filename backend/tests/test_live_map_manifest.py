@@ -104,6 +104,36 @@ def _write_esdf_chunk(flight_dir: Path, sequence: int = 1) -> None:
     )
 
 
+def _write_rack_face_rgbd_chunk(
+    flight_dir: Path,
+    *,
+    face_id: str,
+    points: int,
+    has_rgb: bool = True,
+    viewing_angle_deg: float = 30.0,
+) -> None:
+    chunk_id = f"rgbd_{face_id}_000001"
+    payload = struct.pack("<ffffff", 1.0, 2.0, 1.5, 1.0, 2.5, 1.5)
+    payload += bytes([255, 0, 0, 255, 0, 0])
+    (flight_dir / f"{chunk_id}-facefacefaceface.xyzrgb32").write_bytes(payload)
+    meta = {
+        "source": "rgbd_colored",
+        "layer": "rgbd_colored",
+        "has_rgb": has_rgb,
+        "point_count": points,
+        "encoding": "xyzrgb32_v1",
+        "bbox_local_m": [0.0, 0.0, 0.0, 2.0, 0.2, 2.0],
+        "rack_face_id": face_id,
+        "rack_face_center": [1.0, 0.1, 1.2],
+        "rack_face_normal": [0.0, -1.0, 0.0],
+        "viewing_angle_deg": viewing_angle_deg,
+    }
+    (flight_dir / f"{chunk_id}-facefacefaceface.meta.json").write_text(
+        json.dumps(meta),
+        encoding="utf-8",
+    )
+
+
 def test_manifest_counts_rgbd_and_raw_separately(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -148,6 +178,32 @@ def test_manifest_reconciles_missing_topic_when_chunks_exist(
     assert manifest.chunk_counts["nvblox_esdf"] == 1
     assert "/nvblox_node/static_esdf_pointcloud" not in manifest.missing_topics
     assert manifest.source_quality["nvblox_esdf"]["floor_area_m2"] == 4.0
+
+
+def test_manifest_builds_rack_face_coverage_and_repair_waypoints(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    flight_id = "flight_rack_face_coverage"
+    flight_dir = tmp_path / flight_id
+    flight_dir.mkdir()
+    _write_rack_face_rgbd_chunk(flight_dir, face_id="A-01-L", points=10)
+
+    storage = WarehouseLiveMapChunkStorage(root=tmp_path)
+    monkeypatch.setattr(live_map_manifest, "warehouse_live_map_chunk_storage", storage)
+
+    manifest = live_map_manifest.build_manifest_from_flight_dir(flight_id)
+
+    assert manifest.chunk_quality[0]["rack_face_id"] == "A-01-L"
+    coverage = manifest.rack_face_coverage
+    assert coverage["face_count"] == 1
+    assert coverage["uncovered_face_count"] == 1
+    assert coverage["faces"][0]["reasons"] == ["low_point_density", "missing_esdf"]
+    repair = manifest.coverage_repair
+    assert repair["uncovered_rack_faces"] == ["A-01-L"]
+    assert repair["extra_pass_waypoints"][0]["pose_local_m"]["y"] < 0.0
+    assert repair["extra_pass_waypoints"][0]["pose_local_m"]["frame_id"] == "warehouse_map"
+    assert repair["extra_pass_waypoints"][0]["reasons"] == ["low_point_density", "missing_esdf"]
 
 
 def test_validate_save_quality_fails_for_raw_only(

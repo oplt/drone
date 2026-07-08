@@ -47,6 +47,11 @@ import {
 } from "../utils/structureQualityCopy";
 import { AskAgentPanel } from "../../agents/components/AskAgentPanel";
 import { WarehouseCoordinateDiagnosticsPanel } from "./WarehouseCoordinateDiagnosticsPanel";
+import type {
+  WarehouseCoverageRepairHint,
+  WarehouseCoordinateLiveState,
+  WarehouseLiveProvisionalCandidate,
+} from "../api/warehouseLiveMapApi";
 
 type TargetDraft = {
   aisle_code: string;
@@ -91,6 +96,9 @@ export function WarehouseCoordinateSetupPanel({
   structureLoading = false,
   structureError = null,
   onAutoDetect,
+  provisionalCandidates = [],
+  coverageRepairHints = [],
+  coordinateState = null,
 }: {
   warehouseMapId: number | null;
   token?: string | null;
@@ -102,6 +110,9 @@ export function WarehouseCoordinateSetupPanel({
   structureLoading?: boolean;
   structureError?: string | null;
   onAutoDetect?: (params?: WarehouseStructureExtractParams) => Promise<void>;
+  provisionalCandidates?: WarehouseLiveProvisionalCandidate[];
+  coverageRepairHints?: WarehouseCoverageRepairHint[];
+  coordinateState?: WarehouseCoordinateLiveState | null;
 }) {
   const [draft, setDraft] = useState<TargetDraft>(emptyDraft);
   const [saving, setSaving] = useState(false);
@@ -122,11 +133,32 @@ export function WarehouseCoordinateSetupPanel({
   const qualityReasons = structure?.quality_reasons?.length
     ? structure.quality_reasons
     : quality?.reasons ?? [];
+  const failureReasonCodes = structure?.failure_reason_codes?.length
+    ? structure.failure_reason_codes
+    : quality?.failure_reason_codes ?? [];
+  const debugArtifact = structure?.debug_artifact_url ?? structure?.debug_artifact_path ?? null;
   const readableQualityReasons = describeStructureQualityReasons(qualityReasons);
+  const readableFailureReasons = describeStructureQualityReasons(failureReasonCodes);
   const activeTargetCount =
     structure?.active_target_count ?? quality?.active_target_count ?? structure?.target_count ?? 0;
   const targetCounts = structure?.summary.target_counts;
   const candidateTargetCount = targetCounts?.candidate ?? structure?.target_count ?? 0;
+  const liveCandidateCounts = useMemo(() => {
+    return provisionalCandidates.reduce<Record<string, number>>((counts, candidate) => {
+      counts[candidate.state] = (counts[candidate.state] ?? 0) + 1;
+      return counts;
+    }, {});
+  }, [provisionalCandidates]);
+  const liveCandidatePreview = provisionalCandidates.slice(0, 3);
+  const nextRepairPoint = coverageRepairHints[0]?.target_point;
+  const nextRepairLabel =
+    nextRepairPoint && Number.isFinite(nextRepairPoint.x_m)
+      ? `${nextRepairPoint.x_m.toFixed(1)}, ${
+          Number.isFinite(nextRepairPoint.y_m)
+            ? nextRepairPoint.y_m.toFixed(1)
+            : "?"
+        }`
+      : "current partial map";
 
   useEffect(() => {
     setSelectedIds((current) =>
@@ -418,6 +450,49 @@ export function WarehouseCoordinateSetupPanel({
               Structure extraction is running. Aisle and rack overlays will appear when it finishes.
             </Alert>
           ) : null}
+          {coordinateState || provisionalCandidates.length || coverageRepairHints.length ? (
+            <Alert severity="info" sx={{ mt: 1, py: 0.25 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Live automatic detection:{" "}
+                {(coordinateState?.status ?? "provisional").replaceAll("_", " ")}
+              </Typography>
+              <Typography variant="body2">
+                {provisionalCandidates.length} provisional candidates ·{" "}
+                {coverageRepairHints.length} coverage repair hints · not inspection-ready
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                States: provisional {liveCandidateCounts.provisional ?? 0}, needs more coverage{" "}
+                {liveCandidateCounts.needs_more_coverage ?? 0}, needs review{" "}
+                {liveCandidateCounts.needs_review ?? 0}, ready to publish{" "}
+                {liveCandidateCounts.ready_to_publish ?? 0}, locked{" "}
+                {liveCandidateCounts.locked ?? 0}.
+              </Typography>
+              {liveCandidatePreview.length ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  Latest hints:{" "}
+                  {liveCandidatePreview
+                    .map(
+                      (candidate) =>
+                        `${candidate.identity_key} (${candidate.state.replaceAll("_", " ")}, ${Math.round(
+                          candidate.confidence * 100,
+                        )}%)`,
+                    )
+                    .join("; ")}
+                </Typography>
+              ) : null}
+              {coverageRepairHints[0] ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  Next repair: {coverageRepairHints[0].reason.replaceAll("_", " ")} near{" "}
+                  {nextRepairLabel}.
+                </Typography>
+              ) : null}
+              {coordinateState?.message ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  {coordinateState.message}
+                </Typography>
+              ) : null}
+            </Alert>
+          ) : null}
           {!autoDetecting && qualityStatus === "needs_review" ? (
             <Alert severity="warning" sx={{ mt: 1, py: 0.25 }}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -437,11 +512,31 @@ export function WarehouseCoordinateSetupPanel({
                   Check the scan quality: {readableQualityReasons.join("; ")}.
                 </Typography>
               ) : null}
+              {debugArtifact ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  Debug artifact: {debugArtifact}
+                </Typography>
+              ) : null}
             </Alert>
           ) : null}
           {!autoDetecting && extractionStatus === "failed" ? (
             <Alert severity="error" sx={{ mt: 1, py: 0.25 }}>
-              Structure extraction failed. Restart the stack with `make warehouse`, then try again.
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Structure extraction failed.
+              </Typography>
+              {readableFailureReasons.length ? (
+                <Typography variant="body2">
+                  Reason: {readableFailureReasons.join("; ")}.
+                </Typography>
+              ) : null}
+              {debugArtifact ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  Debug artifact: {debugArtifact}
+                </Typography>
+              ) : null}
+              <Typography variant="caption" color="text.secondary">
+                Restart the stack with `make warehouse`, then try again after checking the reason.
+              </Typography>
             </Alert>
           ) : null}
         </Box>

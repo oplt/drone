@@ -388,6 +388,7 @@ export type WarehouseStructureSummary = {
     rejection_ratio?: number;
     targets_per_rack?: number | null;
     clearance_source?: string;
+    failure_reason_codes?: string[];
   };
   params?: Record<string, number | null>;
   coordinate_setup_status?: "draft" | "active";
@@ -431,7 +432,10 @@ export type WarehouseStructureResponse = {
   target_counts?: Record<string, number>;
   quality_status?: "ready" | "needs_review" | "failed" | null;
   quality_reasons?: string[];
+  failure_reason_codes?: string[];
   confidence?: number | null;
+  debug_artifact_url?: string | null;
+  debug_artifact_path?: string | null;
   summary: WarehouseStructureSummary;
 };
 
@@ -446,8 +450,12 @@ export type WarehouseStructureExtractParams = {
   shelf_min_spacing_m?: number;
   max_shelf_levels?: number;
   max_bins_per_rack_face?: number;
+  min_surface_points?: number;
   min_target_spacing_m?: number;
   review_clearance_m?: number;
+  rack_template_bin_count?: number;
+  rack_template_bay_width_m?: number;
+  rack_template_shelf_levels_m?: number[];
   axis_deg?: number;
 };
 
@@ -457,6 +465,11 @@ export type WarehouseStructureExtractResponse = {
   model_id: number;
   client_flight_id: string;
   task_id: string | null;
+};
+
+export type WarehouseStructureDryRunResponse = WarehouseStructureResponse & {
+  status: "ready" | "needs_review" | "failed";
+  coordinate_frame_id?: number | null;
 };
 
 export async function fetchWarehouseStructure(
@@ -476,6 +489,17 @@ export async function extractWarehouseStructure(
 ): Promise<WarehouseStructureExtractResponse> {
   return httpRequest<WarehouseStructureExtractResponse>(
     `/warehouse/maps/${warehouseMapId}/structure/extract`,
+    { method: "POST", body: params, token, skipUnauthorizedRedirect: true },
+  );
+}
+
+export async function dryRunWarehouseStructure(
+  warehouseMapId: number,
+  params: WarehouseStructureExtractParams = {},
+  token?: string | null,
+): Promise<WarehouseStructureDryRunResponse> {
+  return httpRequest<WarehouseStructureDryRunResponse>(
+    `/warehouse/maps/${warehouseMapId}/structure/dry-run`,
     { method: "POST", body: params, token, skipUnauthorizedRedirect: true },
   );
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from datetime import UTC, datetime
 from typing import Any
 
@@ -34,6 +35,12 @@ def _issue(code: str, message: str, *, severity: str = "error") -> Issue:
     return {"code": code, "message": message, "severity": severity}
 
 
+async def _maybe_await(value: Any) -> Any:
+    if inspect.isawaitable(value):
+        return await value
+    return value
+
+
 def _frame_summary(row: WarehouseCoordinateFrame | None) -> dict[str, Any] | None:
     if row is None:
         return None
@@ -46,6 +53,11 @@ def _frame_summary(row: WarehouseCoordinateFrame | None) -> dict[str, Any] | Non
         "confidence": row.confidence,
         "localization_method": row.localization_method,
         "transform_checksum": row.transform_checksum,
+        "commissioning_report": (
+            row.meta_data.get("commissioning_report")
+            if isinstance(getattr(row, "meta_data", None), dict)
+            else None
+        ),
         "locked_at": row.locked_at.isoformat() if row.locked_at else None,
         "transform_age_ms": transform_age_ms(row.locked_at),
     }
@@ -138,6 +150,16 @@ async def build_coordinate_diagnostics(
                         "Locked coordinate frame checksum does not match transform payload.",
                     )
                 )
+            raw_meta = getattr(locked_frame, "meta_data", {})
+            meta = raw_meta if isinstance(raw_meta, dict) else {}
+            report = meta.get("commissioning_report")
+            if isinstance(report, dict) and report.get("passed") is False:
+                blocking.append(
+                    _issue(
+                        "commissioning_incomplete",
+                        "Locked coordinate frame is missing commissioning evidence.",
+                    )
+                )
         except ValueError as exc:
             blocking.append(
                 _issue("localization_evidence_invalid", str(exc)),
@@ -171,20 +193,52 @@ async def build_coordinate_diagnostics(
 
     entity_counts: dict[str, int] = {}
     if locked_layout is not None:
-        for kind, model in (
-            ("aisles", WarehouseAisle),
-            ("racks", WarehouseRack),
-            ("shelves", WarehouseShelf),
-            ("bins", WarehouseBin),
-        ):
-            count = (
+        entity_counts["aisles"] = int(
+            (
                 await db.execute(
                     select(func.count())
-                    .select_from(model)
-                    .where(model.layout_version_id == locked_layout.id)
+                    .select_from(WarehouseAisle)
+                    .where(WarehouseAisle.layout_version_id == locked_layout.id)
                 )
             ).scalar_one()
-            entity_counts[kind] = int(count or 0)
+            or 0
+        )
+        entity_counts["racks"] = int(
+            (
+                await db.execute(
+                    select(func.count())
+                    .select_from(WarehouseRack)
+                    .join(WarehouseAisle, WarehouseRack.aisle_id == WarehouseAisle.id)
+                    .where(WarehouseAisle.layout_version_id == locked_layout.id)
+                )
+            ).scalar_one()
+            or 0
+        )
+        entity_counts["shelves"] = int(
+            (
+                await db.execute(
+                    select(func.count())
+                    .select_from(WarehouseShelf)
+                    .join(WarehouseRack, WarehouseShelf.rack_id == WarehouseRack.id)
+                    .join(WarehouseAisle, WarehouseRack.aisle_id == WarehouseAisle.id)
+                    .where(WarehouseAisle.layout_version_id == locked_layout.id)
+                )
+            ).scalar_one()
+            or 0
+        )
+        entity_counts["bins"] = int(
+            (
+                await db.execute(
+                    select(func.count())
+                    .select_from(WarehouseBin)
+                    .join(WarehouseShelf, WarehouseBin.shelf_id == WarehouseShelf.id)
+                    .join(WarehouseRack, WarehouseShelf.rack_id == WarehouseRack.id)
+                    .join(WarehouseAisle, WarehouseRack.aisle_id == WarehouseAisle.id)
+                    .where(WarehouseAisle.layout_version_id == locked_layout.id)
+                )
+            ).scalar_one()
+            or 0
+        )
         if sum(entity_counts.values()) == 0:
             warnings.append(
                 _issue(
@@ -206,12 +260,14 @@ async def build_coordinate_diagnostics(
     frame_contract = frame_contract_payload(coordinate_frame=locked_frame)
     mission_ready = not blocking
     slam_probe, ros_map_odom_tf, ros_tf_tree = await asyncio.gather(
-        refresh_slam_localization_from_ros(),
-        probe_mapping_tf_degraded(
-            parent_frame="warehouse_map",
-            child_frame="odom",
+        _maybe_await(refresh_slam_localization_from_ros()),
+        _maybe_await(
+            probe_mapping_tf_degraded(
+                parent_frame="warehouse_map",
+                child_frame="odom",
+            )
         ),
-        probe_warehouse_ros_tf_tree(),
+        _maybe_await(probe_warehouse_ros_tf_tree()),
     )
     if locked_frame is not None and not ros_map_odom_tf.get("tf_ok"):
         warnings.append(

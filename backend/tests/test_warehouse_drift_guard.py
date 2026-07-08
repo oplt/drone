@@ -15,6 +15,11 @@ from backend.modules.warehouse.service.drift_guard import (
     validate_localization_evidence,
     validate_scale_calibration,
 )
+from backend.modules.warehouse.routers.coordinate_frames import (
+    CoordinateFrameCreate,
+    _commissioning_report,
+    _require_commissioned_frame,
+)
 
 IDENTITY = {
     "translation": {"x": 0.0, "y": 0.0, "z": 0.0},
@@ -113,5 +118,120 @@ def test_active_mission_freezes_coordinate_revision() -> None:
 def test_drift_prevention_columns_are_persisted() -> None:
     frame_columns = WarehouseCoordinateFrame.__table__.columns
     setup_columns = WarehouseMapSetupVersion.__table__.columns
-    assert all(name in frame_columns for name in ("transform_timestamp", "max_age_s", "transform_checksum"))
+    assert all(
+        name in frame_columns
+        for name in ("transform_timestamp", "max_age_s", "transform_checksum", "meta_data")
+    )
     assert all(name in setup_columns for name in ("map_resolution_m", "scale", "scale_calibration_json"))
+
+
+class _CountResult:
+    def __init__(self, value: int) -> None:
+        self.value = value
+
+    def scalar_one(self) -> int:
+        return self.value
+
+
+def _commissioned_payload(**overrides) -> CoordinateFrameCreate:
+    data = {
+        "transform": {
+            "translation": {"x": 1.0, "y": 0.5, "z": 0.0},
+            "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+        },
+        "source": "commissioning",
+        "confidence": 0.85,
+        "covariance": COVARIANCE,
+        "transform_timestamp": datetime.now(UTC),
+        "max_age_s": 300.0,
+        "localization_method": "lidar_slam",
+        "commissioning_evidence": {
+            "dock_pose_confirmed": True,
+            "sensor_calibration_hash": "calib-123",
+            "localization_checks": [
+                {
+                    "kind": "slam",
+                    "passed": True,
+                    "confidence": 0.9,
+                    "residual_m": 0.04,
+                    "yaw_residual_deg": 1.2,
+                },
+                {
+                    "kind": "landmark",
+                    "passed": True,
+                    "confidence": 0.82,
+                    "residual_m": 0.08,
+                    "yaw_residual_deg": 2.0,
+                },
+            ],
+        },
+        "lock": True,
+    }
+    data.update(overrides)
+    return CoordinateFrameCreate.model_validate(data)
+
+
+def test_commissioning_report_requires_two_independent_checks() -> None:
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_CountResult(0), _CountResult(0)])
+    payload = _commissioned_payload(
+        commissioning_evidence={
+            "dock_pose_confirmed": True,
+            "sensor_calibration_hash": "calib-123",
+            "localization_checks": [
+                {"kind": "slam", "passed": True, "confidence": 0.9, "residual_m": 0.04}
+            ],
+        }
+    )
+
+    report = asyncio.run(_commissioning_report(db, warehouse_map_id=7, payload=payload))
+
+    codes = {issue["code"] for issue in report["issues"]}
+    assert "landmark_check_missing" in codes
+    assert "independent_checks_missing" in codes
+    assert report["residual_metrics"]["translation_residual_max_m"] == pytest.approx(0.04)
+
+
+def test_commissioning_report_accepts_slam_and_landmark_evidence() -> None:
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_CountResult(1), _CountResult(1)])
+
+    report = asyncio.run(
+        _commissioning_report(db, warehouse_map_id=7, payload=_commissioned_payload())
+    )
+
+    assert report["passed"] is True
+    assert report["issues"] == []
+    assert set(report["check_kinds"]) == {"landmark", "slam"}
+    assert report["residual_metrics"]["translation_residual_count"] == 2
+
+
+def test_commissioning_rejects_identity_without_explicit_simulation() -> None:
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_CountResult(1), _CountResult(1)])
+    payload = _commissioned_payload(transform=IDENTITY)
+
+    report = asyncio.run(_commissioning_report(db, warehouse_map_id=7, payload=payload))
+
+    assert "identity_transform_not_allowed" in {issue["code"] for issue in report["issues"]}
+
+
+def test_require_commissioned_frame_rejects_checksum_mismatch_style_metadata_gap() -> None:
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[_CountResult(0), _CountResult(0)])
+    row = SimpleNamespace(
+        transform_json={"translation": {"x": 1, "y": 0, "z": 0}, "rotation": IDENTITY["rotation"]},
+        covariance_json=COVARIANCE,
+        confidence=0.9,
+        localization_method="lidar_slam",
+        meta_data={
+            "commissioning_evidence": {
+                "localization_checks": [
+                    {"kind": "slam", "passed": True, "confidence": 0.9, "residual_m": 0.02}
+                ]
+            }
+        },
+    )
+
+    with pytest.raises(HTTPException):
+        asyncio.run(_require_commissioned_frame(db, warehouse_map_id=7, row=row))

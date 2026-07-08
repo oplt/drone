@@ -40,8 +40,16 @@ from backend.modules.warehouse.service.layout import (
     parse_revision,
     require_draft_revision,
 )
+from backend.modules.warehouse.observability.warehouse_coordinate_metrics import (
+    record_layout_publish_block,
+)
 
 router = APIRouter(tags=["warehouse-layouts"])
+
+
+def _publish_block(reason: str, detail: object, *, status_code: int = 409) -> HTTPException:
+    record_layout_publish_block(reason=reason)
+    return HTTPException(status_code, detail)
 
 
 class LayoutEntityIn(BaseModel):
@@ -50,6 +58,19 @@ class LayoutEntityIn(BaseModel):
     level: int | None = None
     kind: str | None = None
     geometry: dict = Field(default_factory=dict)
+    template_id: int | None = None
+    template_version_id: int | None = None
+    source_artifact_set_id: int | None = None
+    fitted_transform_json: dict = Field(default_factory=dict)
+    template_fit_json: dict = Field(default_factory=dict)
+    face_plane_json: dict = Field(default_factory=dict)
+    center_local_json: dict = Field(default_factory=dict)
+    volume_json: dict = Field(default_factory=dict)
+    confidence_breakdown_json: dict = Field(default_factory=dict)
+    fit_residual_m: float | None = None
+    observed_point_count: int | None = None
+    coverage_ratio: float | None = None
+    last_verified_at: datetime | None = None
     min_z_m: float | None = None
     max_z_m: float | None = None
     active: bool = True
@@ -61,6 +82,19 @@ class LayoutEntityPatch(BaseModel):
     level: int | None = None
     kind: str | None = None
     geometry: dict | None = None
+    template_id: int | None = None
+    template_version_id: int | None = None
+    source_artifact_set_id: int | None = None
+    fitted_transform_json: dict | None = None
+    template_fit_json: dict | None = None
+    face_plane_json: dict | None = None
+    center_local_json: dict | None = None
+    volume_json: dict | None = None
+    confidence_breakdown_json: dict | None = None
+    fit_residual_m: float | None = None
+    observed_point_count: int | None = None
+    coverage_ratio: float | None = None
+    last_verified_at: datetime | None = None
     min_z_m: float | None = None
     max_z_m: float | None = None
     active: bool | None = None
@@ -142,6 +176,19 @@ def _entity_dict(row) -> dict:
         ("level", "level"),
         ("kind", "kind"),
         ("geometry_json", "geometry"),
+        ("template_id", "template_id"),
+        ("template_version_id", "template_version_id"),
+        ("source_artifact_set_id", "source_artifact_set_id"),
+        ("fitted_transform_json", "fitted_transform_json"),
+        ("template_fit_json", "template_fit_json"),
+        ("face_plane_json", "face_plane_json"),
+        ("center_local_json", "center_local_json"),
+        ("volume_json", "volume_json"),
+        ("confidence_breakdown_json", "confidence_breakdown_json"),
+        ("fit_residual_m", "fit_residual_m"),
+        ("observed_point_count", "observed_point_count"),
+        ("coverage_ratio", "coverage_ratio"),
+        ("last_verified_at", "last_verified_at"),
         ("min_z_m", "min_z_m"),
         ("max_z_m", "max_z_m"),
         ("active", "active"),
@@ -152,6 +199,26 @@ def _entity_dict(row) -> dict:
         if hasattr(row, source):
             result[target] = getattr(row, source)
     return result
+
+
+def _apply_entity_metadata(row, item: LayoutEntityIn) -> None:
+    for name in (
+        "template_id",
+        "template_version_id",
+        "source_artifact_set_id",
+        "fitted_transform_json",
+        "template_fit_json",
+        "face_plane_json",
+        "center_local_json",
+        "volume_json",
+        "confidence_breakdown_json",
+        "fit_residual_m",
+        "observed_point_count",
+        "coverage_ratio",
+        "last_verified_at",
+    ):
+        if hasattr(row, name):
+            setattr(row, name, getattr(item, name))
 
 
 async def _mutating_layout(db, map_id, version, if_match, revision):
@@ -298,7 +365,11 @@ async def publish_layout_version(
     layout = await _mutating_layout(db, warehouse_map_id, version, if_match, None)
     report = await _validation(layout, db)
     if not report.valid:
-        raise HTTPException(422, {"code": "layout_invalid", "issues": report.issues})
+        raise _publish_block(
+            "layout_invalid",
+            {"code": "layout_invalid", "issues": report.issues},
+            status_code=422,
+        )
     active_missions = int(
         (
             await db.execute(
@@ -312,13 +383,19 @@ async def publish_layout_version(
         ).scalar_one()
     )
     if active_missions:
-        raise HTTPException(409, "Cannot publish layout while missions are planned or running")
+        raise _publish_block(
+            "active_missions",
+            "Cannot publish layout while missions are planned or running",
+        )
     frame = await db.get(WarehouseCoordinateFrame, layout.coordinate_frame_id)
     if frame is None or frame.status != "locked":
-        raise HTTPException(409, "Layout coordinate frame is not locked")
+        raise _publish_block("coordinate_frame_not_locked", "Layout coordinate frame is not locked")
     if layout.source == "structure_extraction":
         if layout.artifact_set_id is None or layout.map_model_id is None:
-            raise HTTPException(409, "Layout has no pinned scan artifact/model revisions")
+            raise _publish_block(
+                "missing_artifact_revision",
+                "Layout has no pinned scan artifact/model revisions",
+            )
         artifact = await db.get(WarehouseScanArtifactSet, layout.artifact_set_id)
         model = await db.get(WarehouseModel, layout.map_model_id)
         if (
@@ -329,16 +406,25 @@ async def publish_layout_version(
             or model.coordinate_frame_id != frame.id
             or artifact.checksum_sha256 != layout.input_checksum
         ):
-            raise HTTPException(409, "Layout artifact, model, and frame revisions do not match")
+            raise _publish_block(
+                "artifact_revision_mismatch",
+                "Layout artifact, model, and frame revisions do not match",
+            )
         if artifact.sensor_rig_id is None or not artifact.calibration_hash:
-            raise HTTPException(409, "Scan artifact has no pinned sensor calibration")
+            raise _publish_block(
+                "missing_sensor_calibration",
+                "Scan artifact has no pinned sensor calibration",
+            )
         sensor_rig = await db.get(WarehouseSensorRig, artifact.sensor_rig_id)
         if (
             sensor_rig is None
             or sensor_rig.calibration_status != "valid"
             or sensor_rig.calibration_hash != artifact.calibration_hash
         ):
-            raise HTTPException(409, "Pinned sensor calibration is unavailable or changed")
+            raise _publish_block(
+                "sensor_calibration_changed",
+                "Pinned sensor calibration is unavailable or changed",
+            )
     review_count = int(
         (
             await db.execute(
@@ -352,7 +438,10 @@ async def publish_layout_version(
         ).scalar_one()
     )
     if review_count:
-        raise HTTPException(409, f"{review_count} displaced candidates require review")
+        raise _publish_block(
+            "candidates_require_review",
+            f"{review_count} displaced candidates require review",
+        )
     now = datetime.now(UTC)
     previously_locked_ids = select(WarehouseLayoutVersion.id).where(
         WarehouseLayoutVersion.warehouse_map_id == warehouse_map_id,
@@ -556,6 +645,7 @@ async def _create_entities(db, layout, kind: str, payloads):
                 max_z_m=item.max_z_m,
                 active=item.active,
             )
+        _apply_entity_metadata(row, item)
         db.add(row)
         rows.append(row)
     await db.flush()

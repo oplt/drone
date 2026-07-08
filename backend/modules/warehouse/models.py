@@ -71,6 +71,9 @@ class WarehouseMap(Base):
     coordinate_frames: Mapped[list[WarehouseCoordinateFrame]] = relationship(
         back_populates="warehouse_map", cascade="all, delete-orphan"
     )
+    rack_templates: Mapped[list[WarehouseRackTemplate]] = relationship(
+        back_populates="warehouse_map", cascade="all, delete-orphan"
+    )
 
 
 class WarehouseCoordinateFrame(Base):
@@ -104,6 +107,7 @@ class WarehouseCoordinateFrame(Base):
     transform_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(24), default="draft", nullable=False, index=True)
     confidence: Mapped[float | None] = mapped_column(Float)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -408,6 +412,83 @@ class WarehouseScanArtifactSet(Base):
     )
 
 
+class WarehouseRackTemplate(Base):
+    __tablename__ = "warehouse_rack_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    warehouse_map_id: Mapped[int] = mapped_column(
+        ForeignKey("warehouse_maps.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    rack_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    warehouse_map: Mapped[WarehouseMap] = relationship(back_populates="rack_templates")
+    versions: Mapped[list[WarehouseRackTemplateVersion]] = relationship(
+        back_populates="template", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("warehouse_map_id", "name", name="uq_warehouse_rack_template_name"),
+        Index("idx_warehouse_rack_template_map_active", "warehouse_map_id", "active"),
+    )
+
+
+class WarehouseRackTemplateVersion(Base):
+    __tablename__ = "warehouse_rack_template_versions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("warehouse_rack_templates.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="active", index=True)
+    bay_width_m: Mapped[float] = mapped_column(Float, nullable=False)
+    shelf_heights_json: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
+    bin_pitch_m: Mapped[float] = mapped_column(Float, nullable=False)
+    bin_count: Mapped[int | None] = mapped_column(Integer)
+    left_face_naming: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="left_to_right"
+    )
+    right_face_naming: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="right_to_left"
+    )
+    barcode_scan_side: Mapped[str] = mapped_column(String(32), nullable=False, default="front")
+    preferred_standoff_m: Mapped[float] = mapped_column(Float, nullable=False, default=1.2)
+    min_scanner_angle_deg: Mapped[float] = mapped_column(Float, nullable=False, default=20.0)
+    meta_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    template: Mapped[WarehouseRackTemplate] = relationship(back_populates="versions")
+
+    __table_args__ = (
+        UniqueConstraint("template_id", "version", name="uq_warehouse_rack_template_version"),
+        CheckConstraint(
+            "status IN ('draft', 'active', 'superseded')",
+            name="ck_warehouse_rack_template_version_status",
+        ),
+        CheckConstraint("bay_width_m > 0", name="ck_warehouse_rack_template_bay_width"),
+        CheckConstraint("bin_pitch_m > 0", name="ck_warehouse_rack_template_bin_pitch"),
+        CheckConstraint(
+            "bin_count IS NULL OR bin_count > 0",
+            name="ck_warehouse_rack_template_bin_count",
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Warehouse product/barcode inspection persistence
 # ---------------------------------------------------------------------------
@@ -476,6 +557,23 @@ class WarehouseAisle(Base):
     )
     code: Mapped[str] = mapped_column(String(64), nullable=False)
     geometry_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_rack_templates.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    source_artifact_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_scan_artifact_sets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    confidence_breakdown_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    fit_residual_m: Mapped[float | None] = mapped_column(Float)
+    observed_point_count: Mapped[int | None] = mapped_column(Integer)
+    coverage_ratio: Mapped[float | None] = mapped_column(Float)
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     provenance_status: Mapped[str] = mapped_column(String(24), default="auto", nullable=False)
     confidence: Mapped[float | None] = mapped_column(Float)
     __table_args__ = (
@@ -495,6 +593,33 @@ class WarehouseRack(Base):
     )
     code: Mapped[str] = mapped_column(String(64), nullable=False)
     geometry_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_rack_templates.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    template_version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_rack_template_versions.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    source_artifact_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_scan_artifact_sets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    fitted_transform_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    template_fit_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    face_plane_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    confidence_breakdown_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    fit_residual_m: Mapped[float | None] = mapped_column(Float)
+    observed_point_count: Mapped[int | None] = mapped_column(Integer)
+    coverage_ratio: Mapped[float | None] = mapped_column(Float)
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     provenance_status: Mapped[str] = mapped_column(String(24), default="auto", nullable=False)
     confidence: Mapped[float | None] = mapped_column(Float)
     __table_args__ = (
@@ -514,6 +639,23 @@ class WarehouseShelf(Base):
     )
     level: Mapped[int] = mapped_column(Integer, nullable=False)
     geometry_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_rack_templates.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    source_artifact_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_scan_artifact_sets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    confidence_breakdown_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    fit_residual_m: Mapped[float | None] = mapped_column(Float)
+    observed_point_count: Mapped[int | None] = mapped_column(Integer)
+    coverage_ratio: Mapped[float | None] = mapped_column(Float)
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     provenance_status: Mapped[str] = mapped_column(String(24), default="auto", nullable=False)
     confidence: Mapped[float | None] = mapped_column(Float)
     __table_args__ = (
@@ -533,6 +675,25 @@ class WarehouseBin(Base):
     )
     code: Mapped[str] = mapped_column(String(64), nullable=False)
     geometry_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_rack_templates.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    source_artifact_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_scan_artifact_sets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    center_local_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    volume_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    confidence_breakdown_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    fit_residual_m: Mapped[float | None] = mapped_column(Float)
+    observed_point_count: Mapped[int | None] = mapped_column(Integer)
+    coverage_ratio: Mapped[float | None] = mapped_column(Float)
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     provenance_status: Mapped[str] = mapped_column(String(24), default="auto", nullable=False)
     confidence: Mapped[float | None] = mapped_column(Float)
     __table_args__ = (
@@ -556,6 +717,23 @@ class WarehouseSafetyZone(Base):
     min_z_m: Mapped[float | None] = mapped_column(Float)
     max_z_m: Mapped[float | None] = mapped_column(Float)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_rack_templates.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    source_artifact_set_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warehouse_scan_artifact_sets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    confidence_breakdown_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    fit_residual_m: Mapped[float | None] = mapped_column(Float)
+    observed_point_count: Mapped[int | None] = mapped_column(Integer)
+    coverage_ratio: Mapped[float | None] = mapped_column(Float)
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     __table_args__ = (
         UniqueConstraint("layout_version_id", "code", name="uq_warehouse_safety_zone_code"),
         CheckConstraint(
@@ -649,6 +827,13 @@ class WarehouseScanTarget(Base):
     scan_pose_local_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     sensor_aim_json: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     shelf_normal_local_json: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    scanner_metadata_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    path_validation_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    failure_reason: Mapped[str | None] = mapped_column(String(255))
     standoff_m: Mapped[float] = mapped_column(Float, default=1.2, nullable=False)
     hover_time_s: Mapped[float] = mapped_column(Float, default=3.0, nullable=False)
     scan_timeout_s: Mapped[float] = mapped_column(Float, default=8.0, nullable=False)

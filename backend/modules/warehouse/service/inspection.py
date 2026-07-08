@@ -77,13 +77,21 @@ def _target_hover_time_s(target: WarehouseScanTarget) -> float:
 
 
 def _metadata_for_target(target: WarehouseScanTarget) -> dict[str, Any]:
-    return {
+    scanner_metadata = (
+        target.scanner_metadata_json if isinstance(target.scanner_metadata_json, dict) else {}
+    )
+    metadata = {
         "aisle_code": target.aisle_code,
         "rack_code": target.rack_code,
         "bin_code": target.bin_code,
         "sku": target.sku,
         "barcode": target.barcode,
+        "failure_reason": target.failure_reason,
     }
+    metadata.update(scanner_metadata)
+    metadata["expected_sku"] = target.sku or scanner_metadata.get("expected_sku")
+    metadata["expected_barcode"] = target.barcode or scanner_metadata.get("expected_barcode")
+    return metadata
 
 
 def _local_pose_from_schema(pose_schema: WarehouseLocalPose) -> LocalPose:
@@ -281,6 +289,23 @@ async def _flush_mission_failed(db: AsyncSession, mission: WarehouseInspectionMi
         )
 
 
+async def _relocalize_before_inspection(
+    navigator: LocalNavigationAdapter,
+    *,
+    timeout_s: float,
+) -> None:
+    slam_provider = getattr(navigator, "slam_provider", None)
+    relocalize = getattr(slam_provider, "relocalize", None)
+    if relocalize is None:
+        relocalize = getattr(navigator, "relocalize", None)
+    if not callable(relocalize):
+        logger.info("warehouse_inspection_relocalization_unavailable")
+        return
+    ok = await relocalize(float(timeout_s))
+    if not ok:
+        raise RuntimeError("Inspection relocalization failed before mission start")
+
+
 async def execute_inspection_mission(
     *,
     db: AsyncSession,
@@ -334,6 +359,22 @@ async def execute_inspection_mission(
         raise RuntimeError(f"Inspection targets use a different layout revision: {wrong_layout}")
     scanner = scanner or MockWarehouseScanner()
     mission_id = _safe_int(getattr(mission, "id", 0), default=0)
+    relocalization_timeout_s = _safe_float(
+        policy.relocalization_timeout_s,
+        default=15.0,
+        minimum=1.0,
+    ) if hasattr(policy, "relocalization_timeout_s") else 15.0
+    await _relocalize_before_inspection(
+        navigator,
+        timeout_s=relocalization_timeout_s,
+    )
+    plan = dict(mission.plan_json or {})
+    plan["preflight_relocalization"] = {
+        "status": "passed",
+        "timeout_s": relocalization_timeout_s,
+        "checked_at": datetime.now(UTC).isoformat(),
+    }
+    mission.plan_json = plan
     mission.status = "running"
     await db.flush()
     logger.info("warehouse_inspection_mission_started", extra={"mission_id": mission_id})
@@ -447,6 +488,25 @@ async def execute_inspection_mission(
             )
             db.add(result)
             await db.flush()
+            try:
+                from backend.modules.warehouse.service.inspection_feedback import (
+                    append_rescan_plan,
+                    persist_inspection_feedback,
+                )
+
+                await persist_inspection_feedback(
+                    db,
+                    mission=mission,
+                    target=target,
+                    result=result,
+                )
+                append_rescan_plan(mission, target=target, result=result)
+                await db.flush()
+            except Exception:
+                logger.exception(
+                    "warehouse_inspection_feedback_failed",
+                    extra={"mission_id": mission_id, "target_id": target_id},
+                )
             logger.info(
                 "warehouse_inspection_scan_result",
                 extra={
@@ -475,6 +535,19 @@ async def execute_inspection_mission(
             "warehouse_inspection_mission_completed",
             extra={"mission_id": mission_id, "status": mission.status},
         )
+        if mission.status == "completed":
+            try:
+                from backend.modules.warehouse.service.inspection_feedback import (
+                    persist_layout_drift_report,
+                )
+
+                await persist_layout_drift_report(db, mission=mission)
+                await db.flush()
+            except Exception:
+                logger.exception(
+                    "warehouse_inspection_layout_drift_report_failed",
+                    extra={"mission_id": mission_id},
+                )
         if mission.status == "completed":
             try:
                 from backend.modules.agents.hooks import schedule_warehouse_inspection_postflight

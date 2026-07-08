@@ -89,6 +89,7 @@ def _params_from_payload(payload: dict[str, Any] | None) -> StructureExtractionP
         drone_radius_m=settings.warehouse_structure_drone_radius_m,
         clearance_margin_m=settings.warehouse_structure_clearance_margin_m,
         max_points=settings.warehouse_structure_max_points,
+        min_surface_points=settings.warehouse_structure_min_surface_points,
     )
 
     def _override(name: str, current: float) -> float:
@@ -112,12 +113,39 @@ def _params_from_payload(payload: dict[str, Any] | None) -> StructureExtractionP
     defaults.max_bins_per_rack_face = int(
         _override("max_bins_per_rack_face", defaults.max_bins_per_rack_face)
     )
+    defaults.min_surface_points = int(
+        _override("min_surface_points", defaults.min_surface_points)
+    )
     defaults.min_target_spacing_m = _override(
         "min_target_spacing_m", defaults.min_target_spacing_m
     )
     defaults.review_clearance_m = _override(
         "review_clearance_m", defaults.review_clearance_m
     )
+    defaults.rack_template_bin_count = (
+        None
+        if payload.get("rack_template_bin_count") is None
+        else int(_override("rack_template_bin_count", 1.0))
+    )
+    defaults.rack_template_version_id = (
+        None
+        if payload.get("rack_template_version_id") is None
+        else int(_override("rack_template_version_id", 1.0))
+    )
+    defaults.rack_template_bay_width_m = (
+        None
+        if payload.get("rack_template_bay_width_m") is None
+        else _override("rack_template_bay_width_m", 1.0)
+    )
+    raw_levels = payload.get("rack_template_shelf_levels_m")
+    if isinstance(raw_levels, list):
+        levels: list[float] = []
+        for raw in raw_levels:
+            try:
+                levels.append(float(raw))
+            except (TypeError, ValueError):
+                continue
+        defaults.rack_template_shelf_levels_m = tuple(levels)
     axis = payload.get("axis_deg")
     defaults.axis_deg = None if axis is None else _override("axis_deg", 0.0)
     return defaults.sanitized()
@@ -164,8 +192,13 @@ def extract_warehouse_structure(
             client_flight_id,
         )
         if self.request.retries >= self.max_retries:
+            from backend.modules.warehouse.service.structure_jobs import get_extraction_state
+
+            existing_state = get_extraction_state(int(warehouse_map_id)) or {}
             record_extraction_failed(
                 warehouse_map_id=int(warehouse_map_id),
                 error_message=str(exc),
+                failure_reason_codes=list(existing_state.get("failure_reason_codes") or []),
+                debug_artifact_url=existing_state.get("debug_artifact_url"),
             )
         raise self.retry(exc=exc, countdown=30) from exc

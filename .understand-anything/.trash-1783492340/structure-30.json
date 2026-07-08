@@ -1,0 +1,1151 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 22,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/shared/layout/MenuButton.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 24,
+      "nonEmptyLines": 21,
+      "functions": [
+        {
+          "name": "MenuButton",
+          "startLine": 10,
+          "endLine": 24,
+          "params": [
+            "{\n  showBadge = false,\n  ...props\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MenuButton",
+          "line": 10,
+          "isDefault": true
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/layout/MenuContent.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 235,
+      "nonEmptyLines": 219,
+      "functions": [
+        {
+          "name": "MenuContent",
+          "startLine": 100,
+          "endLine": 235,
+          "params": [
+            "{ collapsed = false, userRole }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MenuContent",
+          "line": 100,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MenuContent",
+          "callee": "useLocation",
+          "lineNumber": 101
+        },
+        {
+          "caller": "isTaskRoute",
+          "callee": "tasksChildren.some",
+          "lineNumber": 103
+        },
+        {
+          "caller": "isTaskRoute",
+          "callee": "pathname.startsWith",
+          "lineNumber": 104
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "isTaskRoute",
+          "lineNumber": 107
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "useState",
+          "lineNumber": 108
+        },
+        {
+          "caller": "handleTasksClick",
+          "callee": "setTasksExpanded",
+          "lineNumber": 112
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "mainListItems.map",
+          "lineNumber": 135
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "withTooltip",
+          "lineNumber": 138
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "isTaskRoute",
+          "lineNumber": 143
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "isTaskRoute",
+          "lineNumber": 153
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "item.children.map",
+          "lineNumber": 162
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "location.pathname.startsWith",
+          "lineNumber": 169
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "withTooltip",
+          "lineNumber": 181
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "location.pathname.startsWith",
+          "lineNumber": 188
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "withTooltip",
+          "lineNumber": 202
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "location.pathname.startsWith",
+          "lineNumber": 207
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "secondaryListItems.map",
+          "lineNumber": 214
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "withTooltip",
+          "lineNumber": 216
+        },
+        {
+          "caller": "MenuContent",
+          "callee": "location.pathname.startsWith",
+          "lineNumber": 222
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/layout/OperationsShell.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 59,
+      "nonEmptyLines": 57,
+      "functions": [
+        {
+          "name": "OperationsShell",
+          "startLine": 19,
+          "endLine": 59,
+          "params": [
+            "{\n  user,\n  onLogout,\n  children,\n  disableCustomTheme,\n  themeComponents,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "OperationsShell",
+          "line": 19,
+          "isDefault": true
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/layout/SideMenu.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 178,
+      "nonEmptyLines": 172,
+      "functions": [
+        {
+          "name": "getDisplayName",
+          "startLine": 18,
+          "endLine": 20,
+          "params": [
+            "user"
+          ]
+        },
+        {
+          "name": "getInitials",
+          "startLine": 22,
+          "endLine": 30,
+          "params": [
+            "user"
+          ]
+        },
+        {
+          "name": "SideMenu",
+          "startLine": 37,
+          "endLine": 178,
+          "params": [
+            "{ user, onLogout }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "SideMenu",
+          "line": 37,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getDisplayName",
+          "callee": "[user?.first_name, user?.last_name].filter(Boolean).join",
+          "lineNumber": 19
+        },
+        {
+          "caller": "getDisplayName",
+          "callee": "[user?.first_name, user?.last_name].filter",
+          "lineNumber": 19
+        },
+        {
+          "caller": "getInitials",
+          "callee": "getDisplayName",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInitials",
+          "callee": "displayName\n    .split(/[\\s@._-]+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((part) => part.charAt(0).toUpperCase())\n    .join",
+          "lineNumber": 24
+        },
+        {
+          "caller": "getInitials",
+          "callee": "displayName\n    .split(/[\\s@._-]+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map",
+          "lineNumber": 24
+        },
+        {
+          "caller": "getInitials",
+          "callee": "displayName\n    .split(/[\\s@._-]+/)\n    .filter(Boolean)\n    .slice",
+          "lineNumber": 24
+        },
+        {
+          "caller": "getInitials",
+          "callee": "displayName\n    .split(/[\\s@._-]+/)\n    .filter",
+          "lineNumber": 24
+        },
+        {
+          "caller": "getInitials",
+          "callee": "displayName\n    .split",
+          "lineNumber": 24
+        },
+        {
+          "caller": "getInitials",
+          "callee": "part.charAt(0).toUpperCase",
+          "lineNumber": 28
+        },
+        {
+          "caller": "getInitials",
+          "callee": "part.charAt",
+          "lineNumber": 28
+        },
+        {
+          "caller": "SideMenu",
+          "callee": "useState",
+          "lineNumber": 38
+        },
+        {
+          "caller": "SideMenu",
+          "callee": "theme.transitions.create",
+          "lineNumber": 49
+        },
+        {
+          "caller": "SideMenu",
+          "callee": "theme.transitions.create",
+          "lineNumber": 60
+        },
+        {
+          "caller": "SideMenu",
+          "callee": "getInitials",
+          "lineNumber": 96
+        },
+        {
+          "caller": "SideMenu",
+          "callee": "getDisplayName",
+          "lineNumber": 105
+        },
+        {
+          "caller": "SideMenu",
+          "callee": "getInitials",
+          "lineNumber": 138
+        },
+        {
+          "caller": "SideMenu",
+          "callee": "setCollapsed",
+          "lineNumber": 145
+        },
+        {
+          "caller": "SideMenu",
+          "callee": "onLogout",
+          "lineNumber": 172
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/layout/SideMenuMobile.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 108,
+      "nonEmptyLines": 104,
+      "functions": [
+        {
+          "name": "getDisplayName",
+          "startLine": 18,
+          "endLine": 20,
+          "params": [
+            "user"
+          ]
+        },
+        {
+          "name": "getInitials",
+          "startLine": 22,
+          "endLine": 29,
+          "params": [
+            "user"
+          ]
+        },
+        {
+          "name": "SideMenuMobile",
+          "startLine": 31,
+          "endLine": 108,
+          "params": [
+            "{ open, toggleDrawer, user, onLogout }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "SideMenuMobile",
+          "line": 31,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getDisplayName",
+          "callee": "[user?.first_name, user?.last_name].filter(Boolean).join",
+          "lineNumber": 19
+        },
+        {
+          "caller": "getDisplayName",
+          "callee": "[user?.first_name, user?.last_name].filter",
+          "lineNumber": 19
+        },
+        {
+          "caller": "getInitials",
+          "callee": "getDisplayName(user)\n    .split(/[\\s@._-]+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map((part) => part.charAt(0).toUpperCase())\n    .join",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInitials",
+          "callee": "getDisplayName(user)\n    .split(/[\\s@._-]+/)\n    .filter(Boolean)\n    .slice(0, 2)\n    .map",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInitials",
+          "callee": "getDisplayName(user)\n    .split(/[\\s@._-]+/)\n    .filter(Boolean)\n    .slice",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInitials",
+          "callee": "getDisplayName(user)\n    .split(/[\\s@._-]+/)\n    .filter",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInitials",
+          "callee": "getDisplayName(user)\n    .split",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInitials",
+          "callee": "getDisplayName",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInitials",
+          "callee": "part.charAt(0).toUpperCase",
+          "lineNumber": 27
+        },
+        {
+          "caller": "getInitials",
+          "callee": "part.charAt",
+          "lineNumber": 27
+        },
+        {
+          "caller": "SideMenuMobile",
+          "callee": "toggleDrawer",
+          "lineNumber": 36
+        },
+        {
+          "caller": "SideMenuMobile",
+          "callee": "getInitials",
+          "lineNumber": 73
+        },
+        {
+          "caller": "SideMenuMobile",
+          "callee": "getDisplayName",
+          "lineNumber": 78
+        },
+        {
+          "caller": "SideMenuMobile",
+          "callee": "onLogout",
+          "lineNumber": 102
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/layout/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 12,
+      "nonEmptyLines": 12,
+      "exports": [
+        {
+          "name": "OperationsShell",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "OperationsShellProps",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "ConsoleToolbar",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "ConsoleToolbarProps",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "PageLayout",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "PageSection",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "PageMetric",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "SideMenu",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "AppNavbar",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "NavbarBreadcrumbs",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "ConsoleSearch",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "ShellUser",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "WorkflowHeader",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 13,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/layout/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 6,
+      "nonEmptyLines": 6,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/AppTheme.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 91,
+      "nonEmptyLines": 89,
+      "functions": [
+        {
+          "name": "AppTheme",
+          "startLine": 17,
+          "endLine": 91,
+          "params": [
+            "props"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "AppTheme",
+          "line": 17,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "AppTheme",
+          "callee": "React.useMemo",
+          "lineNumber": 19
+        },
+        {
+          "caller": "AppTheme",
+          "callee": "createTheme",
+          "lineNumber": 22
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/ColorModeIconDropdown.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 52,
+      "nonEmptyLines": 47,
+      "functions": [
+        {
+          "name": "ColorModeIconDropdown",
+          "startLine": 8,
+          "endLine": 52,
+          "params": [
+            "props"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ColorModeIconDropdown",
+          "line": 8,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ColorModeIconDropdown",
+          "callee": "useColorScheme",
+          "lineNumber": 9
+        },
+        {
+          "caller": "handleToggle",
+          "callee": "setMode",
+          "lineNumber": 37
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/ColorModeSelect.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 28,
+      "nonEmptyLines": 26,
+      "functions": [
+        {
+          "name": "ColorModeSelect",
+          "startLine": 7,
+          "endLine": 28,
+          "params": [
+            "props"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ColorModeSelect",
+          "line": 7,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ColorModeSelect",
+          "callee": "useColorScheme",
+          "lineNumber": 8
+        },
+        {
+          "caller": "ColorModeSelect",
+          "callee": "setMode",
+          "lineNumber": 16
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/charts.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 76,
+      "nonEmptyLines": 75,
+      "exports": [
+        {
+          "name": "chartsCustomizations",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/dataDisplay.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 207,
+      "nonEmptyLines": 206,
+      "exports": [
+        {
+          "name": "dataDisplayCustomizations",
+          "line": 13,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/dataGrid.js",
+      "language": "javascript",
+      "fileCategory": "code",
+      "totalLines": 134,
+      "nonEmptyLines": 132,
+      "exports": [
+        {
+          "name": "dataGridCustomizations",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/datePickers.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 163,
+      "nonEmptyLines": 162,
+      "exports": [
+        {
+          "name": "datePickersCustomizations",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/feedback.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 79,
+      "nonEmptyLines": 77,
+      "exports": [
+        {
+          "name": "feedbackCustomizations",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "exports": [
+        {
+          "name": "chartsCustomizations",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "dataGridCustomizations",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "datePickersCustomizations",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "treeViewCustomizations",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "inputsCustomizations",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "dataDisplayCustomizations",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "feedbackCustomizations",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "navigationCustomizations",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "surfacesCustomizations",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 9,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/inputs.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 416,
+      "nonEmptyLines": 415,
+      "exports": [
+        {
+          "name": "inputsCustomizations",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/navigation.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 223,
+      "nonEmptyLines": 222,
+      "exports": [
+        {
+          "name": "navigationCustomizations",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/surfaces.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 118,
+      "nonEmptyLines": 117,
+      "exports": [
+        {
+          "name": "surfacesCustomizations",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/customizations/treeView.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 64,
+      "nonEmptyLines": 62,
+      "exports": [
+        {
+          "name": "treeViewCustomizations",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/theme/themePrimitives.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 376,
+      "nonEmptyLines": 357,
+      "functions": [
+        {
+          "name": "getDesignTokens",
+          "startLine": 123,
+          "endLine": 266,
+          "params": [
+            "mode"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "tesla",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "fontDisplay",
+          "line": 50,
+          "isDefault": false
+        },
+        {
+          "name": "fontText",
+          "line": 52,
+          "isDefault": false
+        },
+        {
+          "name": "teslaTransition",
+          "line": 55,
+          "isDefault": false
+        },
+        {
+          "name": "brand",
+          "line": 58,
+          "isDefault": false
+        },
+        {
+          "name": "gray",
+          "line": 71,
+          "isDefault": false
+        },
+        {
+          "name": "green",
+          "line": 84,
+          "isDefault": false
+        },
+        {
+          "name": "orange",
+          "line": 97,
+          "isDefault": false
+        },
+        {
+          "name": "red",
+          "line": 110,
+          "isDefault": false
+        },
+        {
+          "name": "getDesignTokens",
+          "line": 123,
+          "isDefault": false
+        },
+        {
+          "name": "colorSchemes",
+          "line": 268,
+          "isDefault": false
+        },
+        {
+          "name": "typography",
+          "line": 365,
+          "isDefault": false
+        },
+        {
+          "name": "shape",
+          "line": 367,
+          "isDefault": false
+        },
+        {
+          "name": "shadows",
+          "line": 376,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getDesignTokens",
+          "callee": "alpha",
+          "lineNumber": 157
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "alpha",
+          "lineNumber": 168
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "alpha",
+          "lineNumber": 168
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "alpha",
+          "lineNumber": 169
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "alpha",
+          "lineNumber": 169
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 204
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 210
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 216
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 222
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 228
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 234
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 241
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 248
+        },
+        {
+          "caller": "getDesignTokens",
+          "callee": "defaultTheme.typography.pxToRem",
+          "lineNumber": 255
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 14,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/shared/ui/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 12,
+      "nonEmptyLines": 12,
+      "exports": [
+        {
+          "name": "PageLoader",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "PageLoaderProps",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "ErrorState",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "ErrorStateProps",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "EmptyState",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "EmptyStateProps",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "PermissionDenied",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "PermissionDeniedProps",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "ConfirmDialog",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "ConfirmDialogProps",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "ErrorAlerts",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "InfoLabel",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 12,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { connectDroneTelemetry } from "../../mission-runtime/api/telemetryConnectApi";
 import {
   fetchWarehousePreflight,
   type WarehouseGoPreflight,
@@ -156,7 +155,9 @@ export function useRunWarehousePreflight(token: string | null) {
 
     const run = runQuery.data;
     if (run.status === "running") {
-      if (run.snapshot) setResult(run.snapshot);
+      if (run.snapshot) {
+        window.queueMicrotask(() => setResult(run.snapshot ?? null));
+      }
       return;
     }
     if (handledRunIdRef.current === run.run_id) return;
@@ -241,13 +242,6 @@ export function useRunWarehousePreflight(token: string | null) {
       setError(null);
       connectWarningRef.current = null;
       deadlineRef.current = Date.now() + (options?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-
-      void connectDroneTelemetry(token, "warehouse_scan", "indoor_local").catch((err) => {
-        connectWarningRef.current =
-          err instanceof Error
-            ? `Drone telemetry connect failed: ${err.message}`
-            : "Drone telemetry connect failed.";
-      });
 
       const runPromise = (async () => {
         try {

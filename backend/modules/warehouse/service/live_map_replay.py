@@ -377,6 +377,10 @@ def _build_disk_live_map_snapshot_uncached(
             chunk_counts=dict(manifest_model.chunk_counts),
             point_counts=dict(manifest_model.point_counts),
             missing_topics=list(manifest_model.missing_topics),
+            source_quality=dict(manifest_model.source_quality),
+            chunk_quality=list(manifest_model.chunk_quality),
+            rack_face_coverage=dict(manifest_model.rack_face_coverage),
+            coverage_repair=dict(manifest_model.coverage_repair),
         )
     update = WarehouseLiveMapUpdate(
         flight_id=client_flight_id,

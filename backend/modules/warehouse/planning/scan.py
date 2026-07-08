@@ -1342,6 +1342,8 @@ class WarehouseScanMission:
             summary["quality_evidence"] = manifest.quality_evidence
             summary["localization_quality"] = manifest.localization_quality
             summary["map_quality"] = manifest.map_quality
+            summary["rack_face_coverage"] = manifest.rack_face_coverage
+            summary["coverage_repair"] = manifest.coverage_repair
         if diagnostics.get("probe_failed"):
             summary["probe_failed"] = True
         else:

@@ -1,0 +1,85 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 1,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "backend/Dockerfile",
+      "language": "dockerfile",
+      "fileCategory": "infra",
+      "totalLines": 21,
+      "nonEmptyLines": 14,
+      "services": [
+        {
+          "name": "python",
+          "image": "python:3.11-slim",
+          "ports": [
+            8000
+          ],
+          "startLine": 1,
+          "endLine": 22
+        }
+      ],
+      "steps": [
+        {
+          "name": "FROM python:3.11-slim",
+          "startLine": 1,
+          "endLine": 1
+        },
+        {
+          "name": "ENV PYTHONDONTWRITEBYTECODE=1 \\",
+          "startLine": 3,
+          "endLine": 3
+        },
+        {
+          "name": "WORKDIR /app",
+          "startLine": 7,
+          "endLine": 7
+        },
+        {
+          "name": "RUN apt-get update \\",
+          "startLine": 9,
+          "endLine": 9
+        },
+        {
+          "name": "COPY requirements.txt /app/requirements.txt",
+          "startLine": 13,
+          "endLine": 13
+        },
+        {
+          "name": "RUN pip install --upgrade pip && pip install -r /app/requirement",
+          "startLine": 14,
+          "endLine": 14
+        },
+        {
+          "name": "COPY backend /app/backend",
+          "startLine": 16,
+          "endLine": 16
+        },
+        {
+          "name": "COPY pyproject.toml /app/pyproject.toml",
+          "startLine": 17,
+          "endLine": 17
+        },
+        {
+          "name": "EXPOSE 8000",
+          "startLine": 19,
+          "endLine": 19
+        },
+        {
+          "name": "CMD [\"uvicorn\", \"backend.entrypoints.api.app:app\", \"--host\", \"0.",
+          "startLine": 21,
+          "endLine": 21
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "serviceCount": 1,
+        "stepCount": 10
+      }
+    }
+  ]
+}

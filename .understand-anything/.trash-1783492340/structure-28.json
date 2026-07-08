@@ -1,0 +1,5341 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 23,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 1268,
+      "nonEmptyLines": 1125,
+      "functions": [
+        {
+          "name": "CesiumMap",
+          "startLine": 54,
+          "endLine": 1268,
+          "params": [
+            "{\n  center,\n  zoom,\n  viewMode,\n  waypoints,\n  droneCenter,\n  headingDeg,\n  onPickLatLng,\n  drawMode = \"none\",\n  onDrawComplete,\n  onBoundaryDrawStarted,\n  onBoundaryDrawProgress,\n  fieldBoundary = null,\n  onFieldBoundaryClick,\n  drawnBoundarySelected = false,\n  plannedRoute = null,\n  exclusionZones = EMPTY_ZONES,\n  fieldTilesetUrl = null,\n  planningAltitudeM = 25,\n  lockCameraToPlanningAltitude = false,\n  useWorldTerrain = true,\n  focusRing = null,\n  focusRequestToken,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "CesiumMap",
+          "line": 54,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 78
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 79
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 80
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 83
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 86
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 87
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 88
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 89
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 90
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 91
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 92
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 93
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 94
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 95
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 96
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 97
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 98
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 99
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 100
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 101
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 102
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 103
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 104
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 105
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 106
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 107
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 108
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 109
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 110
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 113
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 115
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 119
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 123
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 127
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 131
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 135
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 139
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useMemo",
+          "lineNumber": 143
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "Number.isFinite",
+          "lineNumber": 145
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useMemo",
+          "lineNumber": 151
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "computeFieldCameraView",
+          "lineNumber": 153
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "Boolean",
+          "lineNumber": 156
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "fieldCameraView?.center.lat.toFixed",
+          "lineNumber": 158
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "fieldCameraView?.center.lng.toFixed",
+          "lineNumber": 158
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "center.lat.toFixed",
+          "lineNumber": 159
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "center.lng.toFixed",
+          "lineNumber": 159
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 161
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 168
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 169
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 173
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 182
+        },
+        {
+          "caller": "clearTimer",
+          "callee": "clearTimeout",
+          "lineNumber": 188
+        },
+        {
+          "caller": "startInteraction",
+          "callee": "clearTimer",
+          "lineNumber": 194
+        },
+        {
+          "caller": "keepAlive",
+          "callee": "clearTimer",
+          "lineNumber": 200
+        },
+        {
+          "caller": "keepAlive",
+          "callee": "setTimeout",
+          "lineNumber": 201
+        },
+        {
+          "caller": "endInteraction",
+          "callee": "clearTimer",
+          "lineNumber": 207
+        },
+        {
+          "caller": "endInteraction",
+          "callee": "setTimeout",
+          "lineNumber": 208
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "el.addEventListener",
+          "lineNumber": 213
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "el.addEventListener",
+          "lineNumber": 214
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "el.addEventListener",
+          "lineNumber": 215
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "document.addEventListener",
+          "lineNumber": 217
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "document.addEventListener",
+          "lineNumber": 218
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "document.addEventListener",
+          "lineNumber": 219
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "document.addEventListener",
+          "lineNumber": 220
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "el.addEventListener",
+          "lineNumber": 221
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "el.removeEventListener",
+          "lineNumber": 224
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "el.removeEventListener",
+          "lineNumber": 225
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "el.removeEventListener",
+          "lineNumber": 226
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "document.removeEventListener",
+          "lineNumber": 227
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "document.removeEventListener",
+          "lineNumber": 228
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "document.removeEventListener",
+          "lineNumber": 229
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "document.removeEventListener",
+          "lineNumber": 230
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "el.removeEventListener",
+          "lineNumber": 231
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "clearTimer",
+          "lineNumber": 232
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useRef",
+          "lineNumber": 236
+        },
+        {
+          "caller": "updateDroneEntity",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 246
+        },
+        {
+          "caller": "updateDroneEntity",
+          "callee": "clamp",
+          "lineNumber": 252
+        },
+        {
+          "caller": "updateDroneEntity",
+          "callee": "Number.isFinite",
+          "lineNumber": 253
+        },
+        {
+          "caller": "updateDroneEntity",
+          "callee": "CesiumModule.Cartesian3.fromDegrees",
+          "lineNumber": 257
+        },
+        {
+          "caller": "updateDroneEntity",
+          "callee": "viewer.entities.add",
+          "lineNumber": 263
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 294
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "(async () => {\n      const CesiumModule = await import(\"cesium\");\n      if (cancelled) return;\n\n      const token = import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined;\n      if (token) CesiumModule.Ion.defaultAccessToken = token;\n\n      CesiumRef.current = CesiumModule;\n\n      if (!hostRef.current) return;\n\n      const viewer = new CesiumModule.Viewer(hostRef.current, {\n        animation: false,\n        timeline: false,\n        geocoder: false,\n        baseLayerPicker: false,\n        homeButton: false,\n        sceneModePicker: false,\n        navigationHelpButton: false,\n        infoBox: false,\n        selectionIndicator: false,\n        fullscreenButton: false,\n        shouldAnimate: true,\n      });\n\n      viewer.scene.globe.depthTestAgainstTerrain = false;\n\n      if (useWorldTerrain) {\n        try {\n          if (CesiumModule.createWorldTerrainAsync) {\n            viewer.terrainProvider =\n              await CesiumModule.createWorldTerrainAsync();\n          } else if (\n            typeof (CesiumModule as any).createWorldTerrain === \"function\"\n          ) {\n            viewer.terrainProvider = (CesiumModule as any).createWorldTerrain();\n          }\n        } catch {\n          // keep default terrain\n        }\n      }\n\n      if (cancelled) {\n        try {\n          viewer.destroy();\n        } catch {}\n        return;\n      }\n\n      viewerRef.current = viewer;\n\n      const handler = new CesiumModule.ScreenSpaceEventHandler(\n        viewer.scene.canvas,\n      );\n      handler.setInputAction((movement: any) => {\n        if (drawModeRef.current !== \"none\") return;\n\n        const picked = viewer.scene.pick(movement.position);\n        if (\n          picked?.id &&\n          picked.id === fieldBoundaryEntityRef.current\n        ) {\n          onFieldBoundaryClickRef.current?.();\n          return;\n        }\n\n        if (!onPickLatLngRef.current) return;\n        const scene = viewer.scene;\n        let cartesian: Cesium.Cartesian3 | null =\n          scene.pickPosition?.(movement.position) ?? null;\n        if (!cartesian) {\n          cartesian =\n            viewer.camera.pickEllipsoid(\n              movement.position,\n              scene.globe.ellipsoid,\n            ) ?? null;\n        }\n        if (!cartesian) return;\n\n        const carto = CesiumModule.Cartographic.fromCartesian(cartesian);\n        const lat = CesiumModule.Math.toDegrees(carto.latitude);\n        const lng = CesiumModule.Math.toDegrees(carto.longitude);\n        if (Number.isFinite(lat) && Number.isFinite(lng)) {\n          onPickLatLngRef.current({ lat, lng });\n        }\n      }, CesiumModule.ScreenSpaceEventType.LEFT_CLICK);\n      clickHandlerRef.current = handler;\n\n      const initialTarget = fieldCameraView?.center ?? droneCenter ?? center;\n      const initialHeight =\n        fieldCameraView?.topHeight ?? zoomToHeightMeters(zoom);\n      viewer.camera.setView({\n        destination: CesiumModule.Cartesian3.fromDegrees(\n          initialTarget.lng,\n          initialTarget.lat,\n          initialHeight,\n        ),\n      });\n\n      viewerReadyRef.current = true;\n      drawEntities();\n      updateDroneEntity();\n      void loadFieldTileset(fieldTilesetUrlRef.current);\n      applyCameraMode();\n    })",
+          "lineNumber": 297
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "import",
+          "lineNumber": 298
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.createWorldTerrainAsync",
+          "lineNumber": 328
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "(CesiumModule as any).createWorldTerrain",
+          "lineNumber": 332
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.destroy",
+          "lineNumber": 341
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "handler.setInputAction",
+          "lineNumber": 351
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.scene.pick",
+          "lineNumber": 354
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "onFieldBoundaryClickRef.current",
+          "lineNumber": 359
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "scene.pickPosition",
+          "lineNumber": 366
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.camera.pickEllipsoid",
+          "lineNumber": 369
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.Cartographic.fromCartesian",
+          "lineNumber": 376
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.Math.toDegrees",
+          "lineNumber": 377
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.Math.toDegrees",
+          "lineNumber": 378
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "Number.isFinite",
+          "lineNumber": 379
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "Number.isFinite",
+          "lineNumber": 379
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "onPickLatLngRef.current",
+          "lineNumber": 380
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "zoomToHeightMeters",
+          "lineNumber": 387
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.camera.setView",
+          "lineNumber": 388
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.Cartesian3.fromDegrees",
+          "lineNumber": 389
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawEntities",
+          "lineNumber": 397
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "updateDroneEntity",
+          "lineNumber": 398
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "loadFieldTileset",
+          "lineNumber": 399
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "applyCameraMode",
+          "lineNumber": 400
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 407
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "clickHandlerRef.current?.destroy",
+          "lineNumber": 411
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.scene.primitives.remove",
+          "lineNumber": 419
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer?.destroy",
+          "lineNumber": 427
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "viewer.scene.primitives.remove",
+          "lineNumber": 443
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "url.trim",
+          "lineNumber": 452
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "/\\.json(\\?|$)/i.test",
+          "lineNumber": 455
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "parsed.searchParams.get(\"path\")?.trim",
+          "lineNumber": 459
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "parsed.searchParams.get",
+          "lineNumber": 459
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "/\\.json$/i.test",
+          "lineNumber": 461
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "/\\.json$/i.test",
+          "lineNumber": 461
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "tilesetUrl.replace",
+          "lineNumber": 467
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "CesiumModule.Cesium3DTileset.fromUrl",
+          "lineNumber": 473
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "tileset.destroy",
+          "lineNumber": 483
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "viewer.scene.primitives.add",
+          "lineNumber": 490
+        },
+        {
+          "caller": "loadFieldTileset",
+          "callee": "console.error",
+          "lineNumber": 493
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 503
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 505
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 507
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 509
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "exclusionZoneEntityRefs.current.forEach",
+          "lineNumber": 510
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 510
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "waypointEntityRefs.current.forEach",
+          "lineNumber": 512
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 512
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "waypoints\n      .map((w) => ({ lat: w.lat, lng: w.lon }))\n      .filter",
+          "lineNumber": 515
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "waypoints\n      .map",
+          "lineNumber": 515
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "Number.isFinite",
+          "lineNumber": 517
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "Number.isFinite",
+          "lineNumber": 517
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "normalizeLonLatRing",
+          "lineNumber": 519
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Cartesian3.fromDegreesArray",
+          "lineNumber": 522
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "boundaryRing.flatMap",
+          "lineNumber": 523
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.add",
+          "lineNumber": 525
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString(boundaryColor).withAlpha",
+          "lineNumber": 528
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString",
+          "lineNumber": 528
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString",
+          "lineNumber": 532
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "normalizeLonLatRing",
+          "lineNumber": 541
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Cartesian3.fromDegreesArray",
+          "lineNumber": 543
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "ring.flatMap",
+          "lineNumber": 544
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.add",
+          "lineNumber": 546
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString(\"#d32f2f\").withAlpha",
+          "lineNumber": 550
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString",
+          "lineNumber": 550
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString",
+          "lineNumber": 552
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "exclusionZoneEntityRefs.current.push",
+          "lineNumber": 556
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "normalizeLonLatLine",
+          "lineNumber": 559
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Cartesian3.fromDegreesArray",
+          "lineNumber": 561
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "routeLine.flatMap",
+          "lineNumber": 562
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.add",
+          "lineNumber": 564
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString",
+          "lineNumber": 568
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "wp.forEach",
+          "lineNumber": 576
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.add",
+          "lineNumber": 577
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Cartesian3.fromDegrees",
+          "lineNumber": 578
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "waypointEntityRefs.current.push",
+          "lineNumber": 581
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "wp.flatMap",
+          "lineNumber": 585
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.add",
+          "lineNumber": 586
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Cartesian3.fromDegreesArray",
+          "lineNumber": 588
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Cartesian3.fromDegreesArray",
+          "lineNumber": 598
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "wp.flatMap",
+          "lineNumber": 599
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "viewer.entities.add",
+          "lineNumber": 601
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString(\"#1976d2\").withAlpha",
+          "lineNumber": 605
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString",
+          "lineNumber": 605
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "CesiumModule.Color.fromCssColorString",
+          "lineNumber": 607
+        },
+        {
+          "caller": "drawEntities",
+          "callee": "updateDroneEntity",
+          "lineNumber": 615
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 618
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawEntities",
+          "lineNumber": 619
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 622
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "updateDroneEntity",
+          "lineNumber": 623
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 626
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "loadFieldTileset",
+          "lineNumber": 627
+        },
+        {
+          "caller": "pickCartesianOnGlobe",
+          "callee": "scene.pickPosition",
+          "lineNumber": 638
+        },
+        {
+          "caller": "pickCartesianOnGlobe",
+          "callee": "CesiumModule.defined",
+          "lineNumber": 639
+        },
+        {
+          "caller": "pickCartesianOnGlobe",
+          "callee": "viewer.camera.getPickRay",
+          "lineNumber": 642
+        },
+        {
+          "caller": "pickCartesianOnGlobe",
+          "callee": "scene.globe.pick",
+          "lineNumber": 645
+        },
+        {
+          "caller": "cartesianToLngLat",
+          "callee": "CesiumModule.Cartographic.fromCartesian",
+          "lineNumber": 653
+        },
+        {
+          "caller": "cartesianToLngLat",
+          "callee": "CesiumModule.Math.toDegrees",
+          "lineNumber": 655
+        },
+        {
+          "caller": "cartesianToLngLat",
+          "callee": "CesiumModule.Math.toDegrees",
+          "lineNumber": 656
+        },
+        {
+          "caller": "clearDrawEntities",
+          "callee": "drawAnchorsRef.current.forEach",
+          "lineNumber": 664
+        },
+        {
+          "caller": "clearDrawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 664
+        },
+        {
+          "caller": "clearDrawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 668
+        },
+        {
+          "caller": "clearDrawEntities",
+          "callee": "viewer.entities.remove",
+          "lineNumber": 672
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "cartesianToLngLat",
+          "lineNumber": 697
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "cartesianToLngLat",
+          "lineNumber": 698
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "drawPositionsRef.current.slice",
+          "lineNumber": 701
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "pos.filter",
+          "lineNumber": 702
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "pos.map",
+          "lineNumber": 703
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "cartesianToLngLat",
+          "lineNumber": 703
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "completeShape",
+          "lineNumber": 706
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "onDrawCompleteRef.current",
+          "lineNumber": 707
+        },
+        {
+          "caller": "finishDraw",
+          "callee": "clearDrawEntities",
+          "lineNumber": 709
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 712
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawHandlerRef.current?.destroy",
+          "lineNumber": 718
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "clearDrawEntities",
+          "lineNumber": 722
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction",
+          "lineNumber": 726
+        },
+        {
+          "caller": "preventContextMenu",
+          "callee": "event.preventDefault",
+          "lineNumber": 735
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "canvas.addEventListener",
+          "lineNumber": 736
+        },
+        {
+          "caller": "getPreviewCartesians",
+          "callee": "drawPositionsRef.current.map",
+          "lineNumber": 742
+        },
+        {
+          "caller": "getPreviewCartesians",
+          "callee": "cartesianToLngLat",
+          "lineNumber": 743
+        },
+        {
+          "caller": "getPreviewCartesians",
+          "callee": "shapePreview(drawMode, coords).map",
+          "lineNumber": 745
+        },
+        {
+          "caller": "getPreviewCartesians",
+          "callee": "shapePreview",
+          "lineNumber": 745
+        },
+        {
+          "caller": "getPreviewCartesians",
+          "callee": "CesiumModule.Cartesian3.fromDegrees",
+          "lineNumber": 746
+        },
+        {
+          "caller": "ensureTempEntity",
+          "callee": "viewer.entities.add",
+          "lineNumber": 751
+        },
+        {
+          "caller": "ensureTempEntity",
+          "callee": "[\"polygon\", \"rectangle\", \"circle\", \"freehand\", \"triangle\"].includes",
+          "lineNumber": 764
+        },
+        {
+          "caller": "ensureTempEntity",
+          "callee": "viewer.entities.add",
+          "lineNumber": 768
+        },
+        {
+          "caller": "ensureTempEntity",
+          "callee": "getPreviewCartesians",
+          "lineNumber": 771
+        },
+        {
+          "caller": "ensureTempEntity",
+          "callee": "CesiumModule.Color.YELLOW.withAlpha",
+          "lineNumber": 774
+        },
+        {
+          "caller": "addAnchor",
+          "callee": "viewer.entities.add",
+          "lineNumber": 783
+        },
+        {
+          "caller": "addAnchor",
+          "callee": "drawAnchorsRef.current.push",
+          "lineNumber": 792
+        },
+        {
+          "caller": "committedDrawCoords",
+          "callee": "drawPositionsRef.current.slice",
+          "lineNumber": 797
+        },
+        {
+          "caller": "committedDrawCoords",
+          "callee": "pos.filter",
+          "lineNumber": 798
+        },
+        {
+          "caller": "committedDrawCoords",
+          "callee": "pos.map",
+          "lineNumber": 799
+        },
+        {
+          "caller": "committedDrawCoords",
+          "callee": "cartesianToLngLat",
+          "lineNumber": 799
+        },
+        {
+          "caller": "syncBoundaryDraw",
+          "callee": "isFlatBoundaryDrawMode",
+          "lineNumber": 803
+        },
+        {
+          "caller": "syncBoundaryDraw",
+          "callee": "onBoundaryDrawStartedRef.current",
+          "lineNumber": 804
+        },
+        {
+          "caller": "syncBoundaryDraw",
+          "callee": "committedDrawCoords",
+          "lineNumber": 805
+        },
+        {
+          "caller": "syncBoundaryDraw",
+          "callee": "onBoundaryDrawProgressRef.current",
+          "lineNumber": 806
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "handler.setInputAction",
+          "lineNumber": 809
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "pickCartesianOnGlobe",
+          "lineNumber": 810
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "addAnchor",
+          "lineNumber": 815
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "onDrawCompleteRef.current",
+          "lineNumber": 816
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "cartesianToLngLat",
+          "lineNumber": 818
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "clearDrawEntities",
+          "lineNumber": 820
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "ensureTempEntity",
+          "lineNumber": 824
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "c.clone",
+          "lineNumber": 833
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "addAnchor",
+          "lineNumber": 834
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.entities.add",
+          "lineNumber": 837
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "syncBoundaryDraw",
+          "lineNumber": 841
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "finishDraw",
+          "lineNumber": 850
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawPositionsRef.current.push",
+          "lineNumber": 857
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "addAnchor",
+          "lineNumber": 858
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "c.clone",
+          "lineNumber": 860
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawPositionsRef.current.push",
+          "lineNumber": 862
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.entities.add",
+          "lineNumber": 864
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "syncBoundaryDraw",
+          "lineNumber": 868
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawPositionsRef.current.filter",
+          "lineNumber": 874
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawPositionsRef.current.map",
+          "lineNumber": 879
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "cartesianToLngLat",
+          "lineNumber": 880
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "cartesianToLngLat",
+          "lineNumber": 882
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "isNearLonLat",
+          "lineNumber": 886
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "finishDraw",
+          "lineNumber": 888
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawPositionsRef.current.push",
+          "lineNumber": 892
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "addAnchor",
+          "lineNumber": 893
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "c.clone",
+          "lineNumber": 895
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawPositionsRef.current.push",
+          "lineNumber": 897
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "syncBoundaryDraw",
+          "lineNumber": 903
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "handler.setInputAction",
+          "lineNumber": 906
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "pickCartesianOnGlobe",
+          "lineNumber": 908
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "clearDrawEntities",
+          "lineNumber": 910
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "ensureTempEntity",
+          "lineNumber": 914
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "syncBoundaryDraw",
+          "lineNumber": 915
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "handler.setInputAction",
+          "lineNumber": 918
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "pickCartesianOnGlobe",
+          "lineNumber": 925
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "pickCartesianOnGlobe",
+          "lineNumber": 939
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.Cartesian3.distance",
+          "lineNumber": 947
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "drawPositionsRef.current.push",
+          "lineNumber": 948
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "handler.setInputAction",
+          "lineNumber": 951
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "finishDraw",
+          "lineNumber": 953
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "handler.setInputAction",
+          "lineNumber": 956
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "finishDraw",
+          "lineNumber": 957
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "handler.setInputAction",
+          "lineNumber": 959
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "finishDraw",
+          "lineNumber": 960
+        },
+        {
+          "caller": "onKey",
+          "callee": "clearDrawEntities",
+          "lineNumber": 964
+        },
+        {
+          "caller": "onKey",
+          "callee": "finishDraw",
+          "lineNumber": 965
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "window.addEventListener",
+          "lineNumber": 967
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "window.removeEventListener",
+          "lineNumber": 970
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "canvas.removeEventListener",
+          "lineNumber": 971
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "handler.destroy",
+          "lineNumber": 973
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "clearDrawEntities",
+          "lineNumber": 976
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 985
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "clamp",
+          "lineNumber": 996
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "Number.isFinite",
+          "lineNumber": 997
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "zoomToHeightMeters",
+          "lineNumber": 1003
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "clamp",
+          "lineNumber": 1009
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "Math.max",
+          "lineNumber": 1010
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "Math.round",
+          "lineNumber": 1010
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "clamp",
+          "lineNumber": 1012
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "Math.max",
+          "lineNumber": 1013
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "Math.round",
+          "lineNumber": 1013
+        },
+        {
+          "caller": "setView",
+          "callee": "CesiumModule.Cartesian3.fromDegrees",
+          "lineNumber": 1036
+        },
+        {
+          "caller": "setView",
+          "callee": "CesiumModule.Math.toRadians",
+          "lineNumber": 1043
+        },
+        {
+          "caller": "setView",
+          "callee": "viewer.camera.flyTo",
+          "lineNumber": 1047
+        },
+        {
+          "caller": "setView",
+          "callee": "viewer.camera.setView",
+          "lineNumber": 1049
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "[\n        viewMode,\n        target.lat.toFixed(7),\n        target.lng.toFixed(7),\n        Math.round(baseHeight),\n        fieldView ? \"field\" : \"center\",\n      ].join",
+          "lineNumber": 1054
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "target.lat.toFixed",
+          "lineNumber": 1056
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "target.lng.toFixed",
+          "lineNumber": 1057
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "Math.round",
+          "lineNumber": 1058
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "setView",
+          "lineNumber": 1061
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "CesiumModule.Math.toRadians",
+          "lineNumber": 1066
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "[\n        viewMode,\n        target.lat.toFixed(7),\n        target.lng.toFixed(7),\n        Math.round(tiltedHeight),\n        fieldView ? \"field\" : \"center\",\n      ].join",
+          "lineNumber": 1074
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "target.lat.toFixed",
+          "lineNumber": 1076
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "target.lng.toFixed",
+          "lineNumber": 1077
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "Math.round",
+          "lineNumber": 1078
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "setView",
+          "lineNumber": 1081
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "CesiumModule.Math.toRadians",
+          "lineNumber": 1086
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "setView",
+          "lineNumber": 1097
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "CesiumModule.Math.toRadians",
+          "lineNumber": 1102
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "setView",
+          "lineNumber": 1106
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "CesiumModule.Math.toRadians",
+          "lineNumber": 1111
+        },
+        {
+          "caller": "getCurrentCameraHeight",
+          "callee": "CesiumModule.Cartographic.fromCartesian",
+          "lineNumber": 1121
+        },
+        {
+          "caller": "getCurrentCameraHeight",
+          "callee": "Number.isFinite",
+          "lineNumber": 1125
+        },
+        {
+          "caller": "tickFPV",
+          "callee": "Math.max",
+          "lineNumber": 1143
+        },
+        {
+          "caller": "tickFPV",
+          "callee": "getCurrentCameraHeight",
+          "lineNumber": 1143
+        },
+        {
+          "caller": "tickFPV",
+          "callee": "setView",
+          "lineNumber": 1146
+        },
+        {
+          "caller": "tickFPV",
+          "callee": "requestAnimationFrame",
+          "lineNumber": 1156
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "performance.now",
+          "lineNumber": 1167
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "Math.max",
+          "lineNumber": 1172
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "getCurrentCameraHeight",
+          "lineNumber": 1172
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "Math.cos",
+          "lineNumber": 1174
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "Math.sin",
+          "lineNumber": 1176
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "Math.cos",
+          "lineNumber": 1177
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "Math.atan2",
+          "lineNumber": 1180
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "setView",
+          "lineNumber": 1181
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "CesiumModule.Math.toRadians",
+          "lineNumber": 1186
+        },
+        {
+          "caller": "tickOrbit",
+          "callee": "requestAnimationFrame",
+          "lineNumber": 1191
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "tickFPV",
+          "lineNumber": 1196
+        },
+        {
+          "caller": "applyCameraMode",
+          "callee": "tickOrbit",
+          "lineNumber": 1201
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 1206
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "applyCameraMode",
+          "lineNumber": 1207
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 1209
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "useEffect",
+          "lineNumber": 1225
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "computeFieldCameraView",
+          "lineNumber": 1233
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.Math.toRadians",
+          "lineNumber": 1240
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.Math.toRadians",
+          "lineNumber": 1241
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "viewer.camera.flyTo",
+          "lineNumber": 1242
+        },
+        {
+          "caller": "CesiumMap",
+          "callee": "CesiumModule.Cartesian3.fromDegrees",
+          "lineNumber": 1243
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/adapters/CesiumMapLazy.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 37,
+      "nonEmptyLines": 34,
+      "functions": [
+        {
+          "name": "CesiumMapLazy",
+          "startLine": 13,
+          "endLine": 37,
+          "params": [
+            "props"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "CesiumMapLazy",
+          "line": 13,
+          "isDefault": true
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/adapters/LeafletMap.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 381,
+      "nonEmptyLines": 346,
+      "functions": [
+        {
+          "name": "toLatLng",
+          "startLine": 47,
+          "endLine": 49,
+          "params": [
+            "p"
+          ]
+        },
+        {
+          "name": "makeWaypointIcon",
+          "startLine": 51,
+          "endLine": 58,
+          "params": [
+            "label"
+          ]
+        },
+        {
+          "name": "makeDroneIcon",
+          "startLine": 60,
+          "endLine": 67,
+          "params": []
+        },
+        {
+          "name": "LeafletMap",
+          "startLine": 69,
+          "endLine": 381,
+          "params": [
+            "{\n  center,\n  zoom,\n  waypoints = [],\n  droneCenter = null,\n  userCenter = null,\n  onPickLatLng,\n  drawMode = \"none\",\n  onDrawComplete,\n  onBoundaryDrawStarted,\n  onBoundaryDrawProgress,\n  fieldBoundary = null,\n  savedFields = [],\n  selectedFieldId = null,\n  onSavedFieldClick,\n  onFieldBoundaryClick,\n  drawnBoundarySelected = false,\n  plannedRoute = null,\n  exclusionZones = [],\n  height = 400,\n  focusRing = null,\n  focusRequestToken,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "LeafletMap",
+          "line": 69,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "makeWaypointIcon",
+          "callee": "L.divIcon",
+          "lineNumber": 52
+        },
+        {
+          "caller": "makeDroneIcon",
+          "callee": "L.divIcon",
+          "lineNumber": 61
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useRef",
+          "lineNumber": 92
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useRef",
+          "lineNumber": 93
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useRef",
+          "lineNumber": 94
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useRef",
+          "lineNumber": 95
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useRef",
+          "lineNumber": 96
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useRef",
+          "lineNumber": 97
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useRef",
+          "lineNumber": 98
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useCallback",
+          "lineNumber": 99
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "mapRef.current.doubleClickZoom.enable",
+          "lineNumber": 101
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "mapRef.current.doubleClickZoom.disable",
+          "lineNumber": 102
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useMemo",
+          "lineNumber": 105
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "drawLayers.clearLayers",
+          "lineNumber": 110
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "shapePreview",
+          "lineNumber": 111
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "coords.forEach",
+          "lineNumber": 112
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.circleMarker([lat, lng], {\n          radius: 5,\n          color: \"#1976d2\",\n          fillColor: \"#1976d2\",\n          fillOpacity: 0.9,\n          weight: 2,\n        }).addTo",
+          "lineNumber": 113
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.circleMarker",
+          "lineNumber": 113
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polyline(\n          previewCoords.map(([lng, lat]) => [lat, lng] as LatLngExpression),\n          { color: \"#1976d2\", weight: 3, opacity: 0.9, dashArray: \"6 6\" },\n        ).addTo",
+          "lineNumber": 122
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polyline",
+          "lineNumber": 122
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "previewCoords.map",
+          "lineNumber": 123
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "[\"polygon\", \"rectangle\", \"circle\", \"triangle\", \"freehand\"].includes",
+          "lineNumber": 128
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon(\n          closeRing(previewCoords).map(\n            ([lng, lat]) => [lat, lng] as LatLngExpression,\n          ),\n          {\n            color: \"#1976d2\",\n            weight: 2,\n            fillColor: \"#1976d2\",\n            fillOpacity: 0.16,\n          },\n        ).addTo",
+          "lineNumber": 133
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon",
+          "lineNumber": 133
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "closeRing(previewCoords).map",
+          "lineNumber": 134
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "closeRing",
+          "lineNumber": 134
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useFlatMapDrawing",
+          "lineNumber": 149
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useEffect",
+          "lineNumber": 160
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useEffect",
+          "lineNumber": 164
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.map",
+          "lineNumber": 167
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "toLatLng",
+          "lineNumber": 168
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.tileLayer(\"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png\", {\n      maxZoom: 20,\n      attribution:\n        '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OSM</a>',\n    }).addTo",
+          "lineNumber": 174
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.tileLayer",
+          "lineNumber": 174
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.layerGroup().addTo",
+          "lineNumber": 180
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.layerGroup",
+          "lineNumber": 180
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.layerGroup().addTo",
+          "lineNumber": 181
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.layerGroup",
+          "lineNumber": 181
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.layerGroup().addTo",
+          "lineNumber": 182
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.layerGroup",
+          "lineNumber": 182
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.whenReady",
+          "lineNumber": 188
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "setTimeout",
+          "lineNumber": 189
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.invalidateSize",
+          "lineNumber": 189
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.on",
+          "lineNumber": 192
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "drawingRef.current?.handleClick",
+          "lineNumber": 193
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.on",
+          "lineNumber": 195
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "drawingRef.current?.startFreehand",
+          "lineNumber": 196
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.dragging.disable",
+          "lineNumber": 197
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.on",
+          "lineNumber": 199
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "drawingRef.current?.movePointer",
+          "lineNumber": 200
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.on",
+          "lineNumber": 202
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "drawingRef.current?.endFreehand",
+          "lineNumber": 203
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.dragging.enable",
+          "lineNumber": 203
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.on",
+          "lineNumber": 205
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "drawingRef.current?.finishDrawing",
+          "lineNumber": 205
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.on",
+          "lineNumber": 206
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "drawingRef.current?.finishDrawing",
+          "lineNumber": 206
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.remove",
+          "lineNumber": 209
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useEffect",
+          "lineNumber": 217
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "mapRef.current?.setView",
+          "lineNumber": 218
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "toLatLng",
+          "lineNumber": 218
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useEffect",
+          "lineNumber": 221
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "ringLatLngBounds",
+          "lineNumber": 224
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "map.fitBounds",
+          "lineNumber": 226
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.latLngBounds",
+          "lineNumber": 227
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useMemo",
+          "lineNumber": 235
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "waypoints.map",
+          "lineNumber": 236
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useEffect",
+          "lineNumber": 240
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "layers.clearLayers",
+          "lineNumber": 244
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "savedFields.forEach",
+          "lineNumber": 247
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon(\n        field.ring.map(([lng, lat]) => [lat, lng] as LatLngExpression),\n        {\n          color: field.id === selectedFieldId ? \"#1976d2\" : \"#1565c0\",\n          weight: field.id === selectedFieldId ? 4 : 2,\n          fillColor: \"#1565c0\",\n          fillOpacity: 0.08,\n        },\n      )\n        .bindTooltip(field.name ?? `Field #${field.id}`, { permanent: false })\n        .on(\"click\", (event) => {\n          if (drawMode !== \"none\") return;\n          event.originalEvent.stopPropagation();\n          onSavedFieldClick?.(field.id);\n        })\n        .addTo",
+          "lineNumber": 249
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon(\n        field.ring.map(([lng, lat]) => [lat, lng] as LatLngExpression),\n        {\n          color: field.id === selectedFieldId ? \"#1976d2\" : \"#1565c0\",\n          weight: field.id === selectedFieldId ? 4 : 2,\n          fillColor: \"#1565c0\",\n          fillOpacity: 0.08,\n        },\n      )\n        .bindTooltip(field.name ?? `Field #${field.id}`, { permanent: false })\n        .on",
+          "lineNumber": 249
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon(\n        field.ring.map(([lng, lat]) => [lat, lng] as LatLngExpression),\n        {\n          color: field.id === selectedFieldId ? \"#1976d2\" : \"#1565c0\",\n          weight: field.id === selectedFieldId ? 4 : 2,\n          fillColor: \"#1565c0\",\n          fillOpacity: 0.08,\n        },\n      )\n        .bindTooltip",
+          "lineNumber": 249
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon",
+          "lineNumber": 249
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "field.ring.map",
+          "lineNumber": 250
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "event.originalEvent.stopPropagation",
+          "lineNumber": 261
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "onSavedFieldClick",
+          "lineNumber": 262
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon(\n        boundary.map(([lng, lat]) => [lat, lng] as LatLngExpression),\n        {\n          color: drawnBoundarySelected ? \"#1976d2\" : \"#1565c0\",\n          weight: drawnBoundarySelected ? 4 : 2,\n          fillColor: \"#1565c0\",\n          fillOpacity: drawnBoundarySelected ? 0.18 : 0.12,\n        },\n      )\n        .on(\"click\", (event) => {\n          if (drawMode !== \"none\") return;\n          event.originalEvent.stopPropagation();\n          onFieldBoundaryClick?.();\n        })\n        .addTo",
+          "lineNumber": 268
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon(\n        boundary.map(([lng, lat]) => [lat, lng] as LatLngExpression),\n        {\n          color: drawnBoundarySelected ? \"#1976d2\" : \"#1565c0\",\n          weight: drawnBoundarySelected ? 4 : 2,\n          fillColor: \"#1565c0\",\n          fillOpacity: drawnBoundarySelected ? 0.18 : 0.12,\n        },\n      )\n        .on",
+          "lineNumber": 268
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon",
+          "lineNumber": 268
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "boundary.map",
+          "lineNumber": 269
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "event.originalEvent.stopPropagation",
+          "lineNumber": 279
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "onFieldBoundaryClick",
+          "lineNumber": 280
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "exclusionZones.forEach",
+          "lineNumber": 285
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon(\n        zone.map(([lng, lat]) => [lat, lng] as LatLngExpression),\n        {\n          color: \"#b71c1c\",\n          weight: 2,\n          fillColor: \"#d32f2f\",\n          fillOpacity: 0.24,\n        },\n      ).addTo",
+          "lineNumber": 287
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polygon",
+          "lineNumber": 287
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "zone.map",
+          "lineNumber": 288
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polyline(\n        planned.map(([lng, lat]) => [lat, lng] as LatLngExpression),\n        { color: \"#2e7d32\", weight: 4, opacity: 0.85 },\n      ).addTo",
+          "lineNumber": 300
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polyline",
+          "lineNumber": 300
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "planned.map",
+          "lineNumber": 301
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "waypoints.forEach",
+          "lineNumber": 306
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.marker([point.lat, point.lon], {\n        icon: makeWaypointIcon(String(index + 1)),\n      }).addTo",
+          "lineNumber": 307
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.marker",
+          "lineNumber": 307
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "makeWaypointIcon",
+          "lineNumber": 308
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "String",
+          "lineNumber": 308
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polyline(route, { color: \"#1976d2\", weight: 3, opacity: 0.85 }).addTo",
+          "lineNumber": 313
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.polyline",
+          "lineNumber": 313
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "useEffect",
+          "lineNumber": 332
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "liveLayers.clearLayers",
+          "lineNumber": 336
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.marker(toLatLng(droneCenter), {\n        icon: makeDroneIcon(),\n        zIndexOffset: 1000,\n      })\n        .bindTooltip(\"DRONE\", { permanent: false })\n        .addTo",
+          "lineNumber": 339
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.marker(toLatLng(droneCenter), {\n        icon: makeDroneIcon(),\n        zIndexOffset: 1000,\n      })\n        .bindTooltip",
+          "lineNumber": 339
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.marker",
+          "lineNumber": 339
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "toLatLng",
+          "lineNumber": 339
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "makeDroneIcon",
+          "lineNumber": 340
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.circleMarker(toLatLng(userCenter), {\n        radius: 7,\n        color: \"#2e7d32\",\n        fillColor: \"#2e7d32\",\n        fillOpacity: 0.9,\n      })\n        .bindTooltip(\"You\", { permanent: false })\n        .addTo",
+          "lineNumber": 348
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.circleMarker(toLatLng(userCenter), {\n        radius: 7,\n        color: \"#2e7d32\",\n        fillColor: \"#2e7d32\",\n        fillOpacity: 0.9,\n      })\n        .bindTooltip",
+          "lineNumber": 348
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "L.circleMarker",
+          "lineNumber": 348
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "toLatLng",
+          "lineNumber": 348
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "Number.isFinite",
+          "lineNumber": 359
+        },
+        {
+          "caller": "LeafletMap",
+          "callee": "Number.isFinite",
+          "lineNumber": 359
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 586,
+      "nonEmptyLines": 548,
+      "functions": [
+        {
+          "name": "makeMarkerElement",
+          "startLine": 63,
+          "endLine": 79,
+          "params": [
+            "label",
+            "color"
+          ]
+        },
+        {
+          "name": "makeDroneMarkerElement",
+          "startLine": 81,
+          "endLine": 96,
+          "params": []
+        },
+        {
+          "name": "MapLibreMap",
+          "startLine": 98,
+          "endLine": 586,
+          "params": [
+            "{\n  center,\n  zoom,\n  waypoints = [],\n  droneCenter = null,\n  userCenter = null,\n  onPickLatLng,\n  drawMode = \"none\",\n  onDrawComplete,\n  onBoundaryDrawStarted,\n  onBoundaryDrawProgress,\n  fieldBoundary = null,\n  savedFields = [],\n  selectedFieldId = null,\n  onSavedFieldClick,\n  onFieldBoundaryClick,\n  drawnBoundarySelected = false,\n  plannedRoute = null,\n  exclusionZones = [],\n  height = 400,\n  focusRing = null,\n  focusRequestToken,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MapLibreMap",
+          "line": 98,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "makeMarkerElement",
+          "callee": "document.createElement",
+          "lineNumber": 64
+        },
+        {
+          "caller": "makeDroneMarkerElement",
+          "callee": "document.createElement",
+          "lineNumber": 82
+        },
+        {
+          "caller": "makeDroneMarkerElement",
+          "callee": "document.createElement",
+          "lineNumber": 87
+        },
+        {
+          "caller": "makeDroneMarkerElement",
+          "callee": "el.appendChild",
+          "lineNumber": 93
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 121
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 122
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 123
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 124
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 125
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 126
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 127
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 130
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useRef",
+          "lineNumber": 133
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useCallback",
+          "lineNumber": 134
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "mapRef.current.doubleClickZoom.enable",
+          "lineNumber": 136
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "mapRef.current.doubleClickZoom.disable",
+          "lineNumber": 137
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useCallback",
+          "lineNumber": 139
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "isNearLonLatPixels",
+          "lineNumber": 142
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "isNearLonLat",
+          "lineNumber": 142
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "isNearLonLat",
+          "lineNumber": 144
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useFlatMapDrawing",
+          "lineNumber": 146
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "map.isStyleLoaded",
+          "lineNumber": 164
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "shapePreview",
+          "lineNumber": 165
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "coords.map",
+          "lineNumber": 166
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "features.push",
+          "lineNumber": 172
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "[\"polygon\", \"rectangle\", \"circle\", \"triangle\", \"freehand\"].includes",
+          "lineNumber": 179
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "features.push",
+          "lineNumber": 184
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "closeRing",
+          "lineNumber": 187
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "map.getSource",
+          "lineNumber": 192
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "source.setData",
+          "lineNumber": 196
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "map.addSource",
+          "lineNumber": 200
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "map.addLayer",
+          "lineNumber": 201
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "map.addLayer",
+          "lineNumber": 208
+        },
+        {
+          "caller": "updateDrawingPreview",
+          "callee": "map.addLayer",
+          "lineNumber": 219
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useEffect",
+          "lineNumber": 233
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.addControl",
+          "lineNumber": 243
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.once",
+          "lineNumber": 247
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "setTimeout",
+          "lineNumber": 248
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.resize",
+          "lineNumber": 248
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "updateDrawingPreview",
+          "lineNumber": 249
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.on",
+          "lineNumber": 251
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "drawingRef.current?.handleClick",
+          "lineNumber": 253
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.getLayer",
+          "lineNumber": 257
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.queryRenderedFeatures",
+          "lineNumber": 258
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "overlayFeatures.find",
+          "lineNumber": 261
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "onSavedFieldClickRef.current",
+          "lineNumber": 267
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "onSavedFieldClickRef.current",
+          "lineNumber": 271
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "Number",
+          "lineNumber": 271
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "overlayFeatures.find",
+          "lineNumber": 275
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "onFieldBoundaryClickRef.current",
+          "lineNumber": 279
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "drawingRef.current?.handleClick",
+          "lineNumber": 283
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.on",
+          "lineNumber": 285
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "drawingRef.current?.startFreehand",
+          "lineNumber": 286
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.dragPan.disable",
+          "lineNumber": 287
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.on",
+          "lineNumber": 289
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "drawingRef.current?.movePointer",
+          "lineNumber": 290
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.on",
+          "lineNumber": 292
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "drawingRef.current?.endFreehand",
+          "lineNumber": 293
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.dragPan.enable",
+          "lineNumber": 293
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.on",
+          "lineNumber": 295
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "event.preventDefault",
+          "lineNumber": 296
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "drawingRef.current?.finishDrawing",
+          "lineNumber": 298
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.on",
+          "lineNumber": 301
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "event.preventDefault",
+          "lineNumber": 302
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "drawingRef.current?.finishDrawing",
+          "lineNumber": 304
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.on",
+          "lineNumber": 307
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.getLayer",
+          "lineNumber": 308
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map\n        .queryRenderedFeatures(event.point, { layers: [overlayFillLayerId] })\n        .some",
+          "lineNumber": 309
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map\n        .queryRenderedFeatures",
+          "lineNumber": 309
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.getCanvas",
+          "lineNumber": 312
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "waypointMarkersRef.current.forEach",
+          "lineNumber": 317
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "marker.remove",
+          "lineNumber": 317
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "droneMarkerRef.current?.remove",
+          "lineNumber": 319
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "userMarkerRef.current?.remove",
+          "lineNumber": 321
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.remove",
+          "lineNumber": 323
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useEffect",
+          "lineNumber": 328
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "mapRef.current?.jumpTo",
+          "lineNumber": 329
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useEffect",
+          "lineNumber": 332
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "ringLatLngBounds",
+          "lineNumber": 335
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.fitBounds",
+          "lineNumber": 341
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useMemo",
+          "lineNumber": 344
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "waypoints.map",
+          "lineNumber": 345
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useEffect",
+          "lineNumber": 349
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "waypointMarkersRef.current.forEach",
+          "lineNumber": 353
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "marker.remove",
+          "lineNumber": 353
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "waypoints.forEach",
+          "lineNumber": 356
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "waypointMarkersRef.current.push",
+          "lineNumber": 357
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "new maplibregl.Marker({\n          element: makeMarkerElement(String(index + 1), \"#1976d2\"),\n        })\n          .setLngLat([point.lon, point.lat])\n          .addTo",
+          "lineNumber": 358
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "new maplibregl.Marker({\n          element: makeMarkerElement(String(index + 1), \"#1976d2\"),\n        })\n          .setLngLat",
+          "lineNumber": 358
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "makeMarkerElement",
+          "lineNumber": 359
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "String",
+          "lineNumber": 359
+        },
+        {
+          "caller": "updateRoute",
+          "callee": "map.getSource",
+          "lineNumber": 382
+        },
+        {
+          "caller": "updateRoute",
+          "callee": "source.setData",
+          "lineNumber": 386
+        },
+        {
+          "caller": "updateRoute",
+          "callee": "map.addSource",
+          "lineNumber": 390
+        },
+        {
+          "caller": "updateRoute",
+          "callee": "map.addLayer",
+          "lineNumber": 391
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.loaded",
+          "lineNumber": 403
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "updateRoute",
+          "lineNumber": 404
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.once",
+          "lineNumber": 406
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useEffect",
+          "lineNumber": 410
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "new maplibregl.Marker({\n          element: makeDroneMarkerElement(),\n        })\n          .setLngLat([droneCenter.lng, droneCenter.lat])\n          .addTo",
+          "lineNumber": 416
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "new maplibregl.Marker({\n          element: makeDroneMarkerElement(),\n        })\n          .setLngLat",
+          "lineNumber": 416
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "makeDroneMarkerElement",
+          "lineNumber": 417
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "droneMarkerRef.current.setLngLat",
+          "lineNumber": 422
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "droneMarkerRef.current.remove",
+          "lineNumber": 425
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useEffect",
+          "lineNumber": 430
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "new maplibregl.Marker({\n          element: makeMarkerElement(\"U\", \"#2e7d32\"),\n        })\n          .setLngLat([userCenter.lng, userCenter.lat])\n          .addTo",
+          "lineNumber": 436
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "new maplibregl.Marker({\n          element: makeMarkerElement(\"U\", \"#2e7d32\"),\n        })\n          .setLngLat",
+          "lineNumber": 436
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "makeMarkerElement",
+          "lineNumber": 437
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "userMarkerRef.current.setLngLat",
+          "lineNumber": 442
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "userMarkerRef.current.remove",
+          "lineNumber": 445
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "useEffect",
+          "lineNumber": 450
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "savedFields.forEach",
+          "lineNumber": 456
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "features.push",
+          "lineNumber": 458
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "features.push",
+          "lineNumber": 472
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "exclusionZones.forEach",
+          "lineNumber": 481
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "features.push",
+          "lineNumber": 483
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "features.push",
+          "lineNumber": 490
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "map.getSource",
+          "lineNumber": 498
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "source.setData",
+          "lineNumber": 502
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "map.addSource",
+          "lineNumber": 506
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "map.addLayer",
+          "lineNumber": 507
+        },
+        {
+          "caller": "updateOverlays",
+          "callee": "map.addLayer",
+          "lineNumber": 531
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.loaded",
+          "lineNumber": 560
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "updateOverlays",
+          "lineNumber": 560
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "map.once",
+          "lineNumber": 561
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "Number.isFinite",
+          "lineNumber": 564
+        },
+        {
+          "caller": "MapLibreMap",
+          "callee": "Number.isFinite",
+          "lineNumber": 564
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/components/CesiumViewControls.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 109,
+      "nonEmptyLines": 105,
+      "functions": [
+        {
+          "name": "CesiumViewControls",
+          "startLine": 17,
+          "endLine": 109,
+          "params": [
+            "{\n  useCesium,\n  onUseCesiumChange,\n  mapEngine,\n  onMapEngineChange,\n  viewMode,\n  onViewModeChange,\n  sx,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "CesiumViewControls",
+          "line": 17,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "CesiumViewControls",
+          "callee": "useState",
+          "lineNumber": 34
+        },
+        {
+          "caller": "CesiumViewControls",
+          "callee": "useEffect",
+          "lineNumber": 39
+        },
+        {
+          "caller": "CesiumViewControls",
+          "callee": "setLocalEngine",
+          "lineNumber": 42
+        },
+        {
+          "caller": "CesiumViewControls",
+          "callee": "setLocalEngine",
+          "lineNumber": 45
+        },
+        {
+          "caller": "CesiumViewControls",
+          "callee": "setLocalEngine",
+          "lineNumber": 59
+        },
+        {
+          "caller": "CesiumViewControls",
+          "callee": "onMapEngineChange",
+          "lineNumber": 61
+        },
+        {
+          "caller": "CesiumViewControls",
+          "callee": "onUseCesiumChange",
+          "lineNumber": 63
+        },
+        {
+          "caller": "CesiumViewControls",
+          "callee": "window.dispatchEvent",
+          "lineNumber": 65
+        },
+        {
+          "caller": "CesiumViewControls",
+          "callee": "onViewModeChange",
+          "lineNumber": 86
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/components/MissionMapViewport.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 176,
+      "nonEmptyLines": 159,
+      "functions": [
+        {
+          "name": "MissionMapViewport",
+          "startLine": 18,
+          "endLine": 176,
+          "params": [
+            "{\n  loadingLocation,\n  isLoaded,\n  useCesium = false,\n  mapEngine,\n  loadingLocationLabel = \"Loading your location...\",\n  loadingMapLabel = \"Loading map...\",\n  googleMapProps,\n  cesiumMapProps,\n  leafletMapProps,\n  mapLibreMapProps,\n  googleChildren,\n  googleWrapperSx,\n  googleOverlay,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DEFAULT_MISSION_MAP_ENGINE",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "MissionMapViewport",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MissionMapViewport",
+          "callee": "useState",
+          "lineNumber": 47
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "useEffect",
+          "lineNumber": 51
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "setInternalEngine",
+          "lineNumber": 53
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "useEffect",
+          "lineNumber": 59
+        },
+        {
+          "caller": "handleEngineChange",
+          "callee": "setInternalEngine",
+          "lineNumber": 64
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "window.addEventListener",
+          "lineNumber": 67
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "window.removeEventListener",
+          "lineNumber": 69
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "useMemo",
+          "lineNumber": 74
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "rawCenter.lat",
+          "lineNumber": 78
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "rawCenter.lng",
+          "lineNumber": 78
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "googleMapProps.onClick",
+          "lineNumber": 88
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "wrapWithOverlay",
+          "lineNumber": 154
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "wrapWithOverlay",
+          "lineNumber": 158
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "wrapWithOverlay",
+          "lineNumber": 162
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "wrapWithOverlay",
+          "lineNumber": 166
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "wrapWithOverlay",
+          "lineNumber": 170
+        },
+        {
+          "caller": "MissionMapViewport",
+          "callee": "wrapWithOverlay",
+          "lineNumber": 173
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/components/TerraDrawController.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 213,
+      "nonEmptyLines": 195,
+      "functions": [
+        {
+          "name": "stopTerraDraw",
+          "startLine": 55,
+          "endLine": 63,
+          "params": [
+            "drawRef",
+            "onReadyChange"
+          ]
+        },
+        {
+          "name": "TerraDrawController",
+          "startLine": 65,
+          "endLine": 213,
+          "params": [
+            "{\n  map,\n  enabled,\n  mode,\n  drawRef,\n  onReadyChange,\n  onSnapshotChange,\n  onChangeEvent,\n  onSelectionChange,\n  onError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TerraDrawController",
+          "line": 65,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "stopTerraDraw",
+          "callee": "drawRef.current.stop",
+          "lineNumber": 60
+        },
+        {
+          "caller": "stopTerraDraw",
+          "callee": "onReadyChange",
+          "lineNumber": 62
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "useEffect",
+          "lineNumber": 76
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "stopTerraDraw",
+          "lineNumber": 78
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "useEffect",
+          "lineNumber": 81
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "draw.on",
+          "lineNumber": 167
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "SNAPSHOT_CHANGE_EVENTS.has",
+          "lineNumber": 168
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "draw.getSnapshot",
+          "lineNumber": 169
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "onSnapshotChange",
+          "lineNumber": 170
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "onChangeEvent",
+          "lineNumber": 171
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "draw.on",
+          "lineNumber": 173
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "onSelectionChange",
+          "lineNumber": 174
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "draw.on",
+          "lineNumber": 176
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "onSelectionChange",
+          "lineNumber": 177
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "draw.start",
+          "lineNumber": 180
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "draw.setMode",
+          "lineNumber": 181
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "onReadyChange",
+          "lineNumber": 183
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "projectionListener?.remove",
+          "lineNumber": 184
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "console.error",
+          "lineNumber": 187
+        },
+        {
+          "caller": "initializeTerraDraw",
+          "callee": "onError",
+          "lineNumber": 188
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "map.addListener",
+          "lineNumber": 192
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "map.getProjection",
+          "lineNumber": 193
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "initializeTerraDraw",
+          "lineNumber": 193
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "projectionListener?.remove",
+          "lineNumber": 196
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "useEffect",
+          "lineNumber": 201
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "drawRef.current.setMode",
+          "lineNumber": 203
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "useEffect",
+          "lineNumber": 206
+        },
+        {
+          "caller": "TerraDrawController",
+          "callee": "stopTerraDraw",
+          "lineNumber": 208
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useFlatMapDrawing.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 226,
+      "nonEmptyLines": 197,
+      "functions": [
+        {
+          "name": "shouldAppendFreehandPoint",
+          "startLine": 27,
+          "endLine": 34,
+          "params": [
+            "points",
+            "next"
+          ]
+        },
+        {
+          "name": "useFlatMapDrawing",
+          "startLine": 36,
+          "endLine": 226,
+          "params": [
+            "{\n  drawMode,\n  onDrawComplete,\n  onPickLatLng,\n  onPreview,\n  onModeStateChange,\n  onBoundaryDrawStarted,\n  onBoundaryDrawProgress,\n  isNearCoord,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useFlatMapDrawing",
+          "line": 36,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "shouldAppendFreehandPoint",
+          "callee": "Math.abs",
+          "lineNumber": 31
+        },
+        {
+          "caller": "shouldAppendFreehandPoint",
+          "callee": "Math.abs",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 46
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 47
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 48
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 50
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 51
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 52
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 53
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 54
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useRef",
+          "lineNumber": 56
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "onPreviewRef.current",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 65
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "requestAnimationFrame",
+          "lineNumber": 67
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 72
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "onPreviewRef.current",
+          "lineNumber": 75
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 78
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "isFlatBoundaryDrawMode",
+          "lineNumber": 79
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "onBoundaryDrawProgressRef.current",
+          "lineNumber": 80
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 83
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "isFlatBoundaryDrawMode",
+          "lineNumber": 84
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "onBoundaryDrawStartedRef.current",
+          "lineNumber": 85
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useEffect",
+          "lineNumber": 88
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useEffect",
+          "lineNumber": 92
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useEffect",
+          "lineNumber": 96
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useEffect",
+          "lineNumber": 100
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useEffect",
+          "lineNumber": 104
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useEffect",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useEffect",
+          "lineNumber": 112
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "previewNow",
+          "lineNumber": 117
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "onModeStateChange",
+          "lineNumber": 118
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useEffect",
+          "lineNumber": 121
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 123
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 128
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "completeShape",
+          "lineNumber": 132
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "onDrawCompleteRef.current",
+          "lineNumber": 133
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "previewNow",
+          "lineNumber": 136
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 141
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "onPickRef.current",
+          "lineNumber": 145
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "onDrawCompleteRef.current",
+          "lineNumber": 150
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "handleFlatMapShapeClick",
+          "lineNumber": 157
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "previewNow",
+          "lineNumber": 161
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "finishDrawing",
+          "lineNumber": 162
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "maybeStartBoundaryDraw",
+          "lineNumber": 165
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "syncBoundaryDrawState",
+          "lineNumber": 166
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 171
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "previewNow",
+          "lineNumber": 177
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "maybeStartBoundaryDraw",
+          "lineNumber": 178
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "syncBoundaryDrawState",
+          "lineNumber": 179
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 185
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "moveTwoCornerShapePreview",
+          "lineNumber": 188
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "schedulePreview",
+          "lineNumber": 195
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "syncBoundaryDrawState",
+          "lineNumber": 196
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "shouldAppendFreehandPoint",
+          "lineNumber": 201
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "drawingRef.current.push",
+          "lineNumber": 202
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "schedulePreview",
+          "lineNumber": 203
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "syncBoundaryDrawState",
+          "lineNumber": 204
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useCallback",
+          "lineNumber": 209
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "finishDrawing",
+          "lineNumber": 212
+        },
+        {
+          "caller": "useFlatMapDrawing",
+          "callee": "useMemo",
+          "lineNumber": 216
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useMapEngine.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 31,
+      "nonEmptyLines": 26,
+      "functions": [
+        {
+          "name": "dispatchMapEngineChange",
+          "startLine": 7,
+          "endLine": 9,
+          "params": [
+            "engine"
+          ]
+        },
+        {
+          "name": "useMapEngine",
+          "startLine": 11,
+          "endLine": 31,
+          "params": [
+            "initial"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "dispatchMapEngineChange",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "useMapEngine",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "dispatchMapEngineChange",
+          "callee": "window.dispatchEvent",
+          "lineNumber": 8
+        },
+        {
+          "caller": "useMapEngine",
+          "callee": "useState",
+          "lineNumber": 12
+        },
+        {
+          "caller": "useMapEngine",
+          "callee": "useEffect",
+          "lineNumber": 14
+        },
+        {
+          "caller": "handleEngineChange",
+          "callee": "setMapEngine",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useMapEngine",
+          "callee": "window.addEventListener",
+          "lineNumber": 21
+        },
+        {
+          "caller": "useMapEngine",
+          "callee": "window.removeEventListener",
+          "lineNumber": 22
+        },
+        {
+          "caller": "useMapEngine",
+          "callee": "useCallback",
+          "lineNumber": 25
+        },
+        {
+          "caller": "useMapEngine",
+          "callee": "setMapEngine",
+          "lineNumber": 26
+        },
+        {
+          "caller": "useMapEngine",
+          "callee": "dispatchMapEngineChange",
+          "lineNumber": 27
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/tests/cesiumCameraGeometry.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 58,
+      "nonEmptyLines": 52,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/tests/drawingShapes.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 18,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/tests/flatMapShapeClick.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 46,
+      "nonEmptyLines": 40,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/tests/useMapEngine.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 15,
+      "nonEmptyLines": 14,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/utils/cesiumCameraGeometry.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 97,
+      "nonEmptyLines": 84,
+      "functions": [
+        {
+          "name": "clamp",
+          "startLine": 4,
+          "endLine": 6,
+          "params": [
+            "value",
+            "minimum",
+            "maximum"
+          ]
+        },
+        {
+          "name": "zoomToHeightMeters",
+          "startLine": 8,
+          "endLine": 11,
+          "params": [
+            "zoom"
+          ]
+        },
+        {
+          "name": "normalizeLonLatLine",
+          "startLine": 13,
+          "endLine": 24,
+          "params": [
+            "coordinates"
+          ]
+        },
+        {
+          "name": "normalizeLonLatRing",
+          "startLine": 26,
+          "endLine": 34,
+          "params": [
+            "coordinates"
+          ]
+        },
+        {
+          "name": "computeRingCentroid",
+          "startLine": 36,
+          "endLine": 67,
+          "params": [
+            "coordinates"
+          ]
+        },
+        {
+          "name": "computeFieldCameraView",
+          "startLine": 69,
+          "endLine": 97,
+          "params": [
+            "coordinates"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "clamp",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "zoomToHeightMeters",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "normalizeLonLatLine",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "normalizeLonLatRing",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "computeRingCentroid",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "computeFieldCameraView",
+          "line": 69,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "clamp",
+          "callee": "Math.max",
+          "lineNumber": 5
+        },
+        {
+          "caller": "clamp",
+          "callee": "Math.min",
+          "lineNumber": 5
+        },
+        {
+          "caller": "zoomToHeightMeters",
+          "callee": "clamp",
+          "lineNumber": 9
+        },
+        {
+          "caller": "zoomToHeightMeters",
+          "callee": "Math.round",
+          "lineNumber": 10
+        },
+        {
+          "caller": "zoomToHeightMeters",
+          "callee": "Math.pow",
+          "lineNumber": 10
+        },
+        {
+          "caller": "normalizeLonLatLine",
+          "callee": "coordinates.filter",
+          "lineNumber": 17
+        },
+        {
+          "caller": "normalizeLonLatLine",
+          "callee": "Array.isArray",
+          "lineNumber": 19
+        },
+        {
+          "caller": "normalizeLonLatLine",
+          "callee": "Number.isFinite",
+          "lineNumber": 21
+        },
+        {
+          "caller": "normalizeLonLatLine",
+          "callee": "Number.isFinite",
+          "lineNumber": 22
+        },
+        {
+          "caller": "normalizeLonLatRing",
+          "callee": "normalizeLonLatLine",
+          "lineNumber": 29
+        },
+        {
+          "caller": "normalizeLonLatRing",
+          "callee": "line.slice",
+          "lineNumber": 33
+        },
+        {
+          "caller": "computeRingCentroid",
+          "callee": "normalizeLonLatRing",
+          "lineNumber": 39
+        },
+        {
+          "caller": "computeRingCentroid",
+          "callee": "Math.abs",
+          "lineNumber": 55
+        },
+        {
+          "caller": "computeRingCentroid",
+          "callee": "ring.reduce",
+          "lineNumber": 56
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "normalizeLonLatRing",
+          "lineNumber": 72
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "computeRingCentroid",
+          "lineNumber": 74
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.min",
+          "lineNumber": 82
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.max",
+          "lineNumber": 83
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.min",
+          "lineNumber": 84
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.max",
+          "lineNumber": 85
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.max",
+          "lineNumber": 88
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.max",
+          "lineNumber": 89
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.cos",
+          "lineNumber": 89
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.max",
+          "lineNumber": 90
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.max",
+          "lineNumber": 91
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "clamp",
+          "lineNumber": 95
+        },
+        {
+          "caller": "computeFieldCameraView",
+          "callee": "Math.round",
+          "lineNumber": 95
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 6,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/utils/drawingShapes.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 117,
+      "nonEmptyLines": 105,
+      "functions": [
+        {
+          "name": "isFlatBoundaryDrawMode",
+          "startLine": 26,
+          "endLine": 28,
+          "params": [
+            "mode"
+          ]
+        },
+        {
+          "name": "rectangleRing",
+          "startLine": 30,
+          "endLine": 37,
+          "params": [
+            "start",
+            "end"
+          ]
+        },
+        {
+          "name": "triangleRing",
+          "startLine": 39,
+          "endLine": 48,
+          "params": [
+            "start",
+            "end"
+          ]
+        },
+        {
+          "name": "circleRing",
+          "startLine": 50,
+          "endLine": 64,
+          "params": [
+            "center",
+            "edge",
+            "steps"
+          ]
+        },
+        {
+          "name": "closeRing",
+          "startLine": 66,
+          "endLine": 72,
+          "params": [
+            "coords"
+          ]
+        },
+        {
+          "name": "shapePreview",
+          "startLine": 74,
+          "endLine": 79,
+          "params": [
+            "mode",
+            "coords"
+          ]
+        },
+        {
+          "name": "moveTwoCornerShapePreview",
+          "startLine": 81,
+          "endLine": 91,
+          "params": [
+            "mode",
+            "coords",
+            "cursor"
+          ]
+        },
+        {
+          "name": "completeShape",
+          "startLine": 93,
+          "endLine": 117,
+          "params": [
+            "mode",
+            "coords"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "isFlatBoundaryDrawMode",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "rectangleRing",
+          "line": 30,
+          "isDefault": false
+        },
+        {
+          "name": "triangleRing",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "circleRing",
+          "line": 50,
+          "isDefault": false
+        },
+        {
+          "name": "closeRing",
+          "line": 66,
+          "isDefault": false
+        },
+        {
+          "name": "shapePreview",
+          "line": 74,
+          "isDefault": false
+        },
+        {
+          "name": "moveTwoCornerShapePreview",
+          "line": 81,
+          "isDefault": false
+        },
+        {
+          "name": "completeShape",
+          "line": 93,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "isFlatBoundaryDrawMode",
+          "callee": "FLAT_BOUNDARY_DRAW_MODES.has",
+          "lineNumber": 27
+        },
+        {
+          "caller": "triangleRing",
+          "callee": "Math.abs",
+          "lineNumber": 40
+        },
+        {
+          "caller": "circleRing",
+          "callee": "Math.max",
+          "lineNumber": 51
+        },
+        {
+          "caller": "circleRing",
+          "callee": "Math.cos",
+          "lineNumber": 51
+        },
+        {
+          "caller": "circleRing",
+          "callee": "Math.sqrt",
+          "lineNumber": 54
+        },
+        {
+          "caller": "circleRing",
+          "callee": "Array.from",
+          "lineNumber": 57
+        },
+        {
+          "caller": "circleRing",
+          "callee": "Math.cos",
+          "lineNumber": 60
+        },
+        {
+          "caller": "circleRing",
+          "callee": "Math.sin",
+          "lineNumber": 61
+        },
+        {
+          "caller": "shapePreview",
+          "callee": "rectangleRing",
+          "lineNumber": 75
+        },
+        {
+          "caller": "shapePreview",
+          "callee": "circleRing",
+          "lineNumber": 76
+        },
+        {
+          "caller": "shapePreview",
+          "callee": "triangleRing",
+          "lineNumber": 77
+        },
+        {
+          "caller": "moveTwoCornerShapePreview",
+          "callee": "[\"rectangle\", \"circle\", \"triangle\"].includes",
+          "lineNumber": 86
+        },
+        {
+          "caller": "completeShape",
+          "callee": "rectangleRing",
+          "lineNumber": 104
+        },
+        {
+          "caller": "completeShape",
+          "callee": "circleRing",
+          "lineNumber": 107
+        },
+        {
+          "caller": "completeShape",
+          "callee": "triangleRing",
+          "lineNumber": 111
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 8,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/utils/drawingToolModes.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 28,
+      "functions": [
+        {
+          "name": "terraDrawToolToShapeMode",
+          "startLine": 5,
+          "endLine": 16,
+          "params": [
+            "tool"
+          ]
+        },
+        {
+          "name": "isFlatDrawToolSelected",
+          "startLine": 18,
+          "endLine": 30,
+          "params": [
+            "drawMode",
+            "tool"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "terraDrawToolToShapeMode",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "isFlatDrawToolSelected",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/utils/flatMapDrawResult.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 12,
+      "nonEmptyLines": 9,
+      "functions": [
+        {
+          "name": "ringFromFlatDrawResult",
+          "startLine": 4,
+          "endLine": 12,
+          "params": [
+            "result"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ringFromFlatDrawResult",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ringFromFlatDrawResult",
+          "callee": "stripClosedRing",
+          "lineNumber": 7
+        },
+        {
+          "caller": "ringFromFlatDrawResult",
+          "callee": "result.coordinates.map",
+          "lineNumber": 8
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/utils/flatMapShapeClick.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 40,
+      "nonEmptyLines": 35,
+      "functions": [
+        {
+          "name": "handleFlatMapShapeClick",
+          "startLine": 8,
+          "endLine": 40,
+          "params": [
+            "mode",
+            "coord",
+            "drawing",
+            "onPreview",
+            "onFinish",
+            "isNearCoord"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "handleFlatMapShapeClick",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "handleFlatMapShapeClick",
+          "callee": "onPreview",
+          "lineNumber": 19
+        },
+        {
+          "caller": "handleFlatMapShapeClick",
+          "callee": "onPreview",
+          "lineNumber": 23
+        },
+        {
+          "caller": "handleFlatMapShapeClick",
+          "callee": "onFinish",
+          "lineNumber": 24
+        },
+        {
+          "caller": "handleFlatMapShapeClick",
+          "callee": "shouldCloseShapeOnClick",
+          "lineNumber": 32
+        },
+        {
+          "caller": "handleFlatMapShapeClick",
+          "callee": "onFinish",
+          "lineNumber": 33
+        },
+        {
+          "caller": "handleFlatMapShapeClick",
+          "callee": "onPreview",
+          "lineNumber": 38
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/utils/flatMapShapeGeometry.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 45,
+      "nonEmptyLines": 39,
+      "functions": [
+        {
+          "name": "isNearLonLat",
+          "startLine": 6,
+          "endLine": 14,
+          "params": [
+            "a",
+            "b",
+            "threshold"
+          ]
+        },
+        {
+          "name": "isNearLonLatPixels",
+          "startLine": 22,
+          "endLine": 33,
+          "params": [
+            "map",
+            "a",
+            "b",
+            "thresholdPx"
+          ]
+        },
+        {
+          "name": "shouldCloseShapeOnClick",
+          "startLine": 35,
+          "endLine": 45,
+          "params": [
+            "mode",
+            "drawing",
+            "coord",
+            "isNear"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "FLAT_MAP_CLOSE_THRESHOLD_DEG",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "isNearLonLat",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "FLAT_MAP_CLOSE_PIXEL_THRESHOLD",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "isNearLonLatPixels",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "shouldCloseShapeOnClick",
+          "line": 35,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "isNearLonLat",
+          "callee": "Math.abs",
+          "lineNumber": 12
+        },
+        {
+          "caller": "isNearLonLat",
+          "callee": "Math.abs",
+          "lineNumber": 12
+        },
+        {
+          "caller": "isNearLonLatPixels",
+          "callee": "map.project",
+          "lineNumber": 28
+        },
+        {
+          "caller": "isNearLonLatPixels",
+          "callee": "map.project",
+          "lineNumber": 29
+        },
+        {
+          "caller": "shouldCloseShapeOnClick",
+          "callee": "isNear",
+          "lineNumber": 43
+        },
+        {
+          "caller": "shouldCloseShapeOnClick",
+          "callee": "isNearLonLat",
+          "lineNumber": 44
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 5,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 44,
+      "nonEmptyLines": 42,
+      "functions": [
+        {
+          "name": "WorkflowTerraDrawBridge",
+          "startLine": 12,
+          "endLine": 44,
+          "params": [
+            "{\n  mapReady,\n  mapRef,\n  mapEngine,\n  terraDrawMode,\n  terraDrawRef,\n  setTerraDrawReady,\n  shapePrompt,\n  onError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WorkflowTerraDrawBridge",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useMapShapeActionPrompt.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 152,
+      "nonEmptyLines": 133,
+      "functions": [
+        {
+          "name": "featureDrawMode",
+          "startLine": 13,
+          "endLine": 18,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "useMapShapeActionPrompt",
+          "startLine": 22,
+          "endLine": 152,
+          "params": [
+            "{\n  terraDrawRef,\n  syncSnapshot,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useMapShapeActionPrompt",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useState",
+          "lineNumber": 29
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useState",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useState",
+          "lineNumber": 31
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useRef",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useRef",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useRef",
+          "lineNumber": 36
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setOpen",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 39
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setOpen",
+          "lineNumber": 39
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 41
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setFlatBoundarySelected",
+          "lineNumber": 43
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 46
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setFlatBoundarySelected",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setOpen",
+          "lineNumber": 50
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 53
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "syncSnapshot",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "syncSnapshot",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "DRAW_ACTIVITY_EVENTS.has",
+          "lineNumber": 64
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "snapshot.some",
+          "lineNumber": 66
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setFlatBoundarySelected",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setOpen",
+          "lineNumber": 71
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 76
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setSelectedFeatureId",
+          "lineNumber": 79
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "terraDrawRef.current?.getSnapshot",
+          "lineNumber": 85
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "findTerraDrawFeature",
+          "lineNumber": 87
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "shouldOpenShapePromptOnSelection",
+          "lineNumber": 88
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setOpen",
+          "lineNumber": 90
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "featureDrawMode",
+          "lineNumber": 94
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "isUserDrawnBoundaryShape",
+          "lineNumber": 97
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setOpen",
+          "lineNumber": 101
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 112
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setOpen",
+          "lineNumber": 112
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 114
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setFlatBoundarySelected",
+          "lineNumber": 115
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setOpen",
+          "lineNumber": 116
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "useCallback",
+          "lineNumber": 119
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "deleteMainDrawnShape",
+          "lineNumber": 124
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "setSelectedFeatureId",
+          "lineNumber": 126
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "resetBoundaryDrawSession",
+          "lineNumber": 128
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "syncAfterDelete",
+          "lineNumber": 129
+        },
+        {
+          "caller": "useMapShapeActionPrompt",
+          "callee": "syncSnapshot",
+          "lineNumber": 130
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/utils/mapShapePromptUtils.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 182,
+      "nonEmptyLines": 152,
+      "functions": [
+        {
+          "name": "isGuidanceFeature",
+          "startLine": 3,
+          "endLine": 13,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "featureDrawMode",
+          "startLine": 15,
+          "endLine": 18,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "isUserDrawnBoundaryShape",
+          "startLine": 31,
+          "endLine": 49,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "hasUserDrawnBoundaryShape",
+          "startLine": 54,
+          "endLine": 56,
+          "params": [
+            "snapshot"
+          ]
+        },
+        {
+          "name": "isActiveBoundaryDrawFeature",
+          "startLine": 61,
+          "endLine": 83,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "isBoundaryDrawMode",
+          "startLine": 85,
+          "endLine": 87,
+          "params": [
+            "mode"
+          ]
+        },
+        {
+          "name": "shouldOpenShapePromptOnSelection",
+          "startLine": 89,
+          "endLine": 98,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "shouldOpenShapePromptOnCreate",
+          "startLine": 100,
+          "endLine": 109,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "isRemovableTerraDrawFeature",
+          "startLine": 111,
+          "endLine": 115,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "isMainDrawnShapeFeature",
+          "startLine": 119,
+          "endLine": 136,
+          "params": [
+            "feature"
+          ]
+        },
+        {
+          "name": "resolveParentShapeFeatureId",
+          "startLine": 138,
+          "endLine": 154,
+          "params": [
+            "snapshot",
+            "feature"
+          ]
+        },
+        {
+          "name": "resolveMainDrawnShapeFeatureId",
+          "startLine": 156,
+          "endLine": 174,
+          "params": [
+            "snapshot",
+            "selectedFeatureId"
+          ]
+        },
+        {
+          "name": "findTerraDrawFeature",
+          "startLine": 176,
+          "endLine": 182,
+          "params": [
+            "snapshot",
+            "id"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "isUserDrawnBoundaryShape",
+          "line": 31,
+          "isDefault": false
+        },
+        {
+          "name": "isUserDrawnPolygon",
+          "line": 52,
+          "isDefault": false
+        },
+        {
+          "name": "hasUserDrawnBoundaryShape",
+          "line": 54,
+          "isDefault": false
+        },
+        {
+          "name": "hasUserDrawnPolygon",
+          "line": 59,
+          "isDefault": false
+        },
+        {
+          "name": "isActiveBoundaryDrawFeature",
+          "line": 61,
+          "isDefault": false
+        },
+        {
+          "name": "isBoundaryDrawMode",
+          "line": 85,
+          "isDefault": false
+        },
+        {
+          "name": "shouldOpenShapePromptOnSelection",
+          "line": 89,
+          "isDefault": false
+        },
+        {
+          "name": "shouldOpenShapePromptOnCreate",
+          "line": 100,
+          "isDefault": false
+        },
+        {
+          "name": "isRemovableTerraDrawFeature",
+          "line": 111,
+          "isDefault": false
+        },
+        {
+          "name": "isMainDrawnShapeFeature",
+          "line": 119,
+          "isDefault": false
+        },
+        {
+          "name": "resolveMainDrawnShapeFeatureId",
+          "line": 156,
+          "isDefault": false
+        },
+        {
+          "name": "findTerraDrawFeature",
+          "line": 176,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "isGuidanceFeature",
+          "callee": "Boolean",
+          "lineNumber": 5
+        },
+        {
+          "caller": "isUserDrawnBoundaryShape",
+          "callee": "featureDrawMode",
+          "lineNumber": 35
+        },
+        {
+          "caller": "isUserDrawnBoundaryShape",
+          "callee": "isGuidanceFeature",
+          "lineNumber": 36
+        },
+        {
+          "caller": "isUserDrawnBoundaryShape",
+          "callee": "Array.isArray",
+          "lineNumber": 40
+        },
+        {
+          "caller": "isUserDrawnBoundaryShape",
+          "callee": "Array.isArray",
+          "lineNumber": 46
+        },
+        {
+          "caller": "hasUserDrawnBoundaryShape",
+          "callee": "snapshot.some",
+          "lineNumber": 55
+        },
+        {
+          "caller": "hasUserDrawnBoundaryShape",
+          "callee": "isUserDrawnBoundaryShape",
+          "lineNumber": 55
+        },
+        {
+          "caller": "isActiveBoundaryDrawFeature",
+          "callee": "featureDrawMode",
+          "lineNumber": 65
+        },
+        {
+          "caller": "isActiveBoundaryDrawFeature",
+          "callee": "isGuidanceFeature",
+          "lineNumber": 66
+        },
+        {
+          "caller": "isBoundaryDrawMode",
+          "callee": "BOUNDARY_DRAW_MODES.has",
+          "lineNumber": 86
+        },
+        {
+          "caller": "shouldOpenShapePromptOnSelection",
+          "callee": "featureDrawMode",
+          "lineNumber": 92
+        },
+        {
+          "caller": "shouldOpenShapePromptOnSelection",
+          "callee": "SELECTION_PROMPT_MODES.has",
+          "lineNumber": 95
+        },
+        {
+          "caller": "shouldOpenShapePromptOnSelection",
+          "callee": "isUserDrawnBoundaryShape",
+          "lineNumber": 96
+        },
+        {
+          "caller": "shouldOpenShapePromptOnCreate",
+          "callee": "featureDrawMode",
+          "lineNumber": 103
+        },
+        {
+          "caller": "shouldOpenShapePromptOnCreate",
+          "callee": "CREATE_PROMPT_MODES.has",
+          "lineNumber": 106
+        },
+        {
+          "caller": "shouldOpenShapePromptOnCreate",
+          "callee": "isUserDrawnBoundaryShape",
+          "lineNumber": 107
+        },
+        {
+          "caller": "isRemovableTerraDrawFeature",
+          "callee": "featureDrawMode",
+          "lineNumber": 113
+        },
+        {
+          "caller": "isRemovableTerraDrawFeature",
+          "callee": "isGuidanceFeature",
+          "lineNumber": 114
+        },
+        {
+          "caller": "isMainDrawnShapeFeature",
+          "callee": "isGuidanceFeature",
+          "lineNumber": 120
+        },
+        {
+          "caller": "isMainDrawnShapeFeature",
+          "callee": "featureDrawMode",
+          "lineNumber": 122
+        },
+        {
+          "caller": "isMainDrawnShapeFeature",
+          "callee": "MAIN_POLYGON_MODES.has",
+          "lineNumber": 131
+        },
+        {
+          "caller": "resolveParentShapeFeatureId",
+          "callee": "findTerraDrawFeature",
+          "lineNumber": 148
+        },
+        {
+          "caller": "resolveParentShapeFeatureId",
+          "callee": "isMainDrawnShapeFeature",
+          "lineNumber": 149
+        },
+        {
+          "caller": "resolveMainDrawnShapeFeatureId",
+          "callee": "findTerraDrawFeature",
+          "lineNumber": 161
+        },
+        {
+          "caller": "resolveMainDrawnShapeFeatureId",
+          "callee": "isMainDrawnShapeFeature",
+          "lineNumber": 162
+        },
+        {
+          "caller": "resolveMainDrawnShapeFeatureId",
+          "callee": "resolveParentShapeFeatureId",
+          "lineNumber": 166
+        },
+        {
+          "caller": "resolveMainDrawnShapeFeatureId",
+          "callee": "[...snapshot].reverse().find",
+          "lineNumber": 172
+        },
+        {
+          "caller": "resolveMainDrawnShapeFeatureId",
+          "callee": "[...snapshot].reverse",
+          "lineNumber": 172
+        },
+        {
+          "caller": "findTerraDrawFeature",
+          "callee": "snapshot.find",
+          "lineNumber": 181
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 12,
+        "functionCount": 13,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/utils/terraDrawDrawingActions.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 65,
+      "nonEmptyLines": 55,
+      "functions": [
+        {
+          "name": "resolveTerraDrawDeleteTarget",
+          "startLine": 9,
+          "endLine": 21,
+          "params": [
+            "snapshot",
+            "selectedFeatureId",
+            "isRemovable"
+          ]
+        },
+        {
+          "name": "deleteMainDrawnShape",
+          "startLine": 23,
+          "endLine": 49,
+          "params": [
+            "terraDraw",
+            "selectedFeatureId"
+          ]
+        },
+        {
+          "name": "deleteSelectedOrLatestTerraDrawFeature",
+          "startLine": 52,
+          "endLine": 65,
+          "params": [
+            "terraDraw",
+            "selectedFeatureId",
+            "isRemovable"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "resolveTerraDrawDeleteTarget",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "deleteMainDrawnShape",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "deleteSelectedOrLatestTerraDrawFeature",
+          "line": 52,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "resolveTerraDrawDeleteTarget",
+          "callee": "resolveMainDrawnShapeFeatureId",
+          "lineNumber": 14
+        },
+        {
+          "caller": "resolveTerraDrawDeleteTarget",
+          "callee": "findTerraDrawFeature",
+          "lineNumber": 16
+        },
+        {
+          "caller": "resolveTerraDrawDeleteTarget",
+          "callee": "[...snapshot].reverse().find",
+          "lineNumber": 20
+        },
+        {
+          "caller": "resolveTerraDrawDeleteTarget",
+          "callee": "[...snapshot].reverse",
+          "lineNumber": 20
+        },
+        {
+          "caller": "resolveTerraDrawDeleteTarget",
+          "callee": "predicate",
+          "lineNumber": 20
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "terraDraw.getSnapshot",
+          "lineNumber": 27
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "resolveMainDrawnShapeFeatureId",
+          "lineNumber": 28
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "terraDraw.hasFeature",
+          "lineNumber": 34
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "terraDraw.removeFeatures",
+          "lineNumber": 35
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "terraDraw.getSnapshot",
+          "lineNumber": 36
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "snapshot\n    .filter(isMainDrawnShapeFeature)\n    .map((feature) => feature.id)\n    .filter",
+          "lineNumber": 39
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "snapshot\n    .filter(isMainDrawnShapeFeature)\n    .map",
+          "lineNumber": 39
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "snapshot\n    .filter",
+          "lineNumber": 39
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "terraDraw.removeFeatures",
+          "lineNumber": 45
+        },
+        {
+          "caller": "deleteMainDrawnShape",
+          "callee": "terraDraw.getSnapshot",
+          "lineNumber": 48
+        },
+        {
+          "caller": "deleteSelectedOrLatestTerraDrawFeature",
+          "callee": "terraDraw.getSnapshot",
+          "lineNumber": 57
+        },
+        {
+          "caller": "deleteSelectedOrLatestTerraDrawFeature",
+          "callee": "resolveTerraDrawDeleteTarget",
+          "lineNumber": 58
+        },
+        {
+          "caller": "deleteSelectedOrLatestTerraDrawFeature",
+          "callee": "terraDraw.removeFeatures",
+          "lineNumber": 63
+        },
+        {
+          "caller": "deleteSelectedOrLatestTerraDrawFeature",
+          "callee": "terraDraw.getSnapshot",
+          "lineNumber": 64
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    }
+  ]
+}

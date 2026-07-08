@@ -1,0 +1,3325 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 33,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/modules/fleet/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 19,
+      "nonEmptyLines": 18,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 642,
+      "nonEmptyLines": 605,
+      "functions": [
+        {
+          "name": "formatDuration",
+          "startLine": 45,
+          "endLine": 51,
+          "params": [
+            "minutes"
+          ]
+        },
+        {
+          "name": "formatTime",
+          "startLine": 53,
+          "endLine": 58,
+          "params": [
+            "iso"
+          ]
+        },
+        {
+          "name": "PanelSkeleton",
+          "startLine": 60,
+          "endLine": 69,
+          "params": [
+            "{ height = 320 }"
+          ]
+        },
+        {
+          "name": "AddCertDialog",
+          "startLine": 77,
+          "endLine": 182,
+          "params": [
+            "{\n  open,\n  onClose,\n  onCreated,\n}"
+          ]
+        },
+        {
+          "name": "CertRow",
+          "startLine": 184,
+          "endLine": 218,
+          "params": [
+            "{ cert }"
+          ]
+        },
+        {
+          "name": "CertificationsTab",
+          "startLine": 220,
+          "endLine": 265,
+          "params": []
+        },
+        {
+          "name": "AddDeviceDialog",
+          "startLine": 273,
+          "endLine": 376,
+          "params": [
+            "{\n  open,\n  onClose,\n  onCreated,\n}"
+          ]
+        },
+        {
+          "name": "deviceStatusColor",
+          "startLine": 378,
+          "endLine": 385,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "DeviceRow",
+          "startLine": 387,
+          "endLine": 427,
+          "params": [
+            "{ device }"
+          ]
+        },
+        {
+          "name": "DeviceReadinessTab",
+          "startLine": 429,
+          "endLine": 474,
+          "params": []
+        },
+        {
+          "name": "FleetPage",
+          "startLine": 480,
+          "endLine": 642,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "FleetPage",
+          "line": 480,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatDuration",
+          "callee": "Number.isNaN",
+          "lineNumber": 46
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.round",
+          "lineNumber": 47
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.floor",
+          "lineNumber": 48
+        },
+        {
+          "caller": "formatDuration",
+          "callee": "Math.round",
+          "lineNumber": 49
+        },
+        {
+          "caller": "formatTime",
+          "callee": "Number.isNaN",
+          "lineNumber": 56
+        },
+        {
+          "caller": "formatTime",
+          "callee": "dt.getTime",
+          "lineNumber": 56
+        },
+        {
+          "caller": "formatTime",
+          "callee": "dt.toLocaleTimeString",
+          "lineNumber": 57
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 86
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 87
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 88
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 89
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 90
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "useState",
+          "lineNumber": 91
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setCertType",
+          "lineNumber": 94
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setCertNumber",
+          "lineNumber": 95
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setIssuedAt",
+          "lineNumber": 96
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setExpiresAt",
+          "lineNumber": 97
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setError",
+          "lineNumber": 98
+        },
+        {
+          "caller": "handleClose",
+          "callee": "onClose",
+          "lineNumber": 99
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "certNumber.trim",
+          "lineNumber": 103
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 104
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 105
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "createCertification",
+          "lineNumber": 107
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "certNumber.trim",
+          "lineNumber": 109
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "onCreated",
+          "lineNumber": 113
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "handleClose",
+          "lineNumber": 114
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 116
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 118
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "setCertType",
+          "lineNumber": 129
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "CERT_TYPES.map",
+          "lineNumber": 133
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "t.replace",
+          "lineNumber": 135
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "setCertNumber",
+          "lineNumber": 142
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "setIssuedAt",
+          "lineNumber": 150
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "setExpiresAt",
+          "lineNumber": 158
+        },
+        {
+          "caller": "AddCertDialog",
+          "callee": "certNumber.trim",
+          "lineNumber": 176
+        },
+        {
+          "caller": "CertRow",
+          "callee": "new Date(cert.expires_at).toLocaleDateString",
+          "lineNumber": 185
+        },
+        {
+          "caller": "CertRow",
+          "callee": "cert.cert_type.replace",
+          "lineNumber": 193
+        },
+        {
+          "caller": "CertRow",
+          "callee": "new Date(cert.issued_at).toLocaleDateString",
+          "lineNumber": 199
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "useQueryClient",
+          "lineNumber": 221
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "useState",
+          "lineNumber": 222
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "useQuery",
+          "lineNumber": 224
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "fetchCertifications",
+          "lineNumber": 226
+        },
+        {
+          "caller": "refresh",
+          "callee": "queryClient.invalidateQueries",
+          "lineNumber": 229
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "setAddOpen",
+          "lineNumber": 240
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "certs.map",
+          "lineNumber": 253
+        },
+        {
+          "caller": "CertificationsTab",
+          "callee": "setAddOpen",
+          "lineNumber": 260
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 282
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 283
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 284
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 285
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 286
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "useState",
+          "lineNumber": 287
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setDeviceId",
+          "lineNumber": 290
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setDeviceName",
+          "lineNumber": 291
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setStatus",
+          "lineNumber": 292
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setNotes",
+          "lineNumber": 293
+        },
+        {
+          "caller": "handleClose",
+          "callee": "setError",
+          "lineNumber": 294
+        },
+        {
+          "caller": "handleClose",
+          "callee": "onClose",
+          "lineNumber": 295
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "deviceId.trim",
+          "lineNumber": 299
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "deviceName.trim",
+          "lineNumber": 299
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 300
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 301
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "createDevice",
+          "lineNumber": 303
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "deviceId.trim",
+          "lineNumber": 304
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "deviceName.trim",
+          "lineNumber": 305
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "notes.trim",
+          "lineNumber": 307
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "onCreated",
+          "lineNumber": 309
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "handleClose",
+          "lineNumber": 310
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setError",
+          "lineNumber": 312
+        },
+        {
+          "caller": "handleSubmit",
+          "callee": "setSaving",
+          "lineNumber": 314
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "setDeviceId",
+          "lineNumber": 326
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "setDeviceName",
+          "lineNumber": 333
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "setStatus",
+          "lineNumber": 338
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "DEVICE_STATUSES.map",
+          "lineNumber": 342
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "s.charAt(0).toUpperCase",
+          "lineNumber": 344
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "s.charAt",
+          "lineNumber": 344
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "s.slice",
+          "lineNumber": 344
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "setNotes",
+          "lineNumber": 351
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "deviceId.trim",
+          "lineNumber": 370
+        },
+        {
+          "caller": "AddDeviceDialog",
+          "callee": "deviceName.trim",
+          "lineNumber": 370
+        },
+        {
+          "caller": "DeviceRow",
+          "callee": "deviceStatusColor",
+          "lineNumber": 401
+        },
+        {
+          "caller": "DeviceRow",
+          "callee": "new Date(device.last_inspection_at).toLocaleDateString",
+          "lineNumber": 410
+        },
+        {
+          "caller": "DeviceRow",
+          "callee": "new Date(device.next_inspection_due).toLocaleDateString",
+          "lineNumber": 414
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "useQueryClient",
+          "lineNumber": 430
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "useState",
+          "lineNumber": 431
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "useQuery",
+          "lineNumber": 433
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "fetchDevices",
+          "lineNumber": 435
+        },
+        {
+          "caller": "refresh",
+          "callee": "queryClient.invalidateQueries",
+          "lineNumber": 438
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "setAddOpen",
+          "lineNumber": 449
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "devices.map",
+          "lineNumber": 462
+        },
+        {
+          "caller": "DeviceReadinessTab",
+          "callee": "setAddOpen",
+          "lineNumber": 469
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "useAnalyticsOverview",
+          "lineNumber": 481
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Boolean",
+          "lineNumber": 482
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "useTelemetryWebSocket",
+          "lineNumber": 483
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "useState",
+          "lineNumber": 485
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "useMemo",
+          "lineNumber": 487
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "data.recent_flights.map",
+          "lineNumber": 489
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "String(flight.status ?? '').toLowerCase",
+          "lineNumber": 490
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "String",
+          "lineNumber": 490
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "['active', 'in_progress', 'running'].includes",
+          "lineNumber": 495
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "['interrupted', 'aborted'].includes",
+          "lineNumber": 499
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "formatDuration",
+          "lineNumber": 504
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "flight.distance_km.toFixed",
+          "lineNumber": 505
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "formatTime",
+          "lineNumber": 507
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number",
+          "lineNumber": 516
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number",
+          "lineNumber": 517
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number",
+          "lineNumber": 519
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 521
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "setTab",
+          "lineNumber": 551
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 580
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Math.round",
+          "lineNumber": 580
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 585
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 595
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "windSpeed.toFixed",
+          "lineNumber": 595
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Number.isFinite",
+          "lineNumber": 600
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Math.min",
+          "lineNumber": 600
+        },
+        {
+          "caller": "FleetPage",
+          "callee": "Math.round",
+          "lineNumber": 610
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 1,
+        "functionCount": 11,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/config/missionMapDefaults.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 27,
+      "nonEmptyLines": 23,
+      "functions": [
+        {
+          "name": "buildMissionGoogleMapOptions",
+          "startLine": 15,
+          "endLine": 27,
+          "params": [
+            "mapId"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DEFAULT_MISSION_MAP_CONTAINER_STYLE",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "DEFAULT_MISSION_MAP_CENTER",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "DEFAULT_MISSION_MAP_ZOOM",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "buildMissionGoogleMapOptions",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useDroneCenter.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 80,
+      "nonEmptyLines": 64,
+      "functions": [
+        {
+          "name": "useDroneCenter",
+          "startLine": 6,
+          "endLine": 80,
+          "params": [
+            "telemetry"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useDroneCenter",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useDroneCenter",
+          "callee": "useState",
+          "lineNumber": 7
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useRef",
+          "lineNumber": 10
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useRef",
+          "lineNumber": 11
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useRef",
+          "lineNumber": 12
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useRef",
+          "lineNumber": 13
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "useEffect",
+          "lineNumber": 15
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "extractLatLng",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "extractLatLng",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "extractLatLng",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "extractLatLng",
+          "lineNumber": 20
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "setDroneCenter",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "performance.now",
+          "lineNumber": 45
+        },
+        {
+          "caller": "animate",
+          "callee": "Math.min",
+          "lineNumber": 49
+        },
+        {
+          "caller": "animate",
+          "callee": "Math.pow",
+          "lineNumber": 52
+        },
+        {
+          "caller": "animate",
+          "callee": "setDroneCenter",
+          "lineNumber": 56
+        },
+        {
+          "caller": "animate",
+          "callee": "requestAnimationFrame",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "requestAnimationFrame",
+          "lineNumber": 69
+        },
+        {
+          "caller": "useDroneCenter",
+          "callee": "cancelAnimationFrame",
+          "lineNumber": 73
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useDroneMapFollow.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 46,
+      "nonEmptyLines": 39,
+      "functions": [
+        {
+          "name": "useDroneMapFollow",
+          "startLine": 4,
+          "endLine": 46,
+          "params": [
+            "{\n  mapRef,\n  droneCenter,\n  wsConnected,\n  onInitialSnap,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useDroneMapFollow",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useRef",
+          "lineNumber": 15
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useRef",
+          "lineNumber": 16
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useEffect",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "mapRef.current.panTo",
+          "lineNumber": 22
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "mapRef.current.setZoom",
+          "lineNumber": 23
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "onInitialSnap",
+          "lineNumber": 24
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useEffect",
+          "lineNumber": 28
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "useEffect",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "Date.now",
+          "lineNumber": 37
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "mapRef.current.getZoom",
+          "lineNumber": 41
+        },
+        {
+          "caller": "useDroneMapFollow",
+          "callee": "mapRef.current.panTo",
+          "lineNumber": 44
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useGooglePointMarkers.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 90,
+      "nonEmptyLines": 80,
+      "functions": [
+        {
+          "name": "clearGoogleMarkers",
+          "startLine": 14,
+          "endLine": 32,
+          "params": [
+            "markers"
+          ]
+        },
+        {
+          "name": "createMarkerContent",
+          "startLine": 34,
+          "endLine": 43,
+          "params": [
+            "color"
+          ]
+        },
+        {
+          "name": "useGooglePointMarkers",
+          "startLine": 45,
+          "endLine": 90,
+          "params": [
+            "{\n  enabled,\n  isLoaded,\n  mapReady,\n  mapRef,\n  markersRef,\n  markers,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useGooglePointMarkers",
+          "line": 45,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "clearGoogleMarkers",
+          "callee": "markers.current.forEach",
+          "lineNumber": 15
+        },
+        {
+          "caller": "clearGoogleMarkers",
+          "callee": "(marker as { setMap: (value: null) => void }).setMap",
+          "lineNumber": 24
+        },
+        {
+          "caller": "createMarkerContent",
+          "callee": "document.createElement",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useGooglePointMarkers",
+          "callee": "useEffect",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useGooglePointMarkers",
+          "callee": "clearGoogleMarkers",
+          "lineNumber": 73
+        },
+        {
+          "caller": "useGooglePointMarkers",
+          "callee": "markers.forEach",
+          "lineNumber": 77
+        },
+        {
+          "caller": "useGooglePointMarkers",
+          "callee": "createMarkerContent",
+          "lineNumber": 81
+        },
+        {
+          "caller": "useGooglePointMarkers",
+          "callee": "markersRef.current.push",
+          "lineNumber": 85
+        },
+        {
+          "caller": "useGooglePointMarkers",
+          "callee": "clearGoogleMarkers",
+          "lineNumber": 88
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useMissionMapRuntime.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 177,
+      "nonEmptyLines": 159,
+      "functions": [
+        {
+          "name": "useMissionMapRuntime",
+          "startLine": 17,
+          "endLine": 177,
+          "params": [
+            "{\n  apiBase,\n  wsConnected,\n  droneConnected,\n  telemetry,\n  activeFlightId,\n  fieldTilesetUrl,\n  controlledMapEngine,\n  onMapEngineChange,\n  fieldPolygonRef,\n  onAutoStartVideoError,\n  onLocationError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useMissionMapRuntime",
+          "line": 17,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useRef",
+          "lineNumber": 42
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useRef",
+          "lineNumber": 43
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useRef",
+          "lineNumber": 44
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useState",
+          "lineNumber": 45
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useState",
+          "lineNumber": 46
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useState",
+          "lineNumber": 47
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useState",
+          "lineNumber": 48
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useState",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useContext",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useDroneCenter",
+          "lineNumber": 56
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useMissionCommandMetrics",
+          "lineNumber": 57
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "Boolean",
+          "lineNumber": 58
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useMissionVideoStreamState",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useCallback",
+          "lineNumber": 68
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "onMapEngineChange",
+          "lineNumber": 70
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useEffect",
+          "lineNumber": 75
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "handleMapEngineChange",
+          "lineNumber": 77
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "setCesiumViewMode",
+          "lineNumber": 79
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useUserLocation",
+          "lineNumber": 82
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useCallback",
+          "lineNumber": 86
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "setMapReady",
+          "lineNumber": 88
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useCallback",
+          "lineNumber": 91
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 93
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "setMapReady",
+          "lineNumber": 97
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useCallback",
+          "lineNumber": 100
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "mapRef.current.getZoom",
+          "lineNumber": 102
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "Number.isFinite",
+          "lineNumber": 103
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "setMapZoom",
+          "lineNumber": 104
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useCallback",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "mapRef.current.getCenter",
+          "lineNumber": 111
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "mapCenter.lat",
+          "lineNumber": 114
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "mapCenter.lng",
+          "lineNumber": 114
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "Math.abs",
+          "lineNumber": 119
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "Math.abs",
+          "lineNumber": 120
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "setCenter",
+          "lineNumber": 124
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useDroneMapFollow",
+          "lineNumber": 128
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "setMapZoom",
+          "lineNumber": 132
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "useMemo",
+          "lineNumber": 135
+        },
+        {
+          "caller": "useMissionMapRuntime",
+          "callee": "buildMissionGoogleMapOptions",
+          "lineNumber": 135
+        }
+      ],
+      "metrics": {
+        "importCount": 9,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useMissionVideoStreamState.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 64,
+      "nonEmptyLines": 57,
+      "functions": [
+        {
+          "name": "useMissionVideoStreamState",
+          "startLine": 5,
+          "endLine": 64,
+          "params": [
+            "{\n  apiBase,\n  activeFlightId,\n  droneReady,\n  droneConnected,\n  onAutoStartVideoError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useMissionVideoStreamState",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "useState",
+          "lineNumber": 18
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "useState",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "useState",
+          "lineNumber": 20
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "getToken",
+          "lineNumber": 21
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "useAutoStartVideo",
+          "lineNumber": 23
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "Boolean",
+          "lineNumber": 26
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "useEffect",
+          "lineNumber": 31
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "setManualStreamKey",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "useCallback",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "setVideoError",
+          "lineNumber": 39
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "setVideoRetryCount",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "useCallback",
+          "lineNumber": 43
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "setVideoError",
+          "lineNumber": 44
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "setVideoRetryCount",
+          "lineNumber": 45
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "useCallback",
+          "lineNumber": 48
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "setManualStreamKey",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "Date.now",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useMissionVideoStreamState",
+          "callee": "setVideoError",
+          "lineNumber": 50
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useSyncTerraDrawMode.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 27,
+      "functions": [
+        {
+          "name": "useSyncTerraDrawMode",
+          "startLine": 15,
+          "endLine": 30,
+          "params": [
+            "{\n  drawMode,\n  mapEngine,\n  setTerraDrawMode,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useSyncTerraDrawMode",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useSyncTerraDrawMode",
+          "callee": "useEffect",
+          "lineNumber": 24
+        },
+        {
+          "caller": "useSyncTerraDrawMode",
+          "callee": "setTerraDrawMode",
+          "lineNumber": 28
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/hooks/useUserLocation.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 76,
+      "nonEmptyLines": 64,
+      "functions": [
+        {
+          "name": "useUserLocation",
+          "startLine": 26,
+          "endLine": 76,
+          "params": [
+            "{\n  onLocationError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useUserLocation",
+          "line": 26,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useUserLocation",
+          "callee": "Boolean",
+          "lineNumber": 29
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useState",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useState",
+          "lineNumber": 31
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useState",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useRef",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useRef",
+          "lineNumber": 36
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useCallback",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "console.warn",
+          "lineNumber": 43
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "navigator.geolocation.getCurrentPosition",
+          "lineNumber": 47
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setUserCenter",
+          "lineNumber": 50
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setLocationError",
+          "lineNumber": 54
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setLoadingLocation",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "onLocationError",
+          "lineNumber": 59
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setLocationError",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "setLoadingLocation",
+          "lineNumber": 61
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "useEffect",
+          "lineNumber": 67
+        },
+        {
+          "caller": "useUserLocation",
+          "callee": "requestLocation",
+          "lineNumber": 69
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 30,
+      "exports": [
+        {
+          "name": "DEFAULT_MISSION_MAP_ENGINE",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "MissionMapViewport",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawController",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "RouteDrawControls",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumViewControls",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "useDroneMapFollow",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "useDroneCenter",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "useUserLocation",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "UserLocationErrorPolicy",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "UserLocationResult",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "UseUserLocationOptions",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "useMapEngine",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "dispatchMapEngineChange",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "terraDrawToolToShapeMode",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "isFlatDrawToolSelected",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "GoogleMapsContext",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "GoogleMapsProvider",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumMapLazy",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumMap",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumDrawResult",
+          "line": 30,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 20,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/providers/googleMaps.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 38,
+      "nonEmptyLines": 31,
+      "functions": [
+        {
+          "name": "GoogleMapsProvider",
+          "startLine": 17,
+          "endLine": 38,
+          "params": [
+            "{ children }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "GoogleMapsContext",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "GoogleMapsProvider",
+          "line": 17,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "GoogleMapsProvider",
+          "callee": "useJsApiLoader",
+          "lineNumber": 23
+        },
+        {
+          "caller": "GoogleMapsProvider",
+          "callee": "console.error",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/tests/useUserLocation.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 96,
+      "nonEmptyLines": 80,
+      "functions": [
+        {
+          "name": "installGeolocation",
+          "startLine": 9,
+          "endLine": 29,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "installGeolocation",
+          "callee": "vi.fn",
+          "lineNumber": 12
+        },
+        {
+          "caller": "installGeolocation",
+          "callee": "Object.defineProperty",
+          "lineNumber": 18
+        },
+        {
+          "caller": "installGeolocation",
+          "callee": "success",
+          "lineNumber": 25
+        },
+        {
+          "caller": "installGeolocation",
+          "callee": "failure",
+          "lineNumber": 27
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 8,
+      "nonEmptyLines": 8,
+      "exports": [
+        {
+          "name": "MissionMapEngine",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "CesiumViewMode",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "DrawMode",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "DrawResult",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawEditorMode",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawFeature",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawToolMode",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "RouteDrawMode",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "RouteDrawToolMode",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 9,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/maps/utils/flatBoundaryDrawBridge.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 34,
+      "functions": [
+        {
+          "name": "createFlatBoundaryDrawBridge",
+          "startLine": 3,
+          "endLine": 20,
+          "params": [
+            "{\n  setFieldBorder,\n  setSelectedFieldId,\n  onBoundaryDrawStarted,\n}"
+          ]
+        },
+        {
+          "name": "createFarmBorderDrawBridge",
+          "startLine": 22,
+          "endLine": 36,
+          "params": [
+            "{\n  setFarmBorder,\n  onBoundaryDrawStarted,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "createFlatBoundaryDrawBridge",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "createFarmBorderDrawBridge",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "createFlatBoundaryDrawBridge",
+          "callee": "setFieldBorder",
+          "lineNumber": 16
+        },
+        {
+          "caller": "createFlatBoundaryDrawBridge",
+          "callee": "stripClosedRing",
+          "lineNumber": 16
+        },
+        {
+          "caller": "createFlatBoundaryDrawBridge",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 17
+        },
+        {
+          "caller": "createFarmBorderDrawBridge",
+          "callee": "setFarmBorder",
+          "lineNumber": 33
+        },
+        {
+          "caller": "createFarmBorderDrawBridge",
+          "callee": "stripClosedRing",
+          "lineNumber": 33
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/api/missionHistoryApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 55,
+      "nonEmptyLines": 47,
+      "functions": [
+        {
+          "name": "fetchMissionDetail",
+          "startLine": 3,
+          "endLine": 5,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionPreflight",
+          "startLine": 7,
+          "endLine": 12,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionTransitions",
+          "startLine": 14,
+          "endLine": 19,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionCommands",
+          "startLine": 21,
+          "endLine": 26,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionEvents",
+          "startLine": 28,
+          "endLine": 30,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionCompliance",
+          "startLine": 32,
+          "endLine": 37,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchMissionExportJob",
+          "startLine": 39,
+          "endLine": 45,
+          "params": [
+            "flightId",
+            "jobId",
+            "token"
+          ]
+        },
+        {
+          "name": "startMissionExport",
+          "startLine": 47,
+          "endLine": 55,
+          "params": [
+            "flightId",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchMissionDetail",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionPreflight",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionTransitions",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionCommands",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionEvents",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionCompliance",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "fetchMissionExportJob",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "startMissionExport",
+          "line": 47,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchMissionDetail",
+          "callee": "httpRequest",
+          "lineNumber": 4
+        },
+        {
+          "caller": "fetchMissionPreflight",
+          "callee": "httpRequest",
+          "lineNumber": 11
+        },
+        {
+          "caller": "fetchMissionTransitions",
+          "callee": "httpRequest",
+          "lineNumber": 18
+        },
+        {
+          "caller": "fetchMissionCommands",
+          "callee": "httpRequest",
+          "lineNumber": 25
+        },
+        {
+          "caller": "fetchMissionEvents",
+          "callee": "httpRequest",
+          "lineNumber": 29
+        },
+        {
+          "caller": "fetchMissionCompliance",
+          "callee": "httpRequest",
+          "lineNumber": 36
+        },
+        {
+          "caller": "fetchMissionExportJob",
+          "callee": "httpRequest",
+          "lineNumber": 44
+        },
+        {
+          "caller": "startMissionExport",
+          "callee": "httpRequest",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 8,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/components/MissionSectionError.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 23,
+      "nonEmptyLines": 18,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/components/MissionSectionError.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 41,
+      "nonEmptyLines": 38,
+      "functions": [
+        {
+          "name": "MissionSectionError",
+          "startLine": 5,
+          "endLine": 41,
+          "params": [
+            "{\n  section,\n  error,\n  retrying = false,\n  onRetry,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionSectionError",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/views/MissionTimeline.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 91,
+      "nonEmptyLines": 82,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-history/views/MissionTimeline.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 651,
+      "nonEmptyLines": 616,
+      "functions": [
+        {
+          "name": "formatTs",
+          "startLine": 42,
+          "endLine": 45,
+          "params": [
+            "ts"
+          ]
+        },
+        {
+          "name": "StatusBadge",
+          "startLine": 47,
+          "endLine": 56,
+          "params": [
+            "{ status }"
+          ]
+        },
+        {
+          "name": "PreflightSection",
+          "startLine": 58,
+          "endLine": 133,
+          "params": [
+            "{ data }"
+          ]
+        },
+        {
+          "name": "stateIcon",
+          "startLine": 135,
+          "endLine": 150,
+          "params": [
+            "state"
+          ]
+        },
+        {
+          "name": "TransitionItem",
+          "startLine": 152,
+          "endLine": 176,
+          "params": [
+            "{ item }"
+          ]
+        },
+        {
+          "name": "CommandItem",
+          "startLine": 178,
+          "endLine": 206,
+          "params": [
+            "{ item }"
+          ]
+        },
+        {
+          "name": "EventItem",
+          "startLine": 208,
+          "endLine": 262,
+          "params": [
+            "{ item }"
+          ]
+        },
+        {
+          "name": "ExportButton",
+          "startLine": 269,
+          "endLine": 361,
+          "params": [
+            "{ flightId }"
+          ]
+        },
+        {
+          "name": "ComplianceSection",
+          "startLine": 363,
+          "endLine": 414,
+          "params": [
+            "{ data }"
+          ]
+        },
+        {
+          "name": "MissionTimeline",
+          "startLine": 416,
+          "endLine": 651,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionTimeline",
+          "line": 416,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatTs",
+          "callee": "new Date(ts * 1000).toLocaleString",
+          "lineNumber": 44
+        },
+        {
+          "caller": "StatusBadge",
+          "callee": "status.toUpperCase",
+          "lineNumber": 48
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "useState",
+          "lineNumber": 59
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "useId",
+          "lineNumber": 60
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "useTheme",
+          "lineNumber": 61
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "setOpen",
+          "lineNumber": 93
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "formatTs",
+          "lineNumber": 100
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "formatTs",
+          "lineNumber": 100
+        },
+        {
+          "caller": "PreflightSection",
+          "callee": "allChecks.map",
+          "lineNumber": 105
+        },
+        {
+          "caller": "TransitionItem",
+          "callee": "stateIcon",
+          "lineNumber": 155
+        },
+        {
+          "caller": "TransitionItem",
+          "callee": "formatTs",
+          "lineNumber": 166
+        },
+        {
+          "caller": "CommandItem",
+          "callee": "formatTs",
+          "lineNumber": 196
+        },
+        {
+          "caller": "EventItem",
+          "callee": "useState",
+          "lineNumber": 209
+        },
+        {
+          "caller": "EventItem",
+          "callee": "useId",
+          "lineNumber": 210
+        },
+        {
+          "caller": "EventItem",
+          "callee": "Object.keys",
+          "lineNumber": 211
+        },
+        {
+          "caller": "EventItem",
+          "callee": "setOpen",
+          "lineNumber": 229
+        },
+        {
+          "caller": "EventItem",
+          "callee": "formatTs",
+          "lineNumber": 241
+        },
+        {
+          "caller": "EventItem",
+          "callee": "JSON.stringify",
+          "lineNumber": 256
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "useState",
+          "lineNumber": 270
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "useState",
+          "lineNumber": 271
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "useState",
+          "lineNumber": 272
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "useQuery",
+          "lineNumber": 274
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "fetchMissionExportJob",
+          "lineNumber": 276
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "String",
+          "lineNumber": 276
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setStarting",
+          "lineNumber": 286
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setStartError",
+          "lineNumber": 287
+        },
+        {
+          "caller": "handleExport",
+          "callee": "await startMissionExport",
+          "lineNumber": 289
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setJobId",
+          "lineNumber": 290
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setStartError",
+          "lineNumber": 292
+        },
+        {
+          "caller": "handleExport",
+          "callee": "setStarting",
+          "lineNumber": 294
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "setStartError",
+          "lineNumber": 312
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "setJobId",
+          "lineNumber": 313
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "window.open",
+          "lineNumber": 325
+        },
+        {
+          "caller": "ExportButton",
+          "callee": "setJobId",
+          "lineNumber": 336
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "useState",
+          "lineNumber": 364
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "useId",
+          "lineNumber": 365
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "setOpen",
+          "lineNumber": 385
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "new Date(data.preflight_ack_at).toLocaleString",
+          "lineNumber": 395
+        },
+        {
+          "caller": "ComplianceSection",
+          "callee": "new Date(data.laanc_auth_expires).toLocaleString",
+          "lineNumber": 401
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "useParams",
+          "lineNumber": 417
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "useNavigate",
+          "lineNumber": 418
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "useQueries",
+          "lineNumber": 420
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionDetail",
+          "lineNumber": 424
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 425
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionPreflight",
+          "lineNumber": 429
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 430
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionTransitions",
+          "lineNumber": 435
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 436
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionCommands",
+          "lineNumber": 440
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 441
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionEvents",
+          "lineNumber": 445
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 446
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "fetchMissionCompliance",
+          "lineNumber": 450
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "Boolean",
+          "lineNumber": 451
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "(transitionsQ.data ?? []).forEach",
+          "lineNumber": 466
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.push",
+          "lineNumber": 467
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "(commandsQ.data ?? []).forEach",
+          "lineNumber": 469
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.push",
+          "lineNumber": 470
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "(eventsQ.data ?? []).forEach",
+          "lineNumber": 472
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.push",
+          "lineNumber": 473
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.sort",
+          "lineNumber": 476
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "timelineQueries.some",
+          "lineNumber": 484
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "navigate",
+          "lineNumber": 490
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "missionQ.refetch",
+          "lineNumber": 521
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "formatTs",
+          "lineNumber": 545
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "formatTs",
+          "lineNumber": 552
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "preflightQ.refetch",
+          "lineNumber": 587
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "complianceQ.refetch",
+          "lineNumber": 599
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "timelineQueries.map",
+          "lineNumber": 605
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "query.refetch",
+          "lineNumber": 612
+        },
+        {
+          "caller": "MissionTimeline",
+          "callee": "entries.map",
+          "lineNumber": 635
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 10,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-planning/components/GridMissionParamsSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 409,
+      "nonEmptyLines": 405,
+      "functions": [
+        {
+          "name": "GridMissionParamsSection",
+          "startLine": 46,
+          "endLine": 409,
+          "params": [
+            "{\n  copy,\n  gridParams,\n  setGridParams,\n  fieldBorder,\n  gridPreview,\n  gridPreviewStats,\n  previewLegStats,\n  gridPreviewTooDense,\n  gridPreviewError,\n  previewLoading,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "FIELD_SURVEY_GRID_COPY",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "PHOTOGRAMMETRY_GRID_COPY",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "GridMissionParamsSection",
+          "line": 46,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 101
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 124
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 147
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 167
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 168
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 169
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 171
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 190
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 191
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 192
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 194
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 194
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.round",
+          "lineNumber": 194
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 213
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 214
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 215
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 217
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 236
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 239
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 259
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 260
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 261
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 263
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 263
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 277
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 279
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 279
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 290
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 305
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 325
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 327
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "Number",
+          "lineNumber": 327
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "gridPreviewStats.route_m.toFixed",
+          "lineNumber": 354
+        },
+        {
+          "caller": "GridMissionParamsSection",
+          "callee": "copy.tooDenseAlert",
+          "lineNumber": 383
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 3,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-planning/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 6,
+      "nonEmptyLines": 6,
+      "exports": [
+        {
+          "name": "createDefaultGridParams",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "useGridPreview",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "usePatrolPreview",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 28,
+      "exports": [
+        {
+          "name": "resolveTelemetryWebSocketUrl",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "buildMissionTimeline",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "stateChipColor",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "formatTs",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "opsChipColor",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "TimelineEntry",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionRuntime",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionRuntimeDefault",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionWebsocketRuntime",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionStatusPolling",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "useTelemetryStream",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "useTelemetryWebSocket",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "default",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionCommands",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionCommandMetrics",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionVideo",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "useAutoStartVideo",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "useLiveObjectDetection",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionPreflightRows",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "MissionCommandPanel",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "MissionPreflightPanel",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "MissionVideoPanel",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "MissionStatusChips",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "TelemetryHud",
+          "line": 30,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 24,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/realtime/resolveWsUrl.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 18,
+      "nonEmptyLines": 15,
+      "functions": [
+        {
+          "name": "resolveTelemetryWebSocketUrl",
+          "startLine": 3,
+          "endLine": 18,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "resolveTelemetryWebSocketUrl",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "getApiBaseUrl",
+          "lineNumber": 4
+        },
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "apiBase.startsWith",
+          "lineNumber": 9
+        },
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "apiBase.startsWith",
+          "lineNumber": 9
+        },
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "apiBase.replace",
+          "lineNumber": 10
+        },
+        {
+          "caller": "resolveTelemetryWebSocketUrl",
+          "callee": "apiBase.startsWith",
+          "lineNumber": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/types/missionDtos.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 99,
+      "nonEmptyLines": 92,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-runtime/types/runtime.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 135,
+      "nonEmptyLines": 123,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MapDrawToolsOverlay.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 124,
+      "nonEmptyLines": 120,
+      "functions": [
+        {
+          "name": "MapDrawToolsOverlay",
+          "startLine": 39,
+          "endLine": 124,
+          "params": [
+            "{\n  mapEngine,\n  terraDrawMode,\n  terraDrawReady,\n  drawMode,\n  deleteDisabled,\n  onToolSelect,\n  onDelete,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MapDrawToolsOverlay",
+          "line": 39,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MapDrawToolsOverlay",
+          "callee": "DRAW_TOOLS.map",
+          "lineNumber": 74
+        },
+        {
+          "caller": "MapDrawToolsOverlay",
+          "callee": "isFlatDrawToolSelected",
+          "lineNumber": 77
+        },
+        {
+          "caller": "MapDrawToolsOverlay",
+          "callee": "onToolSelect",
+          "lineNumber": 85
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MapShapeActionPopover.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 144,
+      "nonEmptyLines": 136,
+      "functions": [
+        {
+          "name": "VariantIcon",
+          "startLine": 46,
+          "endLine": 51,
+          "params": [
+            "{ variant }"
+          ]
+        },
+        {
+          "name": "MapShapeActionPopover",
+          "startLine": 53,
+          "endLine": 144,
+          "params": [
+            "{\n  open,\n  variant,\n  name,\n  saving,\n  isUpdate,\n  placement = \"right\",\n  onNameChange,\n  onSave,\n  onDismiss,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MapShapeActionPopover",
+          "line": 53,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MapShapeActionPopover",
+          "callee": "onNameChange",
+          "lineNumber": 126
+        },
+        {
+          "caller": "MapShapeActionPopover",
+          "callee": "name.trim",
+          "lineNumber": 135
+        },
+        {
+          "caller": "MapShapeActionPopover",
+          "callee": "onSave",
+          "lineNumber": 136
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MissionFlightStatusPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 49,
+      "nonEmptyLines": 48,
+      "functions": [
+        {
+          "name": "MissionFlightStatusPanel",
+          "startLine": 4,
+          "endLine": 49,
+          "params": [
+            "{\n  missionStatus,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionFlightStatusPanel",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MissionMapBoundaryPrompt.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 34,
+      "nonEmptyLines": 33,
+      "functions": [
+        {
+          "name": "MissionMapBoundaryPrompt",
+          "startLine": 7,
+          "endLine": 34,
+          "params": [
+            "{\n  variant,\n  boundary,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionMapBoundaryPrompt",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MissionMapBoundaryPrompt",
+          "callee": "boundary.saveFromShapePrompt",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MissionWaypointList.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 28,
+      "nonEmptyLines": 26,
+      "functions": [
+        {
+          "name": "MissionWaypointList",
+          "startLine": 4,
+          "endLine": 28,
+          "params": [
+            "{\n  waypoints,\n  fallbackAltitude,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionWaypointList",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MissionWaypointList",
+          "callee": "waypoints.map",
+          "lineNumber": 19
+        },
+        {
+          "caller": "MissionWaypointList",
+          "callee": "wp.lat.toFixed",
+          "lineNumber": 21
+        },
+        {
+          "caller": "MissionWaypointList",
+          "callee": "wp.lon.toFixed",
+          "lineNumber": 21
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/components/MissionWorkflowShell.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 68,
+      "nonEmptyLines": 65,
+      "functions": [
+        {
+          "name": "MissionWorkflowShell",
+          "startLine": 7,
+          "endLine": 68,
+          "params": [
+            "{\n  title,\n  subtitle,\n  droneConnected,\n  wsConnected,\n  errors,\n  onDismissError,\n  onClearErrors,\n  children,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionWorkflowShell",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/constants.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 6,
+      "nonEmptyLines": 6,
+      "exports": [
+        {
+          "name": "MAX_GRID_PREVIEW_WAYPOINTS",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "CESIUM_MAX_SAFE_ZOOM",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "INFO_INPUT_LABEL_PROPS",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

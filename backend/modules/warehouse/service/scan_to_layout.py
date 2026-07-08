@@ -39,9 +39,75 @@ def displacement_m(reference: dict[str, Any], observed: dict[str, Any]) -> float
     return math.dist(left, right)
 
 
-def candidate_status(*, displacement: float | None, threshold_m: float = 0.25) -> str:
+def _template_bin_mismatch(geometry: dict[str, Any]) -> bool:
+    template = geometry.get("template") if isinstance(geometry, dict) else {}
+    template = template if isinstance(template, dict) else {}
+    expected = template.get("bin_count")
+    observed = geometry.get("bin_count") or geometry.get("observed_bin_count")
+    if expected is None or observed is None:
+        return False
+    try:
+        return int(expected) != int(observed)
+    except (TypeError, ValueError):
+        return False
+
+
+def _missing_clearance_evidence(geometry: dict[str, Any]) -> bool:
+    evidence = geometry.get("evidence") if isinstance(geometry, dict) else {}
+    evidence = evidence if isinstance(evidence, dict) else {}
+    quality = geometry.get("quality") if isinstance(geometry, dict) else {}
+    quality = quality if isinstance(quality, dict) else {}
+    if "occupancy_available" in evidence or "esdf_available" in evidence:
+        return not bool(evidence.get("occupancy_available") or evidence.get("esdf_available"))
+    if "missing_occupancy_grid" in set(quality.get("reasons") or []):
+        return True
+    if "missing_esdf_topic" in set(quality.get("reasons") or []):
+        return True
+    return False
+
+
+def review_reasons(
+    *,
+    entity_kind: str,
+    confidence: float,
+    geometry: dict[str, Any] | None = None,
+    displacement: float | None = None,
+    displacement_threshold_m: float = 0.25,
+    low_confidence_threshold: float = 0.75,
+) -> list[str]:
+    geometry = geometry or {}
+    reasons: list[str] = []
+    if entity_kind == "rack" and displacement is None:
+        reasons.append("new_rack_row")
+    if displacement is not None and displacement > displacement_threshold_m:
+        reasons.append("large_displacement")
+    if float(confidence) < low_confidence_threshold:
+        reasons.append("low_confidence")
+    if _missing_clearance_evidence(geometry):
+        reasons.append("missing_esdf_or_occupancy_evidence")
+    if _template_bin_mismatch(geometry):
+        reasons.append("bin_count_mismatch_vs_template")
+    return reasons
+
+
+def candidate_status(
+    *,
+    displacement: float | None,
+    threshold_m: float = 0.25,
+    entity_kind: str = "bin",
+    confidence: float = 1.0,
+    geometry: dict[str, Any] | None = None,
+) -> str:
     return (
-        "needs_review" if displacement is not None and displacement > threshold_m else "provisional"
+        "needs_review"
+        if review_reasons(
+            entity_kind=entity_kind,
+            confidence=confidence,
+            geometry=geometry,
+            displacement=displacement,
+            displacement_threshold_m=threshold_m,
+        )
+        else "provisional"
     )
 
 
@@ -69,7 +135,11 @@ async def persist_candidates(
             geometry_json=candidate.geometry,
             confidence=confidence,
             status=candidate_status(
-                displacement=displacement, threshold_m=displacement_threshold_m
+                displacement=displacement,
+                threshold_m=displacement_threshold_m,
+                entity_kind=candidate.entity_kind,
+                confidence=confidence,
+                geometry=candidate.geometry,
             ),
             displacement_m=displacement,
             source_sequence=candidate.source_sequence,

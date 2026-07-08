@@ -1,0 +1,3215 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 14,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "backend/observability/__init__.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 6,
+      "nonEmptyLines": 4,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/observability/audit.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 76,
+      "nonEmptyLines": 66,
+      "functions": [
+        {
+          "name": "_safe_audit_value",
+          "startLine": 17,
+          "endLine": 36,
+          "params": [
+            "value",
+            "depth"
+          ]
+        },
+        {
+          "name": "emit_audit_event",
+          "startLine": 39,
+          "endLine": 76,
+          "params": [
+            "event_name",
+            "action",
+            "resource_type",
+            "result",
+            "actor_type",
+            "actor_id",
+            "resource_id",
+            "reason",
+            "error_type",
+            "extra"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "_safe_audit_value",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "emit_audit_event",
+          "line": 39,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_safe_audit_value",
+          "callee": "isinstance",
+          "lineNumber": 21
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "isinstance",
+          "lineNumber": 23
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "isinstance",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "list",
+          "lineNumber": 27
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "value.items",
+          "lineNumber": 27
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "str",
+          "lineNumber": 28
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "any",
+          "lineNumber": 29
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "key.lower",
+          "lineNumber": 29
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "_safe_audit_value",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "isinstance",
+          "lineNumber": 34
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "_safe_audit_value",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_safe_audit_value",
+          "callee": "str",
+          "lineNumber": 36
+        },
+        {
+          "caller": "emit_audit_event",
+          "callee": "datetime.now(UTC).isoformat",
+          "lineNumber": 55
+        },
+        {
+          "caller": "emit_audit_event",
+          "callee": "datetime.now",
+          "lineNumber": 55
+        },
+        {
+          "caller": "emit_audit_event",
+          "callee": "log_context_fields",
+          "lineNumber": 61
+        },
+        {
+          "caller": "emit_audit_event",
+          "callee": "extra.items",
+          "lineNumber": 72
+        },
+        {
+          "caller": "emit_audit_event",
+          "callee": "str",
+          "lineNumber": 75
+        },
+        {
+          "caller": "emit_audit_event",
+          "callee": "_safe_audit_value",
+          "lineNumber": 75
+        },
+        {
+          "caller": "emit_audit_event",
+          "callee": "logger.info",
+          "lineNumber": 76
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/observability/celery_instrumentation.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 320,
+      "nonEmptyLines": 282,
+      "functions": [
+        {
+          "name": "_task_name",
+          "startLine": 29,
+          "endLine": 31,
+          "params": [
+            "task"
+          ]
+        },
+        {
+          "name": "_task_queue",
+          "startLine": 34,
+          "endLine": 39,
+          "params": [
+            "task"
+          ]
+        },
+        {
+          "name": "_headers",
+          "startLine": 42,
+          "endLine": 46,
+          "params": [
+            "task"
+          ]
+        },
+        {
+          "name": "_inject_publish_context",
+          "startLine": 49,
+          "endLine": 72,
+          "params": [
+            "headers"
+          ]
+        },
+        {
+          "name": "_extract_worker_context",
+          "startLine": 75,
+          "endLine": 82,
+          "params": [
+            "headers"
+          ]
+        },
+        {
+          "name": "_start_job_span",
+          "startLine": 85,
+          "endLine": 102,
+          "params": [
+            "task",
+            "job_name",
+            "queue"
+          ]
+        },
+        {
+          "name": "_log_job_event",
+          "startLine": 105,
+          "endLine": 117,
+          "params": [
+            "event_name",
+            "task"
+          ]
+        },
+        {
+          "name": "instrument_celery",
+          "startLine": 120,
+          "endLine": 320,
+          "params": [
+            "celery_app"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "_task_name",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "_task_queue",
+          "line": 34,
+          "isDefault": false
+        },
+        {
+          "name": "_headers",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "_inject_publish_context",
+          "line": 49,
+          "isDefault": false
+        },
+        {
+          "name": "_extract_worker_context",
+          "line": 75,
+          "isDefault": false
+        },
+        {
+          "name": "_start_job_span",
+          "line": 85,
+          "isDefault": false
+        },
+        {
+          "name": "_log_job_event",
+          "line": 105,
+          "isDefault": false
+        },
+        {
+          "name": "instrument_celery",
+          "line": 120,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_task_name",
+          "callee": "getattr",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_task_name",
+          "callee": "getattr",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_task_name",
+          "callee": "getattr",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_task_name",
+          "callee": "str",
+          "lineNumber": 31
+        },
+        {
+          "caller": "_task_queue",
+          "callee": "getattr",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_task_queue",
+          "callee": "getattr",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_task_queue",
+          "callee": "delivery.get",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_task_queue",
+          "callee": "str",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_task_queue",
+          "callee": "str",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_task_queue",
+          "callee": "getattr",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_headers",
+          "callee": "getattr",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_headers",
+          "callee": "dict",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_headers",
+          "callee": "getattr",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_inject_publish_context",
+          "callee": "str",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_inject_publish_context",
+          "callee": "time.time",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_inject_publish_context",
+          "callee": "inject",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_inject_publish_context",
+          "callee": "get_request_id",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_inject_publish_context",
+          "callee": "get_correlation_id",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_inject_publish_context",
+          "callee": "extra.items",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_inject_publish_context",
+          "callee": "str",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_extract_worker_context",
+          "callee": "attach",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_extract_worker_context",
+          "callee": "extract",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "trace.get_tracer",
+          "lineNumber": 89
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "tracer.start_as_current_span",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "str",
+          "lineNumber": 94
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "getattr",
+          "lineNumber": 94
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "getattr",
+          "lineNumber": 94
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "int",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "getattr",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "getattr",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_start_job_span",
+          "callee": "nullcontext",
+          "lineNumber": 102
+        },
+        {
+          "caller": "_log_job_event",
+          "callee": "getattr",
+          "lineNumber": 106
+        },
+        {
+          "caller": "_log_job_event",
+          "callee": "_task_name",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_log_job_event",
+          "callee": "_task_queue",
+          "lineNumber": 108
+        },
+        {
+          "caller": "_log_job_event",
+          "callee": "getattr",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_log_job_event",
+          "callee": "int",
+          "lineNumber": 114
+        },
+        {
+          "caller": "_log_job_event",
+          "callee": "getattr",
+          "lineNumber": 114
+        },
+        {
+          "caller": "_log_job_event",
+          "callee": "logger.info",
+          "lineNumber": 117
+        },
+        {
+          "caller": "_log_job_event",
+          "callee": "payload.items",
+          "lineNumber": 117
+        },
+        {
+          "caller": "on_before_task_publish",
+          "callee": "_inject_publish_context",
+          "lineNumber": 129
+        },
+        {
+          "caller": "on_before_task_publish",
+          "callee": "str",
+          "lineNumber": 130
+        },
+        {
+          "caller": "on_before_task_publish",
+          "callee": "str",
+          "lineNumber": 131
+        },
+        {
+          "caller": "on_before_task_publish",
+          "callee": "kwargs.get",
+          "lineNumber": 131
+        },
+        {
+          "caller": "on_before_task_publish",
+          "callee": "kwargs.get",
+          "lineNumber": 131
+        },
+        {
+          "caller": "on_before_task_publish",
+          "callee": "emit_audit_event",
+          "lineNumber": 132
+        },
+        {
+          "caller": "on_before_task_publish",
+          "callee": "logger.info",
+          "lineNumber": 140
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "_headers",
+          "lineNumber": 147
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "_extract_worker_context",
+          "lineNumber": 148
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "_task_name",
+          "lineNumber": 149
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "_task_queue",
+          "lineNumber": 150
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "bind_log_context",
+          "lineNumber": 151
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "headers.get",
+          "lineNumber": 152
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "headers.get",
+          "lineNumber": 153
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "set_job_id",
+          "lineNumber": 156
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "headers.get",
+          "lineNumber": 158
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "max",
+          "lineNumber": 161
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "time.time",
+          "lineNumber": 161
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "float",
+          "lineNumber": 161
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "prometheus_metrics.queue_lag_seconds.labels(queue=queue).observe",
+          "lineNumber": 162
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "prometheus_metrics.queue_lag_seconds.labels",
+          "lineNumber": 162
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "_start_job_span",
+          "lineNumber": 166
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "span_cm.__enter__",
+          "lineNumber": 167
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "time.perf_counter",
+          "lineNumber": 168
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "prometheus_metrics.jobs_started_total.labels(job_name=job_name, queue=queue).inc",
+          "lineNumber": 176
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "prometheus_metrics.jobs_started_total.labels",
+          "lineNumber": 176
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "_BEAT_SCHEDULER_NAMES.get",
+          "lineNumber": 177
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "time.time",
+          "lineNumber": 179
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "_LAST_SCHEDULER_RUN.get",
+          "lineNumber": 180
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "prometheus_metrics.scheduler_lag_seconds.labels(\n                    scheduler_name=scheduler_name\n                ).set",
+          "lineNumber": 182
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "prometheus_metrics.scheduler_lag_seconds.labels",
+          "lineNumber": 182
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "max",
+          "lineNumber": 184
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "prometheus_metrics.scheduler_runs_total.labels(\n                scheduler_name=scheduler_name\n            ).inc",
+          "lineNumber": 186
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "prometheus_metrics.scheduler_runs_total.labels",
+          "lineNumber": 186
+        },
+        {
+          "caller": "on_task_prerun",
+          "callee": "_log_job_event",
+          "lineNumber": 189
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "_TASK_STATE.pop",
+          "lineNumber": 193
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "time.perf_counter",
+          "lineNumber": 196
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "prometheus_metrics.job_duration_seconds.labels(job_name=job_name, queue=queue).observe",
+          "lineNumber": 199
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "prometheus_metrics.job_duration_seconds.labels",
+          "lineNumber": 199
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "prometheus_metrics.celery_task_duration_seconds.labels(\n            task_name=job_name, status=state.lower()\n        ).observe",
+          "lineNumber": 200
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "prometheus_metrics.celery_task_duration_seconds.labels",
+          "lineNumber": 200
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "state.lower",
+          "lineNumber": 201
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "prometheus_metrics.jobs_completed_total.labels(job_name=job_name, queue=queue).inc",
+          "lineNumber": 205
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "prometheus_metrics.jobs_completed_total.labels",
+          "lineNumber": 205
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "emit_audit_event",
+          "lineNumber": 206
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "_log_job_event",
+          "lineNumber": 214
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "round",
+          "lineNumber": 214
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "prometheus_metrics.jobs_failed_total.labels(\n                job_name=job_name, queue=queue, error_type=error_type\n            ).inc",
+          "lineNumber": 217
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "prometheus_metrics.jobs_failed_total.labels",
+          "lineNumber": 217
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "emit_audit_event",
+          "lineNumber": 220
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "_log_job_event",
+          "lineNumber": 229
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "state_info.get",
+          "lineNumber": 231
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "span_cm.__exit__",
+          "lineNumber": 234
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "state_info.get",
+          "lineNumber": 237
+        },
+        {
+          "caller": "on_task_postrun",
+          "callee": "detach",
+          "lineNumber": 242
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "str",
+          "lineNumber": 248
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "getattr",
+          "lineNumber": 248
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "str",
+          "lineNumber": 249
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "getattr(request, \"delivery_info\", {}).get",
+          "lineNumber": 249
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "getattr",
+          "lineNumber": 249
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "normalize_error_type",
+          "lineNumber": 250
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "isinstance",
+          "lineNumber": 250
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "type",
+          "lineNumber": 252
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "prometheus_metrics.job_retries_total.labels(\n            job_name=job_name, queue=queue, retry_reason=retry_reason\n        ).inc",
+          "lineNumber": 253
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "prometheus_metrics.job_retries_total.labels",
+          "lineNumber": 253
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "prometheus_metrics.retry_count_total.labels(subsystem=\"celery\", reason=retry_reason).inc",
+          "lineNumber": 256
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "prometheus_metrics.retry_count_total.labels",
+          "lineNumber": 256
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "emit_audit_event",
+          "lineNumber": 257
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "str",
+          "lineNumber": 261
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "getattr",
+          "lineNumber": 261
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "logger.warning",
+          "lineNumber": 266
+        },
+        {
+          "caller": "on_task_retry",
+          "callee": "getattr",
+          "lineNumber": 272
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "other.get",
+          "lineNumber": 286
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "_task_name",
+          "lineNumber": 287
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "_task_queue",
+          "lineNumber": 288
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "normalize_error_type",
+          "lineNumber": 289
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "_BEAT_SCHEDULER_NAMES.get",
+          "lineNumber": 290
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "prometheus_metrics.scheduler_failures_total.labels(\n                scheduler_name=scheduler_name,\n                error_type=error_type,\n            ).inc",
+          "lineNumber": 292
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "prometheus_metrics.scheduler_failures_total.labels",
+          "lineNumber": 292
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "int",
+          "lineNumber": 296
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "getattr",
+          "lineNumber": 296
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "getattr",
+          "lineNumber": 296
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "getattr",
+          "lineNumber": 297
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "prometheus_metrics.job_dead_letter_total.labels(job_name=job_name, queue=queue).inc",
+          "lineNumber": 299
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "prometheus_metrics.job_dead_letter_total.labels",
+          "lineNumber": 299
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "emit_audit_event",
+          "lineNumber": 300
+        },
+        {
+          "caller": "on_task_failure",
+          "callee": "logger.error",
+          "lineNumber": 309
+        },
+        {
+          "caller": "instrument_celery",
+          "callee": "logger.info",
+          "lineNumber": 320
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 8,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/observability/config.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 52,
+      "nonEmptyLines": 41,
+      "functions": [
+        {
+          "name": "env_bool",
+          "startLine": 9,
+          "endLine": 13,
+          "params": [
+            "name",
+            "default"
+          ]
+        },
+        {
+          "name": "env_str",
+          "startLine": 16,
+          "endLine": 18,
+          "params": [
+            "name",
+            "default"
+          ]
+        },
+        {
+          "name": "load_config",
+          "startLine": 33,
+          "endLine": 52,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "ObservabilityConfig",
+          "startLine": 22,
+          "endLine": 30,
+          "methods": [],
+          "properties": [
+            "enabled",
+            "service_name",
+            "environment",
+            "otlp_endpoint",
+            "traces_exporter",
+            "metrics_exporter",
+            "prometheus_metrics_enabled",
+            "prometheus_metrics_path"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "env_bool",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "env_str",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "ObservabilityConfig",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "load_config",
+          "line": 33,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "env_bool",
+          "callee": "os.getenv",
+          "lineNumber": 10
+        },
+        {
+          "caller": "env_bool",
+          "callee": "value.strip",
+          "lineNumber": 11
+        },
+        {
+          "caller": "env_bool",
+          "callee": "value.strip().lower",
+          "lineNumber": 13
+        },
+        {
+          "caller": "env_bool",
+          "callee": "value.strip",
+          "lineNumber": 13
+        },
+        {
+          "caller": "env_str",
+          "callee": "os.getenv",
+          "lineNumber": 17
+        },
+        {
+          "caller": "env_str",
+          "callee": "value.strip",
+          "lineNumber": 18
+        },
+        {
+          "caller": "env_str",
+          "callee": "value.strip",
+          "lineNumber": 18
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_bool",
+          "lineNumber": 34
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str",
+          "lineNumber": 35
+        },
+        {
+          "caller": "load_config",
+          "callee": "ObservabilityConfig",
+          "lineNumber": 43
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_bool",
+          "lineNumber": 44
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str",
+          "lineNumber": 45
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str",
+          "lineNumber": 46
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str",
+          "lineNumber": 46
+        },
+        {
+          "caller": "load_config",
+          "callee": "(endpoint or \"http://127.0.0.1:4318\").rstrip",
+          "lineNumber": 47
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str(\"OTEL_TRACES_EXPORTER\", \"otlp\").lower",
+          "lineNumber": 48
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str",
+          "lineNumber": 48
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str(\"OTEL_METRICS_EXPORTER\", \"none\").lower",
+          "lineNumber": 49
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str",
+          "lineNumber": 49
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_bool",
+          "lineNumber": 50
+        },
+        {
+          "caller": "load_config",
+          "callee": "env_str",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 3,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/observability/context.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 90,
+      "nonEmptyLines": 62,
+      "functions": [
+        {
+          "name": "new_correlation_id",
+          "startLine": 20,
+          "endLine": 21,
+          "params": []
+        },
+        {
+          "name": "set_request_id",
+          "startLine": 24,
+          "endLine": 25,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "get_request_id",
+          "startLine": 28,
+          "endLine": 29,
+          "params": []
+        },
+        {
+          "name": "set_correlation_id",
+          "startLine": 32,
+          "endLine": 33,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "get_correlation_id",
+          "startLine": 36,
+          "endLine": 37,
+          "params": []
+        },
+        {
+          "name": "set_job_id",
+          "startLine": 40,
+          "endLine": 41,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "get_job_id",
+          "startLine": 44,
+          "endLine": 45,
+          "params": []
+        },
+        {
+          "name": "log_context_fields",
+          "startLine": 48,
+          "endLine": 69,
+          "params": []
+        },
+        {
+          "name": "reset_request_id",
+          "startLine": 72,
+          "endLine": 73,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "reset_correlation_id",
+          "startLine": 76,
+          "endLine": 77,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "reset_job_id",
+          "startLine": 80,
+          "endLine": 81,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "bind_log_context",
+          "startLine": 84,
+          "endLine": 90,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "new_correlation_id",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "set_request_id",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "get_request_id",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "set_correlation_id",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "get_correlation_id",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "set_job_id",
+          "line": 40,
+          "isDefault": false
+        },
+        {
+          "name": "get_job_id",
+          "line": 44,
+          "isDefault": false
+        },
+        {
+          "name": "log_context_fields",
+          "line": 48,
+          "isDefault": false
+        },
+        {
+          "name": "reset_request_id",
+          "line": 72,
+          "isDefault": false
+        },
+        {
+          "name": "reset_correlation_id",
+          "line": 76,
+          "isDefault": false
+        },
+        {
+          "name": "reset_job_id",
+          "line": 80,
+          "isDefault": false
+        },
+        {
+          "name": "bind_log_context",
+          "line": 84,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "new_correlation_id",
+          "callee": "uuid.uuid4",
+          "lineNumber": 21
+        },
+        {
+          "caller": "set_request_id",
+          "callee": "_request_id.set",
+          "lineNumber": 25
+        },
+        {
+          "caller": "get_request_id",
+          "callee": "_request_id.get",
+          "lineNumber": 29
+        },
+        {
+          "caller": "set_correlation_id",
+          "callee": "_correlation_id.set",
+          "lineNumber": 33
+        },
+        {
+          "caller": "get_correlation_id",
+          "callee": "_correlation_id.get",
+          "lineNumber": 37
+        },
+        {
+          "caller": "set_job_id",
+          "callee": "_job_id.set",
+          "lineNumber": 41
+        },
+        {
+          "caller": "get_job_id",
+          "callee": "_job_id.get",
+          "lineNumber": 45
+        },
+        {
+          "caller": "log_context_fields",
+          "callee": "get_request_id",
+          "lineNumber": 50
+        },
+        {
+          "caller": "log_context_fields",
+          "callee": "get_correlation_id",
+          "lineNumber": 51
+        },
+        {
+          "caller": "log_context_fields",
+          "callee": "get_job_id",
+          "lineNumber": 52
+        },
+        {
+          "caller": "log_context_fields",
+          "callee": "trace.get_current_span",
+          "lineNumber": 62
+        },
+        {
+          "caller": "log_context_fields",
+          "callee": "span.get_span_context",
+          "lineNumber": 63
+        },
+        {
+          "caller": "log_context_fields",
+          "callee": "format",
+          "lineNumber": 65
+        },
+        {
+          "caller": "log_context_fields",
+          "callee": "format",
+          "lineNumber": 66
+        },
+        {
+          "caller": "reset_request_id",
+          "callee": "_request_id.reset",
+          "lineNumber": 73
+        },
+        {
+          "caller": "reset_correlation_id",
+          "callee": "_correlation_id.reset",
+          "lineNumber": 77
+        },
+        {
+          "caller": "reset_job_id",
+          "callee": "_job_id.reset",
+          "lineNumber": 81
+        },
+        {
+          "caller": "bind_log_context",
+          "callee": "set_request_id",
+          "lineNumber": 86
+        },
+        {
+          "caller": "bind_log_context",
+          "callee": "str",
+          "lineNumber": 86
+        },
+        {
+          "caller": "bind_log_context",
+          "callee": "set_correlation_id",
+          "lineNumber": 88
+        },
+        {
+          "caller": "bind_log_context",
+          "callee": "str",
+          "lineNumber": 88
+        },
+        {
+          "caller": "bind_log_context",
+          "callee": "set_job_id",
+          "lineNumber": 90
+        },
+        {
+          "caller": "bind_log_context",
+          "callee": "str",
+          "lineNumber": 90
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 12,
+        "functionCount": 12,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/observability/correlation.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 65,
+      "nonEmptyLines": 50,
+      "functions": [
+        {
+          "name": "_valid_id",
+          "startLine": 25,
+          "endLine": 29,
+          "params": [
+            "value"
+          ]
+        },
+        {
+          "name": "current_correlation_id",
+          "startLine": 64,
+          "endLine": 65,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "CorrelationMiddleware",
+          "startLine": 32,
+          "endLine": 61,
+          "methods": [
+            "dispatch"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_valid_id",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "CorrelationMiddleware",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "current_correlation_id",
+          "line": 64,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_valid_id",
+          "callee": "value.strip",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_valid_id",
+          "callee": "_ID_PATTERN.fullmatch",
+          "lineNumber": 27
+        },
+        {
+          "caller": "dispatch",
+          "callee": "request.headers.get",
+          "lineNumber": 36
+        },
+        {
+          "caller": "dispatch",
+          "callee": "_valid_id",
+          "lineNumber": 37
+        },
+        {
+          "caller": "dispatch",
+          "callee": "uuid.uuid4",
+          "lineNumber": 37
+        },
+        {
+          "caller": "dispatch",
+          "callee": "request.headers.get",
+          "lineNumber": 40
+        },
+        {
+          "caller": "dispatch",
+          "callee": "_valid_id",
+          "lineNumber": 42
+        },
+        {
+          "caller": "dispatch",
+          "callee": "getattr",
+          "lineNumber": 43
+        },
+        {
+          "caller": "dispatch",
+          "callee": "new_correlation_id",
+          "lineNumber": 44
+        },
+        {
+          "caller": "dispatch",
+          "callee": "set_request_id",
+          "lineNumber": 48
+        },
+        {
+          "caller": "dispatch",
+          "callee": "set_correlation_id",
+          "lineNumber": 49
+        },
+        {
+          "caller": "dispatch",
+          "callee": "bind_log_context",
+          "lineNumber": 50
+        },
+        {
+          "caller": "dispatch",
+          "callee": "call_next",
+          "lineNumber": 54
+        },
+        {
+          "caller": "dispatch",
+          "callee": "reset_request_id",
+          "lineNumber": 57
+        },
+        {
+          "caller": "dispatch",
+          "callee": "reset_correlation_id",
+          "lineNumber": 58
+        },
+        {
+          "caller": "current_correlation_id",
+          "callee": "get_correlation_id",
+          "lineNumber": 65
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/observability/database.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 165,
+      "nonEmptyLines": 141,
+      "functions": [
+        {
+          "name": "instrument_database",
+          "startLine": 21,
+          "endLine": 40,
+          "params": [
+            "engine"
+          ]
+        },
+        {
+          "name": "_register_query_listeners",
+          "startLine": 43,
+          "endLine": 86,
+          "params": [
+            "sync_engine"
+          ]
+        },
+        {
+          "name": "_statement_operation",
+          "startLine": 89,
+          "endLine": 93,
+          "params": [
+            "statement"
+          ]
+        },
+        {
+          "name": "refresh_pool_metrics",
+          "startLine": 96,
+          "endLine": 102,
+          "params": [
+            "engine"
+          ]
+        },
+        {
+          "name": "record_db_error",
+          "startLine": 105,
+          "endLine": 117,
+          "params": [
+            "operation",
+            "exc"
+          ]
+        },
+        {
+          "name": "observed_db_operation",
+          "startLine": 121,
+          "endLine": 165,
+          "params": [
+            "operation",
+            "table"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "instrument_database",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "_register_query_listeners",
+          "line": 43,
+          "isDefault": false
+        },
+        {
+          "name": "_statement_operation",
+          "line": 89,
+          "isDefault": false
+        },
+        {
+          "name": "refresh_pool_metrics",
+          "line": 96,
+          "isDefault": false
+        },
+        {
+          "name": "record_db_error",
+          "line": 105,
+          "isDefault": false
+        },
+        {
+          "name": "observed_db_operation",
+          "line": 120,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "instrument_database",
+          "callee": "getattr",
+          "lineNumber": 25
+        },
+        {
+          "caller": "instrument_database",
+          "callee": "_register_query_listeners",
+          "lineNumber": 27
+        },
+        {
+          "caller": "instrument_database",
+          "callee": "SQLAlchemyInstrumentor().instrument",
+          "lineNumber": 32
+        },
+        {
+          "caller": "instrument_database",
+          "callee": "SQLAlchemyInstrumentor",
+          "lineNumber": 32
+        },
+        {
+          "caller": "instrument_database",
+          "callee": "logger.info",
+          "lineNumber": 37
+        },
+        {
+          "caller": "instrument_database",
+          "callee": "logger.debug",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_register_query_listeners",
+          "callee": "event.listens_for",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_before_cursor_execute",
+          "callee": "time.perf_counter",
+          "lineNumber": 55
+        },
+        {
+          "caller": "_before_cursor_execute",
+          "callee": "_statement_operation",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_register_query_listeners",
+          "callee": "event.listens_for",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_handle_error",
+          "callee": "_statement_operation",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_handle_error",
+          "callee": "str",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_handle_error",
+          "callee": "getattr",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_handle_error",
+          "callee": "getattr",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_handle_error",
+          "callee": "getattr",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_handle_error",
+          "callee": "isinstance",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_handle_error",
+          "callee": "record_db_error",
+          "lineNumber": 67
+        },
+        {
+          "caller": "_register_query_listeners",
+          "callee": "event.listens_for",
+          "lineNumber": 69
+        },
+        {
+          "caller": "_after_cursor_execute",
+          "callee": "conn.info.pop",
+          "lineNumber": 78
+        },
+        {
+          "caller": "_after_cursor_execute",
+          "callee": "time.perf_counter",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_after_cursor_execute",
+          "callee": "conn.info.pop",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_after_cursor_execute",
+          "callee": "_statement_operation",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_after_cursor_execute",
+          "callee": "prometheus_metrics.db_query_duration_seconds.labels(\n            operation=operation,\n            table=\"unknown\",\n        ).observe",
+          "lineNumber": 83
+        },
+        {
+          "caller": "_after_cursor_execute",
+          "callee": "prometheus_metrics.db_query_duration_seconds.labels",
+          "lineNumber": 83
+        },
+        {
+          "caller": "_statement_operation",
+          "callee": "statement.strip().split(None, 1)[0].upper",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_statement_operation",
+          "callee": "statement.strip().split",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_statement_operation",
+          "callee": "statement.strip",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_statement_operation",
+          "callee": "statement.strip",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_statement_operation",
+          "callee": "head.lower",
+          "lineNumber": 92
+        },
+        {
+          "caller": "refresh_pool_metrics",
+          "callee": "prometheus_metrics.db_pool_active_connections.set",
+          "lineNumber": 99
+        },
+        {
+          "caller": "refresh_pool_metrics",
+          "callee": "pool.checkedout",
+          "lineNumber": 99
+        },
+        {
+          "caller": "refresh_pool_metrics",
+          "callee": "prometheus_metrics.db_pool_idle_connections.set",
+          "lineNumber": 100
+        },
+        {
+          "caller": "refresh_pool_metrics",
+          "callee": "pool.checkedin",
+          "lineNumber": 100
+        },
+        {
+          "caller": "record_db_error",
+          "callee": "normalize_error_type",
+          "lineNumber": 106
+        },
+        {
+          "caller": "record_db_error",
+          "callee": "prometheus_metrics.db_errors_total.labels(operation=operation, error_type=error_type).inc",
+          "lineNumber": 107
+        },
+        {
+          "caller": "record_db_error",
+          "callee": "prometheus_metrics.db_errors_total.labels",
+          "lineNumber": 107
+        },
+        {
+          "caller": "record_db_error",
+          "callee": "isinstance",
+          "lineNumber": 108
+        },
+        {
+          "caller": "record_db_error",
+          "callee": "prometheus_metrics.db_connection_errors_total.inc",
+          "lineNumber": 109
+        },
+        {
+          "caller": "record_db_error",
+          "callee": "emit_audit_event",
+          "lineNumber": 110
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "time.perf_counter",
+          "lineNumber": 127
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "trace.get_tracer",
+          "lineNumber": 132
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "tracer.start_as_current_span",
+          "lineNumber": 133
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "span_cm.__enter__",
+          "lineNumber": 141
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "record_db_error",
+          "lineNumber": 144
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "trace.get_current_span",
+          "lineNumber": 150
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "span.record_exception",
+          "lineNumber": 151
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "span.set_status",
+          "lineNumber": 152
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "Status",
+          "lineNumber": 152
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "normalize_error_type",
+          "lineNumber": 152
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "time.perf_counter",
+          "lineNumber": 157
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "prometheus_metrics.db_query_duration_seconds.labels(\n            operation=operation, table=table\n        ).observe",
+          "lineNumber": 158
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "prometheus_metrics.db_query_duration_seconds.labels",
+          "lineNumber": 158
+        },
+        {
+          "caller": "observed_db_operation",
+          "callee": "span_cm.__exit__",
+          "lineNumber": 163
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 6,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/observability/errors.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 37,
+      "functions": [
+        {
+          "name": "normalize_error_type",
+          "startLine": 10,
+          "endLine": 42,
+          "params": [
+            "exc"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "normalize_error_type",
+          "line": 10,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 13
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 15
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 17
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 19
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "getattr",
+          "lineNumber": 20
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "type(orig).__name__.lower",
+          "lineNumber": 22
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "type",
+          "lineNumber": 22
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 30
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 32
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 34
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 36
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 38
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "isinstance",
+          "lineNumber": 40
+        },
+        {
+          "caller": "normalize_error_type",
+          "callee": "type",
+          "lineNumber": 42
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/observability/external_http.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 115,
+      "nonEmptyLines": 100,
+      "functions": [
+        {
+          "name": "_endpoint_group",
+          "startLine": 18,
+          "endLine": 31,
+          "params": [
+            "method",
+            "url"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "InstrumentedAsyncClient",
+          "startLine": 34,
+          "endLine": 115,
+          "methods": [
+            "__init__",
+            "request",
+            "aclose",
+            "__aenter__",
+            "__aexit__"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_endpoint_group",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "InstrumentedAsyncClient",
+          "line": 34,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_endpoint_group",
+          "callee": "httpx.URL",
+          "lineNumber": 20
+        },
+        {
+          "caller": "_endpoint_group",
+          "callee": "path.split",
+          "lineNumber": 23
+        },
+        {
+          "caller": "_endpoint_group",
+          "callee": "parts[0].isdigit",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_endpoint_group",
+          "callee": "normalized.append",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_endpoint_group",
+          "callee": "part.isalpha",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_endpoint_group",
+          "callee": "\"/\".join",
+          "lineNumber": 31
+        },
+        {
+          "caller": "__init__",
+          "callee": "httpx.AsyncClient",
+          "lineNumber": 39
+        },
+        {
+          "caller": "request",
+          "callee": "_endpoint_group",
+          "lineNumber": 42
+        },
+        {
+          "caller": "request",
+          "callee": "time.perf_counter",
+          "lineNumber": 43
+        },
+        {
+          "caller": "request",
+          "callee": "trace.get_tracer",
+          "lineNumber": 48
+        },
+        {
+          "caller": "request",
+          "callee": "tracer.start_as_current_span",
+          "lineNumber": 49
+        },
+        {
+          "caller": "request",
+          "callee": "method.upper",
+          "lineNumber": 53
+        },
+        {
+          "caller": "request",
+          "callee": "span_cm.__enter__",
+          "lineNumber": 57
+        },
+        {
+          "caller": "request",
+          "callee": "self._client.request",
+          "lineNumber": 58
+        },
+        {
+          "caller": "request",
+          "callee": "str",
+          "lineNumber": 59
+        },
+        {
+          "caller": "request",
+          "callee": "prometheus_metrics.external_api_requests_total.labels(\n                service=self.service_name,\n                endpoint_group=endpoint_group,\n                status_code=status,\n            ).inc",
+          "lineNumber": 60
+        },
+        {
+          "caller": "request",
+          "callee": "prometheus_metrics.external_api_requests_total.labels",
+          "lineNumber": 60
+        },
+        {
+          "caller": "request",
+          "callee": "prometheus_metrics.external_api_errors_total.labels(\n                    service=self.service_name,\n                    error_type=f\"http_{response.status_code // 100}xx\",\n                ).inc",
+          "lineNumber": 66
+        },
+        {
+          "caller": "request",
+          "callee": "prometheus_metrics.external_api_errors_total.labels",
+          "lineNumber": 66
+        },
+        {
+          "caller": "request",
+          "callee": "emit_audit_event",
+          "lineNumber": 70
+        },
+        {
+          "caller": "request",
+          "callee": "normalize_error_type",
+          "lineNumber": 81
+        },
+        {
+          "caller": "request",
+          "callee": "prometheus_metrics.external_api_errors_total.labels(\n                service=self.service_name,\n                error_type=error_type,\n            ).inc",
+          "lineNumber": 82
+        },
+        {
+          "caller": "request",
+          "callee": "prometheus_metrics.external_api_errors_total.labels",
+          "lineNumber": 82
+        },
+        {
+          "caller": "request",
+          "callee": "emit_audit_event",
+          "lineNumber": 86
+        },
+        {
+          "caller": "request",
+          "callee": "time.perf_counter",
+          "lineNumber": 97
+        },
+        {
+          "caller": "request",
+          "callee": "prometheus_metrics.external_api_request_duration_seconds.labels(\n                service=self.service_name,\n                endpoint_group=endpoint_group,\n            ).observe",
+          "lineNumber": 98
+        },
+        {
+          "caller": "request",
+          "callee": "prometheus_metrics.external_api_request_duration_seconds.labels",
+          "lineNumber": 98
+        },
+        {
+          "caller": "request",
+          "callee": "span_cm.__exit__",
+          "lineNumber": 104
+        },
+        {
+          "caller": "aclose",
+          "callee": "self._client.aclose",
+          "lineNumber": 109
+        },
+        {
+          "caller": "__aexit__",
+          "callee": "self.aclose",
+          "lineNumber": 115
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/observability/logging.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 44,
+      "nonEmptyLines": 36,
+      "functions": [
+        {
+          "name": "install_trace_context_filter",
+          "startLine": 38,
+          "endLine": 44,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "TraceContextFilter",
+          "startLine": 8,
+          "endLine": 35,
+          "methods": [
+            "filter"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "TraceContextFilter",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "install_trace_context_filter",
+          "line": 38,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "filter",
+          "callee": "load_config",
+          "lineNumber": 12
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 13
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 14
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 15
+        },
+        {
+          "caller": "filter",
+          "callee": "get_request_id",
+          "lineNumber": 15
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 16
+        },
+        {
+          "caller": "filter",
+          "callee": "get_correlation_id",
+          "lineNumber": 16
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 17
+        },
+        {
+          "caller": "filter",
+          "callee": "get_job_id",
+          "lineNumber": 17
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 18
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 19
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 20
+        },
+        {
+          "caller": "filter",
+          "callee": "getattr",
+          "lineNumber": 21
+        },
+        {
+          "caller": "filter",
+          "callee": "trace.get_current_span().get_span_context",
+          "lineNumber": 25
+        },
+        {
+          "caller": "filter",
+          "callee": "trace.get_current_span",
+          "lineNumber": 25
+        },
+        {
+          "caller": "filter",
+          "callee": "format",
+          "lineNumber": 27
+        },
+        {
+          "caller": "filter",
+          "callee": "format",
+          "lineNumber": 28
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "logging.getLogger",
+          "lineNumber": 39
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "any",
+          "lineNumber": 40
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "isinstance",
+          "lineNumber": 40
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "root.addFilter",
+          "lineNumber": 41
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "TraceContextFilter",
+          "lineNumber": 41
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "any",
+          "lineNumber": 43
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "isinstance",
+          "lineNumber": 43
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "handler.addFilter",
+          "lineNumber": 44
+        },
+        {
+          "caller": "install_trace_context_filter",
+          "callee": "TraceContextFilter",
+          "lineNumber": 44
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/observability/otel.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 256,
+      "nonEmptyLines": 208,
+      "functions": [
+        {
+          "name": "_env",
+          "startLine": 18,
+          "endLine": 20,
+          "params": [
+            "name",
+            "default"
+          ]
+        },
+        {
+          "name": "_env_optional",
+          "startLine": 23,
+          "endLine": 25,
+          "params": [
+            "name"
+          ]
+        },
+        {
+          "name": "_env_bool",
+          "startLine": 28,
+          "endLine": 32,
+          "params": [
+            "name",
+            "default"
+          ]
+        },
+        {
+          "name": "_otlp_headers",
+          "startLine": 35,
+          "endLine": 52,
+          "params": []
+        },
+        {
+          "name": "_resource_attributes",
+          "startLine": 55,
+          "endLine": 66,
+          "params": []
+        },
+        {
+          "name": "_base_endpoint",
+          "startLine": 69,
+          "endLine": 70,
+          "params": []
+        },
+        {
+          "name": "_signal_endpoint",
+          "startLine": 73,
+          "endLine": 91,
+          "params": [
+            "signal",
+            "base_endpoint"
+          ]
+        },
+        {
+          "name": "_resource",
+          "startLine": 94,
+          "endLine": 117,
+          "params": [
+            "service_name"
+          ]
+        },
+        {
+          "name": "setup_observability",
+          "startLine": 120,
+          "endLine": 162,
+          "params": [
+            "app",
+            "service_name"
+          ]
+        },
+        {
+          "name": "_setup_traces",
+          "startLine": 165,
+          "endLine": 175,
+          "params": [
+            "endpoint",
+            "resource",
+            "headers"
+          ]
+        },
+        {
+          "name": "_setup_metrics",
+          "startLine": 178,
+          "endLine": 193,
+          "params": [
+            "endpoint",
+            "resource",
+            "headers"
+          ]
+        },
+        {
+          "name": "_setup_logs",
+          "startLine": 196,
+          "endLine": 215,
+          "params": [
+            "endpoint",
+            "resource",
+            "headers"
+          ]
+        },
+        {
+          "name": "_setup_library_instrumentation",
+          "startLine": 218,
+          "endLine": 234,
+          "params": []
+        },
+        {
+          "name": "_instrument_app",
+          "startLine": 237,
+          "endLine": 246,
+          "params": [
+            "app"
+          ]
+        },
+        {
+          "name": "_log_hook",
+          "startLine": 249,
+          "endLine": 256,
+          "params": [
+            "span",
+            "record"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "_env",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "_env_optional",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "_env_bool",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "_otlp_headers",
+          "line": 35,
+          "isDefault": false
+        },
+        {
+          "name": "_resource_attributes",
+          "line": 55,
+          "isDefault": false
+        },
+        {
+          "name": "_base_endpoint",
+          "line": 69,
+          "isDefault": false
+        },
+        {
+          "name": "_signal_endpoint",
+          "line": 73,
+          "isDefault": false
+        },
+        {
+          "name": "_resource",
+          "line": 94,
+          "isDefault": false
+        },
+        {
+          "name": "setup_observability",
+          "line": 120,
+          "isDefault": false
+        },
+        {
+          "name": "_setup_traces",
+          "line": 165,
+          "isDefault": false
+        },
+        {
+          "name": "_setup_metrics",
+          "line": 178,
+          "isDefault": false
+        },
+        {
+          "name": "_setup_logs",
+          "line": 196,
+          "isDefault": false
+        },
+        {
+          "name": "_setup_library_instrumentation",
+          "line": 218,
+          "isDefault": false
+        },
+        {
+          "name": "_instrument_app",
+          "line": 237,
+          "isDefault": false
+        },
+        {
+          "name": "_log_hook",
+          "line": 249,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_env",
+          "callee": "os.getenv",
+          "lineNumber": 19
+        },
+        {
+          "caller": "_env",
+          "callee": "value.strip",
+          "lineNumber": 20
+        },
+        {
+          "caller": "_env",
+          "callee": "value.strip",
+          "lineNumber": 20
+        },
+        {
+          "caller": "_env_optional",
+          "callee": "os.getenv",
+          "lineNumber": 24
+        },
+        {
+          "caller": "_env_optional",
+          "callee": "value.strip",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_env_optional",
+          "callee": "value.strip",
+          "lineNumber": 25
+        },
+        {
+          "caller": "_env_bool",
+          "callee": "os.getenv",
+          "lineNumber": 29
+        },
+        {
+          "caller": "_env_bool",
+          "callee": "value.strip",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_env_bool",
+          "callee": "value.strip().lower",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_env_bool",
+          "callee": "value.strip",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_otlp_headers",
+          "callee": "_env_optional",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_otlp_headers",
+          "callee": "raw.split",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_otlp_headers",
+          "callee": "item.split",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_otlp_headers",
+          "callee": "key.strip",
+          "lineNumber": 48
+        },
+        {
+          "caller": "_otlp_headers",
+          "callee": "unquote",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_otlp_headers",
+          "callee": "value.strip",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_resource_attributes",
+          "callee": "_env_optional",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_resource_attributes",
+          "callee": "raw.split",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_resource_attributes",
+          "callee": "item.split",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_resource_attributes",
+          "callee": "key.strip",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_resource_attributes",
+          "callee": "value.strip",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_base_endpoint",
+          "callee": "load_config",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_signal_endpoint",
+          "callee": "_env_optional",
+          "lineNumber": 84
+        },
+        {
+          "caller": "_signal_endpoint",
+          "callee": "specific.rstrip",
+          "lineNumber": 86
+        },
+        {
+          "caller": "_signal_endpoint",
+          "callee": "base_endpoint.split",
+          "lineNumber": 88
+        },
+        {
+          "caller": "_signal_endpoint",
+          "callee": "len",
+          "lineNumber": 89
+        },
+        {
+          "caller": "_signal_endpoint",
+          "callee": "\"/\".join",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_resource",
+          "callee": "_resource_attributes",
+          "lineNumber": 98
+        },
+        {
+          "caller": "_resource",
+          "callee": "os.getenv",
+          "lineNumber": 101
+        },
+        {
+          "caller": "_resource",
+          "callee": "_env",
+          "lineNumber": 103
+        },
+        {
+          "caller": "_resource",
+          "callee": "_env",
+          "lineNumber": 106
+        },
+        {
+          "caller": "_resource",
+          "callee": "_env",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_resource",
+          "callee": "attrs.setdefault",
+          "lineNumber": 109
+        },
+        {
+          "caller": "_resource",
+          "callee": "Resource.create",
+          "lineNumber": 111
+        },
+        {
+          "caller": "_resource",
+          "callee": "attrs.items",
+          "lineNumber": 114
+        },
+        {
+          "caller": "_resource",
+          "callee": "isinstance",
+          "lineNumber": 115
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_instrument_app",
+          "lineNumber": 130
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "load_config",
+          "lineNumber": 133
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "logger.info",
+          "lineNumber": 135
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "logger.info",
+          "lineNumber": 138
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_otlp_headers",
+          "lineNumber": 143
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_resource",
+          "lineNumber": 146
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_setup_traces",
+          "lineNumber": 147
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_signal_endpoint",
+          "lineNumber": 147
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_setup_metrics",
+          "lineNumber": 149
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_signal_endpoint",
+          "lineNumber": 149
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_setup_library_instrumentation",
+          "lineNumber": 150
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "_instrument_app",
+          "lineNumber": 152
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "logger.info",
+          "lineNumber": 154
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "logger.warning",
+          "lineNumber": 160
+        },
+        {
+          "caller": "setup_observability",
+          "callee": "logger.warning",
+          "lineNumber": 162
+        },
+        {
+          "caller": "_setup_traces",
+          "callee": "TracerProvider",
+          "lineNumber": 171
+        },
+        {
+          "caller": "_setup_traces",
+          "callee": "provider.add_span_processor",
+          "lineNumber": 172
+        },
+        {
+          "caller": "_setup_traces",
+          "callee": "BatchSpanProcessor",
+          "lineNumber": 173
+        },
+        {
+          "caller": "_setup_traces",
+          "callee": "OTLPSpanExporter",
+          "lineNumber": 173
+        },
+        {
+          "caller": "_setup_traces",
+          "callee": "trace.set_tracer_provider",
+          "lineNumber": 175
+        },
+        {
+          "caller": "_setup_metrics",
+          "callee": "PeriodicExportingMetricReader",
+          "lineNumber": 184
+        },
+        {
+          "caller": "_setup_metrics",
+          "callee": "OTLPMetricExporter",
+          "lineNumber": 185
+        },
+        {
+          "caller": "_setup_metrics",
+          "callee": "int",
+          "lineNumber": 186
+        },
+        {
+          "caller": "_setup_metrics",
+          "callee": "_env",
+          "lineNumber": 187
+        },
+        {
+          "caller": "_setup_metrics",
+          "callee": "str",
+          "lineNumber": 189
+        },
+        {
+          "caller": "_setup_metrics",
+          "callee": "metrics.set_meter_provider",
+          "lineNumber": 193
+        },
+        {
+          "caller": "_setup_metrics",
+          "callee": "MeterProvider",
+          "lineNumber": 193
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "logger.warning",
+          "lineNumber": 203
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "LoggerProvider",
+          "lineNumber": 206
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "provider.add_log_record_processor",
+          "lineNumber": 207
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "BatchLogRecordProcessor",
+          "lineNumber": 208
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "OTLPLogExporter",
+          "lineNumber": 208
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "set_logger_provider",
+          "lineNumber": 210
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "LoggingHandler",
+          "lineNumber": 211
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "logging.getLogger",
+          "lineNumber": 212
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "any",
+          "lineNumber": 213
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "isinstance",
+          "lineNumber": 213
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "root.addHandler",
+          "lineNumber": 214
+        },
+        {
+          "caller": "_setup_logs",
+          "callee": "logger.info",
+          "lineNumber": 215
+        },
+        {
+          "caller": "_setup_library_instrumentation",
+          "callee": "LoggingInstrumentor().instrument",
+          "lineNumber": 225
+        },
+        {
+          "caller": "_setup_library_instrumentation",
+          "callee": "LoggingInstrumentor",
+          "lineNumber": 225
+        },
+        {
+          "caller": "_setup_library_instrumentation",
+          "callee": "logger.debug",
+          "lineNumber": 227
+        },
+        {
+          "caller": "_setup_library_instrumentation",
+          "callee": "RequestsInstrumentor().instrument",
+          "lineNumber": 231
+        },
+        {
+          "caller": "_setup_library_instrumentation",
+          "callee": "RequestsInstrumentor",
+          "lineNumber": 231
+        },
+        {
+          "caller": "_setup_library_instrumentation",
+          "callee": "logger.debug",
+          "lineNumber": 233
+        },
+        {
+          "caller": "_instrument_app",
+          "callee": "getattr",
+          "lineNumber": 238
+        },
+        {
+          "caller": "_instrument_app",
+          "callee": "FastAPIInstrumentor.instrument_app",
+          "lineNumber": 243
+        },
+        {
+          "caller": "_instrument_app",
+          "callee": "logger.debug",
+          "lineNumber": 246
+        },
+        {
+          "caller": "_log_hook",
+          "callee": "span.get_span_context",
+          "lineNumber": 252
+        },
+        {
+          "caller": "_log_hook",
+          "callee": "format",
+          "lineNumber": 255
+        },
+        {
+          "caller": "_log_hook",
+          "callee": "format",
+          "lineNumber": 256
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 15,
+        "functionCount": 15,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/observability/queue_metrics.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 34,
+      "nonEmptyLines": 24,
+      "functions": [
+        {
+          "name": "refresh_queue_depth_metrics",
+          "startLine": 12,
+          "endLine": 34,
+          "params": [
+            "broker_url"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "refresh_queue_depth_metrics",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "broker_url.startswith",
+          "lineNumber": 24
+        },
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "redis.Redis.from_url",
+          "lineNumber": 28
+        },
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "int",
+          "lineNumber": 30
+        },
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "client.llen",
+          "lineNumber": 30
+        },
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "prometheus_metrics.queue_depth.labels(queue=queue).set",
+          "lineNumber": 31
+        },
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "prometheus_metrics.queue_depth.labels",
+          "lineNumber": 31
+        },
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "prometheus_metrics.redis_queue_depth.labels(queue_name=queue).set",
+          "lineNumber": 32
+        },
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "prometheus_metrics.redis_queue_depth.labels",
+          "lineNumber": 32
+        },
+        {
+          "caller": "refresh_queue_depth_metrics",
+          "callee": "logger.debug",
+          "lineNumber": 34
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/observability/readiness.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 33,
+      "nonEmptyLines": 27,
+      "functions": [
+        {
+          "name": "dependency_readiness",
+          "startLine": 9,
+          "endLine": 33,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "dependency_readiness",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "dependency_readiness",
+          "callee": "str",
+          "lineNumber": 10
+        },
+        {
+          "caller": "dependency_readiness",
+          "callee": "broker_url.startswith",
+          "lineNumber": 11
+        },
+        {
+          "caller": "dependency_readiness",
+          "callee": "redis.from_url",
+          "lineNumber": 17
+        },
+        {
+          "caller": "dependency_readiness",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 23
+        },
+        {
+          "caller": "dependency_readiness",
+          "callee": "client.ping",
+          "lineNumber": 23
+        },
+        {
+          "caller": "dependency_readiness",
+          "callee": "client.aclose",
+          "lineNumber": 25
+        },
+        {
+          "caller": "dependency_readiness",
+          "callee": "type",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_readiness.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 13,
+      "nonEmptyLines": 8,
+      "functions": [
+        {
+          "name": "test_readiness_rejects_non_redis_broker",
+          "startLine": 7,
+          "endLine": 13,
+          "params": [
+            "monkeypatch"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_readiness_rejects_non_redis_broker",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_readiness_rejects_non_redis_broker",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 8
+        },
+        {
+          "caller": "test_readiness_rejects_non_redis_broker",
+          "callee": "readiness.dependency_readiness",
+          "lineNumber": 10
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

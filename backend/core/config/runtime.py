@@ -660,6 +660,15 @@ class RuntimeSettings(BaseSettings):
     warehouse_structure_drone_radius_m: float = 0.35
     warehouse_structure_clearance_margin_m: float = 0.25
     warehouse_structure_max_points: int = 6_000_000
+    warehouse_structure_min_surface_points: int = 1_000
+    warehouse_structure_min_surface_points_per_m2: float = 15.0
+    warehouse_structure_max_tf_jump_count: int = 2
+    warehouse_structure_require_occupancy_grid: bool = True
+    warehouse_structure_require_esdf_or_inflated_occupancy: bool = True
+    warehouse_structure_require_rgb_when_barcode_expected: bool = True
+    warehouse_structure_min_frame_confidence: float = 0.7
+    warehouse_structure_require_clearance_evidence: bool = True
+    warehouse_structure_landmark_tolerance_m: float = 0.25
 
     # Simulation / indoor navigation flags
     sim_mode: bool = False

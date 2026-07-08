@@ -1,0 +1,123 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 3,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/e2e/fixtures/auth.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 23,
+      "nonEmptyLines": 21,
+      "functions": [
+        {
+          "name": "mockAuthenticatedSession",
+          "startLine": 3,
+          "endLine": 14,
+          "params": [
+            "page"
+          ]
+        },
+        {
+          "name": "mockGuestSession",
+          "startLine": 16,
+          "endLine": 23,
+          "params": [
+            "page"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "mockAuthenticatedSession",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "mockGuestSession",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "mockAuthenticatedSession",
+          "callee": "page.route",
+          "lineNumber": 4
+        },
+        {
+          "caller": "mockAuthenticatedSession",
+          "callee": "route.fulfill",
+          "lineNumber": 5
+        },
+        {
+          "caller": "mockAuthenticatedSession",
+          "callee": "JSON.stringify",
+          "lineNumber": 8
+        },
+        {
+          "caller": "mockAuthenticatedSession",
+          "callee": "page.route",
+          "lineNumber": 11
+        },
+        {
+          "caller": "mockAuthenticatedSession",
+          "callee": "route.fulfill",
+          "lineNumber": 12
+        },
+        {
+          "caller": "mockGuestSession",
+          "callee": "page.route",
+          "lineNumber": 17
+        },
+        {
+          "caller": "mockGuestSession",
+          "callee": "route.fulfill",
+          "lineNumber": 18
+        },
+        {
+          "caller": "mockGuestSession",
+          "callee": "page.route",
+          "lineNumber": 20
+        },
+        {
+          "caller": "mockGuestSession",
+          "callee": "route.fulfill",
+          "lineNumber": 21
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/e2e/smoke/auth-guard.spec.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 10,
+      "nonEmptyLines": 9,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/e2e/smoke/controlled-flight.spec.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 43,
+      "nonEmptyLines": 40,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,4486 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 33,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 360,
+      "nonEmptyLines": 327,
+      "functions": [
+        {
+          "name": "isDrawingTerraMode",
+          "startLine": 7,
+          "endLine": 9,
+          "params": [
+            "mode"
+          ]
+        },
+        {
+          "name": "useFieldBorderEditor",
+          "startLine": 11,
+          "endLine": 360,
+          "params": [
+            "{\n  setFieldBorder,\n  setSelectedFieldId,\n  fieldPolygonRef,\n  mapRef,\n  terraDrawRef,\n  terraDrawMode = \"static\",\n  onBoundaryClick,\n  fieldName,\n  selectedFieldId,\n  fieldBorder,\n  createFieldRecord,\n  updateFieldRecord,\n  refreshFields,\n  addError,\n  onSaveSuccess,\n  onUpdateSuccess,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useFieldBorderEditor",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useRef",
+          "lineNumber": 54
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useRef",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 57
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "boundaryClickListenerRef.current?.remove",
+          "lineNumber": 58
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "Boolean",
+          "lineNumber": 64
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 74
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isTerraGuidanceFeature",
+          "lineNumber": 81
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 86
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "snapshot.filter",
+          "lineNumber": 88
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isRemovableUserDrawingFeature",
+          "lineNumber": 90
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "Array.isArray",
+          "lineNumber": 92
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "coords.map",
+          "lineNumber": 101
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setFieldBorder",
+          "lineNumber": 102
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "snapshot.filter",
+          "lineNumber": 106
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isRemovableUserDrawingFeature",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "Array.isArray",
+          "lineNumber": 110
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "coords.map",
+          "lineNumber": 116
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setFieldBorder",
+          "lineNumber": 117
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setFieldBorder",
+          "lineNumber": 122
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "poly.getPath",
+          "lineNumber": 128
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "path.getLength",
+          "lineNumber": 130
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "path.getAt",
+          "lineNumber": 131
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "pts.push",
+          "lineNumber": 132
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "p.lng",
+          "lineNumber": 132
+        },
+        {
+          "caller": "polygonPathToLonLat",
+          "callee": "p.lat",
+          "lineNumber": 132
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 137
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "poly.getPath",
+          "lineNumber": 139
+        },
+        {
+          "caller": "update",
+          "callee": "setFieldBorder",
+          "lineNumber": 141
+        },
+        {
+          "caller": "update",
+          "callee": "polygonPathToLonLat",
+          "lineNumber": 141
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "update",
+          "lineNumber": 143
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "path.addListener",
+          "lineNumber": 145
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "path.addListener",
+          "lineNumber": 146
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "path.addListener",
+          "lineNumber": 147
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 152
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 153
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 156
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "terraDrawRef.current.getSnapshot",
+          "lineNumber": 161
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "snapshot\n          .filter((f) => isRemovableUserDrawingFeature(f))\n          .map",
+          "lineNumber": 162
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "snapshot\n          .filter",
+          "lineNumber": 162
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isRemovableUserDrawingFeature",
+          "lineNumber": 163
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "String",
+          "lineNumber": 164
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "terraDrawRef.current.removeFeatures",
+          "lineNumber": 166
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setFieldBorder",
+          "lineNumber": 172
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 173
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 183
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 185
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldName.trim",
+          "lineNumber": 188
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 189
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "createFieldRecord",
+          "lineNumber": 193
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldName.trim",
+          "lineNumber": 194
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "onSaveSuccess",
+          "lineNumber": 199
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "alert",
+          "lineNumber": 201
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "refreshFields",
+          "lineNumber": 203
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 204
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 207
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 220
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 222
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 226
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldName.trim",
+          "lineNumber": 229
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 230
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "updateFieldRecord",
+          "lineNumber": 234
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldName.trim",
+          "lineNumber": 236
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "onUpdateSuccess",
+          "lineNumber": 240
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "alert",
+          "lineNumber": 242
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "refreshFields",
+          "lineNumber": 244
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "addError",
+          "lineNumber": 246
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 258
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 265
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 266
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "stripClosedRing",
+          "lineNumber": 270
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "pts.map",
+          "lineNumber": 273
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "poly.setMap",
+          "lineNumber": 284
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "wirePolygonEditListeners",
+          "lineNumber": 286
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 291
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isDrawingTerraMode",
+          "lineNumber": 294
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "mountEditablePolygon",
+          "lineNumber": 295
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useEffect",
+          "lineNumber": 300
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "isDrawingTerraMode",
+          "lineNumber": 303
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 305
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 306
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "mountEditablePolygon",
+          "lineNumber": 312
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "fieldPolygonRef.current.setMap",
+          "lineNumber": 317
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useEffect",
+          "lineNumber": 327
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 327
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useEffect",
+          "lineNumber": 329
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "clearBoundaryClickListener",
+          "lineNumber": 332
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "poly.addListener",
+          "lineNumber": 333
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "useCallback",
+          "lineNumber": 336
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "stripClosedRing",
+          "lineNumber": 340
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "pts.forEach",
+          "lineNumber": 342
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "bounds.extend",
+          "lineNumber": 342
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "bounds.isEmpty",
+          "lineNumber": 344
+        },
+        {
+          "caller": "useFieldBorderEditor",
+          "callee": "mapRef.current.fitBounds",
+          "lineNumber": 345
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 36,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useMissionAltitudeInput.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 56,
+      "nonEmptyLines": 52,
+      "functions": [
+        {
+          "name": "useMissionAltitudeInput",
+          "startLine": 3,
+          "endLine": 56,
+          "params": [
+            "{\n  initialAltitude = 30,\n  minAltitude = 1,\n  maxAltitude = 500,\n  validationMessage,\n  addError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useMissionAltitudeInput",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "useState",
+          "lineNumber": 16
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "useState",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "String",
+          "lineNumber": 17
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "useCallback",
+          "lineNumber": 19
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAltInput",
+          "lineNumber": 21
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "/^\\d+$/.test",
+          "lineNumber": 24
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAltInput",
+          "lineNumber": 25
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "useCallback",
+          "lineNumber": 28
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAltInput",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "String",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "Number",
+          "lineNumber": 33
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "Number.isFinite",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAltInput",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "String",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "addError",
+          "lineNumber": 39
+        },
+        {
+          "caller": "useMissionAltitudeInput",
+          "callee": "setAlt",
+          "lineNumber": 45
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 247,
+      "nonEmptyLines": 227,
+      "functions": [
+        {
+          "name": "useWorkflowFieldBoundary",
+          "startLine": 21,
+          "endLine": 245,
+          "params": [
+            "{\n  workflowScope,\n  defaultFieldName,\n  terraDrawMode,\n  addError,\n  onSaveSuccess,\n  onUpdateSuccess,\n  onDeleteSuccess,\n  persistFieldId,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useWorkflowFieldBoundary",
+          "line": 21,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useState",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useState",
+          "lineNumber": 41
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useState",
+          "lineNumber": 42
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useState",
+          "lineNumber": 44
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useRef",
+          "lineNumber": 46
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useRef",
+          "lineNumber": 47
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useRef",
+          "lineNumber": 48
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useRef",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useFields",
+          "lineNumber": 60
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 62
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 64
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 66
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "onSaveSuccess",
+          "lineNumber": 68
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 73
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 76
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "onUpdateSuccess",
+          "lineNumber": 78
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useFieldBorderEditor",
+          "lineNumber": 83
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "notifyShapeSelectedRef.current",
+          "lineNumber": 90
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useMapShapeActionPrompt",
+          "lineNumber": 102
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useMemo",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "fields.find",
+          "lineNumber": 112
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useMemo",
+          "lineNumber": 116
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "computeAreaHa",
+          "lineNumber": 119
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "computeCentroid",
+          "lineNumber": 120
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 124
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 126
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 127
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setFieldName",
+          "lineNumber": 128
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setFieldBorder",
+          "lineNumber": 129
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.loadRingIntoEditor",
+          "lineNumber": 130
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.focusRingOnMap",
+          "lineNumber": 131
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 136
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.focusRingOnMap",
+          "lineNumber": 138
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 141
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 144
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.clearFieldBorder",
+          "lineNumber": 145
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "shapePrompt.resetBoundaryDrawSession",
+          "lineNumber": 146
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "fields.find",
+          "lineNumber": 149
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "selectField",
+          "lineNumber": 150
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 155
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 156
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "persistFieldId?.write",
+          "lineNumber": 157
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setFieldName",
+          "lineNumber": 158
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.clearFieldBorder",
+          "lineNumber": 159
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "shapePrompt.resetBoundaryDrawSession",
+          "lineNumber": 160
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 163
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "addError",
+          "lineNumber": 165
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "fields.find",
+          "lineNumber": 168
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "addError",
+          "lineNumber": 170
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setPendingDeleteField",
+          "lineNumber": 173
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 176
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setPendingDeleteField",
+          "lineNumber": 178
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 181
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "deleteFieldRecord",
+          "lineNumber": 184
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.clearFieldBorder",
+          "lineNumber": 185
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setFieldName",
+          "lineNumber": 186
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "setPendingDeleteField",
+          "lineNumber": 187
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "shapePrompt.resetBoundaryDrawSession",
+          "lineNumber": 188
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "onDeleteSuccess",
+          "lineNumber": 189
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "addError",
+          "lineNumber": 191
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "useCallback",
+          "lineNumber": 203
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.updateFieldBorder",
+          "lineNumber": 205
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "borderEditor.saveFieldBorder",
+          "lineNumber": 207
+        },
+        {
+          "caller": "useWorkflowFieldBoundary",
+          "callee": "shapePrompt.closePrompt",
+          "lineNumber": 209
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 25,
+      "exports": [
+        {
+          "name": "useFieldBorderEditor",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "useWorkflowFieldBoundary",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "FieldIdPersistence",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "WorkflowFieldBoundaryVm",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "MissionWorkflowShell",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "GoogleMapEngineAlerts",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "TaskControlFrame",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "MissionMapFrameFooter",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "MissionSurveyCameraSection",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "MapEngineSelectionOverlay",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "MapDrawToolsOverlay",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "MapShapeActionPopover",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "MapShapeActionVariant",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "MissionMapBoundaryPrompt",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "MissionFlightStatusPanel",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "MissionWaypointList",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "WorkflowTerraDrawBridge",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "useMapShapeActionPrompt",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "useMissionAltitudeInput",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "TaskPreflightCommandsDrawer",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "useTaskPreflightCommandsDrawer",
+          "line": 25,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 21,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 29,
+      "exports": [
+        {
+          "name": "CesiumViewMode",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "DrawMode",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawEditorMode",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "TerraDrawToolMode",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/mission-workflow/utils/cesiumZoom.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 5,
+      "nonEmptyLines": 4,
+      "functions": [
+        {
+          "name": "cesiumZoomForMapZoom",
+          "startLine": 3,
+          "endLine": 5,
+          "params": [
+            "mapZoom"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "cesiumZoomForMapZoom",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "cesiumZoomForMapZoom",
+          "callee": "Math.min",
+          "lineNumber": 4
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/api/mappingJobsApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 85,
+      "nonEmptyLines": 76,
+      "functions": [
+        {
+          "name": "fetchMappingJob",
+          "startLine": 8,
+          "endLine": 13,
+          "params": [
+            "jobId",
+            "token"
+          ]
+        },
+        {
+          "name": "listMappingJobs",
+          "startLine": 15,
+          "endLine": 17,
+          "params": [
+            "token"
+          ]
+        },
+        {
+          "name": "deleteMappingJob",
+          "startLine": 19,
+          "endLine": 21,
+          "params": [
+            "jobId",
+            "token"
+          ]
+        },
+        {
+          "name": "startMappingJob",
+          "startLine": 23,
+          "endLine": 25,
+          "params": [
+            "jobId",
+            "token"
+          ]
+        },
+        {
+          "name": "createMappingJob",
+          "startLine": 37,
+          "endLine": 46,
+          "params": [
+            "payload",
+            "token"
+          ]
+        },
+        {
+          "name": "uploadMappingJobImages",
+          "startLine": 48,
+          "endLine": 60,
+          "params": [
+            "jobId",
+            "files",
+            "token"
+          ]
+        },
+        {
+          "name": "createMappingJobFromUpload",
+          "startLine": 68,
+          "endLine": 85,
+          "params": [
+            "files",
+            "payload",
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchMappingJob",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "listMappingJobs",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "deleteMappingJob",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "startMappingJob",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "createMappingJob",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "uploadMappingJobImages",
+          "line": 48,
+          "isDefault": false
+        },
+        {
+          "name": "createMappingJobFromUpload",
+          "line": 68,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchMappingJob",
+          "callee": "httpRequest",
+          "lineNumber": 12
+        },
+        {
+          "caller": "listMappingJobs",
+          "callee": "httpRequest",
+          "lineNumber": 16
+        },
+        {
+          "caller": "deleteMappingJob",
+          "callee": "httpRequest",
+          "lineNumber": 20
+        },
+        {
+          "caller": "startMappingJob",
+          "callee": "httpRequest",
+          "lineNumber": 24
+        },
+        {
+          "caller": "createMappingJob",
+          "callee": "httpRequest",
+          "lineNumber": 41
+        },
+        {
+          "caller": "uploadMappingJobImages",
+          "callee": "files.forEach",
+          "lineNumber": 54
+        },
+        {
+          "caller": "uploadMappingJobImages",
+          "callee": "formData.append",
+          "lineNumber": 54
+        },
+        {
+          "caller": "uploadMappingJobImages",
+          "callee": "httpRequest",
+          "lineNumber": 55
+        },
+        {
+          "caller": "createMappingJobFromUpload",
+          "callee": "files.forEach",
+          "lineNumber": 74
+        },
+        {
+          "caller": "createMappingJobFromUpload",
+          "callee": "formData.append",
+          "lineNumber": 74
+        },
+        {
+          "caller": "createMappingJobFromUpload",
+          "callee": "formData.append",
+          "lineNumber": 76
+        },
+        {
+          "caller": "createMappingJobFromUpload",
+          "callee": "formData.append",
+          "lineNumber": 78
+        },
+        {
+          "caller": "createMappingJobFromUpload",
+          "callee": "JSON.stringify",
+          "lineNumber": 78
+        },
+        {
+          "caller": "createMappingJobFromUpload",
+          "callee": "formData.append",
+          "lineNumber": 79
+        },
+        {
+          "caller": "createMappingJobFromUpload",
+          "callee": "JSON.stringify",
+          "lineNumber": 79
+        },
+        {
+          "caller": "createMappingJobFromUpload",
+          "callee": "httpRequest",
+          "lineNumber": 80
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 7,
+        "functionCount": 7,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/IncompleteJobsTable.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 72,
+      "nonEmptyLines": 68,
+      "functions": [
+        {
+          "name": "IncompleteJobsTable",
+          "startLine": 21,
+          "endLine": 72,
+          "params": [
+            "{ jobs, onDelete, onResume }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "IncompleteJobsTable",
+          "line": 21,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "IncompleteJobsTable",
+          "callee": "jobs.filter",
+          "lineNumber": 22
+        },
+        {
+          "caller": "IncompleteJobsTable",
+          "callee": "incompleteJobs.map",
+          "lineNumber": 43
+        },
+        {
+          "caller": "IncompleteJobsTable",
+          "callee": "onResume",
+          "lineNumber": 56
+        },
+        {
+          "caller": "IncompleteJobsTable",
+          "callee": "onDelete",
+          "lineNumber": 62
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/PhotogrammetryArtifactsPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 39,
+      "nonEmptyLines": 38,
+      "functions": [
+        {
+          "name": "PhotogrammetryArtifactsPanel",
+          "startLine": 3,
+          "endLine": 39,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhotogrammetryArtifactsPanel",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/PhotogrammetryFieldsBlock.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 3,
+      "nonEmptyLines": 2,
+      "exports": [
+        {
+          "name": "PhotogrammetryFieldsBlock",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/PhotogrammetryGridParamsSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 43,
+      "nonEmptyLines": 42,
+      "functions": [
+        {
+          "name": "PhotogrammetryGridParamsSection",
+          "startLine": 8,
+          "endLine": 43,
+          "params": [
+            "{\n  gridParams,\n  setGridParams,\n  fieldBorder,\n  gridPreview,\n  gridPreviewStats,\n  previewLegStats,\n  gridPreviewTooDense,\n  gridPreviewError,\n  previewLoading,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhotogrammetryGridParamsSection",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/PhotogrammetryMapColumn.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 369,
+      "nonEmptyLines": 359,
+      "functions": [
+        {
+          "name": "PhotogrammetryMapColumn",
+          "startLine": 24,
+          "endLine": 215,
+          "params": [
+            "{\n  vm,\n  onSelectField,\n  setupContent,\n}"
+          ]
+        },
+        {
+          "name": "GoogleMapOverlays",
+          "startLine": 217,
+          "endLine": 369,
+          "params": [
+            "{\n  vm,\n  onSelectField,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhotogrammetryMapColumn",
+          "line": 24,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "useMemo",
+          "lineNumber": 34
+        },
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "vm.fields.map",
+          "lineNumber": 36
+        },
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "mission.setDrawMode",
+          "lineNumber": 178
+        },
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "borderEditor.clearFieldBorder",
+          "lineNumber": 182
+        },
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "vm.shapePrompt.closePrompt",
+          "lineNumber": 183
+        },
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "mission.setWaypoints",
+          "lineNumber": 186
+        },
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "prev.slice",
+          "lineNumber": 186
+        },
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "vm.shapePrompt.deleteSelectedDrawing",
+          "lineNumber": 190
+        },
+        {
+          "caller": "PhotogrammetryMapColumn",
+          "callee": "map.handleMapEngineChange",
+          "lineNumber": 199
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "fields.map",
+          "lineNumber": 228
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "onSelectField",
+          "lineNumber": 232
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "activeFlightId.substring",
+          "lineNumber": 283
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "mission.gridPreview.slice(0, -1).map",
+          "lineNumber": 308
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "mission.gridPreview.slice",
+          "lineNumber": 308
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/PhotogrammetryMappingSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 226,
+      "nonEmptyLines": 212,
+      "functions": [
+        {
+          "name": "PhotogrammetryMappingSection",
+          "startLine": 22,
+          "endLine": 173,
+          "params": [
+            "{\n  mapping,\n  selectedFieldId,\n  onOpen3DPlanning,\n}"
+          ]
+        },
+        {
+          "name": "MappingJobProgress",
+          "startLine": 175,
+          "endLine": 226,
+          "params": [
+            "{\n  jobStatus,\n  mappingJobRunning,\n  onOpen3DPlanning,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhotogrammetryMappingSection",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PhotogrammetryMappingSection",
+          "callee": "mapping.setMappingInputMode",
+          "lineNumber": 52
+        },
+        {
+          "caller": "PhotogrammetryMappingSection",
+          "callee": "mapping.setMappingInputFiles",
+          "lineNumber": 53
+        },
+        {
+          "caller": "PhotogrammetryMappingSection",
+          "callee": "Array.from",
+          "lineNumber": 69
+        },
+        {
+          "caller": "PhotogrammetryMappingSection",
+          "callee": "mapping.setMappingInputFiles",
+          "lineNumber": 70
+        },
+        {
+          "caller": "PhotogrammetryMappingSection",
+          "callee": "mapping.setMappingSyncSourceDir",
+          "lineNumber": 94
+        },
+        {
+          "caller": "PhotogrammetryMappingSection",
+          "callee": "mapping.create3DFieldMap",
+          "lineNumber": 129
+        },
+        {
+          "caller": "PhotogrammetryMappingSection",
+          "callee": "mapping.handleDeleteJob",
+          "lineNumber": 168
+        },
+        {
+          "caller": "PhotogrammetryMappingSection",
+          "callee": "mapping.handleResumeJob",
+          "lineNumber": 169
+        },
+        {
+          "caller": "MappingJobProgress",
+          "callee": "Math.max",
+          "lineNumber": 203
+        },
+        {
+          "caller": "MappingJobProgress",
+          "callee": "Math.min",
+          "lineNumber": 203
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/PhotogrammetryMissionControls.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 196,
+      "nonEmptyLines": 185,
+      "functions": [
+        {
+          "name": "PhotogrammetryMissionControls",
+          "startLine": 31,
+          "endLine": 196,
+          "params": [
+            "{\n  apiBase,\n  fieldBorder,\n  preflightRun,\n  telemetry,\n  droneConnected,\n  missionStatus,\n  activeFlightId,\n  mission,\n  mapping,\n  selectedFieldId,\n  onOpen3DPlanning,\n  embedded = false,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhotogrammetryMissionControls",
+          "line": 31,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "import",
+          "lineNumber": 46
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "useTaskPreflightCommandsDrawer",
+          "lineNumber": 58
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "mission.setName",
+          "lineNumber": 72
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "mission.name.trim",
+          "lineNumber": 76
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "mission.name.trim",
+          "lineNumber": 77
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "mission.handleAltitudeInputChange",
+          "lineNumber": 85
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "Number",
+          "lineNumber": 92
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "Number",
+          "lineNumber": 93
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "Number",
+          "lineNumber": 97
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "Number",
+          "lineNumber": 98
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "mission.name.trim",
+          "lineNumber": 121
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "Number",
+          "lineNumber": 123
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "Number",
+          "lineNumber": 124
+        },
+        {
+          "caller": "PhotogrammetryMissionControls",
+          "callee": "mission.sendMission",
+          "lineNumber": 128
+        }
+      ],
+      "metrics": {
+        "importCount": 9,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/PhotogrammetryProfileSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 177,
+      "nonEmptyLines": 176,
+      "functions": [
+        {
+          "name": "PhotogrammetryProfileSection",
+          "startLine": 14,
+          "endLine": 177,
+          "params": [
+            "{\n  profile,\n  onProfileChange,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhotogrammetryProfileSection",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number",
+          "lineNumber": 40
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 41
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "onProfileChange",
+          "lineNumber": 42
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.min",
+          "lineNumber": 44
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.max",
+          "lineNumber": 44
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number",
+          "lineNumber": 56
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 57
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "onProfileChange",
+          "lineNumber": 58
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.min",
+          "lineNumber": 60
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.max",
+          "lineNumber": 60
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number",
+          "lineNumber": 78
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 79
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "onProfileChange",
+          "lineNumber": 80
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.min",
+          "lineNumber": 82
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.max",
+          "lineNumber": 82
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "onProfileChange",
+          "lineNumber": 94
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number",
+          "lineNumber": 111
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 112
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "onProfileChange",
+          "lineNumber": 113
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.min",
+          "lineNumber": 115
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.max",
+          "lineNumber": 115
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number",
+          "lineNumber": 128
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 129
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "onProfileChange",
+          "lineNumber": 130
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.min",
+          "lineNumber": 132
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "Math.max",
+          "lineNumber": 132
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "onProfileChange",
+          "lineNumber": 145
+        },
+        {
+          "caller": "PhotogrammetryProfileSection",
+          "callee": "onProfileChange",
+          "lineNumber": 162
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/components/PhotogrammetryStatusSections.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 28,
+      "nonEmptyLines": 26,
+      "functions": [
+        {
+          "name": "PhotogrammetryStatusSections",
+          "startLine": 8,
+          "endLine": 28,
+          "params": [
+            "{\n  waypoints,\n  alt,\n  missionStatus,\n  activeFlightId,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhotogrammetryStatusSections",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/hooks/useMappingJobs.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 188,
+      "nonEmptyLines": 178,
+      "functions": [
+        {
+          "name": "useMappingJobs",
+          "startLine": 26,
+          "endLine": 188,
+          "params": [
+            "options"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "useMappingJobs",
+          "line": 26,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "useMappingJobs",
+          "callee": "useQueryClient",
+          "lineNumber": 30
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useState",
+          "lineNumber": 31
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useState",
+          "lineNumber": 32
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useState",
+          "lineNumber": 33
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useState",
+          "lineNumber": 34
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useState",
+          "lineNumber": 35
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useCallback",
+          "lineNumber": 37
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "getToken",
+          "lineNumber": 38
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "fetchMappingJob",
+          "lineNumber": 40
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setStatus",
+          "lineNumber": 41
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setError",
+          "lineNumber": 42
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "queryClient.invalidateQueries",
+          "lineNumber": 44
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "fieldsKeys.tileset",
+          "lineNumber": 44
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "options?.onJobReady",
+          "lineNumber": 45
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setActiveJobId",
+          "lineNumber": 46
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "options?.onJobFailed",
+          "lineNumber": 48
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setActiveJobId",
+          "lineNumber": 49
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useCallback",
+          "lineNumber": 54
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "getToken",
+          "lineNumber": 55
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setJobs",
+          "lineNumber": 57
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "listMappingJobs",
+          "lineNumber": 57
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useEffect",
+          "lineNumber": 60
+        },
+        {
+          "caller": "tick",
+          "callee": "refreshJob",
+          "lineNumber": 65
+        },
+        {
+          "caller": "tick",
+          "callee": "setError",
+          "lineNumber": 68
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "tick",
+          "lineNumber": 72
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setInterval",
+          "lineNumber": 73
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "tick",
+          "lineNumber": 73
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "clearInterval",
+          "lineNumber": 76
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useCallback",
+          "lineNumber": 80
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "getToken",
+          "lineNumber": 81
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "deleteMappingJob",
+          "lineNumber": 83
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "loadJobs",
+          "lineNumber": 84
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useCallback",
+          "lineNumber": 87
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "getToken",
+          "lineNumber": 88
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "startMappingJob",
+          "lineNumber": 90
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setActiveJobId",
+          "lineNumber": 91
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "refreshJob",
+          "lineNumber": 92
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useCallback",
+          "lineNumber": 95
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "getToken",
+          "lineNumber": 97
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setBusy",
+          "lineNumber": 99
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setError",
+          "lineNumber": 100
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setStatus",
+          "lineNumber": 101
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "createMappingJobFromUpload",
+          "lineNumber": 103
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setStatus",
+          "lineNumber": 108
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setActiveJobId",
+          "lineNumber": 110
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setActiveJobId",
+          "lineNumber": 112
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "refreshJob",
+          "lineNumber": 114
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setBusy",
+          "lineNumber": 117
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "useCallback",
+          "lineNumber": 123
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "getToken",
+          "lineNumber": 132
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setBusy",
+          "lineNumber": 134
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setError",
+          "lineNumber": 135
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setStatus",
+          "lineNumber": 136
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "createMappingJob",
+          "lineNumber": 138
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "options.syncSourceDir?.trim",
+          "lineNumber": 145
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "Number",
+          "lineNumber": 153
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "Number.isFinite",
+          "lineNumber": 154
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "uploadMappingJobImages",
+          "lineNumber": 158
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "startMappingJob",
+          "lineNumber": 159
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setActiveJobId",
+          "lineNumber": 161
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "refreshJob",
+          "lineNumber": 162
+        },
+        {
+          "caller": "useMappingJobs",
+          "callee": "setBusy",
+          "lineNumber": 165
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMap.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 244,
+      "nonEmptyLines": 229,
+      "functions": [
+        {
+          "name": "usePhotogrammetryMap",
+          "startLine": 21,
+          "endLine": 244,
+          "params": [
+            "{\n  apiBase,\n  wsConnected,\n  droneConnected,\n  telemetry,\n  activeFlightId,\n  fieldBorder,\n  setFieldBorder,\n  setSelectedFieldId,\n  fieldTilesetUrl,\n  waypoints,\n  setWaypoints,\n  alt,\n  drawMode,\n  setDrawMode,\n  terraDrawMode,\n  setTerraDrawMode,\n  loadRingIntoEditor,\n  focusRingOnMap,\n  selectedField,\n  mapEngine: controlledMapEngine,\n  addError,\n  onMapEngineChange,\n  fieldPolygonRef,\n  terraDrawRef,\n  onBoundaryDrawStarted,\n  resetBoundaryDrawSession,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "usePhotogrammetryMap",
+          "line": 21,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useMemo",
+          "lineNumber": 76
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "createFlatBoundaryDrawBridge",
+          "lineNumber": 78
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useCallback",
+          "lineNumber": 86
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "console.error",
+          "lineNumber": 87
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "addError",
+          "lineNumber": 89
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useMissionMapRuntime",
+          "lineNumber": 93
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useCallback",
+          "lineNumber": 108
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "e.latLng.lat",
+          "lineNumber": 112
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "e.latLng.lng",
+          "lineNumber": 113
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setWaypoints",
+          "lineNumber": 114
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useCallback",
+          "lineNumber": 119
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "resetBoundaryDrawSession",
+          "lineNumber": 121
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setDrawMode",
+          "lineNumber": 123
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "terraDrawToolToShapeMode",
+          "lineNumber": 123
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setTerraDrawMode",
+          "lineNumber": 127
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useCallback",
+          "lineNumber": 132
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "stripClosedRing",
+          "lineNumber": 135
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "result.coordinates.map",
+          "lineNumber": 136
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setFieldBorder",
+          "lineNumber": 139
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 140
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "stripClosedRing",
+          "lineNumber": 143
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "result.coordinates.map",
+          "lineNumber": 144
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setFieldBorder",
+          "lineNumber": 147
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 148
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setWaypoints",
+          "lineNumber": 152
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "setDrawMode",
+          "lineNumber": 155
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useSyncTerraDrawMode",
+          "lineNumber": 160
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useMemo",
+          "lineNumber": 162
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "waypoints.map",
+          "lineNumber": 164
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useGooglePointMarkers",
+          "lineNumber": 172
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useEffect",
+          "lineNumber": 181
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "loadRingIntoEditor",
+          "lineNumber": 184
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "focusRingOnMap",
+          "lineNumber": 185
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useMemo",
+          "lineNumber": 188
+        },
+        {
+          "caller": "usePhotogrammetryMap",
+          "callee": "useMemo",
+          "lineNumber": 193
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMapping.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 176,
+      "nonEmptyLines": 164,
+      "functions": [
+        {
+          "name": "usePhotogrammetryMapping",
+          "startLine": 6,
+          "endLine": 176,
+          "params": [
+            "{\n  selectedFieldId,\n  setSelectedFieldId,\n  fieldBorder,\n  fieldName,\n  ensureFieldForMapping,\n  onJobReady,\n  addError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "usePhotogrammetryMapping",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useRef",
+          "lineNumber": 23
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useState",
+          "lineNumber": 24
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useState",
+          "lineNumber": 27
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useState",
+          "lineNumber": 28
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useMappingJobs",
+          "lineNumber": 30
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "onJobReady",
+          "lineNumber": 31
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useEffect",
+          "lineNumber": 35
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.loadJobs",
+          "lineNumber": 36
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useEffect",
+          "lineNumber": 39
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.setError",
+          "lineNumber": 44
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.setStatus",
+          "lineNumber": 45
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.setActiveJobId",
+          "lineNumber": 46
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "Boolean",
+          "lineNumber": 57
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "fieldName.trim",
+          "lineNumber": 57
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useCallback",
+          "lineNumber": 67
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "getToken",
+          "lineNumber": 68
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.setError",
+          "lineNumber": 69
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.setError",
+          "lineNumber": 73
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "fieldName.trim",
+          "lineNumber": 81
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.createFromUpload",
+          "lineNumber": 82
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "setSelectedFieldId",
+          "lineNumber": 89
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "ensureFieldForMapping",
+          "lineNumber": 95
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.createForField",
+          "lineNumber": 102
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.setError",
+          "lineNumber": 107
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useCallback",
+          "lineNumber": 123
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "getToken",
+          "lineNumber": 125
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "addError",
+          "lineNumber": 126
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "window.confirm",
+          "lineNumber": 129
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.removeJob",
+          "lineNumber": 133
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "addError",
+          "lineNumber": 135
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "useCallback",
+          "lineNumber": 141
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "getToken",
+          "lineNumber": 143
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "addError",
+          "lineNumber": 144
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.resumeJob",
+          "lineNumber": 148
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "mappingJobs.loadJobs",
+          "lineNumber": 149
+        },
+        {
+          "caller": "usePhotogrammetryMapping",
+          "callee": "addError",
+          "lineNumber": 151
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMission.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 288,
+      "nonEmptyLines": 267,
+      "functions": [
+        {
+          "name": "usePhotogrammetryMission",
+          "startLine": 45,
+          "endLine": 288,
+          "params": [
+            "{\n  fieldBorder,\n  mapEngine,\n  terraDrawMode,\n  addError,\n  clearErrors,\n  setPendingFlightId,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PHOTOGRAMMETRY_ALT_MIN_M",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "PHOTOGRAMMETRY_ALT_MAX_M",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "usePhotogrammetryMission",
+          "line": 45,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useRef",
+          "lineNumber": 60
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useState",
+          "lineNumber": 61
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useMissionAltitudeInput",
+          "lineNumber": 69
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useState",
+          "lineNumber": 76
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useState",
+          "lineNumber": 77
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useState",
+          "lineNumber": 79
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useState",
+          "lineNumber": 80
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useState",
+          "lineNumber": 82
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useState",
+          "lineNumber": 83
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useGridPreview",
+          "lineNumber": 91
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useMemo",
+          "lineNumber": 100
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "gridPreviewMask.filter",
+          "lineNumber": 102
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useMemo",
+          "lineNumber": 110
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "waypoints.map",
+          "lineNumber": 111
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useMemo",
+          "lineNumber": 115
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "gridPreview.map",
+          "lineNumber": 117
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "waypoints.map",
+          "lineNumber": 120
+        },
+        {
+          "caller": "sendMission",
+          "callee": "getToken",
+          "lineNumber": 127
+        },
+        {
+          "caller": "sendMission",
+          "callee": "addError",
+          "lineNumber": 129
+        },
+        {
+          "caller": "sendMission",
+          "callee": "name.trim",
+          "lineNumber": 132
+        },
+        {
+          "caller": "sendMission",
+          "callee": "addError",
+          "lineNumber": 133
+        },
+        {
+          "caller": "sendMission",
+          "callee": "Number",
+          "lineNumber": 137
+        },
+        {
+          "caller": "sendMission",
+          "callee": "Number.isFinite",
+          "lineNumber": 139
+        },
+        {
+          "caller": "sendMission",
+          "callee": "addError",
+          "lineNumber": 143
+        },
+        {
+          "caller": "sendMission",
+          "callee": "addError",
+          "lineNumber": 150
+        },
+        {
+          "caller": "sendMission",
+          "callee": "addError",
+          "lineNumber": 154
+        },
+        {
+          "caller": "sendMission",
+          "callee": "addError",
+          "lineNumber": 160
+        },
+        {
+          "caller": "sendMission",
+          "callee": "setSending",
+          "lineNumber": 165
+        },
+        {
+          "caller": "sendMission",
+          "callee": "clearErrors",
+          "lineNumber": 166
+        },
+        {
+          "caller": "sendMission",
+          "callee": "name.trim",
+          "lineNumber": 170
+        },
+        {
+          "caller": "sendMission",
+          "callee": "startMissionWithPreflight",
+          "lineNumber": 228
+        },
+        {
+          "caller": "sendMission",
+          "callee": "setPreflightRun",
+          "lineNumber": 229
+        },
+        {
+          "caller": "sendMission",
+          "callee": "alert",
+          "lineNumber": 230
+        },
+        {
+          "caller": "sendMission",
+          "callee": "setPendingFlightId",
+          "lineNumber": 232
+        },
+        {
+          "caller": "sendMission",
+          "callee": "setAlt",
+          "lineNumber": 234
+        },
+        {
+          "caller": "sendMission",
+          "callee": "setAltInput",
+          "lineNumber": 235
+        },
+        {
+          "caller": "sendMission",
+          "callee": "String",
+          "lineNumber": 235
+        },
+        {
+          "caller": "sendMission",
+          "callee": "addError",
+          "lineNumber": 239
+        },
+        {
+          "caller": "sendMission",
+          "callee": "setSending",
+          "lineNumber": 241
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useCallback",
+          "lineNumber": 246
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "setWaypoints",
+          "lineNumber": 248
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "useCallback",
+          "lineNumber": 253
+        },
+        {
+          "caller": "usePhotogrammetryMission",
+          "callee": "cesiumZoomForMapZoom",
+          "lineNumber": 254
+        }
+      ],
+      "metrics": {
+        "importCount": 8,
+        "exportCount": 3,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryPage.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 172,
+      "nonEmptyLines": 155,
+      "functions": [
+        {
+          "name": "usePhotogrammetryPage",
+          "startLine": 24,
+          "endLine": 172,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "usePhotogrammetryPage",
+          "line": 24,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useState",
+          "lineNumber": 26
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useState",
+          "lineNumber": 27
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useErrors",
+          "lineNumber": 31
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "getApiBaseUrl",
+          "lineNumber": 33
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useWorkflowFieldBoundary",
+          "lineNumber": 35
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useGeofenceLayers",
+          "lineNumber": 42
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useFieldTileset",
+          "lineNumber": 43
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useMissionWebsocketRuntime",
+          "lineNumber": 54
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useCallback",
+          "lineNumber": 61
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "setMapEngine",
+          "lineNumber": 62
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "usePhotogrammetryMission",
+          "lineNumber": 65
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "usePhotogrammetryMap",
+          "lineNumber": 74
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "useCallback",
+          "lineNumber": 103
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "fieldBoundary.fieldName.trim",
+          "lineNumber": 110
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "fieldBoundary.createFieldRecord",
+          "lineNumber": 114
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "fieldBoundary.fieldName.trim",
+          "lineNumber": 115
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "fieldBoundary.setSelectedFieldId",
+          "lineNumber": 119
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "alert",
+          "lineNumber": 122
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "usePhotogrammetryMapping",
+          "lineNumber": 130
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "map.handleMapEngineChange",
+          "lineNumber": 137
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "map.setCesiumViewMode",
+          "lineNumber": 138
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "Boolean",
+          "lineNumber": 144
+        },
+        {
+          "caller": "usePhotogrammetryPage",
+          "callee": "mission.cesiumZoomFor",
+          "lineNumber": 146
+        }
+      ],
+      "metrics": {
+        "importCount": 10,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/tests/mappingJobsApi.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 9,
+      "nonEmptyLines": 8,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 47,
+      "nonEmptyLines": 43,
+      "exports": [
+        {
+          "name": "FAST_3D_MAP_WEBODM_OPTIONS",
+          "line": 37,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/photogrammetry/views/PhotoGrammetry.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 142,
+      "nonEmptyLines": 134,
+      "functions": [
+        {
+          "name": "PhotoGrammetryPage",
+          "startLine": 17,
+          "endLine": 142,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhotoGrammetryPage",
+          "line": 17,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PhotoGrammetryPage",
+          "callee": "usePhotogrammetryPage",
+          "lineNumber": 18
+        },
+        {
+          "caller": "open3DPlanning",
+          "callee": "map.handleMapEngineChange",
+          "lineNumber": 23
+        },
+        {
+          "caller": "open3DPlanning",
+          "callee": "map.setCesiumViewMode",
+          "lineNumber": 24
+        },
+        {
+          "caller": "PhotoGrammetryPage",
+          "callee": "borderEditor.focusRingOnMap",
+          "lineNumber": 74
+        },
+        {
+          "caller": "PhotoGrammetryPage",
+          "callee": "vm.confirmDeleteSelectedField",
+          "lineNumber": 138
+        }
+      ],
+      "metrics": {
+        "importCount": 10,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/private-patrol/api/eventTriggerConfigApi.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 73,
+      "nonEmptyLines": 67,
+      "functions": [
+        {
+          "name": "fetchEventTriggerConfig",
+          "startLine": 39,
+          "endLine": 44,
+          "params": [
+            "fieldId",
+            "token"
+          ]
+        },
+        {
+          "name": "saveEventTriggerConfig",
+          "startLine": 46,
+          "endLine": 67,
+          "params": [
+            "body",
+            "token"
+          ]
+        },
+        {
+          "name": "fetchEventTriggerIntegration",
+          "startLine": 69,
+          "endLine": 73,
+          "params": [
+            "token"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "fetchEventTriggerConfig",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "saveEventTriggerConfig",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "fetchEventTriggerIntegration",
+          "line": 69,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fetchEventTriggerConfig",
+          "callee": "httpRequest",
+          "lineNumber": 40
+        },
+        {
+          "caller": "saveEventTriggerConfig",
+          "callee": "httpRequest",
+          "lineNumber": 62
+        },
+        {
+          "caller": "fetchEventTriggerIntegration",
+          "callee": "httpRequest",
+          "lineNumber": 70
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/private-patrol/components/EventTriggerConnectionPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 157,
+      "nonEmptyLines": 148,
+      "functions": [
+        {
+          "name": "CopyField",
+          "startLine": 22,
+          "endLine": 55,
+          "params": [
+            "{\n  label,\n  value,\n  ariaLabel,\n}"
+          ]
+        },
+        {
+          "name": "EventTriggerConnectionPanel",
+          "startLine": 57,
+          "endLine": 157,
+          "params": [
+            "{\n  integration,\n  selectedFieldId,\n  hasGeofence,\n  saving = false,\n  saveError = null,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "EventTriggerConnectionPanel",
+          "line": 57,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "CopyField",
+          "callee": "label.toLowerCase",
+          "lineNumber": 41
+        },
+        {
+          "caller": "CopyField",
+          "callee": "navigator.clipboard.writeText",
+          "lineNumber": 46
+        },
+        {
+          "caller": "EventTriggerConnectionPanel",
+          "callee": "JSON.stringify",
+          "lineNumber": 138
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/private-patrol/components/PrivatePatrolFlightSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 154,
+      "nonEmptyLines": 141,
+      "functions": [
+        {
+          "name": "startPatrolLabel",
+          "startLine": 11,
+          "endLine": 23,
+          "params": [
+            "mission",
+            "sending"
+          ]
+        },
+        {
+          "name": "isStartDisabled",
+          "startLine": 25,
+          "endLine": 50,
+          "params": [
+            "mission"
+          ]
+        },
+        {
+          "name": "PrivatePatrolFlightSection",
+          "startLine": 52,
+          "endLine": 154,
+          "params": [
+            "{\n  mission,\n  onSendMission,\n  activeFlightId,\n  missionStatus,\n  embedded = false,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PrivatePatrolFlightSection",
+          "line": 52,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "isStartDisabled",
+          "callee": "name.trim",
+          "lineNumber": 43
+        },
+        {
+          "caller": "isStartDisabled",
+          "callee": "Number",
+          "lineNumber": 45
+        },
+        {
+          "caller": "isStartDisabled",
+          "callee": "Number",
+          "lineNumber": 46
+        },
+        {
+          "caller": "isStartDisabled",
+          "callee": "preflightAllowsMissionStart",
+          "lineNumber": 48
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "describePreflightStartBlock",
+          "lineNumber": 75
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "isStartDisabled",
+          "lineNumber": 76
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "setName",
+          "lineNumber": 84
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "name.trim",
+          "lineNumber": 88
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "name.trim",
+          "lineNumber": 89
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "handleAltitudeInputChange",
+          "lineNumber": 97
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "Number",
+          "lineNumber": 102
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "Number",
+          "lineNumber": 102
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "Number",
+          "lineNumber": 104
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "Number",
+          "lineNumber": 104
+        },
+        {
+          "caller": "PrivatePatrolFlightSection",
+          "callee": "startPatrolLabel",
+          "lineNumber": 122
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/private-patrol/components/PrivatePatrolMapColumn.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 414,
+      "nonEmptyLines": 402,
+      "functions": [
+        {
+          "name": "PrivatePatrolMapColumn",
+          "startLine": 26,
+          "endLine": 249,
+          "params": [
+            "{\n  vm,\n  onSelectField,\n  setupContent,\n}"
+          ]
+        },
+        {
+          "name": "GoogleMapOverlays",
+          "startLine": 251,
+          "endLine": 414,
+          "params": [
+            "{\n  vm,\n  onSelectField,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PrivatePatrolMapColumn",
+          "line": 26,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "useMemo",
+          "lineNumber": 36
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "vm.fields.map",
+          "lineNumber": 38
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "Boolean",
+          "lineNumber": 70
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "mission.setDrawMode",
+          "lineNumber": 188
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "mission.setEventLocation",
+          "lineNumber": 192
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "mission.setWaypoints",
+          "lineNumber": 196
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "prev.slice",
+          "lineNumber": 196
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "borderEditor.clearFieldBorder",
+          "lineNumber": 200
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "vm.shapePrompt.closePrompt",
+          "lineNumber": 201
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "mission.setEventLocation",
+          "lineNumber": 208
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "mission.setWaypoints",
+          "lineNumber": 212
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "prev.slice",
+          "lineNumber": 212
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "vm.shapePrompt.deleteSelectedDrawing",
+          "lineNumber": 216
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "map.handleMapEngineChange",
+          "lineNumber": 225
+        },
+        {
+          "caller": "PrivatePatrolMapColumn",
+          "callee": "Boolean",
+          "lineNumber": 244
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "fields.map",
+          "lineNumber": 270
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "onSelectField",
+          "lineNumber": 274
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "activeFlightId.substring",
+          "lineNumber": 325
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "gridPreviewPolylineGroups.work.map",
+          "lineNumber": 366
+        },
+        {
+          "caller": "GoogleMapOverlays",
+          "callee": "gridPreviewPolylineGroups.turn.map",
+          "lineNumber": 377
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/private-patrol/components/PrivatePatrolParamsSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 996,
+      "nonEmptyLines": 970,
+      "functions": [
+        {
+          "name": "fieldSx",
+          "startLine": 29,
+          "endLine": 35,
+          "params": [
+            "width"
+          ]
+        },
+        {
+          "name": "PrivatePatrolParamsSection",
+          "startLine": 94,
+          "endLine": 996,
+          "params": [
+            "{\n    mission,\n    selectedFieldId,\n    hasPropertyGeofence,\n    eventTriggerIntegration,\n    eventTriggerSaving,\n    eventTriggerSaveError,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PrivatePatrolParamsSection",
+          "line": 94,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "useCallback",
+          "lineNumber": 134
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 137
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 140
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 173
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 174
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 175
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 177
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 177
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 201
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 202
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 203
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 205
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 205
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.round",
+          "lineNumber": 205
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 225
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 226
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 227
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 229
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 229
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.round",
+          "lineNumber": 229
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "PARAM_TABS.map",
+          "lineNumber": 260
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 285
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 309
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 310
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 311
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 313
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 327
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 328
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 329
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 331
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 331
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.round",
+          "lineNumber": 331
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 351
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 352
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 353
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 355
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 355
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 375
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 376
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 377
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 379
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 379
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 399
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 400
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 401
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 403
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 403
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 430
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 431
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 432
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 434
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 434
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 454
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 455
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 456
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 458
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 458
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 469
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 485
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 517
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 542
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 543
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 544
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 546
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 546
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 567
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 585
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 612
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 613
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 614
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 616
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 616
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 636
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 637
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 638
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 640
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 640
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.round",
+          "lineNumber": 640
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 654
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 655
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 656
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 658
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 678
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 679
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 680
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 682
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 682
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 696
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 697
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 698
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 700
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 700
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 720
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 721
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 722
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 724
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 724
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number",
+          "lineNumber": 738
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Number.isFinite",
+          "lineNumber": 739
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 740
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.min",
+          "lineNumber": 742
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "Math.max",
+          "lineNumber": 742
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 755
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 768
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "eventLocation.lat.toFixed",
+          "lineNumber": 797
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "eventLocation.lon.toFixed",
+          "lineNumber": 797
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "[\n                                [\"intruder_detection\", \"Intruder detection\"],\n                                [\"vehicle_detection\", \"Vehicle detection\"],\n                                [\"fence_breach_detection\", \"Fence breach detection\"],\n                                [\"motion_detection\", \"Motion detection\"],\n                            ].map",
+          "lineNumber": 808
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "gridParams.ai_tasks.includes",
+          "lineNumber": 815
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "setGridParams",
+          "lineNumber": 824
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "p.ai_tasks.includes",
+          "lineNumber": 826
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "p.ai_tasks.filter",
+          "lineNumber": 829
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "patrolPreviewStats!.total_route_m!.toFixed",
+          "lineNumber": 876
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "patrolPreviewStats!.grid_spacing_m!.toFixed",
+          "lineNumber": 904
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "patrolPreviewStats!.path_offset_applied_m!.toFixed",
+          "lineNumber": 911
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "(patrolPreviewStats!.estimated_duration_s! / 60).toFixed",
+          "lineNumber": 918
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "new Date(scheduledStartAt).toLocaleTimeString",
+          "lineNumber": 980
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "effectivePatrolRepeatIntervalMinutes",
+          "lineNumber": 981
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "effectivePatrolRepeatIntervalMinutes",
+          "lineNumber": 982
+        },
+        {
+          "caller": "PrivatePatrolParamsSection",
+          "callee": "new Date(repeatStartAt!).toLocaleTimeString",
+          "lineNumber": 988
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/private-patrol/components/PrivatePatrolPlanningSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 286,
+      "nonEmptyLines": 278,
+      "functions": [
+        {
+          "name": "PrivatePatrolFieldsBlock",
+          "startLine": 27,
+          "endLine": 87,
+          "params": [
+            "{\n                                           fields,\n                                           selectedFieldId,\n                                           selectedField,\n                                           loadingFields,\n                                           deletingField,\n                                           onSelectField,\n                                           onRefreshFields,\n                                           onFocusSelected,\n                                           onDeleteSelected,\n                                           fieldName,\n                                           fieldBorder,\n                                           metrics,\n                                           savingField,\n                                           onFieldNameChange,\n                                           onSaveField,\n                                           onUpdateField,\n                                           onNewField,\n                                         }"
+          ]
+        },
+        {
+          "name": "PrivatePatrolSetupPanel",
+          "startLine": 89,
+          "endLine": 168,
+          "params": [
+            "{\n                                          fields,\n                                          selectedFieldId,\n                                          selectedField,\n                                          loadingFields,\n                                          deletingField,\n                                          onSelectField,\n                                          onRefreshFields,\n                                          onFocusSelected,\n                                          onDeleteSelected,\n                                          fieldName,\n                                          fieldBorder,\n                                          metrics,\n                                          savingField,\n                                          onFieldNameChange,\n                                          onSaveField,\n                                          onUpdateField,\n                                          onNewField,\n                                          mission,\n                                          eventTriggerIntegration,\n                                          eventTriggerSaving,\n                                          eventTriggerSaveError,\n                                        }"
+          ]
+        },
+        {
+          "name": "PrivatePatrolMissionControlsPanel",
+          "startLine": 170,
+          "endLine": 235,
+          "params": [
+            "{\n                                                    apiBase,\n                                                    mission,\n                                                    preflightRun,\n                                                    telemetry,\n                                                    droneConnected,\n                                                    missionStatus,\n                                                    activeFlightId,\n                                                  }"
+          ]
+        },
+        {
+          "name": "PrivatePatrolFlightDrawer",
+          "startLine": 237,
+          "endLine": 286,
+          "params": [
+            "{\n                                            apiBase,\n                                            mission,\n                                            onSendMission,\n                                            activeFlightId,\n                                            missionStatus,\n                                            telemetry,\n                                            droneConnected,\n                                          }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PrivatePatrolFieldsBlock",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "PrivatePatrolSetupPanel",
+          "line": 89,
+          "isDefault": false
+        },
+        {
+          "name": "PrivatePatrolMissionControlsPanel",
+          "line": 170,
+          "isDefault": false
+        },
+        {
+          "name": "PrivatePatrolFlightDrawer",
+          "line": 237,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PrivatePatrolSetupPanel",
+          "callee": "Boolean",
+          "lineNumber": 158
+        },
+        {
+          "caller": "PrivatePatrolMissionControlsPanel",
+          "callee": "mission.name.trim",
+          "lineNumber": 187
+        },
+        {
+          "caller": "PrivatePatrolMissionControlsPanel",
+          "callee": "Number",
+          "lineNumber": 190
+        },
+        {
+          "caller": "PrivatePatrolMissionControlsPanel",
+          "callee": "Number",
+          "lineNumber": 191
+        },
+        {
+          "caller": "PrivatePatrolMissionControlsPanel",
+          "callee": "mission.runPreflightCheck",
+          "lineNumber": 215
+        },
+        {
+          "caller": "PrivatePatrolFlightDrawer",
+          "callee": "useTaskPreflightCommandsDrawer",
+          "lineNumber": 254
+        }
+      ],
+      "metrics": {
+        "importCount": 11,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/private-patrol/components/PrivatePatrolStatusSections.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 69,
+      "nonEmptyLines": 64,
+      "functions": [
+        {
+          "name": "PrivatePatrolStatusSections",
+          "startLine": 8,
+          "endLine": 69,
+          "params": [
+            "{\n  mission,\n  missionStatus,\n  activeFlightId,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PrivatePatrolStatusSections",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PrivatePatrolStatusSections",
+          "callee": "waypoints.map",
+          "lineNumber": 34
+        },
+        {
+          "caller": "PrivatePatrolStatusSections",
+          "callee": "wp.lat.toFixed",
+          "lineNumber": 36
+        },
+        {
+          "caller": "PrivatePatrolStatusSections",
+          "callee": "wp.lon.toFixed",
+          "lineNumber": 36
+        },
+        {
+          "caller": "PrivatePatrolStatusSections",
+          "callee": "eventLocation.lat.toFixed",
+          "lineNumber": 51
+        },
+        {
+          "caller": "PrivatePatrolStatusSections",
+          "callee": "eventLocation.lon.toFixed",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/private-patrol/components/PrivatePatrolUiNotice.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 23,
+      "nonEmptyLines": 22,
+      "functions": [
+        {
+          "name": "PrivatePatrolUiNotice",
+          "startLine": 4,
+          "endLine": 23,
+          "params": [
+            "{\n  notice,\n  onClose,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PrivatePatrolUiNotice",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

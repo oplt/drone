@@ -1,0 +1,190 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 3,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/config/gazebo_frame_aliases.yaml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 24,
+      "nonEmptyLines": 21,
+      "sections": [
+        {
+          "heading": "aliases",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "gazebo_model_links",
+          "level": 1,
+          "line": 16
+        },
+        {
+          "heading": "checksum_gate",
+          "level": 1,
+          "line": 22
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/config/sensor_extrinsics.yaml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 22,
+      "nonEmptyLines": 22,
+      "sections": [
+        {
+          "heading": "schema_version",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "transforms",
+          "level": 1,
+          "line": 2
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "ros2_ws/src/drone_gz_bridge/config/warehouse_bridge.yaml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 235,
+      "nonEmptyLines": 191,
+      "sections": [
+        {
+          "heading": "[0]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[1]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[2]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[3]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[4]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[5]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[6]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[7]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[8]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[9]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[10]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[11]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[12]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[13]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[14]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[15]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[16]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[17]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[18]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[19]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[20]",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "[21]",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 22
+      }
+    }
+  ]
+}

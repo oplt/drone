@@ -55,6 +55,7 @@ from backend.modules.warehouse.schemas import (
     WarehouseScanTargetPage,
     WarehouseScanTargetRead,
     WarehouseScanTargetUpdate,
+    WarehouseStructureDryRunOut,
     WarehouseStructureExtractIn,
     WarehouseStructureExtractOut,
     WarehouseStructureSummaryOut,
@@ -67,6 +68,8 @@ from backend.modules.warehouse.models import (
     WarehouseInspectionResult,
     WarehouseMappingJob,
     WarehouseModel,
+    WarehouseRackTemplate,
+    WarehouseRackTemplateVersion,
     WarehouseScanTarget,
     WarehouseSensorRig,
 )
@@ -97,12 +100,14 @@ from backend.modules.warehouse.service.preflight_snapshot import (
 )
 from backend.modules.warehouse.service.structure_jobs import (
     STRUCTURE_ASSET_TYPE,
+    dry_run_structure_extraction,
     ensure_structure_quality_summary,
     get_extraction_state,
     record_extraction_queued,
     resolve_latest_model_flight,
     warehouse_mapping_worker_ready,
 )
+from backend.modules.warehouse.service.rack_templates import template_params_payload
 from backend.observability.instruments import observed_span
 from backend.observability.metrics import add as metric_add
 from backend.observability.metrics import record as metric_record
@@ -116,6 +121,40 @@ from fastapi import APIRouter
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
+
+
+async def _resolve_template_payload(
+    db: AsyncSession,
+    *,
+    warehouse_map_id: int,
+    params_payload: dict[str, Any],
+) -> dict[str, Any]:
+    version_id = params_payload.get("rack_template_version_id")
+    if version_id is None:
+        return params_payload
+    row = (
+        await db.execute(
+            select(WarehouseRackTemplate, WarehouseRackTemplateVersion)
+            .join(
+                WarehouseRackTemplateVersion,
+                WarehouseRackTemplateVersion.template_id == WarehouseRackTemplate.id,
+            )
+            .where(
+                WarehouseRackTemplate.warehouse_map_id == int(warehouse_map_id),
+                WarehouseRackTemplateVersion.id == int(version_id),
+                WarehouseRackTemplate.active.is_(True),
+                WarehouseRackTemplateVersion.status.in_(("active", "draft")),
+            )
+        )
+    ).one_or_none()
+    if row is None:
+        raise HTTPException(404, "Rack template version not found")
+    _template, version = row
+    resolved = dict(params_payload)
+    for key, value in template_params_payload(version).items():
+        if value is not None:
+            resolved[key] = value
+    return resolved
 
 @router.post(
     "/maps/{warehouse_map_id}/structure/extract",
@@ -143,6 +182,11 @@ async def extract_warehouse_structure_endpoint(
         )
     model_id, client_flight_id = resolved
     params_payload = payload.to_params_payload() if payload is not None else {}
+    params_payload = await _resolve_template_payload(
+        db,
+        warehouse_map_id=warehouse_map_id,
+        params_payload=params_payload,
+    )
 
     worker_ok, worker_detail = await asyncio.to_thread(warehouse_mapping_worker_ready)
     if not worker_ok:
@@ -192,6 +236,42 @@ async def extract_warehouse_structure_endpoint(
         client_flight_id=client_flight_id,
         task_id=task_id,
     )
+
+
+@router.post(
+    "/maps/{warehouse_map_id}/structure/dry-run",
+    response_model=WarehouseStructureDryRunOut,
+)
+async def dry_run_warehouse_structure_endpoint(
+    warehouse_map_id: int,
+    payload: WarehouseStructureExtractIn | None = None,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_write),
+) -> WarehouseStructureDryRunOut:
+    """Run automatic structure detection without mutating layout or targets."""
+    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    resolved = await resolve_latest_model_flight(db, warehouse_map_id=warehouse_map_id)
+    if resolved is None:
+        raise HTTPException(
+            status_code=409,
+            detail="No ready 3D map with a live-map flight is available to extract from.",
+        )
+    model_id, client_flight_id = resolved
+    from backend.entrypoints.workers.warehouse_mapping_tasks import _params_from_payload
+
+    result = await dry_run_structure_extraction(
+        warehouse_map_id=int(warehouse_map_id),
+        model_id=int(model_id),
+        client_flight_id=client_flight_id,
+        params=_params_from_payload(
+            await _resolve_template_payload(
+                db,
+                warehouse_map_id=warehouse_map_id,
+                params_payload=payload.to_params_payload() if payload is not None else {},
+            )
+        ),
+    )
+    return WarehouseStructureDryRunOut(**result)
 
 
 @router.get(
@@ -247,6 +327,8 @@ async def get_warehouse_structure(
             client_flight_id=task_state.get("client_flight_id"),
             task_id=task_state.get("task_id"),
             error_message=task_state.get("error_message"),
+            failure_reason_codes=list(task_state.get("failure_reason_codes") or []),
+            debug_artifact_url=task_state.get("debug_artifact_url"),
             target_count=0,
             active_target_count=0,
             summary={},
@@ -290,6 +372,14 @@ async def get_warehouse_structure(
         ),
         quality_status=quality_status,  # type: ignore[arg-type]
         quality_reasons=list(meta.get("quality_reasons") or quality.get("reasons") or []),
+        failure_reason_codes=list(
+            meta.get("failure_reason_codes")
+            or summary_dict.get("failure_reason_codes")
+            or quality.get("reasons")
+            or []
+        ),
+        debug_artifact_url=meta.get("debug_artifact_url"),
+        debug_artifact_path=meta.get("debug_artifact_path"),
         confidence=meta.get("confidence") if meta.get("confidence") is not None else quality.get("confidence"),
         summary=summary_dict,
     )

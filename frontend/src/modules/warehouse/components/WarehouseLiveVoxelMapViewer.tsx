@@ -538,6 +538,9 @@ export function WarehouseLiveVoxelMapViewer({
           structureLoading={structure.loading}
           structureError={structure.error}
           onAutoDetect={structure.extract}
+          provisionalCandidates={state.provisionalCandidates}
+          coverageRepairHints={state.coverageRepairHints}
+          coordinateState={state.coordinateState}
         />
       ) : null}
     </Stack>

@@ -1,0 +1,6156 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 35,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "backend/modules/patrol/service/mission_runtime_store.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 44,
+      "nonEmptyLines": 33,
+      "classes": [
+        {
+          "name": "ActiveMissionRuntimeContext",
+          "startLine": 16,
+          "endLine": 23,
+          "methods": [],
+          "properties": [
+            "client_flight_id",
+            "mission_name",
+            "mission_type",
+            "state",
+            "db_flight_id",
+            "private_patrol_task_type",
+            "ai_tasks"
+          ]
+        },
+        {
+          "name": "MissionRuntimeStore",
+          "startLine": 26,
+          "endLine": 41,
+          "methods": [
+            "get_active_context"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "ActiveMissionRuntimeContext",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "MissionRuntimeStore",
+          "line": 26,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "get_active_context",
+          "callee": "mission_runtime_repo.get_active",
+          "lineNumber": 30
+        },
+        {
+          "caller": "get_active_context",
+          "callee": "ActiveMissionRuntimeContext",
+          "lineNumber": 33
+        },
+        {
+          "caller": "get_active_context",
+          "callee": "tuple",
+          "lineNumber": 40
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/patrol/service/persistence.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 245,
+      "nonEmptyLines": 218,
+      "classes": [
+        {
+          "name": "PersistedAnomalyResult",
+          "startLine": 24,
+          "endLine": 31,
+          "methods": [],
+          "properties": [
+            "flight_id",
+            "detection_id",
+            "incident_id",
+            "incident_created",
+            "alert_id",
+            "mission_task_type",
+            "ai_task"
+          ]
+        },
+        {
+          "name": "PatrolPersistenceService",
+          "startLine": 34,
+          "endLine": 245,
+          "methods": [
+            "__init__",
+            "_infer_patrol_task_type_from_runtime_mission_type",
+            "_allowed_ai_tasks",
+            "_ai_task_allowed",
+            "_normalize_object_class",
+            "_normalize_track_id",
+            "_extract_bbox",
+            "_extract_centroid",
+            "_resolve_active_runtime_context",
+            "persist_anomaly",
+            "persist_live_detections",
+            "_extract_zone_name"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PersistedAnomalyResult",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "PatrolPersistenceService",
+          "line": 34,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "PatrolDetectionRepository",
+          "lineNumber": 42
+        },
+        {
+          "caller": "_infer_patrol_task_type_from_runtime_mission_type",
+          "callee": "str(mission_type or \"\").strip().lower",
+          "lineNumber": 45
+        },
+        {
+          "caller": "_infer_patrol_task_type_from_runtime_mission_type",
+          "callee": "str(mission_type or \"\").strip",
+          "lineNumber": 45
+        },
+        {
+          "caller": "_infer_patrol_task_type_from_runtime_mission_type",
+          "callee": "str",
+          "lineNumber": 45
+        },
+        {
+          "caller": "_allowed_ai_tasks",
+          "callee": "frozenset_ai_tasks",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_ai_task_allowed",
+          "callee": "str",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_ai_task_allowed",
+          "callee": "payload.get",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_ai_task_allowed",
+          "callee": "map_anomaly_to_ai_task",
+          "lineNumber": 67
+        },
+        {
+          "caller": "_normalize_object_class",
+          "callee": "payload.get",
+          "lineNumber": 74
+        },
+        {
+          "caller": "_normalize_object_class",
+          "callee": "payload.get",
+          "lineNumber": 75
+        },
+        {
+          "caller": "_normalize_object_class",
+          "callee": "payload.get",
+          "lineNumber": 76
+        },
+        {
+          "caller": "_normalize_object_class",
+          "callee": "payload.get",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_normalize_object_class",
+          "callee": "str(value).strip().lower",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_normalize_object_class",
+          "callee": "str(value).strip",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_normalize_object_class",
+          "callee": "str",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_normalize_track_id",
+          "callee": "payload.get",
+          "lineNumber": 83
+        },
+        {
+          "caller": "_normalize_track_id",
+          "callee": "str(value).strip",
+          "lineNumber": 86
+        },
+        {
+          "caller": "_normalize_track_id",
+          "callee": "str",
+          "lineNumber": 86
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "payload.get",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "payload.get",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "isinstance",
+          "lineNumber": 91
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "len",
+          "lineNumber": 91
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "int",
+          "lineNumber": 93
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "int",
+          "lineNumber": 94
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "int",
+          "lineNumber": 95
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "int",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_extract_bbox",
+          "callee": "isinstance",
+          "lineNumber": 98
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "payload.get",
+          "lineNumber": 103
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "payload.get",
+          "lineNumber": 103
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "isinstance",
+          "lineNumber": 104
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "len",
+          "lineNumber": 104
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "int",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "int",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "isinstance",
+          "lineNumber": 106
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "self._extract_bbox",
+          "lineNumber": 109
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "{\"x1\", \"y1\", \"x2\", \"y2\"}.issubset",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "bbox.keys",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "int",
+          "lineNumber": 112
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "int",
+          "lineNumber": 112
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "int",
+          "lineNumber": 112
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "int",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "int",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_extract_centroid",
+          "callee": "int",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_resolve_active_runtime_context",
+          "callee": "self._runtime_context_provider",
+          "lineNumber": 120
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "self._resolve_active_runtime_context",
+          "lineNumber": 123
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "self._allowed_ai_tasks",
+          "lineNumber": 132
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "self._ai_task_allowed",
+          "lineNumber": 133
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "Session",
+          "lineNumber": 141
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "self._repo.persist_detection_pipeline_result",
+          "lineNumber": 147
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "int",
+          "lineNumber": 149
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "str",
+          "lineNumber": 152
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 152
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "float",
+          "lineNumber": 153
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 154
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 155
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "str",
+          "lineNumber": 157
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 157
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "self._extract_zone_name",
+          "lineNumber": 158
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 159
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "getattr",
+          "lineNumber": 160
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "telemetry.get",
+          "lineNumber": 163
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "telemetry.get",
+          "lineNumber": 164
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "telemetry.get",
+          "lineNumber": 165
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "str",
+          "lineNumber": 166
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 166
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 167
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 168
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 169
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "payload.get",
+          "lineNumber": 170
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "db.commit",
+          "lineNumber": 177
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "schedule_patrol_incident_summary",
+          "lineNumber": 182
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "int",
+          "lineNumber": 182
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "PersistedAnomalyResult",
+          "lineNumber": 184
+        },
+        {
+          "caller": "persist_anomaly",
+          "callee": "int",
+          "lineNumber": 185
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "self._resolve_active_runtime_context",
+          "lineNumber": 202
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "self._allowed_ai_tasks",
+          "lineNumber": 207
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "Session",
+          "lineNumber": 209
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "live_detection_ai_task",
+          "lineNumber": 211
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "self._repo.add_patrol_detection",
+          "lineNumber": 215
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "int",
+          "lineNumber": 217
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "telemetry.get",
+          "lineNumber": 225
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "telemetry.get",
+          "lineNumber": 226
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "telemetry.get",
+          "lineNumber": 227
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "telemetry.get",
+          "lineNumber": 228
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "telemetry.get",
+          "lineNumber": 229
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "int",
+          "lineNumber": 233
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "int",
+          "lineNumber": 234
+        },
+        {
+          "caller": "persist_live_detections",
+          "callee": "db.commit",
+          "lineNumber": 238
+        },
+        {
+          "caller": "_extract_zone_name",
+          "callee": "payload.get",
+          "lineNumber": 241
+        },
+        {
+          "caller": "_extract_zone_name",
+          "callee": "isinstance",
+          "lineNumber": 242
+        },
+        {
+          "caller": "_extract_zone_name",
+          "callee": "str",
+          "lineNumber": 243
+        },
+        {
+          "caller": "_extract_zone_name",
+          "callee": "payload.get",
+          "lineNumber": 244
+        },
+        {
+          "caller": "_extract_zone_name",
+          "callee": "str",
+          "lineNumber": 245
+        }
+      ],
+      "metrics": {
+        "importCount": 5,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/anomaly.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 181,
+      "nonEmptyLines": 156,
+      "classes": [
+        {
+          "name": "_TrackEventState",
+          "startLine": 13,
+          "endLine": 21,
+          "methods": [],
+          "properties": [
+            "last_seen_at",
+            "current_restricted_zones",
+            "intrusion_emitted",
+            "loitering_emitted",
+            "last_restricted_zone_entry_at",
+            "last_loitering_at"
+          ]
+        },
+        {
+          "name": "AnomalyScorer",
+          "startLine": 24,
+          "endLine": 181,
+          "methods": [
+            "__init__",
+            "set_enabled_tasks",
+            "_cleanup_missing_tracks",
+            "_get_state",
+            "score"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_TrackEventState",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "AnomalyScorer",
+          "line": 24,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "int",
+          "lineNumber": 44
+        },
+        {
+          "caller": "__init__",
+          "callee": "set",
+          "lineNumber": 45
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 46
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 47
+        },
+        {
+          "caller": "__init__",
+          "callee": "frozenset",
+          "lineNumber": 50
+        },
+        {
+          "caller": "set_enabled_tasks",
+          "callee": "frozenset",
+          "lineNumber": 53
+        },
+        {
+          "caller": "_cleanup_missing_tracks",
+          "callee": "self._track_state.keys",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_cleanup_missing_tracks",
+          "callee": "self._track_state.pop",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_get_state",
+          "callee": "self._track_state.get",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_get_state",
+          "callee": "_TrackEventState",
+          "lineNumber": 63
+        },
+        {
+          "caller": "score",
+          "callee": "list",
+          "lineNumber": 77
+        },
+        {
+          "caller": "score",
+          "callee": "self._cleanup_missing_tracks",
+          "lineNumber": 79
+        },
+        {
+          "caller": "score",
+          "callee": "gps_lookup.get",
+          "lineNumber": 82
+        },
+        {
+          "caller": "score",
+          "callee": "self._get_state",
+          "lineNumber": 86
+        },
+        {
+          "caller": "score",
+          "callee": "self.zone_engine.find_zone_hits",
+          "lineNumber": 88
+        },
+        {
+          "caller": "score",
+          "callee": "getattr",
+          "lineNumber": 89
+        },
+        {
+          "caller": "score",
+          "callee": "sorted",
+          "lineNumber": 109
+        },
+        {
+          "caller": "score",
+          "callee": "anomaly_allowed",
+          "lineNumber": 110
+        },
+        {
+          "caller": "score",
+          "callee": "out.append",
+          "lineNumber": 115
+        },
+        {
+          "caller": "score",
+          "callee": "AnomalyEvent",
+          "lineNumber": 116
+        },
+        {
+          "caller": "score",
+          "callee": "min",
+          "lineNumber": 118
+        },
+        {
+          "caller": "score",
+          "callee": "max",
+          "lineNumber": 118
+        },
+        {
+          "caller": "score",
+          "callee": "(now - track.first_seen).total_seconds",
+          "lineNumber": 137
+        },
+        {
+          "caller": "score",
+          "callee": "anomaly_allowed",
+          "lineNumber": 138
+        },
+        {
+          "caller": "score",
+          "callee": "out.append",
+          "lineNumber": 140
+        },
+        {
+          "caller": "score",
+          "callee": "AnomalyEvent",
+          "lineNumber": 141
+        },
+        {
+          "caller": "score",
+          "callee": "sorted",
+          "lineNumber": 148
+        },
+        {
+          "caller": "score",
+          "callee": "(now - track.first_seen).total_seconds",
+          "lineNumber": 161
+        },
+        {
+          "caller": "score",
+          "callee": "anomaly_allowed",
+          "lineNumber": 162
+        },
+        {
+          "caller": "score",
+          "callee": "out.append",
+          "lineNumber": 164
+        },
+        {
+          "caller": "score",
+          "callee": "AnomalyEvent",
+          "lineNumber": 165
+        },
+        {
+          "caller": "score",
+          "callee": "min",
+          "lineNumber": 167
+        },
+        {
+          "caller": "score",
+          "callee": "max",
+          "lineNumber": 167
+        },
+        {
+          "caller": "score",
+          "callee": "sorted",
+          "lineNumber": 172
+        },
+        {
+          "caller": "score",
+          "callee": "int",
+          "lineNumber": 173
+        },
+        {
+          "caller": "score",
+          "callee": "(now - track.first_seen).total_seconds",
+          "lineNumber": 173
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/config.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 40,
+      "nonEmptyLines": 32,
+      "classes": [
+        {
+          "name": "MLRuntimeSettings",
+          "startLine": 11,
+          "endLine": 37,
+          "methods": [],
+          "properties": [
+            "auto_start",
+            "stream_source",
+            "detector_model_path",
+            "detector_conf",
+            "detector_iou",
+            "frame_stride",
+            "target_fps",
+            "enable_motion_prefilter",
+            "min_motion_area",
+            "loitering_seconds",
+            "evidence_dir",
+            "debug_dir",
+            "emit_websocket_events",
+            "save_debug_frames",
+            "max_duplicate_event_s",
+            "max_events_per_track",
+            "live_detection_persist_interval_s",
+            "event_sink_mode",
+            "event_sink_url"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MLRuntimeSettings",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/detector.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 92,
+      "nonEmptyLines": 78,
+      "classes": [
+        {
+          "name": "ObjectDetector",
+          "startLine": 22,
+          "endLine": 92,
+          "methods": [
+            "__init__",
+            "set_allowed_labels",
+            "_ensure_model",
+            "detect"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "ObjectDetector",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 31
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 32
+        },
+        {
+          "caller": "__init__",
+          "callee": "frozenset",
+          "lineNumber": 33
+        },
+        {
+          "caller": "set_allowed_labels",
+          "callee": "frozenset",
+          "lineNumber": 40
+        },
+        {
+          "caller": "set_allowed_labels",
+          "callee": "str(label).strip().lower",
+          "lineNumber": 40
+        },
+        {
+          "caller": "set_allowed_labels",
+          "callee": "str(label).strip",
+          "lineNumber": 40
+        },
+        {
+          "caller": "set_allowed_labels",
+          "callee": "str",
+          "lineNumber": 40
+        },
+        {
+          "caller": "set_allowed_labels",
+          "callee": "str(label).strip",
+          "lineNumber": 40
+        },
+        {
+          "caller": "set_allowed_labels",
+          "callee": "str",
+          "lineNumber": 40
+        },
+        {
+          "caller": "set_allowed_labels",
+          "callee": "frozenset",
+          "lineNumber": 41
+        },
+        {
+          "caller": "_ensure_model",
+          "callee": "RuntimeError",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_ensure_model",
+          "callee": "str",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_ensure_model",
+          "callee": "ensure_model_file",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_ensure_model",
+          "callee": "self.model_path.startswith",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_ensure_model",
+          "callee": "YOLO",
+          "lineNumber": 57
+        },
+        {
+          "caller": "detect",
+          "callee": "self._ensure_model",
+          "lineNumber": 64
+        },
+        {
+          "caller": "detect",
+          "callee": "RuntimeError",
+          "lineNumber": 68
+        },
+        {
+          "caller": "detect",
+          "callee": "torch.inference_mode",
+          "lineNumber": 70
+        },
+        {
+          "caller": "detect",
+          "callee": "model.predict",
+          "lineNumber": 71
+        },
+        {
+          "caller": "detect",
+          "callee": "int",
+          "lineNumber": 84
+        },
+        {
+          "caller": "detect",
+          "callee": "box.cls[0].item",
+          "lineNumber": 84
+        },
+        {
+          "caller": "detect",
+          "callee": "str",
+          "lineNumber": 85
+        },
+        {
+          "caller": "detect",
+          "callee": "float",
+          "lineNumber": 88
+        },
+        {
+          "caller": "detect",
+          "callee": "box.conf[0].item",
+          "lineNumber": 88
+        },
+        {
+          "caller": "detect",
+          "callee": "map",
+          "lineNumber": 89
+        },
+        {
+          "caller": "detect",
+          "callee": "box.xyxy[0].tolist",
+          "lineNumber": 89
+        },
+        {
+          "caller": "detect",
+          "callee": "detections.append",
+          "lineNumber": 90
+        },
+        {
+          "caller": "detect",
+          "callee": "Detection",
+          "lineNumber": 90
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/events.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 123,
+      "nonEmptyLines": 101,
+      "classes": [
+        {
+          "name": "PipelineEvent",
+          "startLine": 18,
+          "endLine": 22,
+          "methods": [],
+          "properties": [
+            "event_type",
+            "confidence",
+            "location",
+            "payload"
+          ]
+        },
+        {
+          "name": "EventDispatcher",
+          "startLine": 25,
+          "endLine": 85,
+          "methods": [
+            "__init__",
+            "_dedupe_key",
+            "_allow_emit",
+            "dispatch",
+            "emit_system_message"
+          ],
+          "properties": []
+        },
+        {
+          "name": "EventSink",
+          "startLine": 88,
+          "endLine": 123,
+          "methods": [
+            "__init__",
+            "send"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PipelineEvent",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "EventDispatcher",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "EventSink",
+          "line": 88,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 34
+        },
+        {
+          "caller": "__init__",
+          "callee": "int",
+          "lineNumber": 35
+        },
+        {
+          "caller": "__init__",
+          "callee": "defaultdict",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_dedupe_key",
+          "callee": "event.payload.get",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_dedupe_key",
+          "callee": "event.payload.get",
+          "lineNumber": 41
+        },
+        {
+          "caller": "_allow_emit",
+          "callee": "time.time",
+          "lineNumber": 45
+        },
+        {
+          "caller": "_allow_emit",
+          "callee": "self._dedupe_key",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_allow_emit",
+          "callee": "self._last_sent_at.get",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_allow_emit",
+          "callee": "event.payload.get",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_allow_emit",
+          "callee": "isinstance",
+          "lineNumber": 52
+        },
+        {
+          "caller": "dispatch",
+          "callee": "self._allow_emit",
+          "lineNumber": 62
+        },
+        {
+          "caller": "dispatch",
+          "callee": "telemetry_manager.broadcast",
+          "lineNumber": 67
+        },
+        {
+          "caller": "dispatch",
+          "callee": "log.exception",
+          "lineNumber": 77
+        },
+        {
+          "caller": "emit_system_message",
+          "callee": "telemetry_manager.broadcast",
+          "lineNumber": 83
+        },
+        {
+          "caller": "emit_system_message",
+          "callee": "log.exception",
+          "lineNumber": 85
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(mode).strip().lower",
+          "lineNumber": 96
+        },
+        {
+          "caller": "__init__",
+          "callee": "str(mode).strip",
+          "lineNumber": 96
+        },
+        {
+          "caller": "__init__",
+          "callee": "str",
+          "lineNumber": 96
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 98
+        },
+        {
+          "caller": "send",
+          "callee": "ValueError",
+          "lineNumber": 105
+        },
+        {
+          "caller": "send",
+          "callee": "ValueError",
+          "lineNumber": 108
+        },
+        {
+          "caller": "send",
+          "callee": "httpx.AsyncClient",
+          "lineNumber": 121
+        },
+        {
+          "caller": "send",
+          "callee": "client.post",
+          "lineNumber": 122
+        },
+        {
+          "caller": "send",
+          "callee": "resp.raise_for_status",
+          "lineNumber": 123
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 0,
+        "classCount": 3
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/evidence.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 18,
+      "nonEmptyLines": 13,
+      "classes": [
+        {
+          "name": "EvidenceRecorder",
+          "startLine": 9,
+          "endLine": 18,
+          "methods": [
+            "__init__",
+            "save_frame"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "EvidenceRecorder",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "os.makedirs",
+          "lineNumber": 12
+        },
+        {
+          "caller": "save_frame",
+          "callee": "datetime.utcnow().strftime",
+          "lineNumber": 15
+        },
+        {
+          "caller": "save_frame",
+          "callee": "datetime.utcnow",
+          "lineNumber": 15
+        },
+        {
+          "caller": "save_frame",
+          "callee": "os.path.join",
+          "lineNumber": 16
+        },
+        {
+          "caller": "save_frame",
+          "callee": "cv2.imwrite",
+          "lineNumber": 17
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/evidence_policy.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 30,
+      "functions": [
+        {
+          "name": "is_private_patrol_context",
+          "startLine": 22,
+          "endLine": 28,
+          "params": [
+            "ctx"
+          ]
+        },
+        {
+          "name": "should_save_evidence_snapshot",
+          "startLine": 31,
+          "endLine": 36,
+          "params": [
+            "save_debug_frames"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "is_private_patrol_context",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "should_save_evidence_snapshot",
+          "line": 31,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "is_private_patrol_context",
+          "callee": "str(ctx.mission_type or \"\").strip().lower",
+          "lineNumber": 27
+        },
+        {
+          "caller": "is_private_patrol_context",
+          "callee": "str(ctx.mission_type or \"\").strip",
+          "lineNumber": 27
+        },
+        {
+          "caller": "is_private_patrol_context",
+          "callee": "str",
+          "lineNumber": 27
+        },
+        {
+          "caller": "should_save_evidence_snapshot",
+          "callee": "mission_runtime_store.get_active_context",
+          "lineNumber": 35
+        },
+        {
+          "caller": "should_save_evidence_snapshot",
+          "callee": "is_private_patrol_context",
+          "lineNumber": 36
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/geo.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 83,
+      "nonEmptyLines": 67,
+      "classes": [
+        {
+          "name": "GeoProjector",
+          "startLine": 8,
+          "endLine": 83,
+          "methods": [
+            "__init__",
+            "estimate_ground_point"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "GeoProjector",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 31
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 32
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "len",
+          "lineNumber": 45
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "max",
+          "lineNumber": 46
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "int",
+          "lineNumber": 46
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "max",
+          "lineNumber": 47
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "int",
+          "lineNumber": 47
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 53
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 53
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 54
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 54
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 57
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.tan",
+          "lineNumber": 57
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.radians",
+          "lineNumber": 57
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 60
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.tan",
+          "lineNumber": 60
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.radians",
+          "lineNumber": 60
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "abs",
+          "lineNumber": 66
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 66
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 69
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.tan",
+          "lineNumber": 69
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.radians",
+          "lineNumber": 69
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.radians",
+          "lineNumber": 71
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 71
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.cos",
+          "lineNumber": 72
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.sin",
+          "lineNumber": 72
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.sin",
+          "lineNumber": 73
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.cos",
+          "lineNumber": 73
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "max",
+          "lineNumber": 76
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.cos",
+          "lineNumber": 78
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "math.radians",
+          "lineNumber": 78
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 78
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 81
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "float",
+          "lineNumber": 82
+        },
+        {
+          "caller": "estimate_ground_point",
+          "callee": "GeoPoint",
+          "lineNumber": 83
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/live_detections.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 65,
+      "nonEmptyLines": 56,
+      "classes": [
+        {
+          "name": "LiveDetectionPersistence",
+          "startLine": 9,
+          "endLine": 17,
+          "methods": [
+            "persist_live_detections"
+          ],
+          "properties": []
+        },
+        {
+          "name": "LiveDetectionSampler",
+          "startLine": 20,
+          "endLine": 65,
+          "methods": [
+            "__init__",
+            "reset",
+            "current",
+            "capture"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "LiveDetectionPersistence",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "LiveDetectionSampler",
+          "line": 20,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "capture",
+          "callee": "list",
+          "lineNumber": 47
+        },
+        {
+          "caller": "capture",
+          "callee": "int",
+          "lineNumber": 48
+        },
+        {
+          "caller": "capture",
+          "callee": "int",
+          "lineNumber": 49
+        },
+        {
+          "caller": "capture",
+          "callee": "(packet.ts - self._last_persisted_at).total_seconds",
+          "lineNumber": 55
+        },
+        {
+          "caller": "capture",
+          "callee": "persistence.persist_live_detections",
+          "lineNumber": 59
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/models.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 47,
+      "nonEmptyLines": 36,
+      "classes": [
+        {
+          "name": "FramePacket",
+          "startLine": 9,
+          "endLine": 12,
+          "methods": [],
+          "properties": [
+            "frame_id",
+            "ts",
+            "image"
+          ]
+        },
+        {
+          "name": "Detection",
+          "startLine": 16,
+          "endLine": 19,
+          "methods": [],
+          "properties": [
+            "label",
+            "confidence",
+            "bbox"
+          ]
+        },
+        {
+          "name": "Track",
+          "startLine": 23,
+          "endLine": 32,
+          "methods": [],
+          "properties": [
+            "track_id",
+            "label",
+            "confidence",
+            "bbox",
+            "centroid",
+            "age_frames",
+            "first_seen",
+            "last_seen",
+            "meta"
+          ]
+        },
+        {
+          "name": "GeoPoint",
+          "startLine": 36,
+          "endLine": 39,
+          "methods": [],
+          "properties": [
+            "lat",
+            "lon",
+            "alt"
+          ]
+        },
+        {
+          "name": "AnomalyEvent",
+          "startLine": 43,
+          "endLine": 47,
+          "methods": [],
+          "properties": [
+            "event_type",
+            "confidence",
+            "location",
+            "payload"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "FramePacket",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "Detection",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "Track",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "GeoPoint",
+          "line": 35,
+          "isDefault": false
+        },
+        {
+          "name": "AnomalyEvent",
+          "line": 42,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 0,
+        "classCount": 5
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/motion.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 28,
+      "nonEmptyLines": 23,
+      "classes": [
+        {
+          "name": "MotionPrefilter",
+          "startLine": 8,
+          "endLine": 28,
+          "methods": [
+            "__init__",
+            "has_motion"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "MotionPrefilter",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "cv2.createBackgroundSubtractorMOG2",
+          "lineNumber": 10
+        },
+        {
+          "caller": "__init__",
+          "callee": "int",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "cv2.getStructuringElement",
+          "lineNumber": 16
+        },
+        {
+          "caller": "has_motion",
+          "callee": "self.subtractor.apply",
+          "lineNumber": 19
+        },
+        {
+          "caller": "has_motion",
+          "callee": "cv2.morphologyEx",
+          "lineNumber": 20
+        },
+        {
+          "caller": "has_motion",
+          "callee": "cv2.morphologyEx",
+          "lineNumber": 21
+        },
+        {
+          "caller": "has_motion",
+          "callee": "cv2.findContours",
+          "lineNumber": 22
+        },
+        {
+          "caller": "has_motion",
+          "callee": "cv2.contourArea",
+          "lineNumber": 23
+        },
+        {
+          "caller": "has_motion",
+          "callee": "max",
+          "lineNumber": 24
+        },
+        {
+          "caller": "has_motion",
+          "callee": "float",
+          "lineNumber": 26
+        },
+        {
+          "caller": "has_motion",
+          "callee": "len",
+          "lineNumber": 27
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/pipeline.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 453,
+      "nonEmptyLines": 402,
+      "classes": [
+        {
+          "name": "DroneAnomalyPipeline",
+          "startLine": 41,
+          "endLine": 453,
+          "methods": [
+            "__init__",
+            "set_active_ai_tasks",
+            "_read_next_packet",
+            "start",
+            "stop",
+            "status",
+            "set_zones",
+            "_to_float",
+            "_get_latest_telemetry",
+            "_emit_anomaly",
+            "run_forever"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "DroneAnomalyPipeline",
+          "line": 41,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "MotionPrefilter",
+          "lineNumber": 44
+        },
+        {
+          "caller": "__init__",
+          "callee": "ObjectDetector",
+          "lineNumber": 45
+        },
+        {
+          "caller": "__init__",
+          "callee": "SimpleTracker",
+          "lineNumber": 50
+        },
+        {
+          "caller": "__init__",
+          "callee": "GeoProjector",
+          "lineNumber": 51
+        },
+        {
+          "caller": "__init__",
+          "callee": "EventSink",
+          "lineNumber": 52
+        },
+        {
+          "caller": "__init__",
+          "callee": "getattr",
+          "lineNumber": 53
+        },
+        {
+          "caller": "__init__",
+          "callee": "getattr",
+          "lineNumber": 54
+        },
+        {
+          "caller": "__init__",
+          "callee": "EventDispatcher",
+          "lineNumber": 56
+        },
+        {
+          "caller": "__init__",
+          "callee": "EvidenceRecorder",
+          "lineNumber": 61
+        },
+        {
+          "caller": "__init__",
+          "callee": "ZoneEngine",
+          "lineNumber": 63
+        },
+        {
+          "caller": "__init__",
+          "callee": "Zone",
+          "lineNumber": 65
+        },
+        {
+          "caller": "__init__",
+          "callee": "AnomalyScorer",
+          "lineNumber": 77
+        },
+        {
+          "caller": "__init__",
+          "callee": "PatrolPersistenceService",
+          "lineNumber": 85
+        },
+        {
+          "caller": "__init__",
+          "callee": "asyncio.Event",
+          "lineNumber": 91
+        },
+        {
+          "caller": "__init__",
+          "callee": "LiveDetectionSampler",
+          "lineNumber": 99
+        },
+        {
+          "caller": "__init__",
+          "callee": "frozenset",
+          "lineNumber": 100
+        },
+        {
+          "caller": "__init__",
+          "callee": "self.set_active_ai_tasks",
+          "lineNumber": 102
+        },
+        {
+          "caller": "__init__",
+          "callee": "list",
+          "lineNumber": 102
+        },
+        {
+          "caller": "set_active_ai_tasks",
+          "callee": "apply_active_ai_tasks",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_read_next_packet",
+          "callee": "RuntimeError",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_read_next_packet",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 114
+        },
+        {
+          "caller": "start",
+          "callee": "self._task.done",
+          "lineNumber": 121
+        },
+        {
+          "caller": "start",
+          "callee": "self.set_active_ai_tasks",
+          "lineNumber": 123
+        },
+        {
+          "caller": "start",
+          "callee": "self.set_active_ai_tasks",
+          "lineNumber": 126
+        },
+        {
+          "caller": "start",
+          "callee": "create_stream_reader",
+          "lineNumber": 128
+        },
+        {
+          "caller": "start",
+          "callee": "asyncio.Event",
+          "lineNumber": 133
+        },
+        {
+          "caller": "start",
+          "callee": "datetime.utcnow",
+          "lineNumber": 135
+        },
+        {
+          "caller": "start",
+          "callee": "self.live_detections.reset",
+          "lineNumber": 138
+        },
+        {
+          "caller": "start",
+          "callee": "asyncio.create_task",
+          "lineNumber": 139
+        },
+        {
+          "caller": "start",
+          "callee": "self.run_forever",
+          "lineNumber": 139
+        },
+        {
+          "caller": "stop",
+          "callee": "self._stop_event.set",
+          "lineNumber": 143
+        },
+        {
+          "caller": "stop",
+          "callee": "self._task.cancel",
+          "lineNumber": 146
+        },
+        {
+          "caller": "status",
+          "callee": "self._task.done",
+          "lineNumber": 156
+        },
+        {
+          "caller": "status",
+          "callee": "self._started_at.isoformat",
+          "lineNumber": 158
+        },
+        {
+          "caller": "status",
+          "callee": "self._last_frame_at.isoformat",
+          "lineNumber": 159
+        },
+        {
+          "caller": "status",
+          "callee": "self.live_detections.current",
+          "lineNumber": 163
+        },
+        {
+          "caller": "status",
+          "callee": "sorted",
+          "lineNumber": 164
+        },
+        {
+          "caller": "set_zones",
+          "callee": "zone.get",
+          "lineNumber": 171
+        },
+        {
+          "caller": "set_zones",
+          "callee": "polygon_points.append",
+          "lineNumber": 173
+        },
+        {
+          "caller": "set_zones",
+          "callee": "float",
+          "lineNumber": 173
+        },
+        {
+          "caller": "set_zones",
+          "callee": "float",
+          "lineNumber": 173
+        },
+        {
+          "caller": "set_zones",
+          "callee": "len",
+          "lineNumber": 176
+        },
+        {
+          "caller": "set_zones",
+          "callee": "normalized.append",
+          "lineNumber": 178
+        },
+        {
+          "caller": "set_zones",
+          "callee": "Zone",
+          "lineNumber": 179
+        },
+        {
+          "caller": "set_zones",
+          "callee": "str",
+          "lineNumber": 180
+        },
+        {
+          "caller": "set_zones",
+          "callee": "zone.get",
+          "lineNumber": 180
+        },
+        {
+          "caller": "set_zones",
+          "callee": "len",
+          "lineNumber": 180
+        },
+        {
+          "caller": "set_zones",
+          "callee": "bool",
+          "lineNumber": 182
+        },
+        {
+          "caller": "set_zones",
+          "callee": "zone.get",
+          "lineNumber": 182
+        },
+        {
+          "caller": "set_zones",
+          "callee": "self.zone_engine.set_zones",
+          "lineNumber": 186
+        },
+        {
+          "caller": "_to_float",
+          "callee": "float",
+          "lineNumber": 194
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "telemetry_manager.get_last_telemetry_envelope",
+          "lineNumber": 216
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "self._to_float",
+          "lineNumber": 220
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "telemetry_envelope.emitted_at.timestamp",
+          "lineNumber": 220
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "telemetry_manager.runtime_snapshot",
+          "lineNumber": 221
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "time.time",
+          "lineNumber": 225
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "self._to_float",
+          "lineNumber": 231
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "self._to_float",
+          "lineNumber": 232
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "self._to_float",
+          "lineNumber": 233
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "self._to_float",
+          "lineNumber": 235
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "telemetry.update",
+          "lineNumber": 247
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "self._to_float",
+          "lineNumber": 252
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "self._to_float",
+          "lineNumber": 253
+        },
+        {
+          "caller": "_get_latest_telemetry",
+          "callee": "self._to_float",
+          "lineNumber": 254
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "should_save_evidence_snapshot",
+          "lineNumber": 269
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "self.evidence.save_frame",
+          "lineNumber": 270
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "self.persistence.persist_anomaly",
+          "lineNumber": 278
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "log.exception",
+          "lineNumber": 295
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "str",
+          "lineNumber": 296
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "self.event_dispatcher.dispatch",
+          "lineNumber": 299
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "PipelineEvent",
+          "lineNumber": 300
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "float",
+          "lineNumber": 302
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "dict",
+          "lineNumber": 308
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "log.exception",
+          "lineNumber": 312
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "str",
+          "lineNumber": 313
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "self.events.send",
+          "lineNumber": 317
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "log.exception",
+          "lineNumber": 319
+        },
+        {
+          "caller": "_emit_anomaly",
+          "callee": "str",
+          "lineNumber": 320
+        },
+        {
+          "caller": "run_forever",
+          "callee": "RuntimeError",
+          "lineNumber": 326
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self._stop_event.is_set",
+          "lineNumber": 329
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self._read_next_packet",
+          "lineNumber": 330
+        },
+        {
+          "caller": "run_forever",
+          "callee": "asyncio.sleep",
+          "lineNumber": 333
+        },
+        {
+          "caller": "run_forever",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 343
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self._get_latest_telemetry",
+          "lineNumber": 348
+        },
+        {
+          "caller": "run_forever",
+          "callee": "telemetry.get",
+          "lineNumber": 353
+        },
+        {
+          "caller": "run_forever",
+          "callee": "telemetry.get",
+          "lineNumber": 354
+        },
+        {
+          "caller": "run_forever",
+          "callee": "datetime.utcnow",
+          "lineNumber": 356
+        },
+        {
+          "caller": "run_forever",
+          "callee": "(now - self._last_motion_event_at).total_seconds",
+          "lineNumber": 359
+        },
+        {
+          "caller": "run_forever",
+          "callee": "AnomalyEvent",
+          "lineNumber": 362
+        },
+        {
+          "caller": "run_forever",
+          "callee": "min",
+          "lineNumber": 364
+        },
+        {
+          "caller": "run_forever",
+          "callee": "max",
+          "lineNumber": 366
+        },
+        {
+          "caller": "run_forever",
+          "callee": "float",
+          "lineNumber": 368
+        },
+        {
+          "caller": "run_forever",
+          "callee": "motion_meta.get",
+          "lineNumber": 368
+        },
+        {
+          "caller": "run_forever",
+          "callee": "float",
+          "lineNumber": 369
+        },
+        {
+          "caller": "run_forever",
+          "callee": "GeoPoint",
+          "lineNumber": 372
+        },
+        {
+          "caller": "run_forever",
+          "callee": "float",
+          "lineNumber": 373
+        },
+        {
+          "caller": "run_forever",
+          "callee": "float",
+          "lineNumber": 374
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self._emit_anomaly",
+          "lineNumber": 381
+        },
+        {
+          "caller": "run_forever",
+          "callee": "yolo_detection_enabled",
+          "lineNumber": 391
+        },
+        {
+          "caller": "run_forever",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 392
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self.tracker.update",
+          "lineNumber": 393
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self.live_detections.capture",
+          "lineNumber": 398
+        },
+        {
+          "caller": "run_forever",
+          "callee": "log.exception",
+          "lineNumber": 406
+        },
+        {
+          "caller": "run_forever",
+          "callee": "str",
+          "lineNumber": 407
+        },
+        {
+          "caller": "run_forever",
+          "callee": "telemetry.get",
+          "lineNumber": 409
+        },
+        {
+          "caller": "run_forever",
+          "callee": "telemetry.get",
+          "lineNumber": 410
+        },
+        {
+          "caller": "run_forever",
+          "callee": "telemetry.get",
+          "lineNumber": 411
+        },
+        {
+          "caller": "run_forever",
+          "callee": "telemetry.get",
+          "lineNumber": 412
+        },
+        {
+          "caller": "run_forever",
+          "callee": "telemetry.get",
+          "lineNumber": 413
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self.geo.estimate_ground_point",
+          "lineNumber": 417
+        },
+        {
+          "caller": "run_forever",
+          "callee": "getattr",
+          "lineNumber": 424
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self.anomaly.score",
+          "lineNumber": 427
+        },
+        {
+          "caller": "run_forever",
+          "callee": "datetime.utcnow",
+          "lineNumber": 430
+        },
+        {
+          "caller": "run_forever",
+          "callee": "self._emit_anomaly",
+          "lineNumber": 434
+        },
+        {
+          "caller": "run_forever",
+          "callee": "asyncio.sleep",
+          "lineNumber": 441
+        },
+        {
+          "caller": "run_forever",
+          "callee": "log.info",
+          "lineNumber": 444
+        },
+        {
+          "caller": "run_forever",
+          "callee": "str",
+          "lineNumber": 447
+        },
+        {
+          "caller": "run_forever",
+          "callee": "log.exception",
+          "lineNumber": 448
+        },
+        {
+          "caller": "run_forever",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 453
+        }
+      ],
+      "metrics": {
+        "importCount": 15,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/runtime.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 73,
+      "nonEmptyLines": 61,
+      "classes": [
+        {
+          "name": "MLRuntimeManager",
+          "startLine": 13,
+          "endLine": 70,
+          "methods": [
+            "__init__",
+            "start",
+            "stop",
+            "status",
+            "set_zones",
+            "set_active_ai_tasks"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "MLRuntimeManager",
+          "line": 13,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "DroneAnomalyPipeline",
+          "lineNumber": 15
+        },
+        {
+          "caller": "__init__",
+          "callee": "asyncio.Lock",
+          "lineNumber": 17
+        },
+        {
+          "caller": "start",
+          "callee": "self._task.done",
+          "lineNumber": 26
+        },
+        {
+          "caller": "start",
+          "callee": "self.set_active_ai_tasks",
+          "lineNumber": 28
+        },
+        {
+          "caller": "start",
+          "callee": "self.status",
+          "lineNumber": 29
+        },
+        {
+          "caller": "start",
+          "callee": "self.pipeline.start",
+          "lineNumber": 30
+        },
+        {
+          "caller": "start",
+          "callee": "self.status",
+          "lineNumber": 35
+        },
+        {
+          "caller": "stop",
+          "callee": "self.pipeline.stop",
+          "lineNumber": 39
+        },
+        {
+          "caller": "stop",
+          "callee": "self.status",
+          "lineNumber": 41
+        },
+        {
+          "caller": "status",
+          "callee": "self._task.cancelled",
+          "lineNumber": 46
+        },
+        {
+          "caller": "status",
+          "callee": "self._task.done",
+          "lineNumber": 48
+        },
+        {
+          "caller": "status",
+          "callee": "self.pipeline.status",
+          "lineNumber": 53
+        },
+        {
+          "caller": "set_zones",
+          "callee": "self.pipeline.set_zones",
+          "lineNumber": 65
+        },
+        {
+          "caller": "set_zones",
+          "callee": "self.status",
+          "lineNumber": 66
+        },
+        {
+          "caller": "set_active_ai_tasks",
+          "callee": "self.pipeline.set_active_ai_tasks",
+          "lineNumber": 69
+        },
+        {
+          "caller": "set_active_ai_tasks",
+          "callee": "self.status",
+          "lineNumber": 70
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/stream_reader.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 197,
+      "nonEmptyLines": 155,
+      "functions": [
+        {
+          "name": "create_stream_reader",
+          "startLine": 28,
+          "endLine": 43,
+          "params": [
+            "source",
+            "frame_stride",
+            "reopen_delay_s"
+          ]
+        },
+        {
+          "name": "resolve_ml_stream_source",
+          "startLine": 46,
+          "endLine": 49,
+          "params": [
+            "explicit"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "FrameReader",
+          "startLine": 18,
+          "endLine": 25,
+          "methods": [
+            "open",
+            "close",
+            "read"
+          ],
+          "properties": [
+            "source"
+          ]
+        },
+        {
+          "name": "SharedVideoStreamReader",
+          "startLine": 52,
+          "endLine": 110,
+          "methods": [
+            "__init__",
+            "open",
+            "close",
+            "read"
+          ],
+          "properties": []
+        },
+        {
+          "name": "StreamReader",
+          "startLine": 113,
+          "endLine": 197,
+          "methods": [
+            "__init__",
+            "open",
+            "close",
+            "read"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "FrameReader",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "create_stream_reader",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "resolve_ml_stream_source",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "SharedVideoStreamReader",
+          "line": 52,
+          "isDefault": false
+        },
+        {
+          "name": "StreamReader",
+          "line": 113,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "create_stream_reader",
+          "callee": "SharedVideoStreamReader",
+          "lineNumber": 35
+        },
+        {
+          "caller": "create_stream_reader",
+          "callee": "StreamReader",
+          "lineNumber": 39
+        },
+        {
+          "caller": "__init__",
+          "callee": "max",
+          "lineNumber": 62
+        },
+        {
+          "caller": "__init__",
+          "callee": "int",
+          "lineNumber": 62
+        },
+        {
+          "caller": "__init__",
+          "callee": "max",
+          "lineNumber": 63
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 63
+        },
+        {
+          "caller": "read",
+          "callee": "self.open",
+          "lineNumber": 78
+        },
+        {
+          "caller": "read",
+          "callee": "shared_video_runtime.read_jpeg_frame_sync",
+          "lineNumber": 85
+        },
+        {
+          "caller": "read",
+          "callee": "cv2.imdecode",
+          "lineNumber": 100
+        },
+        {
+          "caller": "read",
+          "callee": "np.frombuffer",
+          "lineNumber": 100
+        },
+        {
+          "caller": "read",
+          "callee": "FramePacket",
+          "lineNumber": 104
+        },
+        {
+          "caller": "read",
+          "callee": "datetime.utcnow",
+          "lineNumber": 106
+        },
+        {
+          "caller": "__init__",
+          "callee": "max",
+          "lineNumber": 124
+        },
+        {
+          "caller": "__init__",
+          "callee": "int",
+          "lineNumber": 124
+        },
+        {
+          "caller": "__init__",
+          "callee": "max",
+          "lineNumber": 125
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 125
+        },
+        {
+          "caller": "open",
+          "callee": "self._cap.isOpened",
+          "lineNumber": 133
+        },
+        {
+          "caller": "open",
+          "callee": "isinstance",
+          "lineNumber": 138
+        },
+        {
+          "caller": "open",
+          "callee": "source.strip",
+          "lineNumber": 139
+        },
+        {
+          "caller": "open",
+          "callee": "stripped.isdigit",
+          "lineNumber": 140
+        },
+        {
+          "caller": "open",
+          "callee": "int",
+          "lineNumber": 141
+        },
+        {
+          "caller": "open",
+          "callee": "open_video_capture",
+          "lineNumber": 143
+        },
+        {
+          "caller": "open",
+          "callee": "bool",
+          "lineNumber": 150
+        },
+        {
+          "caller": "open",
+          "callee": "self._cap.isOpened",
+          "lineNumber": 150
+        },
+        {
+          "caller": "open",
+          "callee": "RuntimeError",
+          "lineNumber": 152
+        },
+        {
+          "caller": "close",
+          "callee": "self._cap.release",
+          "lineNumber": 157
+        },
+        {
+          "caller": "read",
+          "callee": "self.open",
+          "lineNumber": 172
+        },
+        {
+          "caller": "read",
+          "callee": "self._cap.read",
+          "lineNumber": 176
+        },
+        {
+          "caller": "read",
+          "callee": "self.close",
+          "lineNumber": 179
+        },
+        {
+          "caller": "read",
+          "callee": "time.sleep",
+          "lineNumber": 180
+        },
+        {
+          "caller": "read",
+          "callee": "self.open",
+          "lineNumber": 182
+        },
+        {
+          "caller": "read",
+          "callee": "FramePacket",
+          "lineNumber": 191
+        },
+        {
+          "caller": "read",
+          "callee": "datetime.utcnow",
+          "lineNumber": 193
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 5,
+        "functionCount": 2,
+        "classCount": 3
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/tracker.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 88,
+      "nonEmptyLines": 74,
+      "functions": [
+        {
+          "name": "_centroid",
+          "startLine": 8,
+          "endLine": 10,
+          "params": [
+            "bbox"
+          ]
+        },
+        {
+          "name": "_iou",
+          "startLine": 13,
+          "endLine": 26,
+          "params": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "SimpleTracker",
+          "startLine": 29,
+          "endLine": 88,
+          "methods": [
+            "__init__",
+            "update"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_centroid",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "_iou",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "SimpleTracker",
+          "line": 29,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_iou",
+          "callee": "max",
+          "lineNumber": 16
+        },
+        {
+          "caller": "_iou",
+          "callee": "max",
+          "lineNumber": 17
+        },
+        {
+          "caller": "_iou",
+          "callee": "min",
+          "lineNumber": 18
+        },
+        {
+          "caller": "_iou",
+          "callee": "min",
+          "lineNumber": 19
+        },
+        {
+          "caller": "_iou",
+          "callee": "max",
+          "lineNumber": 20
+        },
+        {
+          "caller": "_iou",
+          "callee": "max",
+          "lineNumber": 21
+        },
+        {
+          "caller": "_iou",
+          "callee": "max",
+          "lineNumber": 23
+        },
+        {
+          "caller": "_iou",
+          "callee": "max",
+          "lineNumber": 23
+        },
+        {
+          "caller": "_iou",
+          "callee": "max",
+          "lineNumber": 24
+        },
+        {
+          "caller": "_iou",
+          "callee": "max",
+          "lineNumber": 24
+        },
+        {
+          "caller": "__init__",
+          "callee": "float",
+          "lineNumber": 31
+        },
+        {
+          "caller": "__init__",
+          "callee": "int",
+          "lineNumber": 32
+        },
+        {
+          "caller": "update",
+          "callee": "set",
+          "lineNumber": 38
+        },
+        {
+          "caller": "update",
+          "callee": "self.tracks.items",
+          "lineNumber": 43
+        },
+        {
+          "caller": "update",
+          "callee": "_iou",
+          "lineNumber": 46
+        },
+        {
+          "caller": "update",
+          "callee": "_centroid",
+          "lineNumber": 54
+        },
+        {
+          "caller": "update",
+          "callee": "updated_ids.add",
+          "lineNumber": 58
+        },
+        {
+          "caller": "update",
+          "callee": "Track",
+          "lineNumber": 63
+        },
+        {
+          "caller": "update",
+          "callee": "_centroid",
+          "lineNumber": 68
+        },
+        {
+          "caller": "update",
+          "callee": "updated_ids.add",
+          "lineNumber": 74
+        },
+        {
+          "caller": "update",
+          "callee": "list",
+          "lineNumber": 78
+        },
+        {
+          "caller": "update",
+          "callee": "self.tracks.keys",
+          "lineNumber": 78
+        },
+        {
+          "caller": "update",
+          "callee": "self.missed.get",
+          "lineNumber": 80
+        },
+        {
+          "caller": "update",
+          "callee": "stale.append",
+          "lineNumber": 82
+        },
+        {
+          "caller": "update",
+          "callee": "self.tracks.pop",
+          "lineNumber": 85
+        },
+        {
+          "caller": "update",
+          "callee": "self.missed.pop",
+          "lineNumber": 86
+        },
+        {
+          "caller": "update",
+          "callee": "list",
+          "lineNumber": 88
+        },
+        {
+          "caller": "update",
+          "callee": "self.tracks.values",
+          "lineNumber": 88
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/worker.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 12,
+      "nonEmptyLines": 7,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 6,
+          "endLine": 8,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "main",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "main",
+          "callee": "DroneAnomalyPipeline",
+          "lineNumber": 7
+        },
+        {
+          "caller": "main",
+          "callee": "pipeline.run_forever",
+          "lineNumber": 8
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision/zones.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 60,
+      "nonEmptyLines": 48,
+      "functions": [
+        {
+          "name": "point_in_polygon",
+          "startLine": 23,
+          "endLine": 32,
+          "params": [
+            "point",
+            "polygon"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Zone",
+          "startLine": 17,
+          "endLine": 20,
+          "methods": [],
+          "properties": [
+            "name",
+            "polygon",
+            "restricted"
+          ]
+        },
+        {
+          "name": "ZoneEngine",
+          "startLine": 35,
+          "endLine": 60,
+          "methods": [
+            "__init__",
+            "set_zones",
+            "_rebuild_index",
+            "find_zone_hits"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "Zone",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "point_in_polygon",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "ZoneEngine",
+          "line": 35,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "point_in_polygon",
+          "callee": "len",
+          "lineNumber": 26
+        },
+        {
+          "caller": "point_in_polygon",
+          "callee": "range",
+          "lineNumber": 27
+        },
+        {
+          "caller": "__init__",
+          "callee": "list",
+          "lineNumber": 37
+        },
+        {
+          "caller": "__init__",
+          "callee": "self._rebuild_index",
+          "lineNumber": 39
+        },
+        {
+          "caller": "set_zones",
+          "callee": "list",
+          "lineNumber": 42
+        },
+        {
+          "caller": "set_zones",
+          "callee": "self._rebuild_index",
+          "lineNumber": 43
+        },
+        {
+          "caller": "_rebuild_index",
+          "callee": "Polygon",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_rebuild_index",
+          "callee": "STRtree",
+          "lineNumber": 50
+        },
+        {
+          "caller": "find_zone_hits",
+          "callee": "self._strtree.query",
+          "lineNumber": 54
+        },
+        {
+          "caller": "find_zone_hits",
+          "callee": "Point",
+          "lineNumber": 54
+        },
+        {
+          "caller": "find_zone_hits",
+          "callee": "int",
+          "lineNumber": 56
+        },
+        {
+          "caller": "find_zone_hits",
+          "callee": "point_in_polygon",
+          "lineNumber": 58
+        },
+        {
+          "caller": "find_zone_hits",
+          "callee": "int",
+          "lineNumber": 58
+        },
+        {
+          "caller": "find_zone_hits",
+          "callee": "point_in_polygon",
+          "lineNumber": 60
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 1,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/patrol/vision_events_api.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 38,
+      "nonEmptyLines": 29,
+      "functions": [
+        {
+          "name": "ingest_ml_anomaly_event",
+          "startLine": 28,
+          "endLine": 38,
+          "params": [
+            "body"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "MLAnomalyEventIn",
+          "startLine": 20,
+          "endLine": 24,
+          "methods": [],
+          "properties": [
+            "event_type",
+            "confidence",
+            "location",
+            "payload"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MLAnomalyEventIn",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "ingest_ml_anomaly_event",
+          "line": 27,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ingest_ml_anomaly_event",
+          "callee": "_event_dispatcher.dispatch",
+          "lineNumber": 30
+        },
+        {
+          "caller": "ingest_ml_anomaly_event",
+          "callee": "PipelineEvent",
+          "lineNumber": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/application.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 178,
+      "nonEmptyLines": 152,
+      "classes": [
+        {
+          "name": "UploadedVideo",
+          "startLine": 24,
+          "endLine": 30,
+          "methods": [
+            "read",
+            "close"
+          ],
+          "properties": [
+            "filename",
+            "content_type"
+          ]
+        },
+        {
+          "name": "VideoAnalysisNotFound",
+          "startLine": 33,
+          "endLine": 34,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "VideoAnalysisConflict",
+          "startLine": 37,
+          "endLine": 38,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "VideoAnalysisUploadError",
+          "startLine": 41,
+          "endLine": 42,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "VideoAnalysisModelUnavailable",
+          "startLine": 45,
+          "endLine": 46,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "VideoAnalysisApplication",
+          "startLine": 49,
+          "endLine": 178,
+          "methods": [
+            "__init__",
+            "upload_video",
+            "start_analysis",
+            "get_job",
+            "list_detections",
+            "list_videos",
+            "resolve_video_stream_path"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "UploadedVideo",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAnalysisNotFound",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAnalysisConflict",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAnalysisUploadError",
+          "line": 41,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAnalysisModelUnavailable",
+          "line": 45,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAnalysisApplication",
+          "line": 49,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "VideoAnalysisQueue",
+          "lineNumber": 51
+        },
+        {
+          "caller": "upload_video",
+          "callee": "Path",
+          "lineNumber": 62
+        },
+        {
+          "caller": "upload_video",
+          "callee": "Path(safe_name).suffix.lower",
+          "lineNumber": 63
+        },
+        {
+          "caller": "upload_video",
+          "callee": "Path",
+          "lineNumber": 63
+        },
+        {
+          "caller": "upload_video",
+          "callee": "VideoAnalysisUploadError",
+          "lineNumber": 64
+        },
+        {
+          "caller": "upload_video",
+          "callee": "file.content_type.startswith",
+          "lineNumber": 65
+        },
+        {
+          "caller": "upload_video",
+          "callee": "VideoAnalysisUploadError",
+          "lineNumber": 66
+        },
+        {
+          "caller": "upload_video",
+          "callee": "field_service.get_owned",
+          "lineNumber": 69
+        },
+        {
+          "caller": "upload_video",
+          "callee": "VideoAnalysisNotFound",
+          "lineNumber": 71
+        },
+        {
+          "caller": "upload_video",
+          "callee": "mission_runtime_repo.get_by_client_id_for_user",
+          "lineNumber": 74
+        },
+        {
+          "caller": "upload_video",
+          "callee": "VideoAnalysisNotFound",
+          "lineNumber": 76
+        },
+        {
+          "caller": "upload_video",
+          "callee": "UPLOAD_ROOT.mkdir",
+          "lineNumber": 78
+        },
+        {
+          "caller": "upload_video",
+          "callee": "uuid4",
+          "lineNumber": 79
+        },
+        {
+          "caller": "upload_video",
+          "callee": "aiofiles.open",
+          "lineNumber": 82
+        },
+        {
+          "caller": "upload_video",
+          "callee": "file.read",
+          "lineNumber": 83
+        },
+        {
+          "caller": "upload_video",
+          "callee": "len",
+          "lineNumber": 84
+        },
+        {
+          "caller": "upload_video",
+          "callee": "VideoAnalysisUploadError",
+          "lineNumber": 86
+        },
+        {
+          "caller": "upload_video",
+          "callee": "output.write",
+          "lineNumber": 87
+        },
+        {
+          "caller": "upload_video",
+          "callee": "storage_path.unlink",
+          "lineNumber": 89
+        },
+        {
+          "caller": "upload_video",
+          "callee": "file.close",
+          "lineNumber": 92
+        },
+        {
+          "caller": "upload_video",
+          "callee": "VideoAnalysisRepository(db).create_video",
+          "lineNumber": 95
+        },
+        {
+          "caller": "upload_video",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 95
+        },
+        {
+          "caller": "upload_video",
+          "callee": "str",
+          "lineNumber": 97
+        },
+        {
+          "caller": "upload_video",
+          "callee": "storage_path.unlink",
+          "lineNumber": 105
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 111
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "repo.get_video_for_user",
+          "lineNumber": 112
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "VideoAnalysisNotFound",
+          "lineNumber": 114
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "request.model_name.startswith",
+          "lineNumber": 116
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "resolve_model_path(request.model_name).is_file",
+          "lineNumber": 117
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "resolve_model_path",
+          "lineNumber": 117
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "VideoAnalysisModelUnavailable",
+          "lineNumber": 119
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "repo.create_job",
+          "lineNumber": 123
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "self.queue.enqueue",
+          "lineNumber": 130
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "repo.mark_job_failed",
+          "lineNumber": 132
+        },
+        {
+          "caller": "start_analysis",
+          "callee": "VideoAnalysisConflict",
+          "lineNumber": 133
+        },
+        {
+          "caller": "get_job",
+          "callee": "VideoAnalysisRepository(db).get_job_for_user",
+          "lineNumber": 137
+        },
+        {
+          "caller": "get_job",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 137
+        },
+        {
+          "caller": "get_job",
+          "callee": "VideoAnalysisNotFound",
+          "lineNumber": 139
+        },
+        {
+          "caller": "list_detections",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 143
+        },
+        {
+          "caller": "list_detections",
+          "callee": "repo.get_job_for_user",
+          "lineNumber": 144
+        },
+        {
+          "caller": "list_detections",
+          "callee": "VideoAnalysisNotFound",
+          "lineNumber": 145
+        },
+        {
+          "caller": "list_detections",
+          "callee": "repo.list_detections_for_user",
+          "lineNumber": 146
+        },
+        {
+          "caller": "list_videos",
+          "callee": "field_service.get_owned",
+          "lineNumber": 159
+        },
+        {
+          "caller": "list_videos",
+          "callee": "VideoAnalysisNotFound",
+          "lineNumber": 161
+        },
+        {
+          "caller": "list_videos",
+          "callee": "VideoAnalysisRepository(db).list_videos_for_user",
+          "lineNumber": 162
+        },
+        {
+          "caller": "list_videos",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 162
+        },
+        {
+          "caller": "resolve_video_stream_path",
+          "callee": "VideoAnalysisRepository(db).get_video_for_user",
+          "lineNumber": 172
+        },
+        {
+          "caller": "resolve_video_stream_path",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 172
+        },
+        {
+          "caller": "resolve_video_stream_path",
+          "callee": "VideoAnalysisNotFound",
+          "lineNumber": 174
+        },
+        {
+          "caller": "resolve_video_stream_path",
+          "callee": "Path",
+          "lineNumber": 175
+        },
+        {
+          "caller": "resolve_video_stream_path",
+          "callee": "path.is_file",
+          "lineNumber": 176
+        },
+        {
+          "caller": "resolve_video_stream_path",
+          "callee": "VideoAnalysisNotFound",
+          "lineNumber": 177
+        }
+      ],
+      "metrics": {
+        "importCount": 8,
+        "exportCount": 6,
+        "functionCount": 0,
+        "classCount": 6
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/mission_recordings.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 105,
+      "nonEmptyLines": 89,
+      "functions": [
+        {
+          "name": "register_mission_flight_recording",
+          "startLine": 14,
+          "endLine": 70,
+          "params": [
+            "recording_path",
+            "recording_file",
+            "client_flight_id"
+          ]
+        },
+        {
+          "name": "_resolve_recording_path",
+          "startLine": 73,
+          "endLine": 90,
+          "params": [
+            "recording_path",
+            "recording_file"
+          ]
+        },
+        {
+          "name": "_field_id_from_runtime",
+          "startLine": 93,
+          "endLine": 105,
+          "params": [
+            "runtime"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "register_mission_flight_recording",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "_resolve_recording_path",
+          "line": 73,
+          "isDefault": false
+        },
+        {
+          "name": "_field_id_from_runtime",
+          "line": 93,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "_resolve_recording_path",
+          "lineNumber": 24
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "logger.info",
+          "lineNumber": 26
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "mission_runtime_repo.get_by_client_id",
+          "lineNumber": 32
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "int",
+          "lineNumber": 33
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "int",
+          "lineNumber": 34
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "_field_id_from_runtime",
+          "lineNumber": 35
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "Session",
+          "lineNumber": 38
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 39
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "repo.get_video_by_storage_path",
+          "lineNumber": 40
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "str",
+          "lineNumber": 40
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "repo.attach_video_to_mission",
+          "lineNumber": 43
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "repo.create_video",
+          "lineNumber": 50
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "str",
+          "lineNumber": 52
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "logger.info",
+          "lineNumber": 60
+        },
+        {
+          "caller": "register_mission_flight_recording",
+          "callee": "logger.exception",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_resolve_recording_path",
+          "callee": "Path",
+          "lineNumber": 78
+        },
+        {
+          "caller": "_resolve_recording_path",
+          "callee": "candidate.is_file",
+          "lineNumber": 79
+        },
+        {
+          "caller": "_resolve_recording_path",
+          "callee": "candidate.suffix.lower",
+          "lineNumber": 79
+        },
+        {
+          "caller": "_resolve_recording_path",
+          "callee": "candidate.resolve",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_resolve_recording_path",
+          "callee": "Path(settings.drone_video_save_path).resolve",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_resolve_recording_path",
+          "callee": "Path",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_resolve_recording_path",
+          "callee": "candidate.is_file",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_resolve_recording_path",
+          "callee": "candidate.resolve",
+          "lineNumber": 88
+        },
+        {
+          "caller": "_field_id_from_runtime",
+          "callee": "getattr",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_field_id_from_runtime",
+          "callee": "params.get",
+          "lineNumber": 98
+        },
+        {
+          "caller": "_field_id_from_runtime",
+          "callee": "int",
+          "lineNumber": 102
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/model_storage.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 37,
+      "nonEmptyLines": 27,
+      "functions": [
+        {
+          "name": "resolve_model_path",
+          "startLine": 12,
+          "endLine": 19,
+          "params": [
+            "model_name"
+          ]
+        },
+        {
+          "name": "_download_builtin_model",
+          "startLine": 22,
+          "endLine": 27,
+          "params": [
+            "target_path"
+          ]
+        },
+        {
+          "name": "ensure_model_file",
+          "startLine": 30,
+          "endLine": 37,
+          "params": [
+            "model_name"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "resolve_model_path",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "_download_builtin_model",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "ensure_model_file",
+          "line": 30,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "resolve_model_path",
+          "callee": "BUILTIN_MODEL_ROOT.mkdir",
+          "lineNumber": 15
+        },
+        {
+          "caller": "resolve_model_path",
+          "callee": "model_name.startswith",
+          "lineNumber": 17
+        },
+        {
+          "caller": "resolve_model_path",
+          "callee": "ValueError",
+          "lineNumber": 19
+        },
+        {
+          "caller": "_download_builtin_model",
+          "callee": "attempt_download_asset",
+          "lineNumber": 27
+        },
+        {
+          "caller": "_download_builtin_model",
+          "callee": "str",
+          "lineNumber": 27
+        },
+        {
+          "caller": "ensure_model_file",
+          "callee": "resolve_model_path",
+          "lineNumber": 32
+        },
+        {
+          "caller": "ensure_model_file",
+          "callee": "target_path.is_file",
+          "lineNumber": 33
+        },
+        {
+          "caller": "ensure_model_file",
+          "callee": "_download_builtin_model",
+          "lineNumber": 34
+        },
+        {
+          "caller": "ensure_model_file",
+          "callee": "target_path.is_file",
+          "lineNumber": 35
+        },
+        {
+          "caller": "ensure_model_file",
+          "callee": "FileNotFoundError",
+          "lineNumber": 36
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/models.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 127,
+      "nonEmptyLines": 96,
+      "functions": [
+        {
+          "name": "new_uuid",
+          "startLine": 12,
+          "endLine": 13,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "VideoAsset",
+          "startLine": 16,
+          "endLine": 48,
+          "methods": [],
+          "properties": [
+            "id",
+            "mission_id",
+            "field_id",
+            "org_id",
+            "uploaded_by_user_id",
+            "original_filename",
+            "content_type",
+            "storage_path",
+            "fps",
+            "width",
+            "height",
+            "duration_seconds",
+            "status",
+            "created_at",
+            "jobs"
+          ]
+        },
+        {
+          "name": "VideoAnalysisJob",
+          "startLine": 51,
+          "endLine": 81,
+          "methods": [],
+          "properties": [
+            "id",
+            "video_id",
+            "mission_id",
+            "org_id",
+            "status",
+            "progress",
+            "error",
+            "model_name",
+            "frame_stride_seconds",
+            "confidence_threshold",
+            "started_at",
+            "finished_at",
+            "created_at",
+            "video",
+            "detections"
+          ]
+        },
+        {
+          "name": "VideoDetection",
+          "startLine": 84,
+          "endLine": 123,
+          "methods": [],
+          "properties": [
+            "id",
+            "job_id",
+            "video_id",
+            "mission_id",
+            "org_id",
+            "frame_index",
+            "timestamp_seconds",
+            "label",
+            "confidence",
+            "x1",
+            "y1",
+            "x2",
+            "y2",
+            "track_id",
+            "lat",
+            "lon",
+            "altitude_m",
+            "heading_deg",
+            "evidence_path",
+            "raw",
+            "created_at",
+            "job"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "new_uuid",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAsset",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAnalysisJob",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "VideoDetection",
+          "line": 84,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "new_uuid",
+          "callee": "str",
+          "lineNumber": 13
+        },
+        {
+          "caller": "new_uuid",
+          "callee": "uuid.uuid4",
+          "lineNumber": 13
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 1,
+        "classCount": 3
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/repository.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 196,
+      "nonEmptyLines": 174,
+      "classes": [
+        {
+          "name": "VideoAnalysisRepository",
+          "startLine": 12,
+          "endLine": 196,
+          "methods": [
+            "__init__",
+            "create_video",
+            "_visible_video",
+            "get_video_for_user",
+            "get_video",
+            "get_video_by_storage_path",
+            "attach_video_to_mission",
+            "list_videos_for_user",
+            "update_video_metadata",
+            "create_job",
+            "get_job",
+            "get_job_for_user",
+            "mark_job_running",
+            "mark_job_failed",
+            "mark_job_completed",
+            "flush_batch",
+            "set_video_status",
+            "list_detections_for_user"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "VideoAnalysisRepository",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "create_video",
+          "callee": "VideoAsset",
+          "lineNumber": 28
+        },
+        {
+          "caller": "create_video",
+          "callee": "self.db.add",
+          "lineNumber": 38
+        },
+        {
+          "caller": "create_video",
+          "callee": "self.db.commit",
+          "lineNumber": 39
+        },
+        {
+          "caller": "create_video",
+          "callee": "self.db.refresh",
+          "lineNumber": 40
+        },
+        {
+          "caller": "get_video_for_user",
+          "callee": "self.db.execute",
+          "lineNumber": 49
+        },
+        {
+          "caller": "get_video_for_user",
+          "callee": "select(VideoAsset).where",
+          "lineNumber": 50
+        },
+        {
+          "caller": "get_video_for_user",
+          "callee": "select",
+          "lineNumber": 50
+        },
+        {
+          "caller": "get_video_for_user",
+          "callee": "self._visible_video",
+          "lineNumber": 50
+        },
+        {
+          "caller": "get_video_for_user",
+          "callee": "result.scalar_one_or_none",
+          "lineNumber": 52
+        },
+        {
+          "caller": "get_video",
+          "callee": "self.db.get",
+          "lineNumber": 55
+        },
+        {
+          "caller": "get_video_by_storage_path",
+          "callee": "self.db.execute",
+          "lineNumber": 58
+        },
+        {
+          "caller": "get_video_by_storage_path",
+          "callee": "select(VideoAsset).where",
+          "lineNumber": 59
+        },
+        {
+          "caller": "get_video_by_storage_path",
+          "callee": "select",
+          "lineNumber": 59
+        },
+        {
+          "caller": "get_video_by_storage_path",
+          "callee": "result.scalar_one_or_none",
+          "lineNumber": 61
+        },
+        {
+          "caller": "attach_video_to_mission",
+          "callee": "self.db.commit",
+          "lineNumber": 75
+        },
+        {
+          "caller": "attach_video_to_mission",
+          "callee": "self.db.refresh",
+          "lineNumber": 76
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "select(VideoAsset).where",
+          "lineNumber": 87
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "select",
+          "lineNumber": 87
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "self._visible_video",
+          "lineNumber": 87
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "stmt.where",
+          "lineNumber": 89
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "stmt.where",
+          "lineNumber": 91
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "stmt.order_by(VideoAsset.created_at.desc()).limit",
+          "lineNumber": 92
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "stmt.order_by",
+          "lineNumber": 92
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "VideoAsset.created_at.desc",
+          "lineNumber": 92
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "max",
+          "lineNumber": 92
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "int",
+          "lineNumber": 92
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "list",
+          "lineNumber": 93
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "(await self.db.scalars(stmt)).all",
+          "lineNumber": 93
+        },
+        {
+          "caller": "list_videos_for_user",
+          "callee": "self.db.scalars",
+          "lineNumber": 93
+        },
+        {
+          "caller": "update_video_metadata",
+          "callee": "self.db.commit",
+          "lineNumber": 111
+        },
+        {
+          "caller": "update_video_metadata",
+          "callee": "self.db.refresh",
+          "lineNumber": 112
+        },
+        {
+          "caller": "create_job",
+          "callee": "VideoAnalysisJob",
+          "lineNumber": 123
+        },
+        {
+          "caller": "create_job",
+          "callee": "self.db.add",
+          "lineNumber": 132
+        },
+        {
+          "caller": "create_job",
+          "callee": "self.db.commit",
+          "lineNumber": 133
+        },
+        {
+          "caller": "create_job",
+          "callee": "self.db.refresh",
+          "lineNumber": 134
+        },
+        {
+          "caller": "get_job",
+          "callee": "self.db.get",
+          "lineNumber": 138
+        },
+        {
+          "caller": "get_job_for_user",
+          "callee": "self.db.execute",
+          "lineNumber": 141
+        },
+        {
+          "caller": "get_job_for_user",
+          "callee": "select(VideoAnalysisJob)\n            .join(VideoAsset, VideoAsset.id == VideoAnalysisJob.video_id)\n            .where",
+          "lineNumber": 142
+        },
+        {
+          "caller": "get_job_for_user",
+          "callee": "select(VideoAnalysisJob)\n            .join",
+          "lineNumber": 142
+        },
+        {
+          "caller": "get_job_for_user",
+          "callee": "select",
+          "lineNumber": 142
+        },
+        {
+          "caller": "get_job_for_user",
+          "callee": "self._visible_video",
+          "lineNumber": 144
+        },
+        {
+          "caller": "get_job_for_user",
+          "callee": "result.scalar_one_or_none",
+          "lineNumber": 146
+        },
+        {
+          "caller": "mark_job_running",
+          "callee": "self.db.execute",
+          "lineNumber": 149
+        },
+        {
+          "caller": "mark_job_running",
+          "callee": "delete(VideoDetection).where",
+          "lineNumber": 149
+        },
+        {
+          "caller": "mark_job_running",
+          "callee": "delete",
+          "lineNumber": 149
+        },
+        {
+          "caller": "mark_job_running",
+          "callee": "datetime.now",
+          "lineNumber": 151
+        },
+        {
+          "caller": "mark_job_running",
+          "callee": "self.db.commit",
+          "lineNumber": 155
+        },
+        {
+          "caller": "mark_job_failed",
+          "callee": "datetime.now",
+          "lineNumber": 160
+        },
+        {
+          "caller": "mark_job_failed",
+          "callee": "self.db.commit",
+          "lineNumber": 161
+        },
+        {
+          "caller": "mark_job_completed",
+          "callee": "datetime.now",
+          "lineNumber": 166
+        },
+        {
+          "caller": "mark_job_completed",
+          "callee": "self.db.commit",
+          "lineNumber": 167
+        },
+        {
+          "caller": "flush_batch",
+          "callee": "self.db.add_all",
+          "lineNumber": 176
+        },
+        {
+          "caller": "flush_batch",
+          "callee": "max",
+          "lineNumber": 178
+        },
+        {
+          "caller": "flush_batch",
+          "callee": "min",
+          "lineNumber": 178
+        },
+        {
+          "caller": "flush_batch",
+          "callee": "self.db.commit",
+          "lineNumber": 179
+        },
+        {
+          "caller": "set_video_status",
+          "callee": "self.db.commit",
+          "lineNumber": 183
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "select(VideoDetection)\n            .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)\n            .where(VideoDetection.job_id == job_id)\n            .where(self._visible_video(user))\n            .order_by(VideoDetection.timestamp_seconds.asc())\n            .limit",
+          "lineNumber": 189
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "select(VideoDetection)\n            .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)\n            .where(VideoDetection.job_id == job_id)\n            .where(self._visible_video(user))\n            .order_by",
+          "lineNumber": 189
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "select(VideoDetection)\n            .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)\n            .where(VideoDetection.job_id == job_id)\n            .where",
+          "lineNumber": 189
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "select(VideoDetection)\n            .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)\n            .where",
+          "lineNumber": 189
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "select(VideoDetection)\n            .join",
+          "lineNumber": 189
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "select",
+          "lineNumber": 189
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "self._visible_video",
+          "lineNumber": 192
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "VideoDetection.timestamp_seconds.asc",
+          "lineNumber": 193
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "list",
+          "lineNumber": 196
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "(await self.db.scalars(stmt)).all",
+          "lineNumber": 196
+        },
+        {
+          "caller": "list_detections_for_user",
+          "callee": "self.db.scalars",
+          "lineNumber": 196
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/schemas.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 91,
+      "nonEmptyLines": 76,
+      "classes": [
+        {
+          "name": "VideoAssetOut",
+          "startLine": 19,
+          "endLine": 31,
+          "methods": [],
+          "properties": [
+            "id",
+            "mission_id",
+            "field_id",
+            "original_filename",
+            "fps",
+            "width",
+            "height",
+            "duration_seconds",
+            "status",
+            "created_at"
+          ]
+        },
+        {
+          "name": "AnalyzeVideoRequest",
+          "startLine": 34,
+          "endLine": 51,
+          "methods": [
+            "validate_model_name"
+          ],
+          "properties": [
+            "model_name",
+            "frame_stride_seconds",
+            "confidence_threshold"
+          ]
+        },
+        {
+          "name": "VideoAnalysisJobOut",
+          "startLine": 54,
+          "endLine": 68,
+          "methods": [],
+          "properties": [
+            "id",
+            "video_id",
+            "mission_id",
+            "status",
+            "progress",
+            "error",
+            "model_name",
+            "frame_stride_seconds",
+            "confidence_threshold",
+            "started_at",
+            "finished_at",
+            "created_at"
+          ]
+        },
+        {
+          "name": "VideoDetectionOut",
+          "startLine": 71,
+          "endLine": 91,
+          "methods": [],
+          "properties": [
+            "id",
+            "job_id",
+            "video_id",
+            "mission_id",
+            "frame_index",
+            "timestamp_seconds",
+            "label",
+            "confidence",
+            "x1",
+            "y1",
+            "x2",
+            "y2",
+            "track_id",
+            "lat",
+            "lon",
+            "altitude_m",
+            "heading_deg",
+            "evidence_path"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "VideoAssetOut",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "AnalyzeVideoRequest",
+          "line": 34,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAnalysisJobOut",
+          "line": 54,
+          "isDefault": false
+        },
+        {
+          "name": "VideoDetectionOut",
+          "line": 71,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "validate_model_name",
+          "callee": "model_name.startswith",
+          "lineNumber": 47
+        },
+        {
+          "caller": "validate_model_name",
+          "callee": "PurePosixPath",
+          "lineNumber": 48
+        },
+        {
+          "caller": "validate_model_name",
+          "callee": "ValueError",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 0,
+        "classCount": 4
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/service/detector.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 87,
+      "nonEmptyLines": 70,
+      "functions": [
+        {
+          "name": "load_yolo_model",
+          "startLine": 24,
+          "endLine": 42,
+          "params": [
+            "model_name"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "FrameDetection",
+          "startLine": 13,
+          "endLine": 20,
+          "methods": [],
+          "properties": [
+            "label",
+            "confidence",
+            "x1",
+            "y1",
+            "x2",
+            "y2",
+            "raw"
+          ]
+        },
+        {
+          "name": "YoloFrameDetector",
+          "startLine": 45,
+          "endLine": 87,
+          "methods": [
+            "__init__",
+            "predict"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "FrameDetection",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "load_yolo_model",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "YoloFrameDetector",
+          "line": 45,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "load_yolo_model",
+          "callee": "YOLO",
+          "lineNumber": 37
+        },
+        {
+          "caller": "load_yolo_model",
+          "callee": "str",
+          "lineNumber": 37
+        },
+        {
+          "caller": "load_yolo_model",
+          "callee": "ensure_model_file",
+          "lineNumber": 37
+        },
+        {
+          "caller": "load_yolo_model",
+          "callee": "RuntimeError",
+          "lineNumber": 39
+        },
+        {
+          "caller": "__init__",
+          "callee": "load_yolo_model",
+          "lineNumber": 49
+        },
+        {
+          "caller": "predict",
+          "callee": "self.model.predict",
+          "lineNumber": 53
+        },
+        {
+          "caller": "predict",
+          "callee": "box.xyxy[0].detach().cpu().numpy().astype(float).tolist",
+          "lineNumber": 66
+        },
+        {
+          "caller": "predict",
+          "callee": "box.xyxy[0].detach().cpu().numpy().astype",
+          "lineNumber": 66
+        },
+        {
+          "caller": "predict",
+          "callee": "box.xyxy[0].detach().cpu().numpy",
+          "lineNumber": 66
+        },
+        {
+          "caller": "predict",
+          "callee": "box.xyxy[0].detach().cpu",
+          "lineNumber": 66
+        },
+        {
+          "caller": "predict",
+          "callee": "box.xyxy[0].detach",
+          "lineNumber": 66
+        },
+        {
+          "caller": "predict",
+          "callee": "float",
+          "lineNumber": 67
+        },
+        {
+          "caller": "predict",
+          "callee": "box.conf[0].detach().cpu().item",
+          "lineNumber": 67
+        },
+        {
+          "caller": "predict",
+          "callee": "box.conf[0].detach().cpu",
+          "lineNumber": 67
+        },
+        {
+          "caller": "predict",
+          "callee": "box.conf[0].detach",
+          "lineNumber": 67
+        },
+        {
+          "caller": "predict",
+          "callee": "int",
+          "lineNumber": 68
+        },
+        {
+          "caller": "predict",
+          "callee": "box.cls[0].detach().cpu().item",
+          "lineNumber": 68
+        },
+        {
+          "caller": "predict",
+          "callee": "box.cls[0].detach().cpu",
+          "lineNumber": 68
+        },
+        {
+          "caller": "predict",
+          "callee": "box.cls[0].detach",
+          "lineNumber": 68
+        },
+        {
+          "caller": "predict",
+          "callee": "str",
+          "lineNumber": 69
+        },
+        {
+          "caller": "predict",
+          "callee": "names.get",
+          "lineNumber": 69
+        },
+        {
+          "caller": "predict",
+          "callee": "detections.append",
+          "lineNumber": 71
+        },
+        {
+          "caller": "predict",
+          "callee": "FrameDetection",
+          "lineNumber": 72
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 1,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/service/frame_extractor.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 89,
+      "nonEmptyLines": 72,
+      "functions": [
+        {
+          "name": "read_video_metadata",
+          "startLine": 27,
+          "endLine": 45,
+          "params": [
+            "video_path"
+          ]
+        },
+        {
+          "name": "iter_frames",
+          "startLine": 48,
+          "endLine": 89,
+          "params": [
+            "video_path",
+            "every_seconds"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "VideoMetadata",
+          "startLine": 12,
+          "endLine": 17,
+          "methods": [],
+          "properties": [
+            "fps",
+            "width",
+            "height",
+            "frame_count",
+            "duration_seconds"
+          ]
+        },
+        {
+          "name": "ExtractedFrame",
+          "startLine": 21,
+          "endLine": 24,
+          "methods": [],
+          "properties": [
+            "frame_index",
+            "timestamp_seconds",
+            "image_bgr"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "VideoMetadata",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "ExtractedFrame",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "read_video_metadata",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "iter_frames",
+          "line": 48,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "read_video_metadata",
+          "callee": "cv2.VideoCapture",
+          "lineNumber": 28
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "str",
+          "lineNumber": 28
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "capture.isOpened",
+          "lineNumber": 29
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "ValueError",
+          "lineNumber": 30
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "float",
+          "lineNumber": 32
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "capture.get",
+          "lineNumber": 32
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "int",
+          "lineNumber": 33
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "capture.get",
+          "lineNumber": 33
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "int",
+          "lineNumber": 34
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "capture.get",
+          "lineNumber": 34
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "int",
+          "lineNumber": 35
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "capture.get",
+          "lineNumber": 35
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "capture.release",
+          "lineNumber": 37
+        },
+        {
+          "caller": "read_video_metadata",
+          "callee": "VideoMetadata",
+          "lineNumber": 39
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "ValueError",
+          "lineNumber": 59
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "cv2.VideoCapture",
+          "lineNumber": 61
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "str",
+          "lineNumber": 61
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "capture.isOpened",
+          "lineNumber": 62
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "ValueError",
+          "lineNumber": 63
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "float",
+          "lineNumber": 65
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "capture.get",
+          "lineNumber": 65
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "max",
+          "lineNumber": 66
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "round",
+          "lineNumber": 66
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "int",
+          "lineNumber": 68
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "capture.get",
+          "lineNumber": 68
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "max",
+          "lineNumber": 71
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "int",
+          "lineNumber": 71
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "range",
+          "lineNumber": 72
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "capture.set",
+          "lineNumber": 73
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "capture.read",
+          "lineNumber": 74
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "ExtractedFrame",
+          "lineNumber": 77
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "capture.read",
+          "lineNumber": 82
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "ExtractedFrame",
+          "lineNumber": 86
+        },
+        {
+          "caller": "iter_frames",
+          "callee": "capture.release",
+          "lineNumber": 89
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 2,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/service/geo.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 24,
+      "classes": [
+        {
+          "name": "TelemetryMatch",
+          "startLine": 7,
+          "endLine": 11,
+          "methods": [],
+          "properties": [
+            "lat",
+            "lon",
+            "altitude_m",
+            "heading_deg"
+          ]
+        },
+        {
+          "name": "NearestTelemetryMatcher",
+          "startLine": 14,
+          "endLine": 32,
+          "methods": [
+            "__init__",
+            "match"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "TelemetryMatch",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "NearestTelemetryMatcher",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "match",
+          "callee": "TelemetryMatch",
+          "lineNumber": 27
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/service/pipeline.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 235,
+      "nonEmptyLines": 210,
+      "functions": [
+        {
+          "name": "run_video_analysis_job",
+          "startLine": 232,
+          "endLine": 235,
+          "params": [
+            "job_id"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "OfflineVideoAnalysisPipeline",
+          "startLine": 24,
+          "endLine": 229,
+          "methods": [
+            "__init__",
+            "run",
+            "_save_crop",
+            "_clear_prior_evidence"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "OfflineVideoAnalysisPipeline",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "run_video_analysis_job",
+          "line": 232,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__init__",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 29
+        },
+        {
+          "caller": "__init__",
+          "callee": "Path",
+          "lineNumber": 30
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.get_job",
+          "lineNumber": 33
+        },
+        {
+          "caller": "run",
+          "callee": "ValueError",
+          "lineNumber": 35
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.get_video",
+          "lineNumber": 37
+        },
+        {
+          "caller": "run",
+          "callee": "ValueError",
+          "lineNumber": 39
+        },
+        {
+          "caller": "run",
+          "callee": "self._clear_prior_evidence",
+          "lineNumber": 41
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.mark_job_running",
+          "lineNumber": 42
+        },
+        {
+          "caller": "run",
+          "callee": "Path",
+          "lineNumber": 45
+        },
+        {
+          "caller": "run",
+          "callee": "observed_span",
+          "lineNumber": 46
+        },
+        {
+          "caller": "run",
+          "callee": "read_video_metadata",
+          "lineNumber": 52
+        },
+        {
+          "caller": "run",
+          "callee": "logger.info",
+          "lineNumber": 53
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.update_video_metadata",
+          "lineNumber": 62
+        },
+        {
+          "caller": "run",
+          "callee": "YoloFrameDetector",
+          "lineNumber": 71
+        },
+        {
+          "caller": "run",
+          "callee": "NearestTelemetryMatcher",
+          "lineNumber": 75
+        },
+        {
+          "caller": "run",
+          "callee": "max",
+          "lineNumber": 79
+        },
+        {
+          "caller": "run",
+          "callee": "int",
+          "lineNumber": 81
+        },
+        {
+          "caller": "run",
+          "callee": "max",
+          "lineNumber": 81
+        },
+        {
+          "caller": "run",
+          "callee": "enumerate",
+          "lineNumber": 84
+        },
+        {
+          "caller": "run",
+          "callee": "iter_frames",
+          "lineNumber": 85
+        },
+        {
+          "caller": "run",
+          "callee": "metric_add",
+          "lineNumber": 87
+        },
+        {
+          "caller": "run",
+          "callee": "time.monotonic",
+          "lineNumber": 88
+        },
+        {
+          "caller": "run",
+          "callee": "observed_span",
+          "lineNumber": 89
+        },
+        {
+          "caller": "run",
+          "callee": "detector.predict",
+          "lineNumber": 101
+        },
+        {
+          "caller": "run",
+          "callee": "time.monotonic",
+          "lineNumber": 102
+        },
+        {
+          "caller": "run",
+          "callee": "span.set_attribute",
+          "lineNumber": 104
+        },
+        {
+          "caller": "run",
+          "callee": "len",
+          "lineNumber": 104
+        },
+        {
+          "caller": "run",
+          "callee": "span.set_attribute",
+          "lineNumber": 105
+        },
+        {
+          "caller": "run",
+          "callee": "metric_record",
+          "lineNumber": 106
+        },
+        {
+          "caller": "run",
+          "callee": "metric_record",
+          "lineNumber": 111
+        },
+        {
+          "caller": "run",
+          "callee": "len",
+          "lineNumber": 113
+        },
+        {
+          "caller": "run",
+          "callee": "metric_add",
+          "lineNumber": 116
+        },
+        {
+          "caller": "run",
+          "callee": "telemetry.match",
+          "lineNumber": 117
+        },
+        {
+          "caller": "run",
+          "callee": "enumerate",
+          "lineNumber": 119
+        },
+        {
+          "caller": "run",
+          "callee": "observed_span",
+          "lineNumber": 121
+        },
+        {
+          "caller": "run",
+          "callee": "len",
+          "lineNumber": 128
+        },
+        {
+          "caller": "run",
+          "callee": "self._save_crop",
+          "lineNumber": 131
+        },
+        {
+          "caller": "run",
+          "callee": "pending_detections.append",
+          "lineNumber": 139
+        },
+        {
+          "caller": "run",
+          "callee": "VideoDetection",
+          "lineNumber": 140
+        },
+        {
+          "caller": "run",
+          "callee": "str",
+          "lineNumber": 157
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.flush_batch",
+          "lineNumber": 163
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.flush_batch",
+          "lineNumber": 171
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.set_video_status",
+          "lineNumber": 172
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.mark_job_completed",
+          "lineNumber": 173
+        },
+        {
+          "caller": "run",
+          "callee": "logger.info",
+          "lineNumber": 174
+        },
+        {
+          "caller": "run",
+          "callee": "structured_error",
+          "lineNumber": 181
+        },
+        {
+          "caller": "run",
+          "callee": "self.db.rollback",
+          "lineNumber": 187
+        },
+        {
+          "caller": "run",
+          "callee": "str",
+          "lineNumber": 189
+        },
+        {
+          "caller": "run",
+          "callee": "isinstance",
+          "lineNumber": 190
+        },
+        {
+          "caller": "run",
+          "callee": "str",
+          "lineNumber": 190
+        },
+        {
+          "caller": "run",
+          "callee": "type",
+          "lineNumber": 191
+        },
+        {
+          "caller": "run",
+          "callee": "self.repo.mark_job_failed",
+          "lineNumber": 193
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "round",
+          "lineNumber": 208
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "max",
+          "lineNumber": 211
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "min",
+          "lineNumber": 211
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "max",
+          "lineNumber": 212
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "min",
+          "lineNumber": 212
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "max",
+          "lineNumber": 213
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "min",
+          "lineNumber": 213
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "max",
+          "lineNumber": 214
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "min",
+          "lineNumber": 214
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "out_dir.mkdir",
+          "lineNumber": 221
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "cv2.imwrite",
+          "lineNumber": 223
+        },
+        {
+          "caller": "_save_crop",
+          "callee": "str",
+          "lineNumber": 223
+        },
+        {
+          "caller": "_clear_prior_evidence",
+          "callee": "crop_dir.exists",
+          "lineNumber": 228
+        },
+        {
+          "caller": "_clear_prior_evidence",
+          "callee": "shutil.rmtree",
+          "lineNumber": 229
+        },
+        {
+          "caller": "run_video_analysis_job",
+          "callee": "Session",
+          "lineNumber": 233
+        },
+        {
+          "caller": "run_video_analysis_job",
+          "callee": "OfflineVideoAnalysisPipeline(db).run",
+          "lineNumber": 234
+        },
+        {
+          "caller": "run_video_analysis_job",
+          "callee": "OfflineVideoAnalysisPipeline",
+          "lineNumber": 234
+        }
+      ],
+      "metrics": {
+        "importCount": 8,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/video_analysis/service/queue.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 17,
+      "classes": [
+        {
+          "name": "VideoAnalysisQueueError",
+          "startLine": 8,
+          "endLine": 9,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "VideoAnalysisQueue",
+          "startLine": 12,
+          "endLine": 25,
+          "methods": [
+            "enqueue"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "VideoAnalysisQueueError",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "VideoAnalysisQueue",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "enqueue",
+          "callee": "process_video_analysis_job.delay",
+          "lineNumber": 17
+        },
+        {
+          "caller": "enqueue",
+          "callee": "VideoAnalysisQueueError",
+          "lineNumber": 19
+        },
+        {
+          "caller": "enqueue",
+          "callee": "getattr",
+          "lineNumber": 21
+        },
+        {
+          "caller": "enqueue",
+          "callee": "VideoAnalysisQueueError",
+          "lineNumber": 23
+        },
+        {
+          "caller": "enqueue",
+          "callee": "logger.info",
+          "lineNumber": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/scripts/download_video_analysis_models.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 25,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 28,
+          "endLine": 32,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "main",
+          "line": 28,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "main",
+          "callee": "ensure_model_file",
+          "lineNumber": 30
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 31
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 32
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/scripts/simulate_patrol_detection.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 140,
+      "nonEmptyLines": 122,
+      "functions": [
+        {
+          "name": "main",
+          "startLine": 30,
+          "endLine": 136,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "_GeoPoint",
+          "startLine": 12,
+          "endLine": 14,
+          "methods": [],
+          "properties": [
+            "lat",
+            "lon"
+          ]
+        },
+        {
+          "name": "_Anomaly",
+          "startLine": 18,
+          "endLine": 22,
+          "methods": [],
+          "properties": [
+            "event_type",
+            "confidence",
+            "location",
+            "payload"
+          ]
+        },
+        {
+          "name": "_Packet",
+          "startLine": 26,
+          "endLine": 27,
+          "methods": [],
+          "properties": [
+            "frame_id"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "_GeoPoint",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "_Anomaly",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "_Packet",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 30,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "main",
+          "callee": "argparse.ArgumentParser",
+          "lineNumber": 31
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 34
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 40
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 41
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 52
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 58
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 59
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 60
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 61
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 62
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 63
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 64
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 65
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 66
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 67
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 68
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 69
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 70
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 71
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 72
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 73
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 74
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 75
+        },
+        {
+          "caller": "main",
+          "callee": "parser.add_argument",
+          "lineNumber": 76
+        },
+        {
+          "caller": "main",
+          "callee": "parser.parse_args",
+          "lineNumber": 77
+        },
+        {
+          "caller": "main",
+          "callee": "PatrolPersistenceService",
+          "lineNumber": 98
+        },
+        {
+          "caller": "main",
+          "callee": "_Anomaly",
+          "lineNumber": 100
+        },
+        {
+          "caller": "main",
+          "callee": "_GeoPoint",
+          "lineNumber": 103
+        },
+        {
+          "caller": "main",
+          "callee": "_Packet",
+          "lineNumber": 118
+        },
+        {
+          "caller": "main",
+          "callee": "service.persist_anomaly",
+          "lineNumber": 129
+        },
+        {
+          "caller": "main",
+          "callee": "print",
+          "lineNumber": 136
+        },
+        {
+          "caller": "main",
+          "callee": "json.dumps",
+          "lineNumber": 136
+        },
+        {
+          "caller": "main",
+          "callee": "asdict",
+          "lineNumber": 136
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 1,
+        "classCount": 3
+      }
+    },
+    {
+      "path": "backend/scripts/smoke_test_video_analysis.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 50,
+      "nonEmptyLines": 39,
+      "functions": [
+        {
+          "name": "run",
+          "startLine": 23,
+          "endLine": 38,
+          "params": [
+            "video_path"
+          ]
+        },
+        {
+          "name": "main",
+          "startLine": 41,
+          "endLine": 42,
+          "params": [
+            "video_path"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "run",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 41,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "run",
+          "callee": "Session",
+          "lineNumber": 24
+        },
+        {
+          "caller": "run",
+          "callee": "VideoAnalysisRepository",
+          "lineNumber": 25
+        },
+        {
+          "caller": "run",
+          "callee": "repo.create_video",
+          "lineNumber": 26
+        },
+        {
+          "caller": "run",
+          "callee": "Path",
+          "lineNumber": 27
+        },
+        {
+          "caller": "run",
+          "callee": "repo.create_job",
+          "lineNumber": 31
+        },
+        {
+          "caller": "run",
+          "callee": "OfflineVideoAnalysisPipeline(db).run",
+          "lineNumber": 37
+        },
+        {
+          "caller": "run",
+          "callee": "OfflineVideoAnalysisPipeline",
+          "lineNumber": 37
+        },
+        {
+          "caller": "run",
+          "callee": "print",
+          "lineNumber": 38
+        },
+        {
+          "caller": "main",
+          "callee": "asyncio.run",
+          "lineNumber": 42
+        },
+        {
+          "caller": "main",
+          "callee": "run",
+          "lineNumber": 42
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_mission_video_recordings.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 26,
+      "nonEmptyLines": 15,
+      "functions": [
+        {
+          "name": "test_resolve_recording_path_prefers_absolute_path",
+          "startLine": 8,
+          "endLine": 14,
+          "params": [
+            "tmp_path"
+          ]
+        },
+        {
+          "name": "test_resolve_recording_path_falls_back_to_filename",
+          "startLine": 17,
+          "endLine": 26,
+          "params": [
+            "tmp_path",
+            "monkeypatch"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_resolve_recording_path_prefers_absolute_path",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "test_resolve_recording_path_falls_back_to_filename",
+          "line": 17,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_resolve_recording_path_prefers_absolute_path",
+          "callee": "video.write_bytes",
+          "lineNumber": 10
+        },
+        {
+          "caller": "test_resolve_recording_path_prefers_absolute_path",
+          "callee": "_resolve_recording_path",
+          "lineNumber": 12
+        },
+        {
+          "caller": "test_resolve_recording_path_prefers_absolute_path",
+          "callee": "str",
+          "lineNumber": 12
+        },
+        {
+          "caller": "test_resolve_recording_path_prefers_absolute_path",
+          "callee": "video.resolve",
+          "lineNumber": 14
+        },
+        {
+          "caller": "test_resolve_recording_path_falls_back_to_filename",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 20
+        },
+        {
+          "caller": "test_resolve_recording_path_falls_back_to_filename",
+          "callee": "str",
+          "lineNumber": 20
+        },
+        {
+          "caller": "test_resolve_recording_path_falls_back_to_filename",
+          "callee": "video.write_bytes",
+          "lineNumber": 22
+        },
+        {
+          "caller": "test_resolve_recording_path_falls_back_to_filename",
+          "callee": "_resolve_recording_path",
+          "lineNumber": 24
+        },
+        {
+          "caller": "test_resolve_recording_path_falls_back_to_filename",
+          "callee": "video.resolve",
+          "lineNumber": 26
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_patrol_evidence_policy.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 47,
+      "nonEmptyLines": 40,
+      "functions": [
+        {
+          "name": "test_is_private_patrol_context_with_task_type",
+          "startLine": 10,
+          "endLine": 20,
+          "params": []
+        },
+        {
+          "name": "test_is_private_patrol_context_with_mission_type",
+          "startLine": 23,
+          "endLine": 33,
+          "params": []
+        },
+        {
+          "name": "test_non_patrol_context",
+          "startLine": 36,
+          "endLine": 47,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_is_private_patrol_context_with_task_type",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "test_is_private_patrol_context_with_mission_type",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "test_non_patrol_context",
+          "line": 36,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_is_private_patrol_context_with_task_type",
+          "callee": "ActiveMissionRuntimeContext",
+          "lineNumber": 11
+        },
+        {
+          "caller": "test_is_private_patrol_context_with_task_type",
+          "callee": "is_private_patrol_context",
+          "lineNumber": 20
+        },
+        {
+          "caller": "test_is_private_patrol_context_with_mission_type",
+          "callee": "ActiveMissionRuntimeContext",
+          "lineNumber": 24
+        },
+        {
+          "caller": "test_is_private_patrol_context_with_mission_type",
+          "callee": "is_private_patrol_context",
+          "lineNumber": 33
+        },
+        {
+          "caller": "test_non_patrol_context",
+          "callee": "ActiveMissionRuntimeContext",
+          "lineNumber": 37
+        },
+        {
+          "caller": "test_non_patrol_context",
+          "callee": "is_private_patrol_context",
+          "lineNumber": 46
+        },
+        {
+          "caller": "test_non_patrol_context",
+          "callee": "is_private_patrol_context",
+          "lineNumber": 47
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    }
+  ]
+}

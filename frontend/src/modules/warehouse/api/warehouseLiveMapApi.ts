@@ -71,6 +71,10 @@ export type WarehouseLiveMapManifestSummary = {
   chunk_counts?: Record<string, number>;
   point_counts?: Record<string, number>;
   missing_topics?: string[];
+  source_quality?: Record<string, Record<string, unknown>>;
+  chunk_quality?: Array<Record<string, unknown>>;
+  rack_face_coverage?: Record<string, unknown>;
+  coverage_repair?: Record<string, unknown>;
 };
 
 export type NvbloxLiveStatus =
@@ -94,6 +98,43 @@ export type WarehouseLiveHealthFlags = {
   stack_running: boolean;
 };
 
+export type WarehouseLiveCoordinateState =
+  | "provisional"
+  | "needs_more_coverage"
+  | "needs_review"
+  | "ready_to_publish"
+  | "locked";
+
+export type WarehouseLiveProvisionalCandidate = {
+  entity_kind: "aisle" | "rack" | "shelf" | "bin" | "zone" | "inspection_target";
+  identity_key: string;
+  geometry: Record<string, unknown>;
+  confidence: number;
+  state: WarehouseLiveCoordinateState;
+  review_required: boolean;
+  review_reasons: string[];
+  source_sequence?: number | null;
+  inspection_ready: false;
+};
+
+export type WarehouseCoverageRepairHint = {
+  kind: "extra_pass" | "hover_rescan" | "coverage_gap";
+  reason: string;
+  target_point: Record<string, number>;
+  pose_local_m?: Record<string, number | string> | null;
+  bbox_local_m?: number[] | null;
+  source_candidate?: string | null;
+  priority: number;
+};
+
+export type WarehouseCoordinateLiveState = {
+  status: WarehouseLiveCoordinateState;
+  inspection_ready: boolean;
+  candidate_count: number;
+  coverage_repair_count: number;
+  message?: string | null;
+};
+
 export type WarehouseLiveMapUpdate = {
   type: "live_map_update";
   flight_id: string;
@@ -104,6 +145,9 @@ export type WarehouseLiveMapUpdate = {
   removed_chunk_ids: string[];
   scan_path_sample: WarehouseLivePose[];
   health: WarehouseLiveHealthFlags;
+  provisional_candidates?: WarehouseLiveProvisionalCandidate[];
+  coverage_repair_hints?: WarehouseCoverageRepairHint[];
+  coordinate_state?: WarehouseCoordinateLiveState;
   finalized_scan_job_id?: number | null;
 };
 
@@ -144,6 +188,12 @@ export function isWarehouseLiveMapUpdate(
   const pathMatches =
     Array.isArray(update.scan_path_sample) &&
     update.scan_path_sample.every((pose) => pose.frame_id === frameId);
+  const provisionalCandidatesMatch =
+    update.provisional_candidates == null ||
+    (Array.isArray(update.provisional_candidates) &&
+      update.provisional_candidates.every(
+        (candidate) => candidate.inspection_ready === false,
+      ));
   return (
     update.type === "live_map_update" &&
     typeof update.flight_id === "string" &&
@@ -151,7 +201,8 @@ export function isWarehouseLiveMapUpdate(
     chunksMatch &&
     Array.isArray(update.removed_chunk_ids) &&
     pathMatches &&
-    poseMatches
+    poseMatches &&
+    provisionalCandidatesMatch
   );
 }
 

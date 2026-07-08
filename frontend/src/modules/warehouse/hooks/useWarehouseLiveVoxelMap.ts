@@ -6,9 +6,12 @@ import {
   isWarehouseLiveMapSnapshot,
   isWarehouseLiveMapUpdate,
   type WarehouseLiveHealthFlags,
+  type WarehouseCoverageRepairHint,
+  type WarehouseCoordinateLiveState,
   type WarehouseLiveMapManifestSummary,
   type WarehouseLiveMapMessage,
   type WarehouseLiveMapUpdate,
+  type WarehouseLiveProvisionalCandidate,
   type WarehouseLiveVoxelChunk,
 } from "../api/warehouseLiveMapApi";
 import {
@@ -63,6 +66,9 @@ const EMPTY_HEALTH: WarehouseLiveHealthFlags = {
 export type WarehouseLiveVoxelMapState = {
   connectionState: ConnectionState;
   chunks: WarehouseLiveVoxelChunk[];
+  provisionalCandidates: WarehouseLiveProvisionalCandidate[];
+  coverageRepairHints: WarehouseCoverageRepairHint[];
+  coordinateState: WarehouseCoordinateLiveState | null;
   latestUpdate: WarehouseLiveMapUpdate | null;
   health: WarehouseLiveHealthFlags;
   scanPath: WarehouseLiveMapUpdate["scan_path_sample"];
@@ -95,6 +101,14 @@ export function useWarehouseLiveVoxelMap(
   const [chunksById, setChunksById] = useState(
     new Map<string, WarehouseLiveVoxelChunk>(),
   );
+  const [provisionalCandidatesByKey, setProvisionalCandidatesByKey] = useState(
+    new Map<string, WarehouseLiveProvisionalCandidate>(),
+  );
+  const [coverageRepairHints, setCoverageRepairHints] = useState<
+    WarehouseCoverageRepairHint[]
+  >([]);
+  const [coordinateState, setCoordinateState] =
+    useState<WarehouseCoordinateLiveState | null>(null);
   const [scanPath, setScanPath] = useState<
     WarehouseLiveMapUpdate["scan_path_sample"]
   >([]);
@@ -113,6 +127,9 @@ export function useWarehouseLiveVoxelMap(
   const wsConnectedRef = useRef(false);
   const stateRef = useRef({
     chunksById: new Map<string, WarehouseLiveVoxelChunk>(),
+    provisionalCandidatesByKey: new Map<string, WarehouseLiveProvisionalCandidate>(),
+    coverageRepairHints: [] as WarehouseCoverageRepairHint[],
+    coordinateState: null as WarehouseCoordinateLiveState | null,
     scanPath: [] as WarehouseLiveMapUpdate["scan_path_sample"],
     flightId: flightId ?? null,
   });
@@ -127,8 +144,22 @@ export function useWarehouseLiveVoxelMap(
   }, [streamPaused]);
 
   useEffect(() => {
-    stateRef.current = { chunksById, scanPath, flightId: flightId ?? null };
-  }, [chunksById, flightId, scanPath]);
+    stateRef.current = {
+      chunksById,
+      provisionalCandidatesByKey,
+      coverageRepairHints,
+      coordinateState,
+      scanPath,
+      flightId: flightId ?? null,
+    };
+  }, [
+    chunksById,
+    coordinateState,
+    coverageRepairHints,
+    flightId,
+    provisionalCandidatesByKey,
+    scanPath,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -138,6 +169,9 @@ export function useWarehouseLiveVoxelMap(
       const resetTimer = window.setTimeout(() => {
         setConnectionState("empty");
         setChunksById(new Map());
+        setProvisionalCandidatesByKey(new Map());
+        setCoverageRepairHints([]);
+        setCoordinateState(null);
         setScanPath([]);
         setLatestUpdate(null);
         setHealth(EMPTY_HEALTH);
@@ -244,6 +278,9 @@ export function useWarehouseLiveVoxelMap(
 
         stateRef.current = merged;
         setChunksById(merged.chunksById);
+        setProvisionalCandidatesByKey(merged.provisionalCandidatesByKey);
+        setCoverageRepairHints(merged.coverageRepairHints);
+        setCoordinateState(merged.coordinateState);
         setScanPath(merged.scanPath);
 
         if (newestUpdate) {
@@ -359,15 +396,25 @@ export function useWarehouseLiveVoxelMap(
   }, [enabled, flightId, options.token]);
 
   const chunks = useMemo(() => Array.from(chunksById.values()), [chunksById]);
+  const provisionalCandidates = useMemo(
+    () => Array.from(provisionalCandidatesByKey.values()),
+    [provisionalCandidatesByKey],
+  );
 
   const clearMap = () => {
     const empty = {
       chunksById: new Map<string, WarehouseLiveVoxelChunk>(),
+      provisionalCandidatesByKey: new Map<string, WarehouseLiveProvisionalCandidate>(),
+      coverageRepairHints: [] as WarehouseCoverageRepairHint[],
+      coordinateState: null as WarehouseCoordinateLiveState | null,
       scanPath: [] as WarehouseLiveMapUpdate["scan_path_sample"],
       flightId: null,
     };
     stateRef.current = empty;
     setChunksById(empty.chunksById);
+    setProvisionalCandidatesByKey(empty.provisionalCandidatesByKey);
+    setCoverageRepairHints(empty.coverageRepairHints);
+    setCoordinateState(empty.coordinateState);
     setScanPath(empty.scanPath);
     setLatestUpdate(null);
     setManifest(null);
@@ -380,6 +427,9 @@ export function useWarehouseLiveVoxelMap(
   return {
     connectionState,
     chunks,
+    provisionalCandidates,
+    coverageRepairHints,
+    coordinateState,
     latestUpdate,
     health,
     scanPath,

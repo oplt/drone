@@ -70,12 +70,15 @@ async def _run_preflight_refresh(
     user: Any,
     mission_loaded: bool,
 ) -> None:
-    """Complete one expensive refresh outside the initiating HTTP request."""
+    """Complete one expensive refresh outside the initiating HTTP request.
+
+    Preflight is intentionally passive: it must not connect, arm, take off, resume,
+    or start mapping/flight side effects. Flight launch endpoints own those actions.
+    """
     run = _PREFLIGHT_RUNS.get(run_id)
     if run is None or run.finished_at is not None:
         return
     try:
-        drone_connected, drone_connect_error = await connect_drone()
         async with db_factory() as db:
             snapshot = await build_snapshot(
                 db,
@@ -83,33 +86,7 @@ async def _run_preflight_refresh(
                 deep=True,
                 force=True,
                 mission_loaded=mission_loaded,
-                start_bridge=True,
-            )
-        if drone_connected and snapshot.ready_to_fly and snapshot.nvblox_ok is not True:
-            try:
-                await start_mapping_stack()
-            except Exception as exc:
-                logger.warning(
-                    "Background preflight could not start nvblox run_id=%s: %s",
-                    run_id,
-                    exc,
-                    exc_info=True,
-                )
-        if not drone_connected and drone_connect_error:
-            blockers = list(snapshot.blockers)
-            if drone_connect_error not in blockers:
-                blockers.insert(0, drone_connect_error)
-            snapshot = snapshot.model_copy(
-                update={
-                    "ready": False,
-                    "ready_to_fly": False,
-                    "blocking": True,
-                    "primary_blocker": blockers[0],
-                    "blockers": blockers,
-                    "blocking_reasons": blockers,
-                    "suggested_actions": blockers[:3],
-                    "last_error": drone_connect_error,
-                }
+                start_bridge=False,
             )
         run.snapshot = snapshot
         run.status = "complete"

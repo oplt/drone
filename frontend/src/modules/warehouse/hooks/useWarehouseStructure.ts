@@ -59,7 +59,9 @@ export function useWarehouseStructure(
         generatedAtRef.current = result.generated_at ?? null;
         setExtractionStatus(result.status);
         setStructure(
-          result.status === "ready" || result.status === "needs_review"
+          result.status === "ready" ||
+            result.status === "needs_review" ||
+            result.status === "failed"
             ? result
             : null,
         );

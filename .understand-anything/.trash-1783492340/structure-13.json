@@ -1,0 +1,7141 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 31,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "backend/modules/telemetry/repository/batcher.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 152,
+      "nonEmptyLines": 122,
+      "functions": [
+        {
+          "name": "_normalized_status_value",
+          "startLine": 22,
+          "endLine": 23,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "_status_is_terminal",
+          "startLine": 26,
+          "endLine": 30,
+          "params": [
+            "status"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "TelemetryBatcher",
+          "startLine": 33,
+          "endLine": 152,
+          "methods": [
+            "__init__",
+            "add",
+            "flush",
+            "__aenter__",
+            "__aexit__",
+            "_is_due",
+            "_do_flush",
+            "row_from_envelope"
+          ],
+          "properties": [
+            "DEFAULT_MAX_SIZE",
+            "DEFAULT_FLUSH_INTERVAL_S"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "_normalized_status_value",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "_status_is_terminal",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "TelemetryBatcher",
+          "line": 33,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_normalized_status_value",
+          "callee": "normalize_flight_status",
+          "lineNumber": 23
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "_normalized_status_value",
+          "lineNumber": 28
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str(status).strip().lower",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str(status).strip",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str",
+          "lineNumber": 30
+        },
+        {
+          "caller": "__init__",
+          "callee": "time.monotonic",
+          "lineNumber": 69
+        },
+        {
+          "caller": "__init__",
+          "callee": "asyncio.Lock",
+          "lineNumber": 70
+        },
+        {
+          "caller": "add",
+          "callee": "self._buffer.append",
+          "lineNumber": 79
+        },
+        {
+          "caller": "add",
+          "callee": "dict",
+          "lineNumber": 79
+        },
+        {
+          "caller": "add",
+          "callee": "len",
+          "lineNumber": 80
+        },
+        {
+          "caller": "add",
+          "callee": "self._is_due",
+          "lineNumber": 80
+        },
+        {
+          "caller": "add",
+          "callee": "self._do_flush",
+          "lineNumber": 81
+        },
+        {
+          "caller": "flush",
+          "callee": "self._do_flush",
+          "lineNumber": 86
+        },
+        {
+          "caller": "__aexit__",
+          "callee": "self.flush",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_is_due",
+          "callee": "time.monotonic",
+          "lineNumber": 103
+        },
+        {
+          "caller": "_do_flush",
+          "callee": "time.monotonic",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_do_flush",
+          "callee": "self._repo.add_telemetry_many",
+          "lineNumber": 112
+        },
+        {
+          "caller": "_do_flush",
+          "callee": "logger.exception",
+          "lineNumber": 114
+        },
+        {
+          "caller": "_do_flush",
+          "callee": "len",
+          "lineNumber": 117
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/telemetry/repository/ingest.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 169,
+      "nonEmptyLines": 146,
+      "functions": [
+        {
+          "name": "_normalized_status_value",
+          "startLine": 29,
+          "endLine": 30,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "_status_is_terminal",
+          "startLine": 33,
+          "endLine": 37,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "_log_mavlink_insert_summary",
+          "startLine": 152,
+          "endLine": 169,
+          "params": [
+            "flight_id",
+            "inserted_total"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "TelemetryIngestMixin",
+          "startLine": 40,
+          "endLine": 149,
+          "methods": [
+            "add_telemetry",
+            "add_telemetry_many",
+            "add_mavlink_events_many"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_normalized_status_value",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "_status_is_terminal",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "TelemetryIngestMixin",
+          "line": 40,
+          "isDefault": false
+        },
+        {
+          "name": "_log_mavlink_insert_summary",
+          "line": 152,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_normalized_status_value",
+          "callee": "normalize_flight_status",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "_normalized_status_value",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str(status).strip().lower",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str(status).strip",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str",
+          "lineNumber": 37
+        },
+        {
+          "caller": "add_telemetry",
+          "callee": "self._session_factory",
+          "lineNumber": 44
+        },
+        {
+          "caller": "add_telemetry",
+          "callee": "TelemetryRecord",
+          "lineNumber": 45
+        },
+        {
+          "caller": "add_telemetry",
+          "callee": "s.add",
+          "lineNumber": 46
+        },
+        {
+          "caller": "add_telemetry",
+          "callee": "s.commit",
+          "lineNumber": 47
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "dict",
+          "lineNumber": 56
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "d.setdefault",
+          "lineNumber": 57
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "payload.append",
+          "lineNumber": 58
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "max",
+          "lineNumber": 64
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "len",
+          "lineNumber": 64
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "self._session_factory",
+          "lineNumber": 66
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "range",
+          "lineNumber": 67
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "len",
+          "lineNumber": 67
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "s.execute",
+          "lineNumber": 69
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "insert(TelemetryRecord).values",
+          "lineNumber": 69
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "insert",
+          "lineNumber": 69
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "len",
+          "lineNumber": 70
+        },
+        {
+          "caller": "add_telemetry_many",
+          "callee": "s.commit",
+          "lineNumber": 71
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "dict",
+          "lineNumber": 88
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "d.setdefault",
+          "lineNumber": 89
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "d.get",
+          "lineNumber": 91
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "d.get(\"payload\", {}).get",
+          "lineNumber": 91
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "d.get",
+          "lineNumber": 91
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "d.get",
+          "lineNumber": 94
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "isinstance",
+          "lineNumber": 95
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "int",
+          "lineNumber": 97
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "d.get",
+          "lineNumber": 104
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "isinstance",
+          "lineNumber": 105
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "datetime.fromtimestamp",
+          "lineNumber": 108
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "float",
+          "lineNumber": 108
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "datetime.now",
+          "lineNumber": 110
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "datetime.now",
+          "lineNumber": 112
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "payload.append",
+          "lineNumber": 114
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "d.get",
+          "lineNumber": 119
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "d.get",
+          "lineNumber": 121
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "max",
+          "lineNumber": 128
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "len",
+          "lineNumber": 128
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "self._session_factory",
+          "lineNumber": 130
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "range",
+          "lineNumber": 131
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "len",
+          "lineNumber": 131
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "insert(MavlinkEvent).values",
+          "lineNumber": 133
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "insert",
+          "lineNumber": 133
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "s.execute",
+          "lineNumber": 135
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "len",
+          "lineNumber": 136
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "logger.error",
+          "lineNumber": 138
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "s.rollback",
+          "lineNumber": 139
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "s.execute",
+          "lineNumber": 142
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "insert(MavlinkEvent).values",
+          "lineNumber": 142
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "insert",
+          "lineNumber": 142
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "logger.error",
+          "lineNumber": 145
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "s.rollback",
+          "lineNumber": 146
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "s.commit",
+          "lineNumber": 147
+        },
+        {
+          "caller": "add_mavlink_events_many",
+          "callee": "_log_mavlink_insert_summary",
+          "lineNumber": 148
+        },
+        {
+          "caller": "_log_mavlink_insert_summary",
+          "callee": "time.monotonic",
+          "lineNumber": 153
+        },
+        {
+          "caller": "_log_mavlink_insert_summary",
+          "callee": "_MAVLINK_INSERT_SUMMARY.get",
+          "lineNumber": 154
+        },
+        {
+          "caller": "_log_mavlink_insert_summary",
+          "callee": "logger.info",
+          "lineNumber": 163
+        },
+        {
+          "caller": "_log_mavlink_insert_summary",
+          "callee": "int",
+          "lineNumber": 167
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 4,
+        "functionCount": 3,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/telemetry/repository/lifecycle.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 202,
+      "nonEmptyLines": 183,
+      "functions": [
+        {
+          "name": "_normalized_status_value",
+          "startLine": 29,
+          "endLine": 30,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "_status_is_terminal",
+          "startLine": 33,
+          "endLine": 37,
+          "params": [
+            "status"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "TelemetryLifecycleMixin",
+          "startLine": 40,
+          "endLine": 202,
+          "methods": [
+            "save",
+            "create_flight",
+            "add_event",
+            "add_flight_events_many",
+            "finish_flight",
+            "finish_flight_if_in_progress",
+            "set_flight_status_if_active"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_normalized_status_value",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "_status_is_terminal",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "TelemetryLifecycleMixin",
+          "line": 40,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_normalized_status_value",
+          "callee": "normalize_flight_status",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "_normalized_status_value",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str(status).strip().lower",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str(status).strip",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str",
+          "lineNumber": 37
+        },
+        {
+          "caller": "save",
+          "callee": "self._session_factory",
+          "lineNumber": 42
+        },
+        {
+          "caller": "save",
+          "callee": "TelemetryRecord",
+          "lineNumber": 43
+        },
+        {
+          "caller": "save",
+          "callee": "s.add",
+          "lineNumber": 54
+        },
+        {
+          "caller": "save",
+          "callee": "s.commit",
+          "lineNumber": 55
+        },
+        {
+          "caller": "create_flight",
+          "callee": "_normalized_status_value",
+          "lineNumber": 70
+        },
+        {
+          "caller": "create_flight",
+          "callee": "datetime.now",
+          "lineNumber": 71
+        },
+        {
+          "caller": "create_flight",
+          "callee": "self._session_factory",
+          "lineNumber": 72
+        },
+        {
+          "caller": "create_flight",
+          "callee": "Flight",
+          "lineNumber": 73
+        },
+        {
+          "caller": "create_flight",
+          "callee": "s.add",
+          "lineNumber": 84
+        },
+        {
+          "caller": "create_flight",
+          "callee": "s.flush",
+          "lineNumber": 85
+        },
+        {
+          "caller": "create_flight",
+          "callee": "s.commit",
+          "lineNumber": 87
+        },
+        {
+          "caller": "add_event",
+          "callee": "logger.warning",
+          "lineNumber": 97
+        },
+        {
+          "caller": "add_event",
+          "callee": "isinstance",
+          "lineNumber": 99
+        },
+        {
+          "caller": "add_event",
+          "callee": "data.model_dump",
+          "lineNumber": 100
+        },
+        {
+          "caller": "add_event",
+          "callee": "isinstance",
+          "lineNumber": 104
+        },
+        {
+          "caller": "add_event",
+          "callee": "dict",
+          "lineNumber": 105
+        },
+        {
+          "caller": "add_event",
+          "callee": "self._session_factory",
+          "lineNumber": 108
+        },
+        {
+          "caller": "add_event",
+          "callee": "FlightEvent",
+          "lineNumber": 110
+        },
+        {
+          "caller": "add_event",
+          "callee": "s.add",
+          "lineNumber": 111
+        },
+        {
+          "caller": "add_event",
+          "callee": "s.commit",
+          "lineNumber": 112
+        },
+        {
+          "caller": "add_event",
+          "callee": "s.rollback",
+          "lineNumber": 114
+        },
+        {
+          "caller": "add_event",
+          "callee": "logger.exception",
+          "lineNumber": 115
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "self._session_factory",
+          "lineNumber": 135
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "insert(FlightEvent).values",
+          "lineNumber": 137
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "insert",
+          "lineNumber": 137
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "s.execute",
+          "lineNumber": 138
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "s.commit",
+          "lineNumber": 139
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "len",
+          "lineNumber": 140
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "s.rollback",
+          "lineNumber": 142
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "logger.exception",
+          "lineNumber": 143
+        },
+        {
+          "caller": "add_flight_events_many",
+          "callee": "len",
+          "lineNumber": 143
+        },
+        {
+          "caller": "finish_flight",
+          "callee": "_normalized_status_value",
+          "lineNumber": 149
+        },
+        {
+          "caller": "finish_flight",
+          "callee": "self._session_factory",
+          "lineNumber": 150
+        },
+        {
+          "caller": "finish_flight",
+          "callee": "s.execute",
+          "lineNumber": 151
+        },
+        {
+          "caller": "finish_flight",
+          "callee": "select(Flight).where",
+          "lineNumber": 151
+        },
+        {
+          "caller": "finish_flight",
+          "callee": "select",
+          "lineNumber": 151
+        },
+        {
+          "caller": "finish_flight",
+          "callee": "q.scalar_one",
+          "lineNumber": 152
+        },
+        {
+          "caller": "finish_flight",
+          "callee": "datetime.now",
+          "lineNumber": 155
+        },
+        {
+          "caller": "finish_flight",
+          "callee": "s.commit",
+          "lineNumber": 156
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "_normalized_status_value",
+          "lineNumber": 165
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "self._session_factory",
+          "lineNumber": 166
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "s.execute",
+          "lineNumber": 167
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "select(Flight).where",
+          "lineNumber": 167
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "select",
+          "lineNumber": 167
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "q.scalar_one",
+          "lineNumber": 168
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "_status_is_terminal",
+          "lineNumber": 169
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "datetime.now",
+          "lineNumber": 174
+        },
+        {
+          "caller": "finish_flight_if_in_progress",
+          "callee": "s.commit",
+          "lineNumber": 175
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "_normalized_status_value",
+          "lineNumber": 189
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "self._session_factory",
+          "lineNumber": 190
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "s.execute",
+          "lineNumber": 191
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "select(Flight).where",
+          "lineNumber": 191
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "select",
+          "lineNumber": 191
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "q.scalar_one",
+          "lineNumber": 192
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "_status_is_terminal",
+          "lineNumber": 193
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "datetime.now",
+          "lineNumber": 200
+        },
+        {
+          "caller": "set_flight_status_if_active",
+          "callee": "s.commit",
+          "lineNumber": 201
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/telemetry/repository/summaries.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 167,
+      "nonEmptyLines": 145,
+      "functions": [
+        {
+          "name": "_normalized_status_value",
+          "startLine": 29,
+          "endLine": 30,
+          "params": [
+            "status"
+          ]
+        },
+        {
+          "name": "_status_is_terminal",
+          "startLine": 33,
+          "endLine": 37,
+          "params": [
+            "status"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "TelemetrySummaryMixin",
+          "startLine": 40,
+          "endLine": 167,
+          "methods": [
+            "get_telemetry_for_replay",
+            "build_telemetry_summaries",
+            "_aggregate_for_resolution",
+            "get_telemetry_summary"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_normalized_status_value",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "_status_is_terminal",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "TelemetrySummaryMixin",
+          "line": 40,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_normalized_status_value",
+          "callee": "normalize_flight_status",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "_normalized_status_value",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str(status).strip().lower",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str(status).strip",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_status_is_terminal",
+          "callee": "str",
+          "lineNumber": 37
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "self._session_factory",
+          "lineNumber": 58
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "select(TelemetryRecord)\n                .where(TelemetryRecord.flight_id == flight_id)\n                .order_by(TelemetryRecord.created_at)\n                .limit",
+          "lineNumber": 60
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "select(TelemetryRecord)\n                .where(TelemetryRecord.flight_id == flight_id)\n                .order_by",
+          "lineNumber": 60
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "select(TelemetryRecord)\n                .where",
+          "lineNumber": 60
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "select",
+          "lineNumber": 60
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "stmt.where",
+          "lineNumber": 66
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "stmt.where",
+          "lineNumber": 68
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "s.execute",
+          "lineNumber": 69
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "result.scalars().all",
+          "lineNumber": 70
+        },
+        {
+          "caller": "get_telemetry_for_replay",
+          "callee": "result.scalars",
+          "lineNumber": 70
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "self._session_factory",
+          "lineNumber": 81
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "s.execute",
+          "lineNumber": 83
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "delete(TelemetrySummary).where",
+          "lineNumber": 83
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "delete",
+          "lineNumber": 83
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "s.flush",
+          "lineNumber": 84
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "self._aggregate_for_resolution",
+          "lineNumber": 87
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "s.execute",
+          "lineNumber": 89
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "insert(TelemetrySummary).values",
+          "lineNumber": 89
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "insert",
+          "lineNumber": 89
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "len",
+          "lineNumber": 90
+        },
+        {
+          "caller": "build_telemetry_summaries",
+          "callee": "s.commit",
+          "lineNumber": 92
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.extract",
+          "lineNumber": 106
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.to_timestamp(func.floor(epoch_expr / res_s) * res_s).label",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.to_timestamp",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.floor",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "select(\n                bucket_expr,\n                func.avg(TelemetryRecord.alt).label(\"avg_alt\"),\n                func.min(TelemetryRecord.alt).label(\"min_alt\"),\n                func.max(TelemetryRecord.alt).label(\"max_alt\"),\n                func.avg(TelemetryRecord.groundspeed).label(\"avg_groundspeed\"),\n                func.avg(TelemetryRecord.battery_remaining).label(\"avg_battery_remaining\"),\n                func.min(TelemetryRecord.battery_remaining).label(\"min_battery_remaining\"),\n                func.count().label(\"sample_count\"),\n            )\n            .where(TelemetryRecord.flight_id == flight_id)\n            .group_by(text(\"bucket_ts\"))\n            .order_by",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "select(\n                bucket_expr,\n                func.avg(TelemetryRecord.alt).label(\"avg_alt\"),\n                func.min(TelemetryRecord.alt).label(\"min_alt\"),\n                func.max(TelemetryRecord.alt).label(\"max_alt\"),\n                func.avg(TelemetryRecord.groundspeed).label(\"avg_groundspeed\"),\n                func.avg(TelemetryRecord.battery_remaining).label(\"avg_battery_remaining\"),\n                func.min(TelemetryRecord.battery_remaining).label(\"min_battery_remaining\"),\n                func.count().label(\"sample_count\"),\n            )\n            .where(TelemetryRecord.flight_id == flight_id)\n            .group_by",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "select(\n                bucket_expr,\n                func.avg(TelemetryRecord.alt).label(\"avg_alt\"),\n                func.min(TelemetryRecord.alt).label(\"min_alt\"),\n                func.max(TelemetryRecord.alt).label(\"max_alt\"),\n                func.avg(TelemetryRecord.groundspeed).label(\"avg_groundspeed\"),\n                func.avg(TelemetryRecord.battery_remaining).label(\"avg_battery_remaining\"),\n                func.min(TelemetryRecord.battery_remaining).label(\"min_battery_remaining\"),\n                func.count().label(\"sample_count\"),\n            )\n            .where",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "select",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.avg(TelemetryRecord.alt).label",
+          "lineNumber": 112
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.avg",
+          "lineNumber": 112
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.min(TelemetryRecord.alt).label",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.min",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.max(TelemetryRecord.alt).label",
+          "lineNumber": 114
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.max",
+          "lineNumber": 114
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.avg(TelemetryRecord.groundspeed).label",
+          "lineNumber": 115
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.avg",
+          "lineNumber": 115
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.avg(TelemetryRecord.battery_remaining).label",
+          "lineNumber": 116
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.avg",
+          "lineNumber": 116
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.min(TelemetryRecord.battery_remaining).label",
+          "lineNumber": 117
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.min",
+          "lineNumber": 117
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.count().label",
+          "lineNumber": 118
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "func.count",
+          "lineNumber": 118
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "text",
+          "lineNumber": 121
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "text",
+          "lineNumber": 122
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "session.execute",
+          "lineNumber": 125
+        },
+        {
+          "caller": "_aggregate_for_resolution",
+          "callee": "result.fetchall",
+          "lineNumber": 126
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "ValueError",
+          "lineNumber": 154
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "sorted",
+          "lineNumber": 155
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "self._session_factory",
+          "lineNumber": 157
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "select(TelemetrySummary)\n                .where(\n                    TelemetrySummary.flight_id == flight_id,\n                    TelemetrySummary.resolution_s == resolution_s,\n                )\n                .order_by",
+          "lineNumber": 159
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "select(TelemetrySummary)\n                .where",
+          "lineNumber": 159
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "select",
+          "lineNumber": 159
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "s.execute",
+          "lineNumber": 166
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "list",
+          "lineNumber": 167
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "result.scalars().all",
+          "lineNumber": 167
+        },
+        {
+          "caller": "get_telemetry_summary",
+          "callee": "result.scalars",
+          "lineNumber": 167
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/__init__.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 13,
+      "nonEmptyLines": 8,
+      "functions": [
+        {
+          "name": "__getattr__",
+          "startLine": 8,
+          "endLine": 13,
+          "params": [
+            "name"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "__getattr__",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "__getattr__",
+          "callee": "AttributeError",
+          "lineNumber": 13
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/cleanup.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 298,
+      "nonEmptyLines": 243,
+      "functions": [
+        {
+          "name": "_preflight_cleanup_loop",
+          "startLine": 102,
+          "endLine": 115,
+          "params": [
+            "stop_event"
+          ]
+        },
+        {
+          "name": "_mission_cleanup_loop",
+          "startLine": 118,
+          "endLine": 147,
+          "params": [
+            "stop_event"
+          ]
+        },
+        {
+          "name": "_delete_batch",
+          "startLine": 150,
+          "endLine": 174,
+          "params": [
+            "session_factory",
+            "model",
+            "cutoff_col",
+            "cutoff",
+            "batch"
+          ]
+        },
+        {
+          "name": "_telemetry_cleanup_loop",
+          "startLine": 177,
+          "endLine": 237,
+          "params": [
+            "stop_event"
+          ]
+        },
+        {
+          "name": "_runtime_log_cleanup_loop",
+          "startLine": 240,
+          "endLine": 261,
+          "params": [
+            "stop_event"
+          ]
+        },
+        {
+          "name": "start_cleanup_jobs",
+          "startLine": 272,
+          "endLine": 284,
+          "params": []
+        },
+        {
+          "name": "stop_cleanup_jobs",
+          "startLine": 287,
+          "endLine": 298,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_preflight_cleanup_loop",
+          "line": 102,
+          "isDefault": false
+        },
+        {
+          "name": "_mission_cleanup_loop",
+          "line": 118,
+          "isDefault": false
+        },
+        {
+          "name": "_delete_batch",
+          "line": 150,
+          "isDefault": false
+        },
+        {
+          "name": "_telemetry_cleanup_loop",
+          "line": 177,
+          "isDefault": false
+        },
+        {
+          "name": "_runtime_log_cleanup_loop",
+          "line": 240,
+          "isDefault": false
+        },
+        {
+          "name": "start_cleanup_jobs",
+          "line": 272,
+          "isDefault": false
+        },
+        {
+          "name": "stop_cleanup_jobs",
+          "line": 287,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_preflight_cleanup_loop",
+          "callee": "logger.info",
+          "lineNumber": 103
+        },
+        {
+          "caller": "_preflight_cleanup_loop",
+          "callee": "stop_event.is_set",
+          "lineNumber": 104
+        },
+        {
+          "caller": "_preflight_cleanup_loop",
+          "callee": "preflight_run_repo.cleanup_expired",
+          "lineNumber": 106
+        },
+        {
+          "caller": "_preflight_cleanup_loop",
+          "callee": "logger.info",
+          "lineNumber": 108
+        },
+        {
+          "caller": "_preflight_cleanup_loop",
+          "callee": "logger.exception",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_preflight_cleanup_loop",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_preflight_cleanup_loop",
+          "callee": "stop_event.wait",
+          "lineNumber": 113
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "timedelta",
+          "lineNumber": 119
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "logger.info",
+          "lineNumber": 120
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "stop_event.is_set",
+          "lineNumber": 125
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "datetime.now",
+          "lineNumber": 127
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "operator_command_repo.cleanup_old",
+          "lineNumber": 131
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "mission_runtime_repo.cleanup_terminal",
+          "lineNumber": 132
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "logger.info",
+          "lineNumber": 134
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "cutoff.strftime",
+          "lineNumber": 139
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "logger.exception",
+          "lineNumber": 142
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 145
+        },
+        {
+          "caller": "_mission_cleanup_loop",
+          "callee": "stop_event.wait",
+          "lineNumber": 145
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "session_factory",
+          "lineNumber": 163
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "select(model.id)\n            .where(cutoff_col < cutoff)\n            .order_by(cutoff_col)\n            .limit(batch)\n            .scalar_subquery",
+          "lineNumber": 166
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "select(model.id)\n            .where(cutoff_col < cutoff)\n            .order_by(cutoff_col)\n            .limit",
+          "lineNumber": 166
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "select(model.id)\n            .where(cutoff_col < cutoff)\n            .order_by",
+          "lineNumber": 166
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "select(model.id)\n            .where",
+          "lineNumber": 166
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "select",
+          "lineNumber": 166
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "s.execute",
+          "lineNumber": 172
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "delete(model).where",
+          "lineNumber": 172
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "delete",
+          "lineNumber": 172
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "model.id.in_",
+          "lineNumber": 172
+        },
+        {
+          "caller": "_delete_batch",
+          "callee": "s.commit",
+          "lineNumber": 173
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "timedelta",
+          "lineNumber": 178
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "timedelta",
+          "lineNumber": 179
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "timedelta",
+          "lineNumber": 180
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "logger.info",
+          "lineNumber": 182
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "stop_event.is_set",
+          "lineNumber": 190
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "datetime.now",
+          "lineNumber": 191
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "_delete_batch",
+          "lineNumber": 194
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "_delete_batch",
+          "lineNumber": 203
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "_delete_batch",
+          "lineNumber": 212
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "logger.info",
+          "lineNumber": 221
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "raw_cutoff.strftime",
+          "lineNumber": 227
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "summary_cutoff.strftime",
+          "lineNumber": 228
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "mavlink_cutoff.strftime",
+          "lineNumber": 229
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "logger.exception",
+          "lineNumber": 232
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 235
+        },
+        {
+          "caller": "_telemetry_cleanup_loop",
+          "callee": "stop_event.wait",
+          "lineNumber": 235
+        },
+        {
+          "caller": "_runtime_log_cleanup_loop",
+          "callee": "runtime_log_retention_days",
+          "lineNumber": 241
+        },
+        {
+          "caller": "_runtime_log_cleanup_loop",
+          "callee": "logger.info",
+          "lineNumber": 242
+        },
+        {
+          "caller": "_runtime_log_cleanup_loop",
+          "callee": "stop_event.is_set",
+          "lineNumber": 247
+        },
+        {
+          "caller": "_runtime_log_cleanup_loop",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 249
+        },
+        {
+          "caller": "_runtime_log_cleanup_loop",
+          "callee": "logger.info",
+          "lineNumber": 254
+        },
+        {
+          "caller": "_runtime_log_cleanup_loop",
+          "callee": "logger.exception",
+          "lineNumber": 256
+        },
+        {
+          "caller": "_runtime_log_cleanup_loop",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 259
+        },
+        {
+          "caller": "_runtime_log_cleanup_loop",
+          "callee": "stop_event.wait",
+          "lineNumber": 259
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "asyncio.Event",
+          "lineNumber": 277
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "asyncio.create_task",
+          "lineNumber": 279
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "_preflight_cleanup_loop",
+          "lineNumber": 279
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "asyncio.create_task",
+          "lineNumber": 280
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "_mission_cleanup_loop",
+          "lineNumber": 280
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "asyncio.create_task",
+          "lineNumber": 281
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "_telemetry_cleanup_loop",
+          "lineNumber": 281
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "asyncio.create_task",
+          "lineNumber": 282
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "_runtime_log_cleanup_loop",
+          "lineNumber": 282
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "logger.info",
+          "lineNumber": 284
+        },
+        {
+          "caller": "start_cleanup_jobs",
+          "callee": "len",
+          "lineNumber": 284
+        },
+        {
+          "caller": "stop_cleanup_jobs",
+          "callee": "_stop_event.set",
+          "lineNumber": 291
+        },
+        {
+          "caller": "stop_cleanup_jobs",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 294
+        },
+        {
+          "caller": "stop_cleanup_jobs",
+          "callee": "task.cancel",
+          "lineNumber": 296
+        },
+        {
+          "caller": "stop_cleanup_jobs",
+          "callee": "logger.info",
+          "lineNumber": 298
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 7,
+        "functionCount": 7,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/completion_service.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 107,
+      "nonEmptyLines": 95,
+      "classes": [
+        {
+          "name": "RuntimeCompletionServiceMixin",
+          "startLine": 11,
+          "endLine": 107,
+          "methods": [
+            "_finalize_started_flight"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "RuntimeCompletionServiceMixin",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "getattr",
+          "lineNumber": 23
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "logger.debug",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "(note or \"\").strip",
+          "lineNumber": 34
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "len",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "self.record_flight_event",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "logger.exception",
+          "lineNumber": 48
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "{\n            FlightStatus.ACTIVE: \"running\",\n            FlightStatus.PAUSED: \"paused\",\n            FlightStatus.INTERRUPTED: \"aborted\",\n            FlightStatus.COMPLETED: \"completed\",\n            FlightStatus.FAILED: \"failed\",\n        }.get",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "self.record_mission_lifecycle",
+          "lineNumber": 61
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "MissionLifecyclePayloadV1",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "logger.exception",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "self._telemetry_batcher.flush",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "logger.exception",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "self._repo.build_telemetry_summaries",
+          "lineNumber": 89
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "logger.info",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "logger.exception",
+          "lineNumber": 92
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "self.repo.finish_flight_if_in_progress",
+          "lineNumber": 95
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "logger.info",
+          "lineNumber": 101
+        },
+        {
+          "caller": "_finalize_started_flight",
+          "callee": "logger.exception",
+          "lineNumber": 103
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/coordination.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 221,
+      "nonEmptyLines": 197,
+      "classes": [
+        {
+          "name": "_OrchestratorRepositoryAdapter",
+          "startLine": 32,
+          "endLine": 48,
+          "methods": [
+            "__init__",
+            "add_event",
+            "__getattr__"
+          ],
+          "properties": []
+        },
+        {
+          "name": "RuntimeCoordinationMixin",
+          "startLine": 51,
+          "endLine": 221,
+          "methods": [
+            "__init__",
+            "flight_id",
+            "_runtime_db_flight_id",
+            "_mission_context",
+            "bind_event_loop",
+            "telemetry_running",
+            "_current_mission_runtime_id",
+            "_sequence",
+            "_serialize_event_data",
+            "_schedule_coro",
+            "_enqueue_raw_event",
+            "_enqueue_db_event",
+            "_enqueue_lifecycle_event"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_OrchestratorRepositoryAdapter",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "RuntimeCoordinationMixin",
+          "line": 51,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "add_event",
+          "callee": "self._orchestrator.record_persisted_event",
+          "lineNumber": 45
+        },
+        {
+          "caller": "__getattr__",
+          "callee": "getattr",
+          "lineNumber": 48
+        },
+        {
+          "caller": "__init__",
+          "callee": "_OrchestratorRepositoryAdapter",
+          "lineNumber": 74
+        },
+        {
+          "caller": "__init__",
+          "callee": "SimpleWhPerKmModel",
+          "lineNumber": 75
+        },
+        {
+          "caller": "__init__",
+          "callee": "asyncio.Queue",
+          "lineNumber": 80
+        },
+        {
+          "caller": "__init__",
+          "callee": "asyncio.Queue",
+          "lineNumber": 83
+        },
+        {
+          "caller": "__init__",
+          "callee": "asyncio.Queue",
+          "lineNumber": 86
+        },
+        {
+          "caller": "__init__",
+          "callee": "TelemetryPayloadV1().to_legacy_snapshot",
+          "lineNumber": 110
+        },
+        {
+          "caller": "__init__",
+          "callee": "TelemetryPayloadV1",
+          "lineNumber": 110
+        },
+        {
+          "caller": "_runtime_db_flight_id",
+          "callee": "int",
+          "lineNumber": 122
+        },
+        {
+          "caller": "_mission_context",
+          "callee": "MissionContextV1",
+          "lineNumber": 127
+        },
+        {
+          "caller": "_mission_context",
+          "callee": "getattr",
+          "lineNumber": 128
+        },
+        {
+          "caller": "_mission_context",
+          "callee": "getattr",
+          "lineNumber": 129
+        },
+        {
+          "caller": "_mission_context",
+          "callee": "getattr",
+          "lineNumber": 130
+        },
+        {
+          "caller": "_mission_context",
+          "callee": "getattr",
+          "lineNumber": 131
+        },
+        {
+          "caller": "_mission_context",
+          "callee": "any",
+          "lineNumber": 133
+        },
+        {
+          "caller": "_mission_context",
+          "callee": "context.model_dump().values",
+          "lineNumber": 133
+        },
+        {
+          "caller": "_mission_context",
+          "callee": "context.model_dump",
+          "lineNumber": 133
+        },
+        {
+          "caller": "_current_mission_runtime_id",
+          "callee": "getattr",
+          "lineNumber": 142
+        },
+        {
+          "caller": "_sequence",
+          "callee": "next_runtime_sequence",
+          "lineNumber": 145
+        },
+        {
+          "caller": "_sequence",
+          "callee": "self._current_mission_runtime_id",
+          "lineNumber": 145
+        },
+        {
+          "caller": "_serialize_event_data",
+          "callee": "isinstance",
+          "lineNumber": 151
+        },
+        {
+          "caller": "_serialize_event_data",
+          "callee": "data.model_dump",
+          "lineNumber": 152
+        },
+        {
+          "caller": "_serialize_event_data",
+          "callee": "isinstance",
+          "lineNumber": 153
+        },
+        {
+          "caller": "_serialize_event_data",
+          "callee": "dict",
+          "lineNumber": 154
+        },
+        {
+          "caller": "_schedule_coro",
+          "callee": "asyncio.get_running_loop",
+          "lineNumber": 160
+        },
+        {
+          "caller": "_schedule_coro",
+          "callee": "logger.warning",
+          "lineNumber": 162
+        },
+        {
+          "caller": "_schedule_coro",
+          "callee": "asyncio.run_coroutine_threadsafe",
+          "lineNumber": 164
+        },
+        {
+          "caller": "_schedule_coro",
+          "callee": "future.add_done_callback",
+          "lineNumber": 165
+        },
+        {
+          "caller": "_schedule_coro",
+          "callee": "logger.error",
+          "lineNumber": 167
+        },
+        {
+          "caller": "_schedule_coro",
+          "callee": "f.exception",
+          "lineNumber": 167
+        },
+        {
+          "caller": "_schedule_coro",
+          "callee": "f.exception",
+          "lineNumber": 167
+        },
+        {
+          "caller": "_enqueue_raw_event",
+          "callee": "self._raw_event_queue.put_nowait",
+          "lineNumber": 173
+        },
+        {
+          "caller": "_enqueue_raw_event",
+          "callee": "self._raw_event_queue.get_nowait",
+          "lineNumber": 176
+        },
+        {
+          "caller": "_enqueue_raw_event",
+          "callee": "self._raw_event_queue.task_done",
+          "lineNumber": 177
+        },
+        {
+          "caller": "_enqueue_raw_event",
+          "callee": "self._raw_event_queue.put_nowait",
+          "lineNumber": 181
+        },
+        {
+          "caller": "_enqueue_raw_event",
+          "callee": "logger.warning",
+          "lineNumber": 183
+        },
+        {
+          "caller": "_enqueue_db_event",
+          "callee": "self._db_event_queue.put_nowait",
+          "lineNumber": 189
+        },
+        {
+          "caller": "_enqueue_db_event",
+          "callee": "suppress",
+          "lineNumber": 193
+        },
+        {
+          "caller": "_enqueue_db_event",
+          "callee": "self._db_event_queue.get_nowait",
+          "lineNumber": 194
+        },
+        {
+          "caller": "_enqueue_db_event",
+          "callee": "self._db_event_queue.put_nowait",
+          "lineNumber": 196
+        },
+        {
+          "caller": "_enqueue_db_event",
+          "callee": "logger.warning",
+          "lineNumber": 201
+        },
+        {
+          "caller": "_enqueue_lifecycle_event",
+          "callee": "self._db_lifecycle_queue.put_nowait",
+          "lineNumber": 212
+        },
+        {
+          "caller": "_enqueue_lifecycle_event",
+          "callee": "logger.warning",
+          "lineNumber": 215
+        },
+        {
+          "caller": "_enqueue_lifecycle_event",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 220
+        },
+        {
+          "caller": "_enqueue_lifecycle_event",
+          "callee": "self._db_lifecycle_queue.put",
+          "lineNumber": 220
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/event_service.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 169,
+      "nonEmptyLines": 152,
+      "classes": [
+        {
+          "name": "RuntimeEventServiceMixin",
+          "startLine": 24,
+          "endLine": 169,
+          "methods": [
+            "_fanout_runtime_envelope",
+            "record_flight_event",
+            "record_mission_lifecycle",
+            "record_persisted_event"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "RuntimeEventServiceMixin",
+          "line": 24,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "isinstance",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "self.fanout.ingest_telemetry_envelope",
+          "lineNumber": 34
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "envelope.model_dump_jsonable",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "TelemetryBatcher.row_from_envelope",
+          "lineNumber": 42
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "self._telemetry_batcher.add",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 48
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "envelope.model_dump_jsonable",
+          "lineNumber": 50
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "isinstance",
+          "lineNumber": 53
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "self.fanout.ingest_mission_lifecycle_envelope",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "self.fanout.broadcast",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_fanout_runtime_envelope",
+          "callee": "envelope.model_dump_jsonable",
+          "lineNumber": 59
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "self._serialize_event_data",
+          "lineNumber": 73
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "isinstance",
+          "lineNumber": 76
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "FlightEventPayloadV1",
+          "lineNumber": 79
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "FlightEventEnvelopeV1",
+          "lineNumber": 86
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "self._current_mission_runtime_id",
+          "lineNumber": 87
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "self._sequence",
+          "lineNumber": 89
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "utc_now",
+          "lineNumber": 90
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "self._mission_context",
+          "lineNumber": 92
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "self._fanout_runtime_envelope",
+          "lineNumber": 96
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "self._enqueue_db_event",
+          "lineNumber": 100
+        },
+        {
+          "caller": "record_flight_event",
+          "callee": "self._maybe_schedule_shadow_write",
+          "lineNumber": 103
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "isinstance",
+          "lineNumber": 116
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "MissionLifecyclePayloadV1.model_validate",
+          "lineNumber": 117
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "MissionLifecycleEnvelopeV1",
+          "lineNumber": 121
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "self._current_mission_runtime_id",
+          "lineNumber": 122
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "self._sequence",
+          "lineNumber": 124
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "utc_now",
+          "lineNumber": 125
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "self._mission_context",
+          "lineNumber": 127
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "self._fanout_runtime_envelope",
+          "lineNumber": 131
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "self._serialize_event_data",
+          "lineNumber": 136
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "self._enqueue_lifecycle_event",
+          "lineNumber": 137
+        },
+        {
+          "caller": "record_mission_lifecycle",
+          "callee": "self._maybe_schedule_shadow_write",
+          "lineNumber": 141
+        },
+        {
+          "caller": "record_persisted_event",
+          "callee": "isinstance",
+          "lineNumber": 156
+        },
+        {
+          "caller": "record_persisted_event",
+          "callee": "MissionLifecyclePayloadV1.model_validate",
+          "lineNumber": 157
+        },
+        {
+          "caller": "record_persisted_event",
+          "callee": "self.record_mission_lifecycle",
+          "lineNumber": 159
+        },
+        {
+          "caller": "record_persisted_event",
+          "callee": "self.record_flight_event",
+          "lineNumber": 164
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/execution_service.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 423,
+      "nonEmptyLines": 396,
+      "functions": [
+        {
+          "name": "_wait_for_telemetry_startup",
+          "startLine": 22,
+          "endLine": 27,
+          "params": [
+            "started",
+            "grace_s"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "RuntimeExecutionServiceMixin",
+          "startLine": 30,
+          "endLine": 423,
+          "methods": [
+            "_resolve_flight_record_anchor",
+            "run_mission"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_wait_for_telemetry_startup",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "RuntimeExecutionServiceMixin",
+          "line": 30,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_wait_for_telemetry_startup",
+          "callee": "logger.info",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_wait_for_telemetry_startup",
+          "callee": "asyncio.sleep",
+          "lineNumber": 27
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "callable",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "anchor_fn",
+          "lineNumber": 42
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "float",
+          "lineNumber": 42
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "isinstance",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "len",
+          "lineNumber": 45
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "isinstance",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "isinstance",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "logger.exception",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "logger.exception",
+          "lineNumber": 59
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "candidates.extend",
+          "lineNumber": 64
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 69
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 74
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 75
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 76
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "candidates.append",
+          "lineNumber": 83
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 86
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "getattr",
+          "lineNumber": 88
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "Coordinate",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "float",
+          "lineNumber": 97
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "float",
+          "lineNumber": 98
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "float",
+          "lineNumber": 99
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "float",
+          "lineNumber": 99
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "logger.warning",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "Coordinate",
+          "lineNumber": 109
+        },
+        {
+          "caller": "_resolve_flight_record_anchor",
+          "callee": "float",
+          "lineNumber": 109
+        },
+        {
+          "caller": "run_mission",
+          "callee": "mission.get_waypoints",
+          "lineNumber": 118
+        },
+        {
+          "caller": "run_mission",
+          "callee": "getattr",
+          "lineNumber": 126
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.info",
+          "lineNumber": 127
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.info",
+          "lineNumber": 132
+        },
+        {
+          "caller": "run_mission",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 136
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.info",
+          "lineNumber": 137
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._init_video",
+          "lineNumber": 141
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.critical",
+          "lineNumber": 143
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 148
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 152
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._resolve_flight_record_anchor",
+          "lineNumber": 160
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.repo.create_flight",
+          "lineNumber": 165
+        },
+        {
+          "caller": "run_mission",
+          "callee": "TelemetryBatcher",
+          "lineNumber": 174
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.record_flight_event",
+          "lineNumber": 175
+        },
+        {
+          "caller": "run_mission",
+          "callee": "len",
+          "lineNumber": 179
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.record_mission_lifecycle",
+          "lineNumber": 187
+        },
+        {
+          "caller": "run_mission",
+          "callee": "MissionLifecyclePayloadV1",
+          "lineNumber": 188
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.record_flight_event",
+          "lineNumber": 195
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.info",
+          "lineNumber": 203
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 207
+        },
+        {
+          "caller": "run_mission",
+          "callee": "len",
+          "lineNumber": 211
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.exception",
+          "lineNumber": 215
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 219
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 223
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.info",
+          "lineNumber": 231
+        },
+        {
+          "caller": "run_mission",
+          "callee": "mission.get_preflight_mission_data",
+          "lineNumber": 233
+        },
+        {
+          "caller": "run_mission",
+          "callee": "hasattr",
+          "lineNumber": 234
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._run_preflight_checks",
+          "lineNumber": 237
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.info",
+          "lineNumber": 238
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.exception",
+          "lineNumber": 240
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 244
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 248
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._finalize_started_flight",
+          "lineNumber": 251
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 255
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.info",
+          "lineNumber": 263
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.start_live_telemetry",
+          "lineNumber": 264
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.info",
+          "lineNumber": 267
+        },
+        {
+          "caller": "run_mission",
+          "callee": "_wait_for_telemetry_startup",
+          "lineNumber": 271
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.error",
+          "lineNumber": 276
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 285
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 289
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._finalize_started_flight",
+          "lineNumber": 292
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 296
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._start_mission_recording",
+          "lineNumber": 303
+        },
+        {
+          "caller": "run_mission",
+          "callee": "asyncio.create_task",
+          "lineNumber": 310
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.heartbeat_task",
+          "lineNumber": 310
+        },
+        {
+          "caller": "run_mission",
+          "callee": "asyncio.create_task",
+          "lineNumber": 311
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._raw_event_ingest_worker",
+          "lineNumber": 311
+        },
+        {
+          "caller": "run_mission",
+          "callee": "asyncio.create_task",
+          "lineNumber": 312
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.video_health_monitor_task",
+          "lineNumber": 312
+        },
+        {
+          "caller": "run_mission",
+          "callee": "asyncio.create_task",
+          "lineNumber": 313
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.emergency_monitor_task",
+          "lineNumber": 313
+        },
+        {
+          "caller": "run_mission",
+          "callee": "getattr",
+          "lineNumber": 316
+        },
+        {
+          "caller": "run_mission",
+          "callee": "bool",
+          "lineNumber": 317
+        },
+        {
+          "caller": "run_mission",
+          "callee": "getattr",
+          "lineNumber": 317
+        },
+        {
+          "caller": "run_mission",
+          "callee": "tasks.append",
+          "lineNumber": 319
+        },
+        {
+          "caller": "run_mission",
+          "callee": "asyncio.create_task",
+          "lineNumber": 319
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.video_frame_pump_task",
+          "lineNumber": 319
+        },
+        {
+          "caller": "run_mission",
+          "callee": "flight_fn",
+          "lineNumber": 321
+        },
+        {
+          "caller": "run_mission",
+          "callee": "callable",
+          "lineNumber": 321
+        },
+        {
+          "caller": "run_mission",
+          "callee": "inspect.isawaitable",
+          "lineNumber": 322
+        },
+        {
+          "caller": "run_mission",
+          "callee": "TypeError",
+          "lineNumber": 323
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._finalize_started_flight",
+          "lineNumber": 327
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.warning",
+          "lineNumber": 335
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 340
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 344
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._finalize_started_flight",
+          "lineNumber": 347
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 351
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.critical",
+          "lineNumber": 355
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 360
+        },
+        {
+          "caller": "run_mission",
+          "callee": "isinstance",
+          "lineNumber": 363
+        },
+        {
+          "caller": "run_mission",
+          "callee": "e.to_event_payload",
+          "lineNumber": 364
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._finalize_started_flight",
+          "lineNumber": 365
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 371
+        },
+        {
+          "caller": "run_mission",
+          "callee": "t.done",
+          "lineNumber": 383
+        },
+        {
+          "caller": "run_mission",
+          "callee": "task.cancel",
+          "lineNumber": 385
+        },
+        {
+          "caller": "run_mission",
+          "callee": "asyncio.gather",
+          "lineNumber": 388
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._stop_mission_recording",
+          "lineNumber": 390
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self.stop_live_telemetry",
+          "lineNumber": 394
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.warning",
+          "lineNumber": 396
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 401
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 405
+        },
+        {
+          "caller": "run_mission",
+          "callee": "self._cleanup",
+          "lineNumber": 410
+        },
+        {
+          "caller": "run_mission",
+          "callee": "logger.warning",
+          "lineNumber": 412
+        },
+        {
+          "caller": "run_mission",
+          "callee": "emit_app_log",
+          "lineNumber": 417
+        },
+        {
+          "caller": "run_mission",
+          "callee": "str",
+          "lineNumber": 421
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/factory.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 148,
+      "nonEmptyLines": 126,
+      "functions": [
+        {
+          "name": "_mqtt_broker_reachable",
+          "startLine": 28,
+          "endLine": 34,
+          "params": [
+            "host",
+            "port",
+            "timeout_s"
+          ]
+        },
+        {
+          "name": "_create_mqtt_publisher",
+          "startLine": 37,
+          "endLine": 57,
+          "params": []
+        },
+        {
+          "name": "_build_orchestrator_unlocked",
+          "startLine": 60,
+          "endLine": 98,
+          "params": []
+        },
+        {
+          "name": "reset_orchestrator",
+          "startLine": 101,
+          "endLine": 113,
+          "params": []
+        },
+        {
+          "name": "build_orchestrator",
+          "startLine": 116,
+          "endLine": 126,
+          "params": []
+        },
+        {
+          "name": "get_orchestrator",
+          "startLine": 129,
+          "endLine": 144,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_mqtt_broker_reachable",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "_create_mqtt_publisher",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "_build_orchestrator_unlocked",
+          "line": 60,
+          "isDefault": false
+        },
+        {
+          "name": "reset_orchestrator",
+          "line": 101,
+          "isDefault": false
+        },
+        {
+          "name": "build_orchestrator",
+          "line": 116,
+          "isDefault": false
+        },
+        {
+          "name": "get_orchestrator",
+          "line": 129,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_mqtt_broker_reachable",
+          "callee": "socket.create_connection",
+          "lineNumber": 31
+        },
+        {
+          "caller": "_create_mqtt_publisher",
+          "callee": "getattr",
+          "lineNumber": 39
+        },
+        {
+          "caller": "_create_mqtt_publisher",
+          "callee": "socket.gethostname",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_create_mqtt_publisher",
+          "callee": "os.getpid",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_create_mqtt_publisher",
+          "callee": "uuid4",
+          "lineNumber": 40
+        },
+        {
+          "caller": "_create_mqtt_publisher",
+          "callee": "logger.info",
+          "lineNumber": 42
+        },
+        {
+          "caller": "_create_mqtt_publisher",
+          "callee": "os.getpid",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_create_mqtt_publisher",
+          "callee": "MqttPublisherAdapter",
+          "lineNumber": 49
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "MavlinkVehicleAdapter",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "MapAdapter",
+          "lineNumber": 65
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "_mqtt_broker_reachable",
+          "lineNumber": 69
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 71
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "logger.warning",
+          "lineNumber": 73
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "logger.warning",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "TelemetryRepository",
+          "lineNumber": 86
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "RuntimeAdapterBundle",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_build_orchestrator_unlocked",
+          "callee": "Orchestrator",
+          "lineNumber": 88
+        },
+        {
+          "caller": "reset_orchestrator",
+          "callee": "getattr",
+          "lineNumber": 107
+        },
+        {
+          "caller": "reset_orchestrator",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 110
+        },
+        {
+          "caller": "reset_orchestrator",
+          "callee": "logger.exception",
+          "lineNumber": 112
+        },
+        {
+          "caller": "build_orchestrator",
+          "callee": "_build_orchestrator_unlocked",
+          "lineNumber": 125
+        },
+        {
+          "caller": "get_orchestrator",
+          "callee": "_build_orchestrator_unlocked",
+          "lineNumber": 136
+        },
+        {
+          "caller": "get_orchestrator",
+          "callee": "recover_interrupted_missions",
+          "lineNumber": 142
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 6,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/local_position_adapter.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 41,
+      "nonEmptyLines": 33,
+      "classes": [
+        {
+          "name": "LocalPositionSample",
+          "startLine": 11,
+          "endLine": 15,
+          "methods": [],
+          "properties": [
+            "north_m",
+            "east_m",
+            "down_m",
+            "yaw_deg"
+          ]
+        },
+        {
+          "name": "MavlinkLocalPositionAdapter",
+          "startLine": 18,
+          "endLine": 41,
+          "methods": [
+            "enu_path_to_local_ned",
+            "local_ned_to_enu"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "LocalPositionSample",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "MavlinkLocalPositionAdapter",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "enu_path_to_local_ned",
+          "callee": "enu_to_local_ned",
+          "lineNumber": 24
+        },
+        {
+          "caller": "enu_path_to_local_ned",
+          "callee": "converted.append",
+          "lineNumber": 25
+        },
+        {
+          "caller": "enu_path_to_local_ned",
+          "callee": "LocalCoordinate",
+          "lineNumber": 26
+        },
+        {
+          "caller": "enu_path_to_local_ned",
+          "callee": "float",
+          "lineNumber": 27
+        },
+        {
+          "caller": "enu_path_to_local_ned",
+          "callee": "float",
+          "lineNumber": 28
+        },
+        {
+          "caller": "enu_path_to_local_ned",
+          "callee": "float",
+          "lineNumber": 29
+        },
+        {
+          "caller": "local_ned_to_enu",
+          "callee": "EnuCoordinate",
+          "lineNumber": 36
+        },
+        {
+          "caller": "local_ned_to_enu",
+          "callee": "float",
+          "lineNumber": 37
+        },
+        {
+          "caller": "local_ned_to_enu",
+          "callee": "float",
+          "lineNumber": 38
+        },
+        {
+          "caller": "local_ned_to_enu",
+          "callee": "float",
+          "lineNumber": 39
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/orchestrator.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 23,
+      "nonEmptyLines": 20,
+      "classes": [
+        {
+          "name": "Orchestrator",
+          "startLine": 13,
+          "endLine": 23,
+          "methods": [],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "Orchestrator",
+          "line": 13,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 8,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/persistence_service.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 176,
+      "nonEmptyLines": 160,
+      "classes": [
+        {
+          "name": "RuntimePersistenceMixin",
+          "startLine": 10,
+          "endLine": 176,
+          "methods": [
+            "_shadow_write_event",
+            "_maybe_schedule_shadow_write",
+            "get_shadow_report",
+            "_db_event_worker",
+            "_db_lifecycle_worker",
+            "start_background_workers",
+            "stop_background_workers",
+            "get_runtime_metrics"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "RuntimePersistenceMixin",
+          "line": 10,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_shadow_write_event",
+          "callee": "self._repo.add_event",
+          "lineNumber": 20
+        },
+        {
+          "caller": "_shadow_write_event",
+          "callee": "logger.warning",
+          "lineNumber": 24
+        },
+        {
+          "caller": "_maybe_schedule_shadow_write",
+          "callee": "self._schedule_coro",
+          "lineNumber": 38
+        },
+        {
+          "caller": "_maybe_schedule_shadow_write",
+          "callee": "self._shadow_write_event",
+          "lineNumber": 38
+        },
+        {
+          "caller": "get_shadow_report",
+          "callee": "round",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "logger.info",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "self._db_event_queue.get",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "buffer.append",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "len",
+          "lineNumber": 83
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "buffer.append",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "self._db_event_queue.get_nowait",
+          "lineNumber": 85
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "self._repo.add_flight_events_many",
+          "lineNumber": 89
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "buffer.clear",
+          "lineNumber": 91
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "self._repo.add_flight_events_many",
+          "lineNumber": 94
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "buffer.clear",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "logger.exception",
+          "lineNumber": 98
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "len",
+          "lineNumber": 100
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "buffer.clear",
+          "lineNumber": 102
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "self._repo.add_flight_events_many",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "logger.exception",
+          "lineNumber": 109
+        },
+        {
+          "caller": "_db_event_worker",
+          "callee": "logger.info",
+          "lineNumber": 112
+        },
+        {
+          "caller": "_db_lifecycle_worker",
+          "callee": "logger.info",
+          "lineNumber": 116
+        },
+        {
+          "caller": "_db_lifecycle_worker",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 120
+        },
+        {
+          "caller": "_db_lifecycle_worker",
+          "callee": "self._db_lifecycle_queue.get",
+          "lineNumber": 120
+        },
+        {
+          "caller": "_db_lifecycle_worker",
+          "callee": "self._repo.add_flight_events_many",
+          "lineNumber": 123
+        },
+        {
+          "caller": "_db_lifecycle_worker",
+          "callee": "logger.exception",
+          "lineNumber": 126
+        },
+        {
+          "caller": "_db_lifecycle_worker",
+          "callee": "logger.exception",
+          "lineNumber": 130
+        },
+        {
+          "caller": "_db_lifecycle_worker",
+          "callee": "logger.info",
+          "lineNumber": 134
+        },
+        {
+          "caller": "start_background_workers",
+          "callee": "asyncio.create_task",
+          "lineNumber": 141
+        },
+        {
+          "caller": "start_background_workers",
+          "callee": "self._db_event_worker",
+          "lineNumber": 141
+        },
+        {
+          "caller": "start_background_workers",
+          "callee": "asyncio.create_task",
+          "lineNumber": 142
+        },
+        {
+          "caller": "start_background_workers",
+          "callee": "self._db_lifecycle_worker",
+          "lineNumber": 142
+        },
+        {
+          "caller": "start_background_workers",
+          "callee": "logger.info",
+          "lineNumber": 144
+        },
+        {
+          "caller": "start_background_workers",
+          "callee": "len",
+          "lineNumber": 146
+        },
+        {
+          "caller": "stop_background_workers",
+          "callee": "task.done",
+          "lineNumber": 152
+        },
+        {
+          "caller": "stop_background_workers",
+          "callee": "task.cancel",
+          "lineNumber": 153
+        },
+        {
+          "caller": "stop_background_workers",
+          "callee": "logger.exception",
+          "lineNumber": 160
+        },
+        {
+          "caller": "stop_background_workers",
+          "callee": "task.get_name",
+          "lineNumber": 160
+        },
+        {
+          "caller": "stop_background_workers",
+          "callee": "self._bg_workers.clear",
+          "lineNumber": 161
+        },
+        {
+          "caller": "stop_background_workers",
+          "callee": "logger.info",
+          "lineNumber": 162
+        },
+        {
+          "caller": "get_runtime_metrics",
+          "callee": "self._db_event_queue.qsize",
+          "lineNumber": 168
+        },
+        {
+          "caller": "get_runtime_metrics",
+          "callee": "self._db_lifecycle_queue.qsize",
+          "lineNumber": 170
+        },
+        {
+          "caller": "get_runtime_metrics",
+          "callee": "self._raw_event_queue.qsize",
+          "lineNumber": 172
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/ports.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 62,
+      "nonEmptyLines": 35,
+      "classes": [
+        {
+          "name": "MapPort",
+          "startLine": 10,
+          "endLine": 17,
+          "methods": [
+            "geocode",
+            "waypoints_between",
+            "elevation_m"
+          ],
+          "properties": []
+        },
+        {
+          "name": "MessagePublisherPort",
+          "startLine": 20,
+          "endLine": 21,
+          "methods": [
+            "publish"
+          ],
+          "properties": []
+        },
+        {
+          "name": "RuntimeFanoutPort",
+          "startLine": 24,
+          "endLine": 33,
+          "methods": [
+            "ingest_telemetry_envelope",
+            "ingest_mission_lifecycle_envelope",
+            "broadcast",
+            "set_runtime_active"
+          ],
+          "properties": []
+        },
+        {
+          "name": "TelemetryConnectionFactoryPort",
+          "startLine": 36,
+          "endLine": 39,
+          "methods": [
+            "connect",
+            "request_all_streams"
+          ],
+          "properties": []
+        },
+        {
+          "name": "VideoStreamPort",
+          "startLine": 42,
+          "endLine": 52,
+          "methods": [
+            "get_connection_status",
+            "frames",
+            "start_recording",
+            "close"
+          ],
+          "properties": [
+            "enable_recording",
+            "source"
+          ]
+        },
+        {
+          "name": "VideoStreamFactoryPort",
+          "startLine": 55,
+          "endLine": 56,
+          "methods": [
+            "create"
+          ],
+          "properties": []
+        },
+        {
+          "name": "SharedVideoRuntimePort",
+          "startLine": 59,
+          "endLine": 62,
+          "methods": [
+            "start_recording",
+            "stop_recording"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "MapPort",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "MessagePublisherPort",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "RuntimeFanoutPort",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "TelemetryConnectionFactoryPort",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "VideoStreamPort",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "VideoStreamFactoryPort",
+          "line": 55,
+          "isDefault": false
+        },
+        {
+          "name": "SharedVideoRuntimePort",
+          "line": 59,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 7,
+        "functionCount": 0,
+        "classCount": 7
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/recovery_service.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 299,
+      "nonEmptyLines": 272,
+      "classes": [
+        {
+          "name": "RuntimeRecoveryServiceMixin",
+          "startLine": 16,
+          "endLine": 299,
+          "methods": [
+            "_raw_event_ingest_worker",
+            "emergency_monitor_task",
+            "_run_preflight_checks",
+            "_cleanup"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "RuntimeRecoveryServiceMixin",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "logger.info",
+          "lineNumber": 21
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "asyncio.wait_for",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "self._raw_event_queue.get",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "buffer.append",
+          "lineNumber": 27
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "len",
+          "lineNumber": 30
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "buffer.append",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "self._raw_event_queue.get_nowait",
+          "lineNumber": 32
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "buffer.clear",
+          "lineNumber": 37
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "self.repo.add_mavlink_events_many",
+          "lineNumber": 42
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "logger.exception",
+          "lineNumber": 44
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "len",
+          "lineNumber": 47
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "range",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "len",
+          "lineNumber": 51
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "self._raw_event_queue.task_done",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "buffer.clear",
+          "lineNumber": 53
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "self.repo.add_mavlink_events_many",
+          "lineNumber": 58
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "logger.exception",
+          "lineNumber": 60
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "len",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "range",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "len",
+          "lineNumber": 66
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "self._raw_event_queue.task_done",
+          "lineNumber": 67
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "buffer.clear",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "logger.exception",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "len",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "buffer.clear",
+          "lineNumber": 74
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "suppress",
+          "lineNumber": 79
+        },
+        {
+          "caller": "_raw_event_ingest_worker",
+          "callee": "self.repo.add_mavlink_events_many",
+          "lineNumber": 80
+        },
+        {
+          "caller": "emergency_monitor_task",
+          "callee": "getattr",
+          "lineNumber": 88
+        },
+        {
+          "caller": "emergency_monitor_task",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 90
+        },
+        {
+          "caller": "emergency_monitor_task",
+          "callee": "time.time",
+          "lineNumber": 95
+        },
+        {
+          "caller": "emergency_monitor_task",
+          "callee": "suppress",
+          "lineNumber": 103
+        },
+        {
+          "caller": "emergency_monitor_task",
+          "callee": "asyncio.sleep",
+          "lineNumber": 106
+        },
+        {
+          "caller": "emergency_monitor_task",
+          "callee": "logger.info",
+          "lineNumber": 108
+        },
+        {
+          "caller": "emergency_monitor_task",
+          "callee": "asyncio.sleep",
+          "lineNumber": 109
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "getattr",
+          "lineNumber": 124
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "kwargs.pop",
+          "lineNumber": 127
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "str(mission_data.get(\"type\") or \"\").lower",
+          "lineNumber": 136
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "str",
+          "lineNumber": 136
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "mission_data.get",
+          "lineNumber": 136
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "uses_warehouse_ros_preflight",
+          "lineNumber": 137
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "run_warehouse_ros_preflight_report",
+          "lineNumber": 138
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "str",
+          "lineNumber": 141
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "kwargs.pop",
+          "lineNumber": 142
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "kwargs.pop",
+          "lineNumber": 143
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 149
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "PreflightOrchestrator",
+          "lineNumber": 150
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "kwargs.pop",
+          "lineNumber": 150
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "dict",
+          "lineNumber": 151
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "kwargs.pop",
+          "lineNumber": 151
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "runtime_preflight.items",
+          "lineNumber": 197
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "config_overrides.setdefault",
+          "lineNumber": 198
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "orchestrator.run",
+          "lineNumber": 200
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "str",
+          "lineNumber": 203
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "logger.info",
+          "lineNumber": 210
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "report.summary.get",
+          "lineNumber": 212
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "report.summary.get",
+          "lineNumber": 213
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "report.summary.get",
+          "lineNumber": 214
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "logger.log",
+          "lineNumber": 224
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 228
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "time.time",
+          "lineNumber": 231
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "self.record_flight_event",
+          "lineNumber": 245
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "RuntimeError",
+          "lineNumber": 273
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "', '.join",
+          "lineNumber": 274
+        },
+        {
+          "caller": "_run_preflight_checks",
+          "callee": "logger.warning",
+          "lineNumber": 279
+        },
+        {
+          "caller": "_cleanup",
+          "callee": "self.drone.stop_dead_mans_switch",
+          "lineNumber": 286
+        },
+        {
+          "caller": "_cleanup",
+          "callee": "logger.warning",
+          "lineNumber": 288
+        },
+        {
+          "caller": "_cleanup",
+          "callee": "self.video.close",
+          "lineNumber": 292
+        },
+        {
+          "caller": "_cleanup",
+          "callee": "logger.warning",
+          "lineNumber": 294
+        },
+        {
+          "caller": "_cleanup",
+          "callee": "self.drone.close",
+          "lineNumber": 297
+        },
+        {
+          "caller": "_cleanup",
+          "callee": "logger.warning",
+          "lineNumber": 299
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/telemetry_service.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 283,
+      "nonEmptyLines": 257,
+      "classes": [
+        {
+          "name": "RuntimeTelemetryServiceMixin",
+          "startLine": 27,
+          "endLine": 283,
+          "methods": [
+            "start_live_telemetry",
+            "_should_use_existing_vehicle_connection",
+            "_vehicle_telemetry_worker",
+            "stop_live_telemetry",
+            "_telemetry_worker",
+            "heartbeat_task"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "RuntimeTelemetryServiceMixin",
+          "line": 27,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "start_live_telemetry",
+          "callee": "getattr",
+          "lineNumber": 32
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "asyncio.Lock",
+          "lineNumber": 34
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "getattr",
+          "lineNumber": 37
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "thread.is_alive",
+          "lineNumber": 38
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "self.bind_event_loop",
+          "lineNumber": 42
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "asyncio.get_running_loop",
+          "lineNumber": 42
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "RuntimeError",
+          "lineNumber": 46
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "utc_now().isoformat",
+          "lineNumber": 50
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "utc_now",
+          "lineNumber": 50
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 51
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "self._should_use_existing_vehicle_connection",
+          "lineNumber": 54
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "threading.Thread",
+          "lineNumber": 57
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "self._telemetry_thread.start",
+          "lineNumber": 63
+        },
+        {
+          "caller": "start_live_telemetry",
+          "callee": "logger.info",
+          "lineNumber": 64
+        },
+        {
+          "caller": "_should_use_existing_vehicle_connection",
+          "callee": "getattr",
+          "lineNumber": 68
+        },
+        {
+          "caller": "_should_use_existing_vehicle_connection",
+          "callee": "bool",
+          "lineNumber": 69
+        },
+        {
+          "caller": "_should_use_existing_vehicle_connection",
+          "callee": "getattr",
+          "lineNumber": 69
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "getattr",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "logger.info",
+          "lineNumber": 73
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "drone.get_telemetry",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "time.time",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "is_dataclass",
+          "lineNumber": 83
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "asdict",
+          "lineNumber": 84
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "dict",
+          "lineNumber": 86
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "TelemetryEnvelopeV1",
+          "lineNumber": 90
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self._current_mission_runtime_id",
+          "lineNumber": 91
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self._runtime_db_flight_id",
+          "lineNumber": 92
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self._sequence",
+          "lineNumber": 93
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "datetime.fromtimestamp",
+          "lineNumber": 94
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self._mission_context",
+          "lineNumber": 96
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "TelemetryPayloadV1.from_legacy_snapshot",
+          "lineNumber": 97
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self._schedule_coro",
+          "lineNumber": 102
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self._fanout_runtime_envelope",
+          "lineNumber": 102
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 103
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "logger.warning",
+          "lineNumber": 106
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 107
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "time.sleep",
+          "lineNumber": 108
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "max",
+          "lineNumber": 108
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 111
+        },
+        {
+          "caller": "_vehicle_telemetry_worker",
+          "callee": "logger.info",
+          "lineNumber": 112
+        },
+        {
+          "caller": "stop_live_telemetry",
+          "callee": "getattr",
+          "lineNumber": 115
+        },
+        {
+          "caller": "stop_live_telemetry",
+          "callee": "asyncio.Lock",
+          "lineNumber": 117
+        },
+        {
+          "caller": "stop_live_telemetry",
+          "callee": "thread.is_alive",
+          "lineNumber": 125
+        },
+        {
+          "caller": "stop_live_telemetry",
+          "callee": "thread.join",
+          "lineNumber": 126
+        },
+        {
+          "caller": "stop_live_telemetry",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 129
+        },
+        {
+          "caller": "stop_live_telemetry",
+          "callee": "logger.info",
+          "lineNumber": 130
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.monotonic",
+          "lineNumber": 136
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.monotonic",
+          "lineNumber": 137
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.monotonic",
+          "lineNumber": 138
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "logger.info",
+          "lineNumber": 143
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._telemetry_connections.connect",
+          "lineNumber": 144
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 146
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "mav_conn.wait_heartbeat",
+          "lineNumber": 148
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "RuntimeError",
+          "lineNumber": 150
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.monotonic",
+          "lineNumber": 151
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._telemetry_connections.request_all_streams",
+          "lineNumber": 154
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "logger.warning",
+          "lineNumber": 156
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.monotonic",
+          "lineNumber": 160
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "int",
+          "lineNumber": 163
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "logger.warning",
+          "lineNumber": 166
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "suppress",
+          "lineNumber": 174
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "mav_conn.close",
+          "lineNumber": 175
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.sleep",
+          "lineNumber": 176
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "min",
+          "lineNumber": 176
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "min",
+          "lineNumber": 177
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._telemetry_connections.connect",
+          "lineNumber": 178
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 180
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.monotonic",
+          "lineNumber": 184
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "mav_conn.recv_match",
+          "lineNumber": 188
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.monotonic",
+          "lineNumber": 194
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "msg.to_dict",
+          "lineNumber": 195
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.time",
+          "lineNumber": 196
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "dict",
+          "lineNumber": 198
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 200
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._enqueue_raw_event",
+          "lineNumber": 203
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "raw_event_from_mavlink_message",
+          "lineNumber": 204
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "process_mavlink_message",
+          "lineNumber": 211
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "dict",
+          "lineNumber": 216
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "snapshot.update",
+          "lineNumber": 217
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "message_buffer.append",
+          "lineNumber": 220
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.monotonic",
+          "lineNumber": 222
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "consolidated.update",
+          "lineNumber": 229
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "float",
+          "lineNumber": 231
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._last_telemetry_snapshot.get",
+          "lineNumber": 231
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "dict",
+          "lineNumber": 232
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "snapshot.update",
+          "lineNumber": 233
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "TelemetryEnvelopeV1",
+          "lineNumber": 237
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._current_mission_runtime_id",
+          "lineNumber": 238
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._runtime_db_flight_id",
+          "lineNumber": 239
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._sequence",
+          "lineNumber": 240
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "datetime.fromtimestamp",
+          "lineNumber": 241
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._mission_context",
+          "lineNumber": 243
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "TelemetryPayloadV1.from_legacy_snapshot",
+          "lineNumber": 244
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "len",
+          "lineNumber": 246
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._schedule_coro",
+          "lineNumber": 249
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self._fanout_runtime_envelope",
+          "lineNumber": 249
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "message_buffer.clear",
+          "lineNumber": 250
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.sleep",
+          "lineNumber": 253
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "logger.error",
+          "lineNumber": 256
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "time.sleep",
+          "lineNumber": 257
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "logger.error",
+          "lineNumber": 259
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "suppress",
+          "lineNumber": 262
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "mav_conn.close",
+          "lineNumber": 263
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "self.fanout.set_runtime_active",
+          "lineNumber": 266
+        },
+        {
+          "caller": "_telemetry_worker",
+          "callee": "logger.info",
+          "lineNumber": 267
+        },
+        {
+          "caller": "heartbeat_task",
+          "callee": "logger.info",
+          "lineNumber": 270
+        },
+        {
+          "caller": "heartbeat_task",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 274
+        },
+        {
+          "caller": "heartbeat_task",
+          "callee": "time.time",
+          "lineNumber": 276
+        },
+        {
+          "caller": "heartbeat_task",
+          "callee": "asyncio.sleep",
+          "lineNumber": 279
+        },
+        {
+          "caller": "heartbeat_task",
+          "callee": "logging.warning",
+          "lineNumber": 283
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/types.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 78,
+      "nonEmptyLines": 68,
+      "classes": [
+        {
+          "name": "Coordinate",
+          "startLine": 7,
+          "endLine": 10,
+          "methods": [],
+          "properties": [
+            "lat",
+            "lon",
+            "alt"
+          ]
+        },
+        {
+          "name": "LocalCoordinate",
+          "startLine": 14,
+          "endLine": 18,
+          "methods": [],
+          "properties": [
+            "north_m",
+            "east_m",
+            "down_m",
+            "yaw_rad"
+          ]
+        },
+        {
+          "name": "EnuCoordinate",
+          "startLine": 22,
+          "endLine": 27,
+          "methods": [],
+          "properties": [
+            "x_m",
+            "y_m",
+            "z_m",
+            "yaw_rad",
+            "frame_id"
+          ]
+        },
+        {
+          "name": "Telemetry",
+          "startLine": 31,
+          "endLine": 70,
+          "methods": [],
+          "properties": [
+            "lat",
+            "lon",
+            "alt",
+            "heading",
+            "groundspeed",
+            "mode",
+            "battery_voltage",
+            "battery_current",
+            "battery_remaining",
+            "gps_fix_type",
+            "hdop",
+            "satellites_visible",
+            "heartbeat_age_s",
+            "is_armable",
+            "home_set",
+            "home_source",
+            "home_lat",
+            "home_lon",
+            "ekf_ok",
+            "local_north_m",
+            "local_east_m",
+            "local_down_m",
+            "local_position_ok",
+            "local_origin_ok",
+            "odometry_healthy",
+            "odometry_drift_m",
+            "lidar_healthy",
+            "estimator_ready",
+            "rangefinder_healthy",
+            "proximity_healthy",
+            "slam_ready",
+            "slam_tracking_ok",
+            "localization_confidence",
+            "dock_reference_ready",
+            "takeoff_clearance_m",
+            "obstacle_distance_m",
+            "ceiling_distance_m",
+            "system_time"
+          ]
+        },
+        {
+          "name": "Detection",
+          "startLine": 74,
+          "endLine": 78,
+          "methods": [],
+          "properties": [
+            "label",
+            "confidence",
+            "bbox",
+            "extra"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Coordinate",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "LocalCoordinate",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "EnuCoordinate",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "Telemetry",
+          "line": 30,
+          "isDefault": false
+        },
+        {
+          "name": "Detection",
+          "line": 73,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 0,
+        "classCount": 5
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/vehicle_port.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 93,
+      "nonEmptyLines": 73,
+      "classes": [
+        {
+          "name": "MissionAbortRequested",
+          "startLine": 7,
+          "endLine": 8,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "DroneClient",
+          "startLine": 11,
+          "endLine": 93,
+          "methods": [
+            "__init__",
+            "connect",
+            "arm_and_takeoff",
+            "goto",
+            "set_mode",
+            "get_telemetry",
+            "follow_waypoints",
+            "follow_local_setpoints",
+            "follow_enu_setpoints",
+            "land",
+            "wait_until_disarmed",
+            "close",
+            "set_groundspeed",
+            "start_image_capture",
+            "stop_image_capture",
+            "start_video_recording",
+            "stop_video_recording",
+            "send_velocity",
+            "pause_mission",
+            "resume_mission",
+            "abort_mission",
+            "download_captured_images",
+            "download_mapping_capture",
+            "download_lidar_capture"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "MissionAbortRequested",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "DroneClient",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/modules/vehicle_runtime/video_service.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 246,
+      "nonEmptyLines": 223,
+      "classes": [
+        {
+          "name": "RuntimeVideoServiceMixin",
+          "startLine": 19,
+          "endLine": 246,
+          "methods": [
+            "_init_video",
+            "video_health_monitor_task",
+            "video_frame_pump_task",
+            "_is_warehouse_owned_mission",
+            "_start_mission_recording",
+            "_stop_mission_recording",
+            "_register_mission_recording"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "RuntimeVideoServiceMixin",
+          "line": 19,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_init_video",
+          "callee": "logger.info",
+          "lineNumber": 23
+        },
+        {
+          "caller": "_init_video",
+          "callee": "logger.info",
+          "lineNumber": 26
+        },
+        {
+          "caller": "_init_video",
+          "callee": "logger.debug",
+          "lineNumber": 29
+        },
+        {
+          "caller": "_init_video",
+          "callee": "logger.warning",
+          "lineNumber": 33
+        },
+        {
+          "caller": "_init_video",
+          "callee": "self._video_factory.create",
+          "lineNumber": 35
+        },
+        {
+          "caller": "_init_video",
+          "callee": "logger.info",
+          "lineNumber": 36
+        },
+        {
+          "caller": "_init_video",
+          "callee": "logger.error",
+          "lineNumber": 38
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "logger.info",
+          "lineNumber": 43
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "dict",
+          "lineNumber": 49
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "self.video.get_connection_status",
+          "lineNumber": 49
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "status.setdefault",
+          "lineNumber": 50
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "status.setdefault",
+          "lineNumber": 51
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "getattr",
+          "lineNumber": 51
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "getattr",
+          "lineNumber": 52
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "callable",
+          "lineNumber": 53
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "status.setdefault",
+          "lineNumber": 54
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "recording_full_path",
+          "lineNumber": 54
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "VideoHealthPayloadV1.from_status",
+          "lineNumber": 55
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "VideoHealthEnvelopeV1",
+          "lineNumber": 56
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "getattr",
+          "lineNumber": 57
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "self._runtime_db_flight_id",
+          "lineNumber": 62
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "next_runtime_sequence",
+          "lineNumber": 63
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "getattr",
+          "lineNumber": 64
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "utc_now",
+          "lineNumber": 67
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "self._mission_context",
+          "lineNumber": 69
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 75
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "video_payload.to_legacy_status_payload",
+          "lineNumber": 77
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "video_envelope.emitted_at.timestamp",
+          "lineNumber": 78
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 82
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "video_envelope.model_dump_jsonable",
+          "lineNumber": 84
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "logging.warning",
+          "lineNumber": 90
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "self.mqtt.publish",
+          "lineNumber": 92
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "time.time",
+          "lineNumber": 97
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "asyncio.sleep",
+          "lineNumber": 102
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "logger.error",
+          "lineNumber": 105
+        },
+        {
+          "caller": "video_health_monitor_task",
+          "callee": "asyncio.sleep",
+          "lineNumber": 106
+        },
+        {
+          "caller": "video_frame_pump_task",
+          "callee": "logger.info",
+          "lineNumber": 113
+        },
+        {
+          "caller": "video_frame_pump_task",
+          "callee": "self.video.frames",
+          "lineNumber": 114
+        },
+        {
+          "caller": "video_frame_pump_task",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 117
+        },
+        {
+          "caller": "video_frame_pump_task",
+          "callee": "logger.error",
+          "lineNumber": 119
+        },
+        {
+          "caller": "video_frame_pump_task",
+          "callee": "asyncio.sleep",
+          "lineNumber": 125
+        },
+        {
+          "caller": "_is_warehouse_owned_mission",
+          "callee": "getattr",
+          "lineNumber": 137
+        },
+        {
+          "caller": "_is_warehouse_owned_mission",
+          "callee": "getattr",
+          "lineNumber": 138
+        },
+        {
+          "caller": "_is_warehouse_owned_mission",
+          "callee": "getattr",
+          "lineNumber": 139
+        },
+        {
+          "caller": "_is_warehouse_owned_mission",
+          "callee": "getattr",
+          "lineNumber": 140
+        },
+        {
+          "caller": "_is_warehouse_owned_mission",
+          "callee": "getattr",
+          "lineNumber": 142
+        },
+        {
+          "caller": "_is_warehouse_owned_mission",
+          "callee": "str(value or \"\").strip().lower",
+          "lineNumber": 143
+        },
+        {
+          "caller": "_is_warehouse_owned_mission",
+          "callee": "str(value or \"\").strip",
+          "lineNumber": 143
+        },
+        {
+          "caller": "_is_warehouse_owned_mission",
+          "callee": "str",
+          "lineNumber": 143
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "bool",
+          "lineNumber": 150
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "getattr",
+          "lineNumber": 150
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "self._is_warehouse_owned_mission",
+          "lineNumber": 151
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "logger.warning",
+          "lineNumber": 154
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "self._shared_video.start_recording",
+          "lineNumber": 159
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "bool",
+          "lineNumber": 160
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "status.get",
+          "lineNumber": 160
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "self.record_flight_event",
+          "lineNumber": 162
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "status.get",
+          "lineNumber": 166
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "status.get",
+          "lineNumber": 167
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "logger.error",
+          "lineNumber": 175
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "getattr",
+          "lineNumber": 178
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "bool",
+          "lineNumber": 179
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "getattr",
+          "lineNumber": 179
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 182
+        },
+        {
+          "caller": "_start_mission_recording",
+          "callee": "logger.error",
+          "lineNumber": 185
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "self.video.recording_full_path",
+          "lineNumber": 194
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "asyncio.to_thread",
+          "lineNumber": 195
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "self._register_mission_recording",
+          "lineNumber": 196
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "logger.warning",
+          "lineNumber": 202
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "self._shared_video.stop_recording",
+          "lineNumber": 205
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "self._register_mission_recording",
+          "lineNumber": 206
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "status.get",
+          "lineNumber": 208
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "status.get",
+          "lineNumber": 209
+        },
+        {
+          "caller": "_stop_mission_recording",
+          "callee": "logger.warning",
+          "lineNumber": 212
+        },
+        {
+          "caller": "_register_mission_recording",
+          "callee": "self.record_flight_event",
+          "lineNumber": 222
+        },
+        {
+          "caller": "_register_mission_recording",
+          "callee": "getattr",
+          "lineNumber": 234
+        },
+        {
+          "caller": "_register_mission_recording",
+          "callee": "register_mission_flight_recording",
+          "lineNumber": 242
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/tests/test_flight_profile.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 20,
+      "functions": [
+        {
+          "name": "test_outdoor_missions_use_global_profile",
+          "startLine": 9,
+          "endLine": 14,
+          "params": []
+        },
+        {
+          "name": "test_warehouse_missions_use_indoor_local_profile",
+          "startLine": 17,
+          "endLine": 22,
+          "params": []
+        },
+        {
+          "name": "test_environment_override_supports_indoor_controlled_flight",
+          "startLine": 25,
+          "endLine": 29,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_outdoor_missions_use_global_profile",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "test_warehouse_missions_use_indoor_local_profile",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "test_environment_override_supports_indoor_controlled_flight",
+          "line": 25,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_outdoor_missions_use_global_profile",
+          "callee": "flight_profile_for_mission_type",
+          "lineNumber": 10
+        },
+        {
+          "caller": "test_warehouse_missions_use_indoor_local_profile",
+          "callee": "flight_profile_for_mission_type",
+          "lineNumber": 18
+        },
+        {
+          "caller": "test_environment_override_supports_indoor_controlled_flight",
+          "callee": "flight_profile_for_environment",
+          "lineNumber": 26
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_local_dev_runtime.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 185,
+      "nonEmptyLines": 135,
+      "functions": [
+        {
+          "name": "test_mjpeg_proxy_waits_for_drone_link",
+          "startLine": 37,
+          "endLine": 54,
+          "params": [
+            "monkeypatch"
+          ]
+        },
+        {
+          "name": "test_start_video_stream_waits_for_drone_link",
+          "startLine": 58,
+          "endLine": 80,
+          "params": [
+            "monkeypatch"
+          ]
+        },
+        {
+          "name": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "startLine": 84,
+          "endLine": 93,
+          "params": [
+            "monkeypatch"
+          ]
+        },
+        {
+          "name": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "startLine": 97,
+          "endLine": 122,
+          "params": [
+            "monkeypatch"
+          ]
+        },
+        {
+          "name": "test_start_video_stream_honors_backoff_without_restarting",
+          "startLine": 126,
+          "endLine": 156,
+          "params": [
+            "monkeypatch"
+          ]
+        },
+        {
+          "name": "_fake_vehicle",
+          "startLine": 159,
+          "endLine": 166,
+          "params": []
+        },
+        {
+          "name": "test_local_frame_home_fallback_allowed_in_sim",
+          "startLine": 169,
+          "endLine": 175,
+          "params": [
+            "monkeypatch"
+          ]
+        },
+        {
+          "name": "test_real_flight_blocks_local_frame_home_fallback",
+          "startLine": 178,
+          "endLine": 185,
+          "params": [
+            "monkeypatch"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "_FakeVideoRuntime",
+          "startLine": 13,
+          "endLine": 33,
+          "methods": [
+            "source_url",
+            "ensure_running",
+            "status",
+            "readiness_status"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_FakeVideoRuntime",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "test_mjpeg_proxy_waits_for_drone_link",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "test_start_video_stream_waits_for_drone_link",
+          "line": 57,
+          "isDefault": false
+        },
+        {
+          "name": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "line": 83,
+          "isDefault": false
+        },
+        {
+          "name": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "line": 96,
+          "isDefault": false
+        },
+        {
+          "name": "test_start_video_stream_honors_backoff_without_restarting",
+          "line": 125,
+          "isDefault": false
+        },
+        {
+          "name": "_fake_vehicle",
+          "line": 159,
+          "isDefault": false
+        },
+        {
+          "name": "test_local_frame_home_fallback_allowed_in_sim",
+          "line": 169,
+          "isDefault": false
+        },
+        {
+          "name": "test_real_flight_blocks_local_frame_home_fallback",
+          "line": 178,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ensure_running",
+          "callee": "RuntimeError",
+          "lineNumber": 18
+        },
+        {
+          "caller": "readiness_status",
+          "callee": "self.status",
+          "lineNumber": 28
+        },
+        {
+          "caller": "ensure_running",
+          "callee": "super().ensure_running",
+          "lineNumber": 43
+        },
+        {
+          "caller": "ensure_running",
+          "callee": "super",
+          "lineNumber": 43
+        },
+        {
+          "caller": "test_mjpeg_proxy_waits_for_drone_link",
+          "callee": "_Runtime",
+          "lineNumber": 45
+        },
+        {
+          "caller": "test_mjpeg_proxy_waits_for_drone_link",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 46
+        },
+        {
+          "caller": "test_mjpeg_proxy_waits_for_drone_link",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 47
+        },
+        {
+          "caller": "test_mjpeg_proxy_waits_for_drone_link",
+          "callee": "pytest.raises",
+          "lineNumber": 49
+        },
+        {
+          "caller": "test_mjpeg_proxy_waits_for_drone_link",
+          "callee": "media_api.mjpeg_proxy",
+          "lineNumber": 50
+        },
+        {
+          "caller": "test_mjpeg_proxy_waits_for_drone_link",
+          "callee": "SimpleNamespace",
+          "lineNumber": 50
+        },
+        {
+          "caller": "test_mjpeg_proxy_waits_for_drone_link",
+          "callee": "object",
+          "lineNumber": 50
+        },
+        {
+          "caller": "ensure_running",
+          "callee": "super().ensure_running",
+          "lineNumber": 69
+        },
+        {
+          "caller": "ensure_running",
+          "callee": "super",
+          "lineNumber": 69
+        },
+        {
+          "caller": "test_start_video_stream_waits_for_drone_link",
+          "callee": "_Runtime",
+          "lineNumber": 71
+        },
+        {
+          "caller": "test_start_video_stream_waits_for_drone_link",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 72
+        },
+        {
+          "caller": "test_start_video_stream_waits_for_drone_link",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 73
+        },
+        {
+          "caller": "test_start_video_stream_waits_for_drone_link",
+          "callee": "media_api.start_video_stream",
+          "lineNumber": 75
+        },
+        {
+          "caller": "test_start_video_stream_waits_for_drone_link",
+          "callee": "object",
+          "lineNumber": 75
+        },
+        {
+          "caller": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "callee": "_FakeVideoRuntime",
+          "lineNumber": 85
+        },
+        {
+          "caller": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 86
+        },
+        {
+          "caller": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 87
+        },
+        {
+          "caller": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "callee": "pytest.raises",
+          "lineNumber": 89
+        },
+        {
+          "caller": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "callee": "media_api.mjpeg_proxy",
+          "lineNumber": 90
+        },
+        {
+          "caller": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "callee": "SimpleNamespace",
+          "lineNumber": 90
+        },
+        {
+          "caller": "test_mjpeg_proxy_returns_503_when_camera_unavailable",
+          "callee": "object",
+          "lineNumber": 90
+        },
+        {
+          "caller": "readiness_status",
+          "callee": "self.status",
+          "lineNumber": 103
+        },
+        {
+          "caller": "ensure_running",
+          "callee": "super().ensure_running",
+          "lineNumber": 111
+        },
+        {
+          "caller": "ensure_running",
+          "callee": "super",
+          "lineNumber": 111
+        },
+        {
+          "caller": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "callee": "_BackoffRuntime",
+          "lineNumber": 113
+        },
+        {
+          "caller": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 114
+        },
+        {
+          "caller": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 115
+        },
+        {
+          "caller": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "callee": "pytest.raises",
+          "lineNumber": 117
+        },
+        {
+          "caller": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "callee": "media_api.mjpeg_proxy",
+          "lineNumber": 118
+        },
+        {
+          "caller": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "callee": "SimpleNamespace",
+          "lineNumber": 118
+        },
+        {
+          "caller": "test_mjpeg_proxy_honors_backoff_without_starting_worker",
+          "callee": "object",
+          "lineNumber": 118
+        },
+        {
+          "caller": "readiness_status",
+          "callee": "self.status",
+          "lineNumber": 133
+        },
+        {
+          "caller": "ensure_running",
+          "callee": "super().ensure_running",
+          "lineNumber": 145
+        },
+        {
+          "caller": "ensure_running",
+          "callee": "super",
+          "lineNumber": 145
+        },
+        {
+          "caller": "test_start_video_stream_honors_backoff_without_restarting",
+          "callee": "_BackoffRuntime",
+          "lineNumber": 147
+        },
+        {
+          "caller": "test_start_video_stream_honors_backoff_without_restarting",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 148
+        },
+        {
+          "caller": "test_start_video_stream_honors_backoff_without_restarting",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 149
+        },
+        {
+          "caller": "test_start_video_stream_honors_backoff_without_restarting",
+          "callee": "media_api.start_video_stream",
+          "lineNumber": 151
+        },
+        {
+          "caller": "test_start_video_stream_honors_backoff_without_restarting",
+          "callee": "object",
+          "lineNumber": 151
+        },
+        {
+          "caller": "_fake_vehicle",
+          "callee": "SimpleNamespace",
+          "lineNumber": 160
+        },
+        {
+          "caller": "_fake_vehicle",
+          "callee": "SimpleNamespace",
+          "lineNumber": 162
+        },
+        {
+          "caller": "_fake_vehicle",
+          "callee": "SimpleNamespace",
+          "lineNumber": 163
+        },
+        {
+          "caller": "_fake_vehicle",
+          "callee": "SimpleNamespace",
+          "lineNumber": 164
+        },
+        {
+          "caller": "test_local_frame_home_fallback_allowed_in_sim",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 170
+        },
+        {
+          "caller": "test_local_frame_home_fallback_allowed_in_sim",
+          "callee": "_fake_vehicle",
+          "lineNumber": 170
+        },
+        {
+          "caller": "test_local_frame_home_fallback_allowed_in_sim",
+          "callee": "MavlinkDrone",
+          "lineNumber": 172
+        },
+        {
+          "caller": "test_local_frame_home_fallback_allowed_in_sim",
+          "callee": "drone.connect",
+          "lineNumber": 173
+        },
+        {
+          "caller": "test_real_flight_blocks_local_frame_home_fallback",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 179
+        },
+        {
+          "caller": "test_real_flight_blocks_local_frame_home_fallback",
+          "callee": "_fake_vehicle",
+          "lineNumber": 179
+        },
+        {
+          "caller": "test_real_flight_blocks_local_frame_home_fallback",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 180
+        },
+        {
+          "caller": "test_real_flight_blocks_local_frame_home_fallback",
+          "callee": "MavlinkDrone",
+          "lineNumber": 182
+        },
+        {
+          "caller": "test_real_flight_blocks_local_frame_home_fallback",
+          "callee": "pytest.raises",
+          "lineNumber": 184
+        },
+        {
+          "caller": "test_real_flight_blocks_local_frame_home_fallback",
+          "callee": "drone.connect",
+          "lineNumber": 185
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 9,
+        "functionCount": 8,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/tests/test_mission_builder_indoor_exploration.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 25,
+      "nonEmptyLines": 21,
+      "functions": [
+        {
+          "name": "test_indoor_exploration_builds_existing_planner",
+          "startLine": 5,
+          "endLine": 25,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_indoor_exploration_builds_existing_planner",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_indoor_exploration_builds_existing_planner",
+          "callee": "MissionCreateIn.model_validate",
+          "lineNumber": 6
+        },
+        {
+          "caller": "test_indoor_exploration_builds_existing_planner",
+          "callee": "build_mission",
+          "lineNumber": 21
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_mission_runtime_finalization.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 95,
+      "nonEmptyLines": 79,
+      "functions": [
+        {
+          "name": "_repository_with_row",
+          "startLine": 8,
+          "endLine": 18,
+          "params": [
+            "row"
+          ]
+        },
+        {
+          "name": "test_finalize_execution_updates_active_runtime_atomically",
+          "startLine": 21,
+          "endLine": 39,
+          "params": []
+        },
+        {
+          "name": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "startLine": 42,
+          "endLine": 59,
+          "params": []
+        },
+        {
+          "name": "test_execute_mission_uses_one_authoritative_finalizer",
+          "startLine": 62,
+          "endLine": 95,
+          "params": [
+            "monkeypatch"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "_repository_with_row",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "test_finalize_execution_updates_active_runtime_atomically",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "test_execute_mission_uses_one_authoritative_finalizer",
+          "line": 62,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_repository_with_row",
+          "callee": "MagicMock",
+          "lineNumber": 9
+        },
+        {
+          "caller": "_repository_with_row",
+          "callee": "MagicMock",
+          "lineNumber": 10
+        },
+        {
+          "caller": "_repository_with_row",
+          "callee": "AsyncMock",
+          "lineNumber": 12
+        },
+        {
+          "caller": "_repository_with_row",
+          "callee": "AsyncMock",
+          "lineNumber": 13
+        },
+        {
+          "caller": "_repository_with_row",
+          "callee": "AsyncMock",
+          "lineNumber": 14
+        },
+        {
+          "caller": "_repository_with_row",
+          "callee": "MagicMock",
+          "lineNumber": 15
+        },
+        {
+          "caller": "_repository_with_row",
+          "callee": "AsyncMock",
+          "lineNumber": 16
+        },
+        {
+          "caller": "_repository_with_row",
+          "callee": "AsyncMock",
+          "lineNumber": 17
+        },
+        {
+          "caller": "_repository_with_row",
+          "callee": "MissionRuntimeRepository",
+          "lineNumber": 18
+        },
+        {
+          "caller": "test_finalize_execution_updates_active_runtime_atomically",
+          "callee": "SimpleNamespace",
+          "lineNumber": 22
+        },
+        {
+          "caller": "test_finalize_execution_updates_active_runtime_atomically",
+          "callee": "_repository_with_row",
+          "lineNumber": 28
+        },
+        {
+          "caller": "test_finalize_execution_updates_active_runtime_atomically",
+          "callee": "asyncio.run",
+          "lineNumber": 30
+        },
+        {
+          "caller": "test_finalize_execution_updates_active_runtime_atomically",
+          "callee": "repository.finalize_execution",
+          "lineNumber": 31
+        },
+        {
+          "caller": "test_finalize_execution_updates_active_runtime_atomically",
+          "callee": "session.commit.assert_awaited_once",
+          "lineNumber": 38
+        },
+        {
+          "caller": "test_finalize_execution_updates_active_runtime_atomically",
+          "callee": "session.refresh.assert_awaited_once_with",
+          "lineNumber": 39
+        },
+        {
+          "caller": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "callee": "SimpleNamespace",
+          "lineNumber": 43
+        },
+        {
+          "caller": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "callee": "object",
+          "lineNumber": 47
+        },
+        {
+          "caller": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "callee": "_repository_with_row",
+          "lineNumber": 49
+        },
+        {
+          "caller": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "callee": "asyncio.run",
+          "lineNumber": 51
+        },
+        {
+          "caller": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "callee": "repository.finalize_execution",
+          "lineNumber": 52
+        },
+        {
+          "caller": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "callee": "session.commit.assert_not_awaited",
+          "lineNumber": 58
+        },
+        {
+          "caller": "test_finalize_execution_preserves_concurrent_terminal_state",
+          "callee": "session.refresh.assert_not_awaited",
+          "lineNumber": 59
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "MagicMock",
+          "lineNumber": 65
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "AsyncMock",
+          "lineNumber": 66
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "AsyncMock",
+          "lineNumber": 67
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "AsyncMock",
+          "lineNumber": 68
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "AsyncMock",
+          "lineNumber": 69
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 70
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 71
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 76
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "SimpleNamespace",
+          "lineNumber": 77
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "asyncio.run",
+          "lineNumber": 79
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "routes.execute_mission",
+          "lineNumber": 80
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "set_runtime_state.assert_awaited_once_with",
+          "lineNumber": 89
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "finalize_execution.assert_awaited_once_with",
+          "lineNumber": 90
+        },
+        {
+          "caller": "test_execute_mission_uses_one_authoritative_finalizer",
+          "callee": "legacy_get.assert_not_awaited",
+          "lineNumber": 95
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_patrol_ai_tasks.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 54,
+      "nonEmptyLines": 40,
+      "functions": [
+        {
+          "name": "test_coerce_ai_tasks_defaults_when_empty",
+          "startLine": 11,
+          "endLine": 17,
+          "params": []
+        },
+        {
+          "name": "test_coerce_ai_tasks_deduplicates",
+          "startLine": 20,
+          "endLine": 23,
+          "params": []
+        },
+        {
+          "name": "test_detector_labels_for_vehicle_only",
+          "startLine": 26,
+          "endLine": 30,
+          "params": []
+        },
+        {
+          "name": "test_detector_labels_for_motion_only_skips_yolo",
+          "startLine": 33,
+          "endLine": 36,
+          "params": []
+        },
+        {
+          "name": "test_map_anomaly_to_ai_task",
+          "startLine": 39,
+          "endLine": 44,
+          "params": []
+        },
+        {
+          "name": "test_live_detection_ai_task_respects_enabled_set",
+          "startLine": 47,
+          "endLine": 50,
+          "params": []
+        },
+        {
+          "name": "test_frozenset_ai_tasks",
+          "startLine": 53,
+          "endLine": 54,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_coerce_ai_tasks_defaults_when_empty",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "test_coerce_ai_tasks_deduplicates",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "test_detector_labels_for_vehicle_only",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "test_detector_labels_for_motion_only_skips_yolo",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "test_map_anomaly_to_ai_task",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "test_live_detection_ai_task_respects_enabled_set",
+          "line": 47,
+          "isDefault": false
+        },
+        {
+          "name": "test_frozenset_ai_tasks",
+          "line": 53,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_coerce_ai_tasks_defaults_when_empty",
+          "callee": "coerce_ai_tasks",
+          "lineNumber": 12
+        },
+        {
+          "caller": "test_coerce_ai_tasks_deduplicates",
+          "callee": "coerce_ai_tasks",
+          "lineNumber": 21
+        },
+        {
+          "caller": "test_detector_labels_for_vehicle_only",
+          "callee": "frozenset",
+          "lineNumber": 27
+        },
+        {
+          "caller": "test_detector_labels_for_vehicle_only",
+          "callee": "detector_labels_for_tasks",
+          "lineNumber": 28
+        },
+        {
+          "caller": "test_detector_labels_for_vehicle_only",
+          "callee": "frozenset",
+          "lineNumber": 28
+        },
+        {
+          "caller": "test_detector_labels_for_motion_only_skips_yolo",
+          "callee": "frozenset",
+          "lineNumber": 34
+        },
+        {
+          "caller": "test_detector_labels_for_motion_only_skips_yolo",
+          "callee": "detector_labels_for_tasks",
+          "lineNumber": 35
+        },
+        {
+          "caller": "test_detector_labels_for_motion_only_skips_yolo",
+          "callee": "frozenset",
+          "lineNumber": 35
+        },
+        {
+          "caller": "test_detector_labels_for_motion_only_skips_yolo",
+          "callee": "yolo_detection_enabled",
+          "lineNumber": 36
+        },
+        {
+          "caller": "test_map_anomaly_to_ai_task",
+          "callee": "map_anomaly_to_ai_task",
+          "lineNumber": 40
+        },
+        {
+          "caller": "test_map_anomaly_to_ai_task",
+          "callee": "map_anomaly_to_ai_task",
+          "lineNumber": 41
+        },
+        {
+          "caller": "test_map_anomaly_to_ai_task",
+          "callee": "map_anomaly_to_ai_task",
+          "lineNumber": 42
+        },
+        {
+          "caller": "test_map_anomaly_to_ai_task",
+          "callee": "map_anomaly_to_ai_task",
+          "lineNumber": 43
+        },
+        {
+          "caller": "test_map_anomaly_to_ai_task",
+          "callee": "map_anomaly_to_ai_task",
+          "lineNumber": 44
+        },
+        {
+          "caller": "test_live_detection_ai_task_respects_enabled_set",
+          "callee": "frozenset",
+          "lineNumber": 48
+        },
+        {
+          "caller": "test_live_detection_ai_task_respects_enabled_set",
+          "callee": "live_detection_ai_task",
+          "lineNumber": 49
+        },
+        {
+          "caller": "test_live_detection_ai_task_respects_enabled_set",
+          "callee": "live_detection_ai_task",
+          "lineNumber": 50
+        },
+        {
+          "caller": "test_frozenset_ai_tasks",
+          "callee": "frozenset_ai_tasks",
+          "lineNumber": 54
+        },
+        {
+          "caller": "test_frozenset_ai_tasks",
+          "callee": "frozenset",
+          "lineNumber": 54
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 7,
+        "functionCount": 7,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_patrol_event_orbit.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 75,
+      "nonEmptyLines": 64,
+      "functions": [
+        {
+          "name": "_belgian_test_geofence",
+          "startLine": 10,
+          "endLine": 16,
+          "params": []
+        },
+        {
+          "name": "test_max_orbit_radius_clamped_near_geofence_edge",
+          "startLine": 19,
+          "endLine": 31,
+          "params": []
+        },
+        {
+          "name": "test_event_triggered_plan_orbit_stays_inside_geofence",
+          "startLine": 34,
+          "endLine": 49,
+          "params": []
+        },
+        {
+          "name": "test_event_triggered_plan_uses_circular_orbit_not_cardinal_box",
+          "startLine": 52,
+          "endLine": 75,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_belgian_test_geofence",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "test_max_orbit_radius_clamped_near_geofence_edge",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "test_event_triggered_plan_orbit_stays_inside_geofence",
+          "line": 34,
+          "isDefault": false
+        },
+        {
+          "name": "test_event_triggered_plan_uses_circular_orbit_not_cardinal_box",
+          "line": 52,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_max_orbit_radius_clamped_near_geofence_edge",
+          "callee": "_belgian_test_geofence",
+          "lineNumber": 20
+        },
+        {
+          "caller": "test_max_orbit_radius_clamped_near_geofence_edge",
+          "callee": "max_orbit_radius_inside_polygon",
+          "lineNumber": 23
+        },
+        {
+          "caller": "test_event_triggered_plan_orbit_stays_inside_geofence",
+          "callee": "_belgian_test_geofence",
+          "lineNumber": 35
+        },
+        {
+          "caller": "test_event_triggered_plan_orbit_stays_inside_geofence",
+          "callee": "generate_event_triggered_patrol_plan",
+          "lineNumber": 37
+        },
+        {
+          "caller": "test_event_triggered_plan_orbit_stays_inside_geofence",
+          "callee": "len",
+          "lineNumber": 46
+        },
+        {
+          "caller": "test_event_triggered_plan_orbit_stays_inside_geofence",
+          "callee": "point_in_polygon",
+          "lineNumber": 49
+        },
+        {
+          "caller": "test_event_triggered_plan_uses_circular_orbit_not_cardinal_box",
+          "callee": "generate_event_triggered_patrol_plan",
+          "lineNumber": 59
+        },
+        {
+          "caller": "test_event_triggered_plan_uses_circular_orbit_not_cardinal_box",
+          "callee": "len",
+          "lineNumber": 67
+        },
+        {
+          "caller": "test_event_triggered_plan_uses_circular_orbit_not_cardinal_box",
+          "callee": "distances_m.append",
+          "lineNumber": 74
+        },
+        {
+          "caller": "test_event_triggered_plan_uses_circular_orbit_not_cardinal_box",
+          "callee": "len",
+          "lineNumber": 75
+        },
+        {
+          "caller": "test_event_triggered_plan_uses_circular_orbit_not_cardinal_box",
+          "callee": "round",
+          "lineNumber": 75
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_patrol_event_trigger_mqtt.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 27,
+      "functions": [
+        {
+          "name": "test_patrol_mqtt_topic_org_scoped",
+          "startLine": 10,
+          "endLine": 11,
+          "params": []
+        },
+        {
+          "name": "test_patrol_mqtt_topic_user_scoped",
+          "startLine": 14,
+          "endLine": 15,
+          "params": []
+        },
+        {
+          "name": "test_patrol_mqtt_subscribe_pattern",
+          "startLine": 18,
+          "endLine": 19,
+          "params": []
+        },
+        {
+          "name": "test_build_event_trigger_integration_info_includes_mqtt",
+          "startLine": 22,
+          "endLine": 36,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_patrol_mqtt_topic_org_scoped",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "test_patrol_mqtt_topic_user_scoped",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "test_patrol_mqtt_subscribe_pattern",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "test_build_event_trigger_integration_info_includes_mqtt",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_patrol_mqtt_topic_org_scoped",
+          "callee": "patrol_mqtt_topic",
+          "lineNumber": 11
+        },
+        {
+          "caller": "test_patrol_mqtt_topic_user_scoped",
+          "callee": "patrol_mqtt_topic",
+          "lineNumber": 15
+        },
+        {
+          "caller": "test_patrol_mqtt_subscribe_pattern",
+          "callee": "patrol_mqtt_subscribe_pattern",
+          "lineNumber": 19
+        },
+        {
+          "caller": "test_build_event_trigger_integration_info_includes_mqtt",
+          "callee": "build_event_trigger_integration_info",
+          "lineNumber": 23
+        },
+        {
+          "caller": "test_build_event_trigger_integration_info_includes_mqtt",
+          "callee": "integration.webhook_url.endswith",
+          "lineNumber": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_patrol_sensor_trigger.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 99,
+      "nonEmptyLines": 79,
+      "functions": [
+        {
+          "name": "test_resolve_trigger_location_prefers_coordinates",
+          "startLine": 16,
+          "endLine": 22,
+          "params": []
+        },
+        {
+          "name": "test_resolve_trigger_location_uses_sensor_registry",
+          "startLine": 25,
+          "endLine": 31,
+          "params": []
+        },
+        {
+          "name": "test_choose_response_mode",
+          "startLine": 34,
+          "endLine": 36,
+          "params": []
+        },
+        {
+          "name": "test_geofence_validation",
+          "startLine": 39,
+          "endLine": 43,
+          "params": []
+        },
+        {
+          "name": "test_sensor_trigger_geofence_tolerance_accepts_nearby_point",
+          "startLine": 46,
+          "endLine": 56,
+          "params": []
+        },
+        {
+          "name": "test_sensor_trigger_payload_allows_optional_sensor_id",
+          "startLine": 59,
+          "endLine": 62,
+          "params": []
+        },
+        {
+          "name": "test_create_mission_from_dict_requires_type_not_task_type",
+          "startLine": 65,
+          "endLine": 72,
+          "params": []
+        },
+        {
+          "name": "test_preflight_block_detail_lists_failed_checks",
+          "startLine": 75,
+          "endLine": 99,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_resolve_trigger_location_prefers_coordinates",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "test_resolve_trigger_location_uses_sensor_registry",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "test_choose_response_mode",
+          "line": 34,
+          "isDefault": false
+        },
+        {
+          "name": "test_geofence_validation",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "test_sensor_trigger_geofence_tolerance_accepts_nearby_point",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "test_sensor_trigger_payload_allows_optional_sensor_id",
+          "line": 59,
+          "isDefault": false
+        },
+        {
+          "name": "test_create_mission_from_dict_requires_type_not_task_type",
+          "line": 65,
+          "isDefault": false
+        },
+        {
+          "name": "test_preflight_block_detail_lists_failed_checks",
+          "line": 75,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_resolve_trigger_location_prefers_coordinates",
+          "callee": "resolve_trigger_location",
+          "lineNumber": 17
+        },
+        {
+          "caller": "test_resolve_trigger_location_uses_sensor_registry",
+          "callee": "resolve_trigger_location",
+          "lineNumber": 26
+        },
+        {
+          "caller": "test_choose_response_mode",
+          "callee": "choose_response_mode",
+          "lineNumber": 35
+        },
+        {
+          "caller": "test_choose_response_mode",
+          "callee": "choose_response_mode",
+          "lineNumber": 36
+        },
+        {
+          "caller": "test_geofence_validation",
+          "callee": "validate_location_in_geofence",
+          "lineNumber": 41
+        },
+        {
+          "caller": "test_geofence_validation",
+          "callee": "validate_location_in_geofence",
+          "lineNumber": 42
+        },
+        {
+          "caller": "test_geofence_validation",
+          "callee": "point_in_polygon",
+          "lineNumber": 43
+        },
+        {
+          "caller": "test_sensor_trigger_geofence_tolerance_accepts_nearby_point",
+          "callee": "validate_location_in_geofence",
+          "lineNumber": 54
+        },
+        {
+          "caller": "test_sensor_trigger_geofence_tolerance_accepts_nearby_point",
+          "callee": "point_in_geofence_within_m",
+          "lineNumber": 55
+        },
+        {
+          "caller": "test_sensor_trigger_geofence_tolerance_accepts_nearby_point",
+          "callee": "distance_point_to_polygon_m",
+          "lineNumber": 56
+        },
+        {
+          "caller": "test_sensor_trigger_payload_allows_optional_sensor_id",
+          "callee": "PatrolSensorTriggerIn",
+          "lineNumber": 60
+        },
+        {
+          "caller": "test_create_mission_from_dict_requires_type_not_task_type",
+          "callee": "pytest.raises",
+          "lineNumber": 69
+        },
+        {
+          "caller": "test_create_mission_from_dict_requires_type_not_task_type",
+          "callee": "create_mission_from_dict",
+          "lineNumber": 70
+        },
+        {
+          "caller": "test_preflight_block_detail_lists_failed_checks",
+          "callee": "CheckResult",
+          "lineNumber": 83
+        },
+        {
+          "caller": "test_preflight_block_detail_lists_failed_checks",
+          "callee": "CheckResult",
+          "lineNumber": 90
+        },
+        {
+          "caller": "test_preflight_block_detail_lists_failed_checks",
+          "callee": "_preflight_block_http_detail",
+          "lineNumber": 97
+        },
+        {
+          "caller": "test_preflight_block_detail_lists_failed_checks",
+          "callee": "_Report",
+          "lineNumber": 97
+        },
+        {
+          "caller": "test_preflight_block_detail_lists_failed_checks",
+          "callee": "len",
+          "lineNumber": 99
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 8,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_scheduling_job.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 27,
+      "functions": [
+        {
+          "name": "test_mission_payload_adds_template_identity",
+          "startLine": 9,
+          "endLine": 25,
+          "params": []
+        },
+        {
+          "name": "test_mission_payload_rejects_invalid_template_config",
+          "startLine": 28,
+          "endLine": 36,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_mission_payload_adds_template_identity",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "test_mission_payload_rejects_invalid_template_config",
+          "line": 28,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_mission_payload_adds_template_identity",
+          "callee": "SimpleNamespace",
+          "lineNumber": 10
+        },
+        {
+          "caller": "test_mission_payload_adds_template_identity",
+          "callee": "_mission_payload",
+          "lineNumber": 22
+        },
+        {
+          "caller": "test_mission_payload_rejects_invalid_template_config",
+          "callee": "SimpleNamespace",
+          "lineNumber": 29
+        },
+        {
+          "caller": "test_mission_payload_rejects_invalid_template_config",
+          "callee": "pytest.raises",
+          "lineNumber": 35
+        },
+        {
+          "caller": "test_mission_payload_rejects_invalid_template_config",
+          "callee": "_mission_payload",
+          "lineNumber": 36
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_vehicle_frame_conversion.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 63,
+      "nonEmptyLines": 50,
+      "functions": [
+        {
+          "name": "test_known_enu_landmark_converts_to_ned_once",
+          "startLine": 14,
+          "endLine": 22,
+          "params": []
+        },
+        {
+          "name": "test_enu_ned_round_trip_preserves_pose",
+          "startLine": 26,
+          "endLine": 34,
+          "params": [
+            "yaw_rad"
+          ]
+        },
+        {
+          "name": "test_locked_map_transform_is_applied_before_ned_conversion",
+          "startLine": 37,
+          "endLine": 56,
+          "params": []
+        },
+        {
+          "name": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "startLine": 59,
+          "endLine": 63,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_known_enu_landmark_converts_to_ned_once",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "test_enu_ned_round_trip_preserves_pose",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "test_locked_map_transform_is_applied_before_ned_conversion",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "line": 59,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_known_enu_landmark_converts_to_ned_once",
+          "callee": "enu_to_local_ned",
+          "lineNumber": 15
+        },
+        {
+          "caller": "test_known_enu_landmark_converts_to_ned_once",
+          "callee": "EnuCoordinate",
+          "lineNumber": 16
+        },
+        {
+          "caller": "test_known_enu_landmark_converts_to_ned_once",
+          "callee": "pytest.approx",
+          "lineNumber": 20
+        },
+        {
+          "caller": "test_known_enu_landmark_converts_to_ned_once",
+          "callee": "local_ned_position_to_enu",
+          "lineNumber": 21
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "EnuCoordinate",
+          "lineNumber": 27
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "local_ned_to_enu",
+          "lineNumber": 28
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "enu_to_local_ned",
+          "lineNumber": 28
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "pytest.approx",
+          "lineNumber": 30
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "math.sin",
+          "lineNumber": 33
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "pytest.approx",
+          "lineNumber": 33
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "math.sin",
+          "lineNumber": 33
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "math.cos",
+          "lineNumber": 34
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "pytest.approx",
+          "lineNumber": 34
+        },
+        {
+          "caller": "test_enu_ned_round_trip_preserves_pose",
+          "callee": "math.cos",
+          "lineNumber": 34
+        },
+        {
+          "caller": "test_locked_map_transform_is_applied_before_ned_conversion",
+          "callee": "EnuCoordinate",
+          "lineNumber": 38
+        },
+        {
+          "caller": "test_locked_map_transform_is_applied_before_ned_conversion",
+          "callee": "warehouse_map_to_odom_enu",
+          "lineNumber": 45
+        },
+        {
+          "caller": "test_locked_map_transform_is_applied_before_ned_conversion",
+          "callee": "enu_to_local_ned",
+          "lineNumber": 52
+        },
+        {
+          "caller": "test_locked_map_transform_is_applied_before_ned_conversion",
+          "callee": "pytest.approx",
+          "lineNumber": 54
+        },
+        {
+          "caller": "test_locked_map_transform_is_applied_before_ned_conversion",
+          "callee": "pytest.approx",
+          "lineNumber": 55
+        },
+        {
+          "caller": "test_locked_map_transform_is_applied_before_ned_conversion",
+          "callee": "pytest.approx",
+          "lineNumber": 56
+        },
+        {
+          "caller": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "callee": "pytest.raises",
+          "lineNumber": 60
+        },
+        {
+          "caller": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "callee": "enu_to_local_ned",
+          "lineNumber": 61
+        },
+        {
+          "caller": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "callee": "EnuCoordinate",
+          "lineNumber": 61
+        },
+        {
+          "caller": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "callee": "pytest.raises",
+          "lineNumber": 62
+        },
+        {
+          "caller": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "callee": "enu_to_local_ned",
+          "lineNumber": 63
+        },
+        {
+          "caller": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "callee": "EnuCoordinate",
+          "lineNumber": 63
+        },
+        {
+          "caller": "test_mavlink_boundary_rejects_wrong_frame_and_non_finite_values",
+          "callee": "float",
+          "lineNumber": 63
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/tests/test_vehicle_runtime_execution.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 20,
+      "functions": [
+        {
+          "name": "test_waits_configured_grace_when_telemetry_was_started",
+          "startLine": 9,
+          "endLine": 15,
+          "params": [
+            "monkeypatch"
+          ]
+        },
+        {
+          "name": "test_skips_grace_when_not_needed",
+          "startLine": 22,
+          "endLine": 30,
+          "params": [
+            "monkeypatch",
+            "started",
+            "grace_s"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_waits_configured_grace_when_telemetry_was_started",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "test_skips_grace_when_not_needed",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_waits_configured_grace_when_telemetry_was_started",
+          "callee": "AsyncMock",
+          "lineNumber": 10
+        },
+        {
+          "caller": "test_waits_configured_grace_when_telemetry_was_started",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 11
+        },
+        {
+          "caller": "test_waits_configured_grace_when_telemetry_was_started",
+          "callee": "asyncio.run",
+          "lineNumber": 13
+        },
+        {
+          "caller": "test_waits_configured_grace_when_telemetry_was_started",
+          "callee": "execution_service._wait_for_telemetry_startup",
+          "lineNumber": 13
+        },
+        {
+          "caller": "test_waits_configured_grace_when_telemetry_was_started",
+          "callee": "sleep.assert_awaited_once_with",
+          "lineNumber": 15
+        },
+        {
+          "caller": "test_skips_grace_when_not_needed",
+          "callee": "AsyncMock",
+          "lineNumber": 23
+        },
+        {
+          "caller": "test_skips_grace_when_not_needed",
+          "callee": "monkeypatch.setattr",
+          "lineNumber": 24
+        },
+        {
+          "caller": "test_skips_grace_when_not_needed",
+          "callee": "asyncio.run",
+          "lineNumber": 26
+        },
+        {
+          "caller": "test_skips_grace_when_not_needed",
+          "callee": "execution_service._wait_for_telemetry_startup",
+          "lineNumber": 27
+        },
+        {
+          "caller": "test_skips_grace_when_not_needed",
+          "callee": "sleep.assert_not_awaited",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    }
+  ]
+}

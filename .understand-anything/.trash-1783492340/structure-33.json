@@ -1,0 +1,4556 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 12,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "backend/modules/property_patrol/api.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 514,
+      "nonEmptyLines": 433,
+      "functions": [
+        {
+          "name": "_owner_filter",
+          "startLine": 51,
+          "endLine": 58,
+          "params": [
+            "model",
+            "user"
+          ]
+        },
+        {
+          "name": "_get_site",
+          "startLine": 61,
+          "endLine": 66,
+          "params": [
+            "db",
+            "site_id",
+            "user"
+          ]
+        },
+        {
+          "name": "_get_template",
+          "startLine": 69,
+          "endLine": 73,
+          "params": [
+            "db",
+            "template_id"
+          ]
+        },
+        {
+          "name": "_validate_site_payload",
+          "startLine": 76,
+          "endLine": 83,
+          "params": [
+            "payload"
+          ]
+        },
+        {
+          "name": "_template_from_preview",
+          "startLine": 86,
+          "endLine": 98,
+          "params": [
+            "site",
+            "payload"
+          ]
+        },
+        {
+          "name": "_resolve_template_for_preview",
+          "startLine": 101,
+          "endLine": 107,
+          "params": [
+            "db",
+            "site",
+            "payload"
+          ]
+        },
+        {
+          "name": "list_sites",
+          "startLine": 111,
+          "endLine": 124,
+          "params": [
+            "limit",
+            "offset",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "create_site",
+          "startLine": 128,
+          "endLine": 139,
+          "params": [
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "get_site",
+          "startLine": 143,
+          "endLine": 144,
+          "params": [
+            "site_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "update_site",
+          "startLine": 148,
+          "endLine": 155,
+          "params": [
+            "site_id",
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "delete_site",
+          "startLine": 159,
+          "endLine": 162,
+          "params": [
+            "site_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "list_templates",
+          "startLine": 166,
+          "endLine": 177,
+          "params": [
+            "site_id",
+            "limit",
+            "offset",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "create_template",
+          "startLine": 181,
+          "endLine": 187,
+          "params": [
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "get_template",
+          "startLine": 191,
+          "endLine": 192,
+          "params": [
+            "template_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "update_template",
+          "startLine": 196,
+          "endLine": 202,
+          "params": [
+            "template_id",
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "delete_template",
+          "startLine": 206,
+          "endLine": 209,
+          "params": [
+            "template_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "route_preview",
+          "startLine": 213,
+          "endLine": 219,
+          "params": [
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "validate_mission",
+          "startLine": 223,
+          "endLine": 228,
+          "params": [
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "start_mission",
+          "startLine": 232,
+          "endLine": 251,
+          "params": [
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "list_missions",
+          "startLine": 255,
+          "endLine": 266,
+          "params": [
+            "site_id",
+            "limit",
+            "offset",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "get_mission",
+          "startLine": 270,
+          "endLine": 274,
+          "params": [
+            "mission_run_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "_mission_command",
+          "startLine": 277,
+          "endLine": 287,
+          "params": [
+            "mission_run_id",
+            "command",
+            "db"
+          ]
+        },
+        {
+          "name": "approve_mission",
+          "startLine": 291,
+          "endLine": 301,
+          "params": [
+            "mission_run_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "pause_mission",
+          "startLine": 305,
+          "endLine": 306,
+          "params": [
+            "mission_run_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "resume_mission",
+          "startLine": 310,
+          "endLine": 311,
+          "params": [
+            "mission_run_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "abort_mission",
+          "startLine": 315,
+          "endLine": 316,
+          "params": [
+            "mission_run_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "return_home_mission",
+          "startLine": 320,
+          "endLine": 321,
+          "params": [
+            "mission_run_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "create_sensor_event",
+          "startLine": 325,
+          "endLine": 428,
+          "params": [
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "list_sensor_events",
+          "startLine": 432,
+          "endLine": 443,
+          "params": [
+            "site_id",
+            "limit",
+            "offset",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "list_incidents",
+          "startLine": 447,
+          "endLine": 458,
+          "params": [
+            "site_id",
+            "limit",
+            "offset",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "create_incident",
+          "startLine": 462,
+          "endLine": 468,
+          "params": [
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "get_incident",
+          "startLine": 472,
+          "endLine": 476,
+          "params": [
+            "incident_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "update_incident",
+          "startLine": 480,
+          "endLine": 488,
+          "params": [
+            "incident_id",
+            "payload",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "_incident_status",
+          "startLine": 491,
+          "endLine": 499,
+          "params": [
+            "incident_id",
+            "status",
+            "db"
+          ]
+        },
+        {
+          "name": "acknowledge_incident",
+          "startLine": 503,
+          "endLine": 504,
+          "params": [
+            "incident_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "false_positive_incident",
+          "startLine": 508,
+          "endLine": 509,
+          "params": [
+            "incident_id",
+            "user",
+            "db"
+          ]
+        },
+        {
+          "name": "close_incident",
+          "startLine": 513,
+          "endLine": 514,
+          "params": [
+            "incident_id",
+            "user",
+            "db"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "_owner_filter",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "_get_site",
+          "line": 61,
+          "isDefault": false
+        },
+        {
+          "name": "_get_template",
+          "line": 69,
+          "isDefault": false
+        },
+        {
+          "name": "_validate_site_payload",
+          "line": 76,
+          "isDefault": false
+        },
+        {
+          "name": "_template_from_preview",
+          "line": 86,
+          "isDefault": false
+        },
+        {
+          "name": "_resolve_template_for_preview",
+          "line": 101,
+          "isDefault": false
+        },
+        {
+          "name": "list_sites",
+          "line": 110,
+          "isDefault": false
+        },
+        {
+          "name": "create_site",
+          "line": 127,
+          "isDefault": false
+        },
+        {
+          "name": "get_site",
+          "line": 142,
+          "isDefault": false
+        },
+        {
+          "name": "update_site",
+          "line": 147,
+          "isDefault": false
+        },
+        {
+          "name": "delete_site",
+          "line": 158,
+          "isDefault": false
+        },
+        {
+          "name": "list_templates",
+          "line": 165,
+          "isDefault": false
+        },
+        {
+          "name": "create_template",
+          "line": 180,
+          "isDefault": false
+        },
+        {
+          "name": "get_template",
+          "line": 190,
+          "isDefault": false
+        },
+        {
+          "name": "update_template",
+          "line": 195,
+          "isDefault": false
+        },
+        {
+          "name": "delete_template",
+          "line": 205,
+          "isDefault": false
+        },
+        {
+          "name": "route_preview",
+          "line": 212,
+          "isDefault": false
+        },
+        {
+          "name": "validate_mission",
+          "line": 222,
+          "isDefault": false
+        },
+        {
+          "name": "start_mission",
+          "line": 231,
+          "isDefault": false
+        },
+        {
+          "name": "list_missions",
+          "line": 254,
+          "isDefault": false
+        },
+        {
+          "name": "get_mission",
+          "line": 269,
+          "isDefault": false
+        },
+        {
+          "name": "_mission_command",
+          "line": 277,
+          "isDefault": false
+        },
+        {
+          "name": "approve_mission",
+          "line": 290,
+          "isDefault": false
+        },
+        {
+          "name": "pause_mission",
+          "line": 304,
+          "isDefault": false
+        },
+        {
+          "name": "resume_mission",
+          "line": 309,
+          "isDefault": false
+        },
+        {
+          "name": "abort_mission",
+          "line": 314,
+          "isDefault": false
+        },
+        {
+          "name": "return_home_mission",
+          "line": 319,
+          "isDefault": false
+        },
+        {
+          "name": "create_sensor_event",
+          "line": 324,
+          "isDefault": false
+        },
+        {
+          "name": "list_sensor_events",
+          "line": 431,
+          "isDefault": false
+        },
+        {
+          "name": "list_incidents",
+          "line": 446,
+          "isDefault": false
+        },
+        {
+          "name": "create_incident",
+          "line": 461,
+          "isDefault": false
+        },
+        {
+          "name": "get_incident",
+          "line": 471,
+          "isDefault": false
+        },
+        {
+          "name": "update_incident",
+          "line": 479,
+          "isDefault": false
+        },
+        {
+          "name": "_incident_status",
+          "line": 491,
+          "isDefault": false
+        },
+        {
+          "name": "acknowledge_incident",
+          "line": 502,
+          "isDefault": false
+        },
+        {
+          "name": "false_positive_incident",
+          "line": 507,
+          "isDefault": false
+        },
+        {
+          "name": "close_incident",
+          "line": 512,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_owner_filter",
+          "callee": "getattr",
+          "lineNumber": 52
+        },
+        {
+          "caller": "_owner_filter",
+          "callee": "hasattr",
+          "lineNumber": 54
+        },
+        {
+          "caller": "_owner_filter",
+          "callee": "filters.append",
+          "lineNumber": 55
+        },
+        {
+          "caller": "_owner_filter",
+          "callee": "getattr",
+          "lineNumber": 55
+        },
+        {
+          "caller": "_owner_filter",
+          "callee": "hasattr",
+          "lineNumber": 56
+        },
+        {
+          "caller": "_owner_filter",
+          "callee": "filters.append",
+          "lineNumber": 57
+        },
+        {
+          "caller": "_get_site",
+          "callee": "select(PropertyPatrolSite).where",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_get_site",
+          "callee": "select",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_get_site",
+          "callee": "db.scalar",
+          "lineNumber": 63
+        },
+        {
+          "caller": "_get_site",
+          "callee": "HTTPException",
+          "lineNumber": 65
+        },
+        {
+          "caller": "_get_template",
+          "callee": "db.scalar",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_get_template",
+          "callee": "select(PropertyPatrolTemplate).where",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_get_template",
+          "callee": "select",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_get_template",
+          "callee": "HTTPException",
+          "lineNumber": 72
+        },
+        {
+          "caller": "_validate_site_payload",
+          "callee": "payload.model_dump",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_validate_site_payload",
+          "callee": "data.get",
+          "lineNumber": 79
+        },
+        {
+          "caller": "_validate_site_payload",
+          "callee": "polygon_from_geojson",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_validate_site_payload",
+          "callee": "enumerate",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_validate_site_payload",
+          "callee": "data.get",
+          "lineNumber": 82
+        },
+        {
+          "caller": "_validate_site_payload",
+          "callee": "polygon_from_geojson",
+          "lineNumber": 83
+        },
+        {
+          "caller": "_template_from_preview",
+          "callee": "PropertyPatrolTemplate",
+          "lineNumber": 87
+        },
+        {
+          "caller": "_resolve_template_for_preview",
+          "callee": "_get_template",
+          "lineNumber": 103
+        },
+        {
+          "caller": "_resolve_template_for_preview",
+          "callee": "HTTPException",
+          "lineNumber": 105
+        },
+        {
+          "caller": "_resolve_template_for_preview",
+          "callee": "_template_from_preview",
+          "lineNumber": 107
+        },
+        {
+          "caller": "list_sites",
+          "callee": "Query",
+          "lineNumber": 112
+        },
+        {
+          "caller": "list_sites",
+          "callee": "Query",
+          "lineNumber": 113
+        },
+        {
+          "caller": "list_sites",
+          "callee": "Depends",
+          "lineNumber": 114
+        },
+        {
+          "caller": "list_sites",
+          "callee": "Depends",
+          "lineNumber": 115
+        },
+        {
+          "caller": "list_sites",
+          "callee": "select(PropertyPatrolSite)\n        .order_by(PropertyPatrolSite.updated_at.desc())\n        .limit(limit)\n        .offset",
+          "lineNumber": 118
+        },
+        {
+          "caller": "list_sites",
+          "callee": "select(PropertyPatrolSite)\n        .order_by(PropertyPatrolSite.updated_at.desc())\n        .limit",
+          "lineNumber": 118
+        },
+        {
+          "caller": "list_sites",
+          "callee": "select(PropertyPatrolSite)\n        .order_by",
+          "lineNumber": 118
+        },
+        {
+          "caller": "list_sites",
+          "callee": "select",
+          "lineNumber": 118
+        },
+        {
+          "caller": "list_sites",
+          "callee": "PropertyPatrolSite.updated_at.desc",
+          "lineNumber": 119
+        },
+        {
+          "caller": "list_sites",
+          "callee": "(await db.scalars(stmt)).all",
+          "lineNumber": 123
+        },
+        {
+          "caller": "list_sites",
+          "callee": "db.scalars",
+          "lineNumber": 123
+        },
+        {
+          "caller": "list_sites",
+          "callee": "PropertyPatrolSiteOut.model_validate",
+          "lineNumber": 124
+        },
+        {
+          "caller": "create_site",
+          "callee": "Depends",
+          "lineNumber": 128
+        },
+        {
+          "caller": "create_site",
+          "callee": "Depends",
+          "lineNumber": 128
+        },
+        {
+          "caller": "create_site",
+          "callee": "_validate_site_payload",
+          "lineNumber": 129
+        },
+        {
+          "caller": "create_site",
+          "callee": "PropertyPatrolSite",
+          "lineNumber": 130
+        },
+        {
+          "caller": "create_site",
+          "callee": "getattr",
+          "lineNumber": 131
+        },
+        {
+          "caller": "create_site",
+          "callee": "getattr",
+          "lineNumber": 132
+        },
+        {
+          "caller": "create_site",
+          "callee": "payload.model_dump",
+          "lineNumber": 133
+        },
+        {
+          "caller": "create_site",
+          "callee": "db.add",
+          "lineNumber": 135
+        },
+        {
+          "caller": "create_site",
+          "callee": "db.commit",
+          "lineNumber": 136
+        },
+        {
+          "caller": "create_site",
+          "callee": "db.refresh",
+          "lineNumber": 137
+        },
+        {
+          "caller": "create_site",
+          "callee": "logger.info",
+          "lineNumber": 138
+        },
+        {
+          "caller": "get_site",
+          "callee": "Depends",
+          "lineNumber": 143
+        },
+        {
+          "caller": "get_site",
+          "callee": "Depends",
+          "lineNumber": 143
+        },
+        {
+          "caller": "get_site",
+          "callee": "_get_site",
+          "lineNumber": 144
+        },
+        {
+          "caller": "update_site",
+          "callee": "Depends",
+          "lineNumber": 148
+        },
+        {
+          "caller": "update_site",
+          "callee": "Depends",
+          "lineNumber": 148
+        },
+        {
+          "caller": "update_site",
+          "callee": "_validate_site_payload",
+          "lineNumber": 149
+        },
+        {
+          "caller": "update_site",
+          "callee": "_get_site",
+          "lineNumber": 150
+        },
+        {
+          "caller": "update_site",
+          "callee": "payload.model_dump(exclude_unset=True, mode=\"json\").items",
+          "lineNumber": 151
+        },
+        {
+          "caller": "update_site",
+          "callee": "payload.model_dump",
+          "lineNumber": 151
+        },
+        {
+          "caller": "update_site",
+          "callee": "setattr",
+          "lineNumber": 152
+        },
+        {
+          "caller": "update_site",
+          "callee": "db.commit",
+          "lineNumber": 153
+        },
+        {
+          "caller": "update_site",
+          "callee": "db.refresh",
+          "lineNumber": 154
+        },
+        {
+          "caller": "delete_site",
+          "callee": "Depends",
+          "lineNumber": 159
+        },
+        {
+          "caller": "delete_site",
+          "callee": "Depends",
+          "lineNumber": 159
+        },
+        {
+          "caller": "delete_site",
+          "callee": "_get_site",
+          "lineNumber": 160
+        },
+        {
+          "caller": "delete_site",
+          "callee": "db.delete",
+          "lineNumber": 161
+        },
+        {
+          "caller": "delete_site",
+          "callee": "db.commit",
+          "lineNumber": 162
+        },
+        {
+          "caller": "list_templates",
+          "callee": "Query",
+          "lineNumber": 167
+        },
+        {
+          "caller": "list_templates",
+          "callee": "Query",
+          "lineNumber": 168
+        },
+        {
+          "caller": "list_templates",
+          "callee": "Query",
+          "lineNumber": 169
+        },
+        {
+          "caller": "list_templates",
+          "callee": "Depends",
+          "lineNumber": 170
+        },
+        {
+          "caller": "list_templates",
+          "callee": "Depends",
+          "lineNumber": 171
+        },
+        {
+          "caller": "list_templates",
+          "callee": "select(PropertyPatrolTemplate).order_by",
+          "lineNumber": 173
+        },
+        {
+          "caller": "list_templates",
+          "callee": "select",
+          "lineNumber": 173
+        },
+        {
+          "caller": "list_templates",
+          "callee": "PropertyPatrolTemplate.updated_at.desc",
+          "lineNumber": 173
+        },
+        {
+          "caller": "list_templates",
+          "callee": "stmt.where",
+          "lineNumber": 175
+        },
+        {
+          "caller": "list_templates",
+          "callee": "stmt.limit(limit).offset",
+          "lineNumber": 176
+        },
+        {
+          "caller": "list_templates",
+          "callee": "stmt.limit",
+          "lineNumber": 176
+        },
+        {
+          "caller": "list_templates",
+          "callee": "list",
+          "lineNumber": 177
+        },
+        {
+          "caller": "list_templates",
+          "callee": "(await db.scalars(stmt)).all",
+          "lineNumber": 177
+        },
+        {
+          "caller": "list_templates",
+          "callee": "db.scalars",
+          "lineNumber": 177
+        },
+        {
+          "caller": "create_template",
+          "callee": "Depends",
+          "lineNumber": 181
+        },
+        {
+          "caller": "create_template",
+          "callee": "Depends",
+          "lineNumber": 181
+        },
+        {
+          "caller": "create_template",
+          "callee": "_get_site",
+          "lineNumber": 182
+        },
+        {
+          "caller": "create_template",
+          "callee": "PropertyPatrolTemplate",
+          "lineNumber": 183
+        },
+        {
+          "caller": "create_template",
+          "callee": "payload.model_dump",
+          "lineNumber": 183
+        },
+        {
+          "caller": "create_template",
+          "callee": "db.add",
+          "lineNumber": 184
+        },
+        {
+          "caller": "create_template",
+          "callee": "db.commit",
+          "lineNumber": 185
+        },
+        {
+          "caller": "create_template",
+          "callee": "db.refresh",
+          "lineNumber": 186
+        },
+        {
+          "caller": "get_template",
+          "callee": "Depends",
+          "lineNumber": 191
+        },
+        {
+          "caller": "get_template",
+          "callee": "Depends",
+          "lineNumber": 191
+        },
+        {
+          "caller": "get_template",
+          "callee": "_get_template",
+          "lineNumber": 192
+        },
+        {
+          "caller": "update_template",
+          "callee": "Depends",
+          "lineNumber": 196
+        },
+        {
+          "caller": "update_template",
+          "callee": "Depends",
+          "lineNumber": 196
+        },
+        {
+          "caller": "update_template",
+          "callee": "_get_template",
+          "lineNumber": 197
+        },
+        {
+          "caller": "update_template",
+          "callee": "payload.model_dump(exclude_unset=True).items",
+          "lineNumber": 198
+        },
+        {
+          "caller": "update_template",
+          "callee": "payload.model_dump",
+          "lineNumber": 198
+        },
+        {
+          "caller": "update_template",
+          "callee": "setattr",
+          "lineNumber": 199
+        },
+        {
+          "caller": "update_template",
+          "callee": "db.commit",
+          "lineNumber": 200
+        },
+        {
+          "caller": "update_template",
+          "callee": "db.refresh",
+          "lineNumber": 201
+        },
+        {
+          "caller": "delete_template",
+          "callee": "Depends",
+          "lineNumber": 206
+        },
+        {
+          "caller": "delete_template",
+          "callee": "Depends",
+          "lineNumber": 206
+        },
+        {
+          "caller": "delete_template",
+          "callee": "_get_template",
+          "lineNumber": 207
+        },
+        {
+          "caller": "delete_template",
+          "callee": "db.delete",
+          "lineNumber": 208
+        },
+        {
+          "caller": "delete_template",
+          "callee": "db.commit",
+          "lineNumber": 209
+        },
+        {
+          "caller": "route_preview",
+          "callee": "Depends",
+          "lineNumber": 213
+        },
+        {
+          "caller": "route_preview",
+          "callee": "Depends",
+          "lineNumber": 213
+        },
+        {
+          "caller": "route_preview",
+          "callee": "_get_site",
+          "lineNumber": 214
+        },
+        {
+          "caller": "route_preview",
+          "callee": "_resolve_template_for_preview",
+          "lineNumber": 215
+        },
+        {
+          "caller": "route_preview",
+          "callee": "route_planner.generate",
+          "lineNumber": 216
+        },
+        {
+          "caller": "route_preview",
+          "callee": "policy_engine.validate_route",
+          "lineNumber": 217
+        },
+        {
+          "caller": "route_preview",
+          "callee": "logger.info",
+          "lineNumber": 218
+        },
+        {
+          "caller": "route_preview",
+          "callee": "len",
+          "lineNumber": 218
+        },
+        {
+          "caller": "route_preview",
+          "callee": "RoutePreviewOut",
+          "lineNumber": 219
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "Depends",
+          "lineNumber": 223
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "Depends",
+          "lineNumber": 223
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "_get_site",
+          "lineNumber": 224
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "_resolve_template_for_preview",
+          "lineNumber": 225
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "wp.model_dump",
+          "lineNumber": 226
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "route_planner.generate",
+          "lineNumber": 226
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "policy_engine.validate_route",
+          "lineNumber": 227
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "RoutePreviewOut",
+          "lineNumber": 228
+        },
+        {
+          "caller": "validate_mission",
+          "callee": "len",
+          "lineNumber": 228
+        },
+        {
+          "caller": "start_mission",
+          "callee": "Depends",
+          "lineNumber": 232
+        },
+        {
+          "caller": "start_mission",
+          "callee": "Depends",
+          "lineNumber": 232
+        },
+        {
+          "caller": "start_mission",
+          "callee": "_get_site",
+          "lineNumber": 233
+        },
+        {
+          "caller": "start_mission",
+          "callee": "_resolve_template_for_preview",
+          "lineNumber": 234
+        },
+        {
+          "caller": "start_mission",
+          "callee": "route_planner.generate",
+          "lineNumber": 235
+        },
+        {
+          "caller": "start_mission",
+          "callee": "dispatch_service.create_validated_run",
+          "lineNumber": 236
+        },
+        {
+          "caller": "start_mission",
+          "callee": "getattr",
+          "lineNumber": 242
+        },
+        {
+          "caller": "start_mission",
+          "callee": "db.commit",
+          "lineNumber": 246
+        },
+        {
+          "caller": "start_mission",
+          "callee": "HTTPException",
+          "lineNumber": 247
+        },
+        {
+          "caller": "start_mission",
+          "callee": "err.model_dump",
+          "lineNumber": 247
+        },
+        {
+          "caller": "start_mission",
+          "callee": "dispatch_service.dispatch_after_preflight",
+          "lineNumber": 248
+        },
+        {
+          "caller": "start_mission",
+          "callee": "db.commit",
+          "lineNumber": 249
+        },
+        {
+          "caller": "start_mission",
+          "callee": "db.refresh",
+          "lineNumber": 250
+        },
+        {
+          "caller": "list_missions",
+          "callee": "Query",
+          "lineNumber": 256
+        },
+        {
+          "caller": "list_missions",
+          "callee": "Query",
+          "lineNumber": 257
+        },
+        {
+          "caller": "list_missions",
+          "callee": "Query",
+          "lineNumber": 258
+        },
+        {
+          "caller": "list_missions",
+          "callee": "Depends",
+          "lineNumber": 259
+        },
+        {
+          "caller": "list_missions",
+          "callee": "Depends",
+          "lineNumber": 260
+        },
+        {
+          "caller": "list_missions",
+          "callee": "select(PropertyPatrolRun).order_by",
+          "lineNumber": 262
+        },
+        {
+          "caller": "list_missions",
+          "callee": "select",
+          "lineNumber": 262
+        },
+        {
+          "caller": "list_missions",
+          "callee": "PropertyPatrolRun.updated_at.desc",
+          "lineNumber": 262
+        },
+        {
+          "caller": "list_missions",
+          "callee": "stmt.where",
+          "lineNumber": 264
+        },
+        {
+          "caller": "list_missions",
+          "callee": "stmt.limit(limit).offset",
+          "lineNumber": 265
+        },
+        {
+          "caller": "list_missions",
+          "callee": "stmt.limit",
+          "lineNumber": 265
+        },
+        {
+          "caller": "list_missions",
+          "callee": "list",
+          "lineNumber": 266
+        },
+        {
+          "caller": "list_missions",
+          "callee": "(await db.scalars(stmt)).all",
+          "lineNumber": 266
+        },
+        {
+          "caller": "list_missions",
+          "callee": "db.scalars",
+          "lineNumber": 266
+        },
+        {
+          "caller": "get_mission",
+          "callee": "Depends",
+          "lineNumber": 270
+        },
+        {
+          "caller": "get_mission",
+          "callee": "Depends",
+          "lineNumber": 270
+        },
+        {
+          "caller": "get_mission",
+          "callee": "db.get",
+          "lineNumber": 271
+        },
+        {
+          "caller": "get_mission",
+          "callee": "HTTPException",
+          "lineNumber": 273
+        },
+        {
+          "caller": "_mission_command",
+          "callee": "db.get",
+          "lineNumber": 278
+        },
+        {
+          "caller": "_mission_command",
+          "callee": "HTTPException",
+          "lineNumber": 280
+        },
+        {
+          "caller": "_mission_command",
+          "callee": "dispatch_service.operator_transition",
+          "lineNumber": 282
+        },
+        {
+          "caller": "_mission_command",
+          "callee": "HTTPException",
+          "lineNumber": 284
+        },
+        {
+          "caller": "_mission_command",
+          "callee": "str",
+          "lineNumber": 284
+        },
+        {
+          "caller": "_mission_command",
+          "callee": "db.commit",
+          "lineNumber": 285
+        },
+        {
+          "caller": "_mission_command",
+          "callee": "db.refresh",
+          "lineNumber": 286
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "Depends",
+          "lineNumber": 291
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "Depends",
+          "lineNumber": 291
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "db.get",
+          "lineNumber": 292
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "HTTPException",
+          "lineNumber": 294
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "dispatch_service.dispatch_after_preflight",
+          "lineNumber": 295
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "db.commit",
+          "lineNumber": 297
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "HTTPException",
+          "lineNumber": 298
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "err.model_dump",
+          "lineNumber": 298
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "db.commit",
+          "lineNumber": 299
+        },
+        {
+          "caller": "approve_mission",
+          "callee": "db.refresh",
+          "lineNumber": 300
+        },
+        {
+          "caller": "pause_mission",
+          "callee": "Depends",
+          "lineNumber": 305
+        },
+        {
+          "caller": "pause_mission",
+          "callee": "Depends",
+          "lineNumber": 305
+        },
+        {
+          "caller": "pause_mission",
+          "callee": "_mission_command",
+          "lineNumber": 306
+        },
+        {
+          "caller": "resume_mission",
+          "callee": "Depends",
+          "lineNumber": 310
+        },
+        {
+          "caller": "resume_mission",
+          "callee": "Depends",
+          "lineNumber": 310
+        },
+        {
+          "caller": "resume_mission",
+          "callee": "_mission_command",
+          "lineNumber": 311
+        },
+        {
+          "caller": "abort_mission",
+          "callee": "Depends",
+          "lineNumber": 315
+        },
+        {
+          "caller": "abort_mission",
+          "callee": "Depends",
+          "lineNumber": 315
+        },
+        {
+          "caller": "abort_mission",
+          "callee": "_mission_command",
+          "lineNumber": 316
+        },
+        {
+          "caller": "return_home_mission",
+          "callee": "Depends",
+          "lineNumber": 320
+        },
+        {
+          "caller": "return_home_mission",
+          "callee": "Depends",
+          "lineNumber": 320
+        },
+        {
+          "caller": "return_home_mission",
+          "callee": "_mission_command",
+          "lineNumber": 321
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "Depends",
+          "lineNumber": 325
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "Depends",
+          "lineNumber": 325
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "HTTPException",
+          "lineNumber": 327
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "_get_site",
+          "lineNumber": 328
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "sensor_event_validator.validate",
+          "lineNumber": 329
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "any",
+          "lineNumber": 330
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.scalar",
+          "lineNumber": 332
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "select(PropertyPatrolSensorEvent).where",
+          "lineNumber": 333
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "select",
+          "lineNumber": 333
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "SensorEventResponse",
+          "lineNumber": 339
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "SensorEventOut.model_validate",
+          "lineNumber": 340
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "PropertyPatrolSensorEvent",
+          "lineNumber": 344
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "payload.timestamp.astimezone",
+          "lineNumber": 351
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "payload.timestamp.replace",
+          "lineNumber": 351
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "payload.approx_location.model_dump",
+          "lineNumber": 352
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "sensor_event_to_raw_payload",
+          "lineNumber": 354
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "bool",
+          "lineNumber": 355
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "\"; \".join",
+          "lineNumber": 357
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.add",
+          "lineNumber": 359
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.flush",
+          "lineNumber": 360
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "logger.info",
+          "lineNumber": 361
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.commit",
+          "lineNumber": 364
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.refresh",
+          "lineNumber": 365
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "SensorEventResponse",
+          "lineNumber": 366
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "SensorEventOut.model_validate",
+          "lineNumber": 366
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.scalar",
+          "lineNumber": 368
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "select(PropertyPatrolTemplate).where(PropertyPatrolTemplate.site_id == site.id).order_by",
+          "lineNumber": 368
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "select(PropertyPatrolTemplate).where",
+          "lineNumber": 368
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "select",
+          "lineNumber": 368
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "PropertyPatrolTemplate.updated_at.desc",
+          "lineNumber": 368
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "PropertyPatrolIncident",
+          "lineNumber": 369
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.add",
+          "lineNumber": 382
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.flush",
+          "lineNumber": 383
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "route_planner.generate",
+          "lineNumber": 388
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "dispatch_service.create_validated_run",
+          "lineNumber": 389
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "validation.warnings.extend",
+          "lineNumber": 398
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "validation.errors.extend",
+          "lineNumber": 399
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "dispatch_service.dispatch_after_preflight",
+          "lineNumber": 402
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "validation.warnings.extend",
+          "lineNumber": 403
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "validation.errors.extend",
+          "lineNumber": 404
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.commit",
+          "lineNumber": 412
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.refresh",
+          "lineNumber": 413
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "db.refresh",
+          "lineNumber": 415
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "summarize_property_patrol_incident.delay",
+          "lineNumber": 419
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "int",
+          "lineNumber": 419
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "logger.exception",
+          "lineNumber": 421
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "SensorEventResponse",
+          "lineNumber": 422
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "SensorEventOut.model_validate",
+          "lineNumber": 423
+        },
+        {
+          "caller": "create_sensor_event",
+          "callee": "MissionRunOut.model_validate",
+          "lineNumber": 425
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "Query",
+          "lineNumber": 433
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "Query",
+          "lineNumber": 434
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "Query",
+          "lineNumber": 435
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "Depends",
+          "lineNumber": 436
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "Depends",
+          "lineNumber": 437
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "select(PropertyPatrolSensorEvent).order_by",
+          "lineNumber": 439
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "select",
+          "lineNumber": 439
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "PropertyPatrolSensorEvent.created_at.desc",
+          "lineNumber": 439
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "stmt.where",
+          "lineNumber": 441
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "stmt.limit(limit).offset",
+          "lineNumber": 442
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "stmt.limit",
+          "lineNumber": 442
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "list",
+          "lineNumber": 443
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "(await db.scalars(stmt)).all",
+          "lineNumber": 443
+        },
+        {
+          "caller": "list_sensor_events",
+          "callee": "db.scalars",
+          "lineNumber": 443
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "Query",
+          "lineNumber": 448
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "Query",
+          "lineNumber": 449
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "Query",
+          "lineNumber": 450
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "Depends",
+          "lineNumber": 451
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "Depends",
+          "lineNumber": 452
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "select(PropertyPatrolIncident).order_by",
+          "lineNumber": 454
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "select",
+          "lineNumber": 454
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "PropertyPatrolIncident.updated_at.desc",
+          "lineNumber": 454
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "stmt.where",
+          "lineNumber": 456
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "stmt.limit(limit).offset",
+          "lineNumber": 457
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "stmt.limit",
+          "lineNumber": 457
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "list",
+          "lineNumber": 458
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "(await db.scalars(stmt)).all",
+          "lineNumber": 458
+        },
+        {
+          "caller": "list_incidents",
+          "callee": "db.scalars",
+          "lineNumber": 458
+        },
+        {
+          "caller": "create_incident",
+          "callee": "Depends",
+          "lineNumber": 462
+        },
+        {
+          "caller": "create_incident",
+          "callee": "Depends",
+          "lineNumber": 462
+        },
+        {
+          "caller": "create_incident",
+          "callee": "PropertyPatrolIncident",
+          "lineNumber": 463
+        },
+        {
+          "caller": "create_incident",
+          "callee": "payload.model_dump",
+          "lineNumber": 463
+        },
+        {
+          "caller": "create_incident",
+          "callee": "db.add",
+          "lineNumber": 464
+        },
+        {
+          "caller": "create_incident",
+          "callee": "db.commit",
+          "lineNumber": 465
+        },
+        {
+          "caller": "create_incident",
+          "callee": "db.refresh",
+          "lineNumber": 466
+        },
+        {
+          "caller": "create_incident",
+          "callee": "logger.info",
+          "lineNumber": 467
+        },
+        {
+          "caller": "get_incident",
+          "callee": "Depends",
+          "lineNumber": 472
+        },
+        {
+          "caller": "get_incident",
+          "callee": "Depends",
+          "lineNumber": 472
+        },
+        {
+          "caller": "get_incident",
+          "callee": "db.get",
+          "lineNumber": 473
+        },
+        {
+          "caller": "get_incident",
+          "callee": "HTTPException",
+          "lineNumber": 475
+        },
+        {
+          "caller": "update_incident",
+          "callee": "Depends",
+          "lineNumber": 480
+        },
+        {
+          "caller": "update_incident",
+          "callee": "Depends",
+          "lineNumber": 480
+        },
+        {
+          "caller": "update_incident",
+          "callee": "db.get",
+          "lineNumber": 481
+        },
+        {
+          "caller": "update_incident",
+          "callee": "HTTPException",
+          "lineNumber": 483
+        },
+        {
+          "caller": "update_incident",
+          "callee": "payload.model_dump(exclude_unset=True).items",
+          "lineNumber": 484
+        },
+        {
+          "caller": "update_incident",
+          "callee": "payload.model_dump",
+          "lineNumber": 484
+        },
+        {
+          "caller": "update_incident",
+          "callee": "setattr",
+          "lineNumber": 485
+        },
+        {
+          "caller": "update_incident",
+          "callee": "db.commit",
+          "lineNumber": 486
+        },
+        {
+          "caller": "update_incident",
+          "callee": "db.refresh",
+          "lineNumber": 487
+        },
+        {
+          "caller": "_incident_status",
+          "callee": "db.get",
+          "lineNumber": 492
+        },
+        {
+          "caller": "_incident_status",
+          "callee": "HTTPException",
+          "lineNumber": 494
+        },
+        {
+          "caller": "_incident_status",
+          "callee": "db.commit",
+          "lineNumber": 496
+        },
+        {
+          "caller": "_incident_status",
+          "callee": "db.refresh",
+          "lineNumber": 497
+        },
+        {
+          "caller": "_incident_status",
+          "callee": "logger.info",
+          "lineNumber": 498
+        },
+        {
+          "caller": "acknowledge_incident",
+          "callee": "Depends",
+          "lineNumber": 503
+        },
+        {
+          "caller": "acknowledge_incident",
+          "callee": "Depends",
+          "lineNumber": 503
+        },
+        {
+          "caller": "acknowledge_incident",
+          "callee": "_incident_status",
+          "lineNumber": 504
+        },
+        {
+          "caller": "false_positive_incident",
+          "callee": "Depends",
+          "lineNumber": 508
+        },
+        {
+          "caller": "false_positive_incident",
+          "callee": "Depends",
+          "lineNumber": 508
+        },
+        {
+          "caller": "false_positive_incident",
+          "callee": "_incident_status",
+          "lineNumber": 509
+        },
+        {
+          "caller": "close_incident",
+          "callee": "Depends",
+          "lineNumber": 513
+        },
+        {
+          "caller": "close_incident",
+          "callee": "Depends",
+          "lineNumber": 513
+        },
+        {
+          "caller": "close_incident",
+          "callee": "_incident_status",
+          "lineNumber": 514
+        }
+      ],
+      "metrics": {
+        "importCount": 10,
+        "exportCount": 37,
+        "functionCount": 37,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/models.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 145,
+      "nonEmptyLines": 121,
+      "classes": [
+        {
+          "name": "PropertyPatrolSite",
+          "startLine": 24,
+          "endLine": 43,
+          "methods": [],
+          "properties": [
+            "id",
+            "owner_id",
+            "org_id",
+            "name",
+            "description",
+            "property_boundary",
+            "flight_safe_area",
+            "no_fly_zones",
+            "privacy_zones",
+            "emergency_landing_zones",
+            "default_home_position",
+            "default_altitude_m",
+            "created_at",
+            "updated_at",
+            "templates",
+            "runs"
+          ]
+        },
+        {
+          "name": "PropertyPatrolTemplate",
+          "startLine": 46,
+          "endLine": 74,
+          "methods": [],
+          "properties": [
+            "id",
+            "site_id",
+            "name",
+            "patrol_mode",
+            "altitude_m",
+            "speed_mps",
+            "boundary_offset_m",
+            "grid_spacing_m",
+            "overlap_percent",
+            "camera_direction",
+            "camera_gimbal_pitch_deg",
+            "schedule_interval_minutes",
+            "max_mission_duration_minutes",
+            "min_battery_return_percent",
+            "trigger_behavior",
+            "ai_detection_enabled",
+            "llm_summary_enabled",
+            "privacy_blur_faces",
+            "privacy_blur_license_plates",
+            "event_clip_recording_only",
+            "retention_hours_or_days",
+            "created_at",
+            "updated_at",
+            "site",
+            "runs"
+          ]
+        },
+        {
+          "name": "PropertyPatrolRun",
+          "startLine": 77,
+          "endLine": 95,
+          "methods": [],
+          "properties": [
+            "id",
+            "template_id",
+            "site_id",
+            "mission_type",
+            "state",
+            "route_waypoints",
+            "start_time",
+            "end_time",
+            "drone_id",
+            "operator_id",
+            "failure_reason",
+            "created_at",
+            "updated_at",
+            "site",
+            "template"
+          ]
+        },
+        {
+          "name": "PropertyPatrolSensorEvent",
+          "startLine": 98,
+          "endLine": 117,
+          "methods": [],
+          "properties": [
+            "id",
+            "external_event_id",
+            "sensor_id",
+            "site_id",
+            "zone_id",
+            "event_type",
+            "confidence",
+            "timestamp",
+            "approx_location",
+            "evidence_clip_id",
+            "raw_payload",
+            "signature_valid",
+            "status",
+            "rejection_reason",
+            "created_at"
+          ]
+        },
+        {
+          "name": "PropertyPatrolIncident",
+          "startLine": 120,
+          "endLine": 144,
+          "methods": [],
+          "properties": [
+            "id",
+            "site_id",
+            "mission_run_id",
+            "sensor_event_id",
+            "source",
+            "event_type",
+            "severity",
+            "confidence",
+            "zone_id",
+            "detected_objects",
+            "start_time",
+            "end_time",
+            "location",
+            "video_clip_id",
+            "snapshot_ids",
+            "llm_summary",
+            "operator_notes",
+            "status",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PropertyPatrolSite",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "PropertyPatrolTemplate",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "PropertyPatrolRun",
+          "line": 77,
+          "isDefault": false
+        },
+        {
+          "name": "PropertyPatrolSensorEvent",
+          "line": 98,
+          "isDefault": false
+        },
+        {
+          "name": "PropertyPatrolIncident",
+          "line": 120,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 5,
+        "functionCount": 0,
+        "classCount": 5
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/schemas.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 282,
+      "nonEmptyLines": 226,
+      "classes": [
+        {
+          "name": "GeoPoint",
+          "startLine": 23,
+          "endLine": 26,
+          "methods": [],
+          "properties": [
+            "lat",
+            "lon",
+            "alt"
+          ]
+        },
+        {
+          "name": "ValidationIssue",
+          "startLine": 29,
+          "endLine": 32,
+          "methods": [],
+          "properties": [
+            "code",
+            "message",
+            "waypoint_index"
+          ]
+        },
+        {
+          "name": "ValidationResult",
+          "startLine": 35,
+          "endLine": 38,
+          "methods": [],
+          "properties": [
+            "ok",
+            "errors",
+            "warnings"
+          ]
+        },
+        {
+          "name": "PropertyPatrolSiteBase",
+          "startLine": 41,
+          "endLine": 50,
+          "methods": [],
+          "properties": [
+            "name",
+            "description",
+            "property_boundary",
+            "flight_safe_area",
+            "no_fly_zones",
+            "privacy_zones",
+            "emergency_landing_zones",
+            "default_home_position",
+            "default_altitude_m"
+          ]
+        },
+        {
+          "name": "PropertyPatrolSiteCreate",
+          "startLine": 53,
+          "endLine": 54,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "PropertyPatrolSiteUpdate",
+          "startLine": 57,
+          "endLine": 66,
+          "methods": [],
+          "properties": [
+            "name",
+            "description",
+            "property_boundary",
+            "flight_safe_area",
+            "no_fly_zones",
+            "privacy_zones",
+            "emergency_landing_zones",
+            "default_home_position",
+            "default_altitude_m"
+          ]
+        },
+        {
+          "name": "PropertyPatrolSiteOut",
+          "startLine": 69,
+          "endLine": 74,
+          "methods": [],
+          "properties": [
+            "id",
+            "created_at",
+            "updated_at"
+          ]
+        },
+        {
+          "name": "PatrolTemplateBase",
+          "startLine": 77,
+          "endLine": 97,
+          "methods": [],
+          "properties": [
+            "site_id",
+            "name",
+            "patrol_mode",
+            "altitude_m",
+            "speed_mps",
+            "boundary_offset_m",
+            "grid_spacing_m",
+            "overlap_percent",
+            "camera_direction",
+            "camera_gimbal_pitch_deg",
+            "schedule_interval_minutes",
+            "max_mission_duration_minutes",
+            "min_battery_return_percent",
+            "trigger_behavior",
+            "ai_detection_enabled",
+            "llm_summary_enabled",
+            "privacy_blur_faces",
+            "privacy_blur_license_plates",
+            "event_clip_recording_only",
+            "retention_hours_or_days"
+          ]
+        },
+        {
+          "name": "PatrolTemplateCreate",
+          "startLine": 100,
+          "endLine": 101,
+          "methods": [],
+          "properties": []
+        },
+        {
+          "name": "PatrolTemplateUpdate",
+          "startLine": 104,
+          "endLine": 123,
+          "methods": [],
+          "properties": [
+            "name",
+            "patrol_mode",
+            "altitude_m",
+            "speed_mps",
+            "boundary_offset_m",
+            "grid_spacing_m",
+            "overlap_percent",
+            "camera_direction",
+            "camera_gimbal_pitch_deg",
+            "schedule_interval_minutes",
+            "max_mission_duration_minutes",
+            "min_battery_return_percent",
+            "trigger_behavior",
+            "ai_detection_enabled",
+            "llm_summary_enabled",
+            "privacy_blur_faces",
+            "privacy_blur_license_plates",
+            "event_clip_recording_only",
+            "retention_hours_or_days"
+          ]
+        },
+        {
+          "name": "PatrolTemplateOut",
+          "startLine": 126,
+          "endLine": 131,
+          "methods": [],
+          "properties": [
+            "id",
+            "created_at",
+            "updated_at"
+          ]
+        },
+        {
+          "name": "PatrolWaypoint",
+          "startLine": 134,
+          "endLine": 140,
+          "methods": [],
+          "properties": [
+            "lat",
+            "lon",
+            "alt",
+            "speed_mps",
+            "yaw_deg",
+            "camera_direction"
+          ]
+        },
+        {
+          "name": "RoutePreviewIn",
+          "startLine": 143,
+          "endLine": 153,
+          "methods": [],
+          "properties": [
+            "site_id",
+            "template_id",
+            "patrol_mode",
+            "altitude_m",
+            "speed_mps",
+            "boundary_offset_m",
+            "grid_spacing_m",
+            "overlap_percent",
+            "camera_direction",
+            "camera_gimbal_pitch_deg"
+          ]
+        },
+        {
+          "name": "RoutePreviewOut",
+          "startLine": 156,
+          "endLine": 159,
+          "methods": [],
+          "properties": [
+            "waypoints",
+            "stats",
+            "validation"
+          ]
+        },
+        {
+          "name": "MissionValidateIn",
+          "startLine": 162,
+          "endLine": 163,
+          "methods": [],
+          "properties": [
+            "route_waypoints"
+          ]
+        },
+        {
+          "name": "MissionStartIn",
+          "startLine": 166,
+          "endLine": 168,
+          "methods": [],
+          "properties": [
+            "mission_type",
+            "drone_id"
+          ]
+        },
+        {
+          "name": "MissionRunOut",
+          "startLine": 171,
+          "endLine": 186,
+          "methods": [],
+          "properties": [
+            "id",
+            "template_id",
+            "site_id",
+            "mission_type",
+            "state",
+            "route_waypoints",
+            "start_time",
+            "end_time",
+            "drone_id",
+            "operator_id",
+            "failure_reason",
+            "created_at",
+            "updated_at"
+          ]
+        },
+        {
+          "name": "SensorEventCreate",
+          "startLine": 189,
+          "endLine": 200,
+          "methods": [],
+          "properties": [
+            "sensor_id",
+            "external_event_id",
+            "event_type",
+            "confidence",
+            "site_id",
+            "zone_id",
+            "timestamp",
+            "approx_location",
+            "evidence_clip_id",
+            "signature",
+            "raw_payload"
+          ]
+        },
+        {
+          "name": "SensorEventOut",
+          "startLine": 203,
+          "endLine": 219,
+          "methods": [],
+          "properties": [
+            "id",
+            "external_event_id",
+            "sensor_id",
+            "site_id",
+            "zone_id",
+            "event_type",
+            "confidence",
+            "timestamp",
+            "approx_location",
+            "evidence_clip_id",
+            "signature_valid",
+            "status",
+            "rejection_reason",
+            "created_at"
+          ]
+        },
+        {
+          "name": "SensorEventResponse",
+          "startLine": 222,
+          "endLine": 227,
+          "methods": [],
+          "properties": [
+            "event",
+            "action",
+            "mission_run",
+            "incident_id",
+            "validation"
+          ]
+        },
+        {
+          "name": "IncidentCreate",
+          "startLine": 230,
+          "endLine": 246,
+          "methods": [],
+          "properties": [
+            "site_id",
+            "mission_run_id",
+            "sensor_event_id",
+            "source",
+            "event_type",
+            "severity",
+            "confidence",
+            "zone_id",
+            "detected_objects",
+            "start_time",
+            "end_time",
+            "location",
+            "video_clip_id",
+            "snapshot_ids",
+            "llm_summary",
+            "operator_notes"
+          ]
+        },
+        {
+          "name": "IncidentUpdate",
+          "startLine": 249,
+          "endLine": 252,
+          "methods": [],
+          "properties": [
+            "status",
+            "operator_notes",
+            "llm_summary"
+          ]
+        },
+        {
+          "name": "IncidentOut",
+          "startLine": 255,
+          "endLine": 282,
+          "methods": [
+            "_flatten_location"
+          ],
+          "properties": [
+            "id",
+            "site_id",
+            "mission_run_id",
+            "sensor_event_id",
+            "source",
+            "event_type",
+            "severity",
+            "confidence",
+            "zone_id",
+            "detected_objects",
+            "start_time",
+            "end_time",
+            "location",
+            "video_clip_id",
+            "snapshot_ids",
+            "llm_summary",
+            "operator_notes",
+            "status",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "GeoPoint",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "ValidationIssue",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "ValidationResult",
+          "line": 35,
+          "isDefault": false
+        },
+        {
+          "name": "PropertyPatrolSiteBase",
+          "line": 41,
+          "isDefault": false
+        },
+        {
+          "name": "PropertyPatrolSiteCreate",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "PropertyPatrolSiteUpdate",
+          "line": 57,
+          "isDefault": false
+        },
+        {
+          "name": "PropertyPatrolSiteOut",
+          "line": 69,
+          "isDefault": false
+        },
+        {
+          "name": "PatrolTemplateBase",
+          "line": 77,
+          "isDefault": false
+        },
+        {
+          "name": "PatrolTemplateCreate",
+          "line": 100,
+          "isDefault": false
+        },
+        {
+          "name": "PatrolTemplateUpdate",
+          "line": 104,
+          "isDefault": false
+        },
+        {
+          "name": "PatrolTemplateOut",
+          "line": 126,
+          "isDefault": false
+        },
+        {
+          "name": "PatrolWaypoint",
+          "line": 134,
+          "isDefault": false
+        },
+        {
+          "name": "RoutePreviewIn",
+          "line": 143,
+          "isDefault": false
+        },
+        {
+          "name": "RoutePreviewOut",
+          "line": 156,
+          "isDefault": false
+        },
+        {
+          "name": "MissionValidateIn",
+          "line": 162,
+          "isDefault": false
+        },
+        {
+          "name": "MissionStartIn",
+          "line": 166,
+          "isDefault": false
+        },
+        {
+          "name": "MissionRunOut",
+          "line": 171,
+          "isDefault": false
+        },
+        {
+          "name": "SensorEventCreate",
+          "line": 189,
+          "isDefault": false
+        },
+        {
+          "name": "SensorEventOut",
+          "line": 203,
+          "isDefault": false
+        },
+        {
+          "name": "SensorEventResponse",
+          "line": 222,
+          "isDefault": false
+        },
+        {
+          "name": "IncidentCreate",
+          "line": 230,
+          "isDefault": false
+        },
+        {
+          "name": "IncidentUpdate",
+          "line": 249,
+          "isDefault": false
+        },
+        {
+          "name": "IncidentOut",
+          "line": 255,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 23,
+        "functionCount": 0,
+        "classCount": 23
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/services/dispatch.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 157,
+      "nonEmptyLines": 144,
+      "classes": [
+        {
+          "name": "PatrolDispatchService",
+          "startLine": 25,
+          "endLine": 154,
+          "methods": [
+            "create_validated_run",
+            "dispatch_after_preflight",
+            "operator_transition"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PatrolDispatchService",
+          "line": 25,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "create_validated_run",
+          "callee": "policy_engine.validate_route",
+          "lineNumber": 37
+        },
+        {
+          "caller": "create_validated_run",
+          "callee": "PropertyPatrolRun",
+          "lineNumber": 40
+        },
+        {
+          "caller": "create_validated_run",
+          "callee": "\"; \".join",
+          "lineNumber": 50
+        },
+        {
+          "caller": "create_validated_run",
+          "callee": "db.add",
+          "lineNumber": 52
+        },
+        {
+          "caller": "create_validated_run",
+          "callee": "db.flush",
+          "lineNumber": 53
+        },
+        {
+          "caller": "create_validated_run",
+          "callee": "logger.info",
+          "lineNumber": 54
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "state_machine.transition",
+          "lineNumber": 67
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "ValidationResult",
+          "lineNumber": 71
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "ValidationIssue",
+          "lineNumber": 73
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "str",
+          "lineNumber": 73
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "preflight_validator.validate",
+          "lineNumber": 75
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "\"; \".join",
+          "lineNumber": 80
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "logger.info",
+          "lineNumber": 81
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "state_machine.transition",
+          "lineNumber": 87
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "db.get",
+          "lineNumber": 90
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "db.get",
+          "lineNumber": 92
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "ValidationResult",
+          "lineNumber": 96
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "ValidationIssue",
+          "lineNumber": 98
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "float",
+          "lineNumber": 101
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "run.route_waypoints[0].get",
+          "lineNumber": 101
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "MissionCreateIn.model_validate",
+          "lineNumber": 102
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "start_mission_for_user",
+          "lineNumber": 111
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "str",
+          "lineNumber": 114
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "logger.exception",
+          "lineNumber": 115
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "ValidationResult",
+          "lineNumber": 116
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "ValidationIssue",
+          "lineNumber": 119
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "datetime.now",
+          "lineNumber": 126
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "logger.info",
+          "lineNumber": 127
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "len",
+          "lineNumber": 131
+        },
+        {
+          "caller": "dispatch_after_preflight",
+          "callee": "db.flush",
+          "lineNumber": 135
+        },
+        {
+          "caller": "operator_transition",
+          "callee": "state_machine.transition",
+          "lineNumber": 148
+        },
+        {
+          "caller": "operator_transition",
+          "callee": "datetime.now",
+          "lineNumber": 150
+        },
+        {
+          "caller": "operator_transition",
+          "callee": "logger.info",
+          "lineNumber": 151
+        }
+      ],
+      "metrics": {
+        "importCount": 8,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/services/geometry.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 25,
+      "functions": [
+        {
+          "name": "polygon_from_geojson",
+          "startLine": 9,
+          "endLine": 21,
+          "params": [
+            "value",
+            "name"
+          ]
+        },
+        {
+          "name": "polygons_from_geojson",
+          "startLine": 24,
+          "endLine": 25,
+          "params": [
+            "values",
+            "name"
+          ]
+        },
+        {
+          "name": "point_from_lat_lon",
+          "startLine": 28,
+          "endLine": 29,
+          "params": [
+            "lat",
+            "lon"
+          ]
+        },
+        {
+          "name": "waypoint_dict",
+          "startLine": 32,
+          "endLine": 35,
+          "params": [
+            "lat",
+            "lon",
+            "alt"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "polygon_from_geojson",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "polygons_from_geojson",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "point_from_lat_lon",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "waypoint_dict",
+          "line": 32,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "polygon_from_geojson",
+          "callee": "shape",
+          "lineNumber": 11
+        },
+        {
+          "caller": "polygon_from_geojson",
+          "callee": "ValueError",
+          "lineNumber": 13
+        },
+        {
+          "caller": "polygon_from_geojson",
+          "callee": "ValueError",
+          "lineNumber": 15
+        },
+        {
+          "caller": "polygon_from_geojson",
+          "callee": "Polygon",
+          "lineNumber": 16
+        },
+        {
+          "caller": "polygon_from_geojson",
+          "callee": "ValueError",
+          "lineNumber": 18
+        },
+        {
+          "caller": "polygon_from_geojson",
+          "callee": "explain_validity",
+          "lineNumber": 18
+        },
+        {
+          "caller": "polygon_from_geojson",
+          "callee": "ValueError",
+          "lineNumber": 20
+        },
+        {
+          "caller": "polygons_from_geojson",
+          "callee": "polygon_from_geojson",
+          "lineNumber": 25
+        },
+        {
+          "caller": "polygons_from_geojson",
+          "callee": "enumerate",
+          "lineNumber": 25
+        },
+        {
+          "caller": "point_from_lat_lon",
+          "callee": "Point",
+          "lineNumber": 29
+        },
+        {
+          "caller": "point_from_lat_lon",
+          "callee": "float",
+          "lineNumber": 29
+        },
+        {
+          "caller": "point_from_lat_lon",
+          "callee": "float",
+          "lineNumber": 29
+        },
+        {
+          "caller": "waypoint_dict",
+          "callee": "float",
+          "lineNumber": 33
+        },
+        {
+          "caller": "waypoint_dict",
+          "callee": "float",
+          "lineNumber": 33
+        },
+        {
+          "caller": "waypoint_dict",
+          "callee": "float",
+          "lineNumber": 33
+        },
+        {
+          "caller": "waypoint_dict",
+          "callee": "payload.update",
+          "lineNumber": 34
+        },
+        {
+          "caller": "waypoint_dict",
+          "callee": "extra.items",
+          "lineNumber": 34
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/services/policy.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 87,
+      "nonEmptyLines": 76,
+      "classes": [
+        {
+          "name": "PropertyPatrolPolicyEngine",
+          "startLine": 17,
+          "endLine": 83,
+          "methods": [
+            "validate_route",
+            "validate_sensor_location"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PropertyPatrolPolicyEngine",
+          "line": 17,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "validate_route",
+          "callee": "polygon_from_geojson",
+          "lineNumber": 28
+        },
+        {
+          "caller": "validate_route",
+          "callee": "polygons_from_geojson",
+          "lineNumber": 29
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationResult",
+          "lineNumber": 31
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 31
+        },
+        {
+          "caller": "validate_route",
+          "callee": "str",
+          "lineNumber": 31
+        },
+        {
+          "caller": "validate_route",
+          "callee": "float",
+          "lineNumber": 36
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 37
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 37
+        },
+        {
+          "caller": "validate_route",
+          "callee": "float",
+          "lineNumber": 38
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 39
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 39
+        },
+        {
+          "caller": "validate_route",
+          "callee": "int",
+          "lineNumber": 40
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 41
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 41
+        },
+        {
+          "caller": "validate_route",
+          "callee": "float",
+          "lineNumber": 42
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 43
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 43
+        },
+        {
+          "caller": "validate_route",
+          "callee": "warnings.append",
+          "lineNumber": 45
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 45
+        },
+        {
+          "caller": "validate_route",
+          "callee": "warnings.append",
+          "lineNumber": 47
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 47
+        },
+        {
+          "caller": "validate_route",
+          "callee": "enumerate",
+          "lineNumber": 50
+        },
+        {
+          "caller": "validate_route",
+          "callee": "point_from_lat_lon",
+          "lineNumber": 53
+        },
+        {
+          "caller": "validate_route",
+          "callee": "float",
+          "lineNumber": 53
+        },
+        {
+          "caller": "validate_route",
+          "callee": "float",
+          "lineNumber": 53
+        },
+        {
+          "caller": "validate_route",
+          "callee": "float",
+          "lineNumber": 54
+        },
+        {
+          "caller": "validate_route",
+          "callee": "wp.get",
+          "lineNumber": 54
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 56
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 56
+        },
+        {
+          "caller": "validate_route",
+          "callee": "safe.covers",
+          "lineNumber": 58
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 59
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 59
+        },
+        {
+          "caller": "validate_route",
+          "callee": "any",
+          "lineNumber": 60
+        },
+        {
+          "caller": "validate_route",
+          "callee": "zone.covers",
+          "lineNumber": 60
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 61
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 61
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 63
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 63
+        },
+        {
+          "caller": "validate_route",
+          "callee": "errors.append",
+          "lineNumber": 65
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationIssue",
+          "lineNumber": 65
+        },
+        {
+          "caller": "validate_route",
+          "callee": "ValidationResult",
+          "lineNumber": 66
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "ValidationResult",
+          "lineNumber": 75
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "polygon_from_geojson",
+          "lineNumber": 77
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "point_from_lat_lon",
+          "lineNumber": 78
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "float",
+          "lineNumber": 78
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "float",
+          "lineNumber": 78
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "ValidationResult",
+          "lineNumber": 80
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "ValidationIssue",
+          "lineNumber": 80
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "str",
+          "lineNumber": 80
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "safe.covers",
+          "lineNumber": 81
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "ValidationResult",
+          "lineNumber": 82
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "ValidationIssue",
+          "lineNumber": 82
+        },
+        {
+          "caller": "validate_sensor_location",
+          "callee": "ValidationResult",
+          "lineNumber": 83
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/services/preflight.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 23,
+      "classes": [
+        {
+          "name": "PatrolPreflightValidator",
+          "startLine": 8,
+          "endLine": 26,
+          "methods": [
+            "validate"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PatrolPreflightValidator",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "validate",
+          "callee": "telemetry.get",
+          "lineNumber": 13
+        },
+        {
+          "caller": "validate",
+          "callee": "telemetry.get",
+          "lineNumber": 14
+        },
+        {
+          "caller": "validate",
+          "callee": "telemetry.get",
+          "lineNumber": 15
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 17
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 17
+        },
+        {
+          "caller": "validate",
+          "callee": "float",
+          "lineNumber": 18
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 19
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 19
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 21
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 21
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 23
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 23
+        },
+        {
+          "caller": "validate",
+          "callee": "warnings.append",
+          "lineNumber": 25
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 25
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationResult",
+          "lineNumber": 26
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/services/route_planner.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 85,
+      "nonEmptyLines": 74,
+      "functions": [
+        {
+          "name": "_route_length_m",
+          "startLine": 68,
+          "endLine": 72,
+          "params": [
+            "waypoints"
+          ]
+        },
+        {
+          "name": "_distance_m",
+          "startLine": 75,
+          "endLine": 81,
+          "params": [
+            "lat1",
+            "lon1",
+            "lat2",
+            "lon2"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "PatrolRoutePlanner",
+          "startLine": 15,
+          "endLine": 65,
+          "methods": [
+            "generate"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PatrolRoutePlanner",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "_route_length_m",
+          "line": 68,
+          "isDefault": false
+        },
+        {
+          "name": "_distance_m",
+          "line": 75,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "generate",
+          "callee": "polygon_from_geojson",
+          "lineNumber": 22
+        },
+        {
+          "caller": "generate",
+          "callee": "float",
+          "lineNumber": 23
+        },
+        {
+          "caller": "generate",
+          "callee": "float",
+          "lineNumber": 23
+        },
+        {
+          "caller": "generate",
+          "callee": "list",
+          "lineNumber": 23
+        },
+        {
+          "caller": "generate",
+          "callee": "generate_grid_surveillance_plan",
+          "lineNumber": 25
+        },
+        {
+          "caller": "generate",
+          "callee": "max",
+          "lineNumber": 30
+        },
+        {
+          "caller": "generate",
+          "callee": "generate_private_patrol_plan",
+          "lineNumber": 33
+        },
+        {
+          "caller": "generate",
+          "callee": "generate_private_patrol_plan",
+          "lineNumber": 42
+        },
+        {
+          "caller": "generate",
+          "callee": "waypoint_dict",
+          "lineNumber": 50
+        },
+        {
+          "caller": "generate",
+          "callee": "dict",
+          "lineNumber": 60
+        },
+        {
+          "caller": "generate",
+          "callee": "round",
+          "lineNumber": 61
+        },
+        {
+          "caller": "generate",
+          "callee": "_route_length_m",
+          "lineNumber": 62
+        },
+        {
+          "caller": "generate",
+          "callee": "max",
+          "lineNumber": 62
+        },
+        {
+          "caller": "_route_length_m",
+          "callee": "zip",
+          "lineNumber": 70
+        },
+        {
+          "caller": "_route_length_m",
+          "callee": "_distance_m",
+          "lineNumber": 71
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.radians",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.radians",
+          "lineNumber": 77
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.radians",
+          "lineNumber": 78
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.radians",
+          "lineNumber": 79
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.sin",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.cos",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.cos",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.sin",
+          "lineNumber": 80
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.atan2",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.sqrt",
+          "lineNumber": 81
+        },
+        {
+          "caller": "_distance_m",
+          "callee": "math.sqrt",
+          "lineNumber": 81
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 3,
+        "functionCount": 2,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/services/sensor_events.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 72,
+      "nonEmptyLines": 59,
+      "functions": [
+        {
+          "name": "sensor_event_to_raw_payload",
+          "startLine": 67,
+          "endLine": 71,
+          "params": [
+            "payload"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "PatrolSensorEventValidator",
+          "startLine": 21,
+          "endLine": 61,
+          "methods": [
+            "validate"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PatrolSensorEventValidator",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "sensor_event_to_raw_payload",
+          "line": 67,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "validate",
+          "callee": "db.scalar",
+          "lineNumber": 35
+        },
+        {
+          "caller": "validate",
+          "callee": "select(PropertyPatrolSensorEvent).where",
+          "lineNumber": 36
+        },
+        {
+          "caller": "validate",
+          "callee": "select",
+          "lineNumber": 36
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 42
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 42
+        },
+        {
+          "caller": "validate",
+          "callee": "datetime.now",
+          "lineNumber": 44
+        },
+        {
+          "caller": "validate",
+          "callee": "ts.replace",
+          "lineNumber": 47
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 49
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 49
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 51
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 51
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 53
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 53
+        },
+        {
+          "caller": "validate",
+          "callee": "payload.sensor_id.strip",
+          "lineNumber": 54
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.append",
+          "lineNumber": 55
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationIssue",
+          "lineNumber": 55
+        },
+        {
+          "caller": "validate",
+          "callee": "payload.approx_location.model_dump",
+          "lineNumber": 57
+        },
+        {
+          "caller": "validate",
+          "callee": "policy_engine.validate_sensor_location",
+          "lineNumber": 58
+        },
+        {
+          "caller": "validate",
+          "callee": "errors.extend",
+          "lineNumber": 59
+        },
+        {
+          "caller": "validate",
+          "callee": "warnings.extend",
+          "lineNumber": 60
+        },
+        {
+          "caller": "validate",
+          "callee": "ValidationResult",
+          "lineNumber": 61
+        },
+        {
+          "caller": "sensor_event_to_raw_payload",
+          "callee": "payload.model_dump",
+          "lineNumber": 68
+        },
+        {
+          "caller": "sensor_event_to_raw_payload",
+          "callee": "body.pop",
+          "lineNumber": 69
+        },
+        {
+          "caller": "sensor_event_to_raw_payload",
+          "callee": "bool",
+          "lineNumber": 70
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/modules/property_patrol/services/state_machine.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 46,
+      "nonEmptyLines": 36,
+      "classes": [
+        {
+          "name": "PatrolMissionStateMachine",
+          "startLine": 30,
+          "endLine": 42,
+          "methods": [
+            "transition"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "PatrolMissionStateMachine",
+          "line": 30,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "transition",
+          "callee": "ValueError",
+          "lineNumber": 33
+        },
+        {
+          "caller": "transition",
+          "callee": "ValueError",
+          "lineNumber": 35
+        },
+        {
+          "caller": "transition",
+          "callee": "ALLOWED_TRANSITIONS.get",
+          "lineNumber": 36
+        },
+        {
+          "caller": "transition",
+          "callee": "set",
+          "lineNumber": 36
+        },
+        {
+          "caller": "transition",
+          "callee": "ValueError",
+          "lineNumber": 37
+        },
+        {
+          "caller": "transition",
+          "callee": "logger.info",
+          "lineNumber": 38
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/tests/test_property_patrol.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 226,
+      "nonEmptyLines": 178,
+      "functions": [
+        {
+          "name": "_site",
+          "startLine": 45,
+          "endLine": 55,
+          "params": [
+            "no_fly"
+          ]
+        },
+        {
+          "name": "_template",
+          "startLine": 58,
+          "endLine": 80,
+          "params": [
+            "mode"
+          ]
+        },
+        {
+          "name": "test_perimeter_route_stays_inside_safe_polygon",
+          "startLine": 83,
+          "endLine": 91,
+          "params": []
+        },
+        {
+          "name": "test_private_patrol_reduces_offset_for_small_property",
+          "startLine": 94,
+          "endLine": 111,
+          "params": []
+        },
+        {
+          "name": "test_grid_route_stays_inside_safe_polygon",
+          "startLine": 114,
+          "endLine": 122,
+          "params": []
+        },
+        {
+          "name": "test_policy_rejects_waypoint_outside_safe_area",
+          "startLine": 125,
+          "endLine": 133,
+          "params": []
+        },
+        {
+          "name": "test_policy_rejects_waypoint_inside_no_fly_zone",
+          "startLine": 136,
+          "endLine": 144,
+          "params": []
+        },
+        {
+          "name": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "startLine": 147,
+          "endLine": 159,
+          "params": []
+        },
+        {
+          "name": "test_state_machine_allows_valid_and_blocks_invalid_transitions",
+          "startLine": 162,
+          "endLine": 169,
+          "params": []
+        },
+        {
+          "name": "test_preflight_blocks_empty_route_and_low_battery",
+          "startLine": 172,
+          "endLine": 179,
+          "params": []
+        },
+        {
+          "name": "test_sensor_event_validator_accepts_valid_event",
+          "startLine": 187,
+          "endLine": 205,
+          "params": []
+        },
+        {
+          "name": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "startLine": 208,
+          "endLine": 226,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "_NoDuplicateDb",
+          "startLine": 182,
+          "endLine": 184,
+          "methods": [
+            "scalar"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "_site",
+          "line": 45,
+          "isDefault": false
+        },
+        {
+          "name": "_template",
+          "line": 58,
+          "isDefault": false
+        },
+        {
+          "name": "test_perimeter_route_stays_inside_safe_polygon",
+          "line": 83,
+          "isDefault": false
+        },
+        {
+          "name": "test_private_patrol_reduces_offset_for_small_property",
+          "line": 94,
+          "isDefault": false
+        },
+        {
+          "name": "test_grid_route_stays_inside_safe_polygon",
+          "line": 114,
+          "isDefault": false
+        },
+        {
+          "name": "test_policy_rejects_waypoint_outside_safe_area",
+          "line": 125,
+          "isDefault": false
+        },
+        {
+          "name": "test_policy_rejects_waypoint_inside_no_fly_zone",
+          "line": 136,
+          "isDefault": false
+        },
+        {
+          "name": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "line": 147,
+          "isDefault": false
+        },
+        {
+          "name": "test_state_machine_allows_valid_and_blocks_invalid_transitions",
+          "line": 162,
+          "isDefault": false
+        },
+        {
+          "name": "test_preflight_blocks_empty_route_and_low_battery",
+          "line": 172,
+          "isDefault": false
+        },
+        {
+          "name": "_NoDuplicateDb",
+          "line": 182,
+          "isDefault": false
+        },
+        {
+          "name": "test_sensor_event_validator_accepts_valid_event",
+          "line": 187,
+          "isDefault": false
+        },
+        {
+          "name": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "line": 208,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "_site",
+          "callee": "PropertyPatrolSite",
+          "lineNumber": 46
+        },
+        {
+          "caller": "_template",
+          "callee": "PropertyPatrolTemplate",
+          "lineNumber": 59
+        },
+        {
+          "caller": "test_perimeter_route_stays_inside_safe_polygon",
+          "callee": "_site",
+          "lineNumber": 84
+        },
+        {
+          "caller": "test_perimeter_route_stays_inside_safe_polygon",
+          "callee": "_template",
+          "lineNumber": 85
+        },
+        {
+          "caller": "test_perimeter_route_stays_inside_safe_polygon",
+          "callee": "route_planner.generate",
+          "lineNumber": 87
+        },
+        {
+          "caller": "test_perimeter_route_stays_inside_safe_polygon",
+          "callee": "policy_engine.validate_route",
+          "lineNumber": 88
+        },
+        {
+          "caller": "test_private_patrol_reduces_offset_for_small_property",
+          "callee": "generate_private_patrol_plan",
+          "lineNumber": 102
+        },
+        {
+          "caller": "test_grid_route_stays_inside_safe_polygon",
+          "callee": "_site",
+          "lineNumber": 115
+        },
+        {
+          "caller": "test_grid_route_stays_inside_safe_polygon",
+          "callee": "_template",
+          "lineNumber": 116
+        },
+        {
+          "caller": "test_grid_route_stays_inside_safe_polygon",
+          "callee": "route_planner.generate",
+          "lineNumber": 118
+        },
+        {
+          "caller": "test_grid_route_stays_inside_safe_polygon",
+          "callee": "policy_engine.validate_route",
+          "lineNumber": 119
+        },
+        {
+          "caller": "test_policy_rejects_waypoint_outside_safe_area",
+          "callee": "policy_engine.validate_route",
+          "lineNumber": 126
+        },
+        {
+          "caller": "test_policy_rejects_waypoint_outside_safe_area",
+          "callee": "_site",
+          "lineNumber": 127
+        },
+        {
+          "caller": "test_policy_rejects_waypoint_outside_safe_area",
+          "callee": "_template",
+          "lineNumber": 128
+        },
+        {
+          "caller": "test_policy_rejects_waypoint_outside_safe_area",
+          "callee": "any",
+          "lineNumber": 133
+        },
+        {
+          "caller": "test_policy_rejects_waypoint_inside_no_fly_zone",
+          "callee": "policy_engine.validate_route",
+          "lineNumber": 137
+        },
+        {
+          "caller": "test_policy_rejects_waypoint_inside_no_fly_zone",
+          "callee": "_site",
+          "lineNumber": 138
+        },
+        {
+          "caller": "test_policy_rejects_waypoint_inside_no_fly_zone",
+          "callee": "_template",
+          "lineNumber": 139
+        },
+        {
+          "caller": "test_policy_rejects_waypoint_inside_no_fly_zone",
+          "callee": "any",
+          "lineNumber": 144
+        },
+        {
+          "caller": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "callee": "policy_engine.validate_route",
+          "lineNumber": 148
+        },
+        {
+          "caller": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "callee": "_site",
+          "lineNumber": 149
+        },
+        {
+          "caller": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "callee": "_template",
+          "lineNumber": 150
+        },
+        {
+          "caller": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "callee": "policy_engine.validate_sensor_location",
+          "lineNumber": 153
+        },
+        {
+          "caller": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "callee": "_site",
+          "lineNumber": 154
+        },
+        {
+          "caller": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "callee": "any",
+          "lineNumber": 158
+        },
+        {
+          "caller": "test_policy_rejects_unsafe_altitude_and_sensor_outside_site",
+          "callee": "any",
+          "lineNumber": 159
+        },
+        {
+          "caller": "test_state_machine_allows_valid_and_blocks_invalid_transitions",
+          "callee": "state_machine.transition",
+          "lineNumber": 163
+        },
+        {
+          "caller": "test_state_machine_allows_valid_and_blocks_invalid_transitions",
+          "callee": "pytest.raises",
+          "lineNumber": 165
+        },
+        {
+          "caller": "test_state_machine_allows_valid_and_blocks_invalid_transitions",
+          "callee": "state_machine.transition",
+          "lineNumber": 166
+        },
+        {
+          "caller": "test_state_machine_allows_valid_and_blocks_invalid_transitions",
+          "callee": "pytest.raises",
+          "lineNumber": 168
+        },
+        {
+          "caller": "test_state_machine_allows_valid_and_blocks_invalid_transitions",
+          "callee": "state_machine.transition",
+          "lineNumber": 169
+        },
+        {
+          "caller": "test_preflight_blocks_empty_route_and_low_battery",
+          "callee": "asyncio.run",
+          "lineNumber": 173
+        },
+        {
+          "caller": "test_preflight_blocks_empty_route_and_low_battery",
+          "callee": "preflight_validator.validate",
+          "lineNumber": 173
+        },
+        {
+          "caller": "test_sensor_event_validator_accepts_valid_event",
+          "callee": "SensorEventCreate",
+          "lineNumber": 188
+        },
+        {
+          "caller": "test_sensor_event_validator_accepts_valid_event",
+          "callee": "datetime.now",
+          "lineNumber": 195
+        },
+        {
+          "caller": "test_sensor_event_validator_accepts_valid_event",
+          "callee": "asyncio.run",
+          "lineNumber": 199
+        },
+        {
+          "caller": "test_sensor_event_validator_accepts_valid_event",
+          "callee": "sensor_event_validator.validate",
+          "lineNumber": 199
+        },
+        {
+          "caller": "test_sensor_event_validator_accepts_valid_event",
+          "callee": "_NoDuplicateDb",
+          "lineNumber": 200
+        },
+        {
+          "caller": "test_sensor_event_validator_accepts_valid_event",
+          "callee": "_site",
+          "lineNumber": 201
+        },
+        {
+          "caller": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "callee": "SensorEventCreate",
+          "lineNumber": 209
+        },
+        {
+          "caller": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "callee": "datetime.now",
+          "lineNumber": 215
+        },
+        {
+          "caller": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "callee": "timedelta",
+          "lineNumber": 215
+        },
+        {
+          "caller": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "callee": "asyncio.run",
+          "lineNumber": 219
+        },
+        {
+          "caller": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "callee": "sensor_event_validator.validate",
+          "lineNumber": 219
+        },
+        {
+          "caller": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "callee": "_NoDuplicateDb",
+          "lineNumber": 220
+        },
+        {
+          "caller": "test_sensor_event_validator_rejects_old_and_low_confidence_event",
+          "callee": "_site",
+          "lineNumber": 221
+        }
+      ],
+      "metrics": {
+        "importCount": 8,
+        "exportCount": 13,
+        "functionCount": 12,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/tests/test_property_patrol_sites_pagination.py",
+      "language": "python",
+      "fileCategory": "code",
+      "totalLines": 93,
+      "nonEmptyLines": 72,
+      "functions": [
+        {
+          "name": "test_property_patrol_sites_are_paginated",
+          "startLine": 13,
+          "endLine": 25,
+          "params": []
+        },
+        {
+          "name": "test_property_patrol_templates_are_paginated",
+          "startLine": 28,
+          "endLine": 42,
+          "params": []
+        },
+        {
+          "name": "test_property_patrol_missions_are_paginated",
+          "startLine": 45,
+          "endLine": 59,
+          "params": []
+        },
+        {
+          "name": "test_property_patrol_sensor_events_are_paginated",
+          "startLine": 62,
+          "endLine": 76,
+          "params": []
+        },
+        {
+          "name": "test_property_patrol_incidents_are_paginated",
+          "startLine": 79,
+          "endLine": 93,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "test_property_patrol_sites_are_paginated",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "test_property_patrol_templates_are_paginated",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "test_property_patrol_missions_are_paginated",
+          "line": 45,
+          "isDefault": false
+        },
+        {
+          "name": "test_property_patrol_sensor_events_are_paginated",
+          "line": 62,
+          "isDefault": false
+        },
+        {
+          "name": "test_property_patrol_incidents_are_paginated",
+          "line": 79,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "test_property_patrol_sites_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 14
+        },
+        {
+          "caller": "test_property_patrol_sites_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 16
+        },
+        {
+          "caller": "test_property_patrol_sites_are_paginated",
+          "callee": "AsyncMock",
+          "lineNumber": 17
+        },
+        {
+          "caller": "test_property_patrol_sites_are_paginated",
+          "callee": "asyncio.run",
+          "lineNumber": 19
+        },
+        {
+          "caller": "test_property_patrol_sites_are_paginated",
+          "callee": "list_sites",
+          "lineNumber": 19
+        },
+        {
+          "caller": "test_property_patrol_sites_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 19
+        },
+        {
+          "caller": "test_property_patrol_sites_are_paginated",
+          "callee": "db.scalars.assert_awaited_once",
+          "lineNumber": 22
+        },
+        {
+          "caller": "test_property_patrol_templates_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 29
+        },
+        {
+          "caller": "test_property_patrol_templates_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 31
+        },
+        {
+          "caller": "test_property_patrol_templates_are_paginated",
+          "callee": "AsyncMock",
+          "lineNumber": 32
+        },
+        {
+          "caller": "test_property_patrol_templates_are_paginated",
+          "callee": "asyncio.run",
+          "lineNumber": 34
+        },
+        {
+          "caller": "test_property_patrol_templates_are_paginated",
+          "callee": "list_templates",
+          "lineNumber": 35
+        },
+        {
+          "caller": "test_property_patrol_templates_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 35
+        },
+        {
+          "caller": "test_property_patrol_templates_are_paginated",
+          "callee": "db.scalars.assert_awaited_once",
+          "lineNumber": 39
+        },
+        {
+          "caller": "test_property_patrol_missions_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 46
+        },
+        {
+          "caller": "test_property_patrol_missions_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 48
+        },
+        {
+          "caller": "test_property_patrol_missions_are_paginated",
+          "callee": "AsyncMock",
+          "lineNumber": 49
+        },
+        {
+          "caller": "test_property_patrol_missions_are_paginated",
+          "callee": "asyncio.run",
+          "lineNumber": 51
+        },
+        {
+          "caller": "test_property_patrol_missions_are_paginated",
+          "callee": "list_missions",
+          "lineNumber": 52
+        },
+        {
+          "caller": "test_property_patrol_missions_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 52
+        },
+        {
+          "caller": "test_property_patrol_missions_are_paginated",
+          "callee": "db.scalars.assert_awaited_once",
+          "lineNumber": 56
+        },
+        {
+          "caller": "test_property_patrol_sensor_events_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 63
+        },
+        {
+          "caller": "test_property_patrol_sensor_events_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 65
+        },
+        {
+          "caller": "test_property_patrol_sensor_events_are_paginated",
+          "callee": "AsyncMock",
+          "lineNumber": 66
+        },
+        {
+          "caller": "test_property_patrol_sensor_events_are_paginated",
+          "callee": "asyncio.run",
+          "lineNumber": 68
+        },
+        {
+          "caller": "test_property_patrol_sensor_events_are_paginated",
+          "callee": "list_sensor_events",
+          "lineNumber": 69
+        },
+        {
+          "caller": "test_property_patrol_sensor_events_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 69
+        },
+        {
+          "caller": "test_property_patrol_sensor_events_are_paginated",
+          "callee": "db.scalars.assert_awaited_once",
+          "lineNumber": 73
+        },
+        {
+          "caller": "test_property_patrol_incidents_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 80
+        },
+        {
+          "caller": "test_property_patrol_incidents_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 82
+        },
+        {
+          "caller": "test_property_patrol_incidents_are_paginated",
+          "callee": "AsyncMock",
+          "lineNumber": 83
+        },
+        {
+          "caller": "test_property_patrol_incidents_are_paginated",
+          "callee": "asyncio.run",
+          "lineNumber": 85
+        },
+        {
+          "caller": "test_property_patrol_incidents_are_paginated",
+          "callee": "list_incidents",
+          "lineNumber": 86
+        },
+        {
+          "caller": "test_property_patrol_incidents_are_paginated",
+          "callee": "MagicMock",
+          "lineNumber": 86
+        },
+        {
+          "caller": "test_property_patrol_incidents_are_paginated",
+          "callee": "db.scalars.assert_awaited_once",
+          "lineNumber": 90
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 5,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    }
+  ]
+}

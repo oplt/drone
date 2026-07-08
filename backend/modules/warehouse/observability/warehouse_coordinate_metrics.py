@@ -29,6 +29,30 @@ def record_transform_jump(*, source: str) -> None:
     prometheus_metrics.warehouse_transform_jump_total.labels(source=str(source or "unknown")).inc()
 
 
+def record_structure_extraction_failure(*, reason: str) -> None:
+    prometheus_metrics.warehouse_structure_extraction_failures_total.labels(
+        reason=str(reason or "unknown")[:96]
+    ).inc()
+
+
+def record_low_confidence_candidate(*, source: str) -> None:
+    prometheus_metrics.warehouse_low_confidence_candidates_total.labels(
+        source=str(source or "unknown")[:64]
+    ).inc()
+
+
+def record_layout_publish_block(*, reason: str) -> None:
+    prometheus_metrics.warehouse_layout_publish_blocks_total.labels(
+        reason=str(reason or "unknown")[:96]
+    ).inc()
+
+
+def record_inspection_target_clearance_failure(*, source: str) -> None:
+    prometheus_metrics.warehouse_inspection_target_clearance_failures_total.labels(
+        source=str(source or "unknown")[:64]
+    ).inc()
+
+
 @contextmanager
 def observe_inspection_validation() -> Iterator[None]:
     started = time.perf_counter()

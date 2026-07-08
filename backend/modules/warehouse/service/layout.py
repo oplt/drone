@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
@@ -11,6 +13,7 @@ from backend.modules.warehouse.models import (
     WarehouseBin,
     WarehouseLayoutVersion,
     WarehouseRack,
+    WarehouseRackTemplateVersion,
     WarehouseShelf,
 )
 from backend.modules.warehouse.service.scan_to_layout import extraction_confidence
@@ -70,6 +73,64 @@ def geometry_warnings(geometry: dict | None) -> list[dict[str, str]]:
 
 def can_auto_publish_layout(current: WarehouseLayoutVersion | None) -> bool:
     return current is None or current.provenance_status == "auto"
+
+
+def _float_or_none(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _int_or_none(value: object) -> int | None:
+    if isinstance(value, int):
+        return int(value)
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return None
+
+
+def _template_id(template_meta: dict[str, Any]) -> int | None:
+    return _int_or_none(template_meta.get("template_id"))
+
+
+def _fit_residual_m(template_fit: dict[str, Any]) -> float | None:
+    values = [
+        _float_or_none(template_fit.get("bay_width_residual_m")),
+        _float_or_none(template_fit.get("shelf_level_residual_m")),
+        _float_or_none(template_fit.get("fit_residual_m")),
+    ]
+    residuals = [value for value in values if value is not None]
+    return max(residuals) if residuals else None
+
+
+def _coverage_ratio(template_fit: dict[str, Any]) -> float | None:
+    for key in ("coverage_ratio", "template_coverage_ratio"):
+        value = _float_or_none(template_fit.get(key))
+        if value is not None:
+            return max(0.0, min(1.0, value))
+    return None
+
+
+def _observed_point_count(template_meta: dict[str, Any]) -> int | None:
+    face_plane = template_meta.get("rack_face_plane")
+    if isinstance(face_plane, dict):
+        return _int_or_none(face_plane.get("support_points"))
+    return None
+
+
+def _bin_volume_geometry(target, template_meta: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source": "generated_bin_template",
+        "center": dict(getattr(target, "target_point", {}) or {}),
+        "frame_id": (getattr(target, "target_point", {}) or {}).get("frame_id"),
+        "shelf_level": int(getattr(target, "shelf_level", 0)),
+        "bin_count": template_meta.get("rack_template_bin_count"),
+        "bay_width_m": template_meta.get("rack_template_bay_width_m"),
+    }
+
+
+def _candidate_breakdown(target) -> dict[str, Any]:
+    return dict(getattr(target, "confidence_breakdown", {}) or {})
 
 
 async def resolve_bin_context(
@@ -208,33 +269,85 @@ async def create_extracted_layout(
     db.add(layout)
     await db.flush()
 
+    verified_at = datetime.now(UTC)
     by_aisle: dict[str, WarehouseAisle] = {}
     by_rack: dict[tuple[str, str], WarehouseRack] = {}
     by_shelf: dict[tuple[str, str, int], WarehouseShelf] = {}
     bin_ids: dict[tuple[str, str, int, str], int] = {}
+    template_id_by_version: dict[int, int | None] = {}
+
+    async def _resolved_template_id(template_meta: dict[str, Any]) -> int | None:
+        template_id = _template_id(template_meta)
+        if template_id is not None:
+            return template_id
+        template_version_id = _int_or_none(template_meta.get("template_version_id"))
+        if template_version_id is None:
+            return None
+        if template_version_id not in template_id_by_version:
+            version_row = await db.get(WarehouseRackTemplateVersion, template_version_id)
+            template_id_by_version[template_version_id] = (
+                int(version_row.template_id) if version_row is not None else None
+            )
+        return template_id_by_version[template_version_id]
+
     for target in targets:
         confidence = extraction_confidence(target)
         aisle_key = str(target.aisle_code)
         rack_key = (aisle_key, str(target.rack_code))
         shelf_key = (*rack_key, int(target.shelf_level))
         bin_key = (*shelf_key, str(target.bin_code))
+        template_meta = dict(getattr(target, "template_metadata", {}) or {})
+        template_fit = dict(template_meta.get("template_fit") or {})
+        template_id = await _resolved_template_id(template_meta)
         if aisle_key not in by_aisle:
             aisle = WarehouseAisle(
-                layout_version_id=layout.id, code=aisle_key, confidence=confidence
+                layout_version_id=layout.id,
+                code=aisle_key,
+                source_artifact_set_id=artifact_set_id,
+                template_id=template_id,
+                confidence_breakdown_json=_candidate_breakdown(target),
+                fit_residual_m=_fit_residual_m(template_fit),
+                observed_point_count=_observed_point_count(template_meta),
+                coverage_ratio=_coverage_ratio(template_fit),
+                last_verified_at=verified_at,
+                confidence=confidence,
             )
             db.add(aisle)
             await db.flush()
             by_aisle[aisle_key] = aisle
         if rack_key not in by_rack:
+            template_version_id = template_meta.get("template_version_id")
             rack = WarehouseRack(
-                aisle_id=by_aisle[aisle_key].id, code=rack_key[1], confidence=confidence
+                aisle_id=by_aisle[aisle_key].id,
+                code=rack_key[1],
+                geometry_json={"template": template_meta} if template_meta else {},
+                source_artifact_set_id=artifact_set_id,
+                template_id=template_id,
+                template_version_id=int(template_version_id) if template_version_id else None,
+                template_fit_json=template_fit,
+                face_plane_json=dict(template_meta.get("rack_face_plane") or {}),
+                confidence_breakdown_json=_candidate_breakdown(target),
+                fit_residual_m=_fit_residual_m(template_fit),
+                observed_point_count=_observed_point_count(template_meta),
+                coverage_ratio=_coverage_ratio(template_fit),
+                last_verified_at=verified_at,
+                confidence=confidence,
             )
             db.add(rack)
             await db.flush()
             by_rack[rack_key] = rack
         if shelf_key not in by_shelf:
             shelf = WarehouseShelf(
-                rack_id=by_rack[rack_key].id, level=shelf_key[2], confidence=confidence
+                rack_id=by_rack[rack_key].id,
+                level=shelf_key[2],
+                source_artifact_set_id=artifact_set_id,
+                template_id=template_id,
+                confidence_breakdown_json=_candidate_breakdown(target),
+                fit_residual_m=_fit_residual_m(template_fit),
+                observed_point_count=_observed_point_count(template_meta),
+                coverage_ratio=_coverage_ratio(template_fit),
+                last_verified_at=verified_at,
+                confidence=confidence,
             )
             db.add(shelf)
             await db.flush()
@@ -251,8 +364,17 @@ async def create_extracted_layout(
                 geometry_json=(
                     preserved_value[0]
                     if preserved_value is not None
-                    else {"target_point": target.target_point}
+                    else {"target_point": target.target_point, "template": template_meta}
                 ),
+                source_artifact_set_id=artifact_set_id,
+                template_id=template_id,
+                center_local_json=dict(getattr(target, "target_point", {}) or {}),
+                volume_json=_bin_volume_geometry(target, template_meta),
+                confidence_breakdown_json=_candidate_breakdown(target),
+                fit_residual_m=_fit_residual_m(template_fit),
+                observed_point_count=_observed_point_count(template_meta),
+                coverage_ratio=_coverage_ratio(template_fit),
+                last_verified_at=verified_at,
                 provenance_status=(preserved_value[1] if preserved_value else "auto"),
                 confidence=(preserved_value[2] if preserved_value else confidence),
             )

@@ -9,6 +9,9 @@ import type { WarehouseScannedMapResponse } from "../types/missions";
 const EMPTY_REPLAY_STATE: WarehouseLiveVoxelMapState = {
   connectionState: "empty",
   chunks: [],
+  provisionalCandidates: [],
+  coverageRepairHints: [],
+  coordinateState: null,
   latestUpdate: null,
   health: {
     coverage_percent: null,
@@ -91,6 +94,9 @@ export function useWarehouseScannedMapReplay(
               : "finalized"
             : "empty",
           chunks: merged.chunks,
+          provisionalCandidates: [],
+          coverageRepairHints: [],
+          coordinateState: null,
           latestUpdate,
           health: latestUpdate?.health ?? EMPTY_REPLAY_STATE.health,
           scanPath: merged.scanPath,

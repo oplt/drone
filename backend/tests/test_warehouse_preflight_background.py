@@ -16,7 +16,7 @@ class _DatabaseContext:
         return False
 
 
-def test_background_preflight_connects_and_completes_once(monkeypatch) -> None:
+def test_background_preflight_is_passive_and_completes_once(monkeypatch) -> None:
     preflight_background._PREFLIGHT_RUNS.clear()
     run = WarehousePreflightRefreshOut(
         run_id="run-1",
@@ -35,6 +35,7 @@ def test_background_preflight_connects_and_completes_once(monkeypatch) -> None:
 
     async def build_snapshot(*args, **kwargs):
         calls["snapshot"] += 1
+        assert kwargs["start_bridge"] is False
         return WarehousePreflightOut(
             ready=True,
             blocking=False,
@@ -70,7 +71,7 @@ def test_background_preflight_connects_and_completes_once(monkeypatch) -> None:
     assert completed.status == "complete"
     assert completed.finished_at is not None
     assert completed.snapshot is not None
-    assert calls == {"connect": 1, "snapshot": 1, "stack": 1}
+    assert calls == {"connect": 0, "snapshot": 1, "stack": 0}
 
 
 def test_background_preflight_marks_probe_failure_terminal(monkeypatch) -> None:

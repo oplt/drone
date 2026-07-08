@@ -103,6 +103,13 @@ def scan_target_out(row: WarehouseScanTarget) -> WarehouseScanTargetRead:
             "scan_pose_local_json": row.scan_pose_local_json,
             "sensor_aim_json": row.sensor_aim_json,
             "shelf_normal_local_json": row.shelf_normal_local_json,
+            "scanner_metadata_json": (
+                row.scanner_metadata_json if isinstance(row.scanner_metadata_json, dict) else {}
+            ),
+            "path_validation_json": (
+                row.path_validation_json if isinstance(row.path_validation_json, dict) else {}
+            ),
+            "failure_reason": row.failure_reason,
             "standoff_m": row.standoff_m,
             "hover_time_s": row.hover_time_s,
             "scan_timeout_s": row.scan_timeout_s,

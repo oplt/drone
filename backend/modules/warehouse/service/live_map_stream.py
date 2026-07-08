@@ -123,6 +123,64 @@ class WarehouseLiveHealthFlags(BaseModel):
     stack_running: bool = False
 
 
+class WarehouseLiveProvisionalCandidate(BaseModel):
+    entity_kind: Literal["aisle", "rack", "shelf", "bin", "zone", "inspection_target"] = (
+        "inspection_target"
+    )
+    identity_key: str = Field(..., min_length=1, max_length=256)
+    geometry: dict[str, Any] = Field(default_factory=dict)
+    confidence: float = Field(default=0.0, ge=0, le=1)
+    state: Literal[
+        "provisional",
+        "needs_more_coverage",
+        "needs_review",
+        "ready_to_publish",
+        "locked",
+    ] = "provisional"
+    review_required: bool = False
+    review_reasons: list[str] = Field(default_factory=list)
+    source_sequence: int | None = Field(default=None, ge=0)
+    inspection_ready: bool = False
+
+    @model_validator(mode="after")
+    def never_live_inspection_ready(self) -> WarehouseLiveProvisionalCandidate:
+        if self.inspection_ready:
+            raise ValueError("live provisional candidates cannot be inspection-ready")
+        if self.state == "locked":
+            raise ValueError("live provisional candidates cannot be locked")
+        return self
+
+
+class WarehouseCoverageRepairHint(BaseModel):
+    kind: Literal["extra_pass", "hover_rescan", "coverage_gap"] = "extra_pass"
+    reason: str = Field(..., min_length=1, max_length=128)
+    target_point: dict[str, float] = Field(default_factory=dict)
+    pose_local_m: dict[str, float | str] | None = None
+    bbox_local_m: list[float] | None = Field(default=None, min_length=6, max_length=6)
+    source_candidate: str | None = Field(default=None, max_length=256)
+    priority: int = Field(default=100, ge=0, le=100)
+
+
+class WarehouseCoordinateLiveState(BaseModel):
+    status: Literal[
+        "provisional",
+        "needs_more_coverage",
+        "needs_review",
+        "ready_to_publish",
+        "locked",
+    ] = "needs_more_coverage"
+    inspection_ready: bool = False
+    candidate_count: int = Field(default=0, ge=0)
+    coverage_repair_count: int = Field(default=0, ge=0)
+    message: str | None = Field(default=None, max_length=256)
+
+    @model_validator(mode="after")
+    def live_state_not_inspection_ready(self) -> WarehouseCoordinateLiveState:
+        if self.status != "locked" and self.inspection_ready:
+            raise ValueError("provisional coordinate state cannot be inspection-ready")
+        return self
+
+
 class WarehouseLiveMapUpdate(BaseModel):
     type: Literal["live_map_update"] = "live_map_update"
     flight_id: str = Field(..., min_length=1, max_length=128)
@@ -133,6 +191,15 @@ class WarehouseLiveMapUpdate(BaseModel):
     removed_chunk_ids: list[str] = Field(default_factory=list)
     scan_path_sample: list[WarehouseLivePose] = Field(default_factory=list)
     health: WarehouseLiveHealthFlags = Field(default_factory=WarehouseLiveHealthFlags)
+    provisional_candidates: list[WarehouseLiveProvisionalCandidate] = Field(
+        default_factory=list, max_length=200
+    )
+    coverage_repair_hints: list[WarehouseCoverageRepairHint] = Field(
+        default_factory=list, max_length=200
+    )
+    coordinate_state: WarehouseCoordinateLiveState = Field(
+        default_factory=WarehouseCoordinateLiveState
+    )
     finalized_scan_job_id: int | None = None
 
     @field_validator("frame_id")
@@ -188,6 +255,10 @@ class WarehouseLiveMapManifestSummary(BaseModel):
     chunk_counts: dict[str, int] = Field(default_factory=dict)
     point_counts: dict[str, int] = Field(default_factory=dict)
     missing_topics: list[str] = Field(default_factory=list)
+    source_quality: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    chunk_quality: list[dict[str, Any]] = Field(default_factory=list)
+    rack_face_coverage: dict[str, Any] = Field(default_factory=dict)
+    coverage_repair: dict[str, Any] = Field(default_factory=dict)
 
 
 class WarehouseLiveMapSnapshot(BaseModel):
@@ -413,4 +484,21 @@ warehouse_live_map_stream = WarehouseLiveMapStream()
 
 
 def normalize_live_map_payload(payload: dict[str, Any]) -> WarehouseLiveMapUpdate:
+    if "provisional_candidates" not in payload or "coverage_repair_hints" not in payload:
+        try:
+            from backend.modules.warehouse.service.provisional_mapping import (
+                provisional_candidates_from_live_update,
+            )
+
+            candidates, repair_hints, coordinate_state = provisional_candidates_from_live_update(
+                payload
+            )
+            payload = {
+                **payload,
+                "provisional_candidates": payload.get("provisional_candidates", candidates),
+                "coverage_repair_hints": payload.get("coverage_repair_hints", repair_hints),
+                "coordinate_state": payload.get("coordinate_state", coordinate_state),
+            }
+        except Exception:
+            logger.debug("warehouse_live_provisional_candidates_failed", exc_info=True)
     return WarehouseLiveMapUpdate.model_validate(payload)

@@ -1,0 +1,141 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 4,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/docs/architecture-baseline.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 116,
+      "nonEmptyLines": 90,
+      "sections": [
+        {
+          "heading": "Frontend Architecture Baseline (Stage 0)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "ESLint baseline (`npm run lint:ci`)",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "File-size baseline (`npm run check:arch`)",
+          "level": 2,
+          "line": 35
+        },
+        {
+          "heading": "Stage 1 layout (2026-05-26)",
+          "level": 2,
+          "line": 57
+        },
+        {
+          "heading": "Stage 2 layout (2026-05-26)",
+          "level": 2,
+          "line": 75
+        },
+        {
+          "heading": "CI commands",
+          "level": 2,
+          "line": 92
+        },
+        {
+          "heading": "Size limits (new and migrated code)",
+          "level": 2,
+          "line": 105
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "frontend/docs/frontend-quality-debt.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 11,
+      "nonEmptyLines": 8,
+      "sections": [
+        {
+          "heading": "Frontend quality debt follow-ups",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "frontend/docs/oversized-map-warehouse-modules.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 22,
+      "nonEmptyLines": 17,
+      "sections": [
+        {
+          "heading": "Oversized map and warehouse modules",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Extraction sequence",
+          "level": 2,
+          "line": 13
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "frontend/docs/smoke-paths.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 30,
+      "nonEmptyLines": 21,
+      "sections": [
+        {
+          "heading": "Frontend Smoke Paths",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Automated (Playwright)",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "Manual smoke checklist",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "Environment",
+          "level": 2,
+          "line": 27
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    }
+  ]
+}

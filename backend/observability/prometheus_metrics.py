@@ -359,6 +359,30 @@ warehouse_transform_jump_total = Counter(
     ["source"],
 )
 
+warehouse_structure_extraction_failures_total = Counter(
+    "warehouse_structure_extraction_failures_total",
+    "Total warehouse structure extraction failures by reason",
+    ["reason"],
+)
+
+warehouse_low_confidence_candidates_total = Counter(
+    "warehouse_low_confidence_candidates_total",
+    "Total warehouse layout/inspection candidates emitted below the confidence threshold",
+    ["source"],
+)
+
+warehouse_layout_publish_blocks_total = Counter(
+    "warehouse_layout_publish_blocks_total",
+    "Total warehouse layout publish attempts blocked by validation gates",
+    ["reason"],
+)
+
+warehouse_inspection_target_clearance_failures_total = Counter(
+    "warehouse_inspection_target_clearance_failures_total",
+    "Total warehouse inspection target clearance failures during extraction",
+    ["source"],
+)
+
 KNOWN_QUEUES = (
     "default",
     "photogrammetry",

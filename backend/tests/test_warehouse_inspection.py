@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import math
+from datetime import UTC, datetime
+
 import numpy as np
 import pytest
 from pydantic import ValidationError
 
 from backend.modules.missions.flight_profile import flight_profile_for_mission_type
 from backend.modules.missions.schemas.mission_types import MissionType
-from backend.modules.warehouse.models import WarehouseScanTarget
+from backend.modules.warehouse.models import WarehouseInspectionResult, WarehouseScanTarget
 from backend.modules.warehouse.planning.indoor.enums import OccupancyState
 from backend.modules.warehouse.planning.indoor.models import OccupancyGrid
 from backend.modules.warehouse.schemas import (
@@ -165,6 +168,13 @@ def test_scan_target_keeps_sensor_aim_separate_from_vehicle_pose() -> None:
 
 def test_mission_waypoints_use_scan_pose_not_target_point() -> None:
     target = _target(1, x_m=11.6)
+    target.sku = "SKU-1"
+    target.scanner_metadata_json = {
+        "barcode_mode": "decode",
+        "empty_bin_vision_mode": "classify_empty_bin",
+        "image_roi": {"mode": "center_crop", "x": 0.25, "y": 0.2, "width": 0.5, "height": 0.6},
+        "min_confidence": 0.8,
+    }
 
     waypoints = build_inspection_waypoints([target])
 
@@ -176,6 +186,10 @@ def test_mission_waypoints_use_scan_pose_not_target_point() -> None:
     ]
     assert waypoints[1].pose.x_m == 11.6
     assert waypoints[1].pose.x_m != target.target_point_local_json["x_m"]
+    assert waypoints[2].metadata["barcode_mode"] == "decode"
+    assert waypoints[2].metadata["empty_bin_vision_mode"] == "classify_empty_bin"
+    assert waypoints[2].metadata["expected_sku"] == "SKU-1"
+    assert waypoints[2].metadata["min_confidence"] == 0.8
 
 
 def test_nearest_neighbor_ordering_after_priority_sort() -> None:
@@ -409,6 +423,141 @@ def _synthetic_two_rack_warehouse_cloud() -> np.ndarray:
     return np.ascontiguousarray(np.vstack(parts).astype(np.float32))
 
 
+def _rotate_cloud_z(cloud: np.ndarray, degrees: float) -> np.ndarray:
+    theta = math.radians(float(degrees))
+    rotation = np.array(
+        [
+            [math.cos(theta), -math.sin(theta), 0.0],
+            [math.sin(theta), math.cos(theta), 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=np.float32,
+    )
+    return np.ascontiguousarray(cloud @ rotation.T)
+
+
+def _partial_occlusion_cloud(cloud: np.ndarray) -> np.ndarray:
+    keep = ~((cloud[:, 0] > 3.0) & (cloud[:, 0] < 4.5) & (cloud[:, 2] > 0.2))
+    return np.ascontiguousarray(cloud[keep])
+
+
+def _asymmetric_rack_depth_cloud() -> np.ndarray:
+    rng = np.random.default_rng(9)
+    parts: list[np.ndarray] = []
+    floor_x = rng.uniform(0.0, 8.0, 6000)
+    floor_y = rng.uniform(-0.5, 4.0, 6000)
+    parts.append(np.column_stack([floor_x, floor_y, np.zeros_like(floor_x)]))
+    for y_lo, y_hi, count in ((0.0, 0.25, 9000), (3.0, 3.7, 12000)):
+        parts.append(
+            np.column_stack(
+                [
+                    rng.uniform(0.0, 8.0, count),
+                    rng.uniform(y_lo, y_hi, count),
+                    rng.uniform(0.3, 3.0, count),
+                ]
+            )
+        )
+    return np.ascontiguousarray(np.vstack(parts).astype(np.float32))
+
+
+def _noisy_floor_ceiling_cloud(cloud: np.ndarray) -> np.ndarray:
+    rng = np.random.default_rng(11)
+    noisy = cloud.copy()
+    floor = noisy[:, 2] == 0.0
+    noisy[floor, 2] = rng.normal(0.0, 0.02, int(floor.sum()))
+    ceiling = np.column_stack(
+        [
+            rng.uniform(0.0, 8.0, 4000),
+            rng.uniform(-0.5, 4.0, 4000),
+            rng.normal(3.2, 0.03, 4000),
+        ]
+    )
+    return np.ascontiguousarray(np.vstack([noisy, ceiling]).astype(np.float32))
+
+
+@pytest.mark.parametrize(
+    ("case_name", "cloud_factory", "axis_deg", "params_kwargs"),
+    [
+        ("straight_aisles", lambda base: base, 0.0, {}),
+        ("rotated_aisles", lambda base: _rotate_cloud_z(base, 30.0), 30.0, {}),
+        ("partial_occlusion", _partial_occlusion_cloud, 0.0, {}),
+        ("asymmetric_rack_depths", lambda _base: _asymmetric_rack_depth_cloud(), 0.0, {}),
+        ("noisy_floor_ceiling", _noisy_floor_ceiling_cloud, 0.0, {}),
+        (
+            "missing_shelf_levels_template_prior",
+            lambda base: np.ascontiguousarray(base[base[:, 2] < 2.0]),
+            0.0,
+            {
+                "rack_template_bay_width_m": 2.0,
+                "rack_template_bin_count": 2,
+                "rack_template_shelf_levels_m": (0.75, 1.5, 2.25),
+            },
+        ),
+    ],
+)
+def test_category10_geometry_extraction_synthetic_warehouses(
+    case_name: str,
+    cloud_factory,
+    axis_deg: float,
+    params_kwargs: dict,
+) -> None:
+    from backend.modules.warehouse.service.structure_extraction import (
+        StructureExtractionParams,
+        extract_structure,
+    )
+
+    cloud = cloud_factory(_synthetic_two_rack_warehouse_cloud())
+
+    result = extract_structure(
+        cloud,
+        params=StructureExtractionParams(axis_deg=axis_deg, **params_kwargs).sanitized(),
+        occupancy_grid=None,
+    )
+
+    assert result.targets, case_name
+    assert result.summary["counts"]["aisles"] >= 1
+    assert result.summary["counts"]["racks"] >= 1
+    assert result.summary["target_counts"]["candidate"] == len(result.targets)
+    assert result.summary["algorithm_core"]["primary"] == "vertical_plane_graph"
+    assert result.summary["racks"][0]["face_planes"], case_name
+    assert result.summary["racks"][0]["shelf_detection"]["levels_m"], case_name
+    if params_kwargs.get("rack_template_shelf_levels_m"):
+        assert result.summary["racks"][0]["template_fit"]["applied"] is True
+
+
+def test_category10_acceptance_thresholds_for_template_backed_extraction() -> None:
+    from backend.modules.warehouse.service.structure_extraction import (
+        StructureExtractionParams,
+        extract_structure,
+    )
+
+    params = StructureExtractionParams(
+        axis_deg=0.0,
+        rack_template_bay_width_m=2.0,
+        rack_template_bin_count=2,
+        rack_template_shelf_levels_m=(0.75, 1.5),
+        max_bins_per_rack_face=8,
+    ).sanitized()
+    result = extract_structure(
+        _synthetic_two_rack_warehouse_cloud(),
+        params=params,
+        occupancy_grid=None,
+    )
+
+    assert result.targets
+    for target in result.targets:
+        target_z = float(target.target_point["z_m"])
+        assert min(abs(target_z - expected) for expected in (0.75, 1.5)) <= 0.10
+        normal = target.shelf_normal
+        normal_xy_norm = math.hypot(float(normal["x"]), float(normal["y"]))
+        assert normal_xy_norm == pytest.approx(1.0, abs=1e-6)
+        axis_alignment = abs(float(normal["y"])) / normal_xy_norm
+        assert math.degrees(math.acos(min(1.0, axis_alignment))) <= 5.0
+        if target.clearance_status == "active":
+            assert target.clearance_m is not None
+            assert target.clearance_m >= params.required_clearance_m
+
+
 def test_extract_structure_creates_draft_setup_without_active_targets() -> None:
     from backend.modules.warehouse.service.structure_extraction import (
         StructureExtractionParams,
@@ -435,11 +584,137 @@ def test_extract_structure_creates_draft_setup_without_active_targets() -> None:
     assert summary["coordinate_setup_status"] == "draft"
     assert summary["manual_review_required"] is True
     assert summary["counts"]["racks"] >= 1
+    assert summary["aisle_graph"]["edges"]
+    assert summary["algorithm_core"]["primary"] == "vertical_plane_graph"
+    assert summary["algorithm_core"]["fallback_used"] is False
+    assert summary["rack_plane_clusters"]
+    assert summary["racks"][0]["face_planes"]
+    assert summary["racks"][0]["face_planes"][0]["source"] == "vertical_plane_extraction"
+    assert summary["racks"][0]["shelf_detection"]["source"] == "horizontal_plane_histogram"
+    assert "confidence_breakdown" in summary["racks"][0]
+    assert "confidence_breakdown" in summary["candidate_targets"][0]
+    assert summary["candidate_targets"][0]["scanner_metadata"]["barcode_mode"]
+    assert summary["candidate_targets"][0]["path_validation"]["path"]["status"] == "needs_review"
+    assert result.targets[0].scanner_metadata["image_roi"]["mode"] == "center_crop"
+    assert result.targets[0].path_validation["esdf"]["status"] == "unavailable"
+    assert result.targets[0].failure_reason is not None
+    assert result.targets[0].standoff_m >= (
+        StructureExtractionParams().drone_radius_m + StructureExtractionParams().clearance_margin_m
+    )
     assert {t.clearance_status for t in result.targets} <= {
         "active",
         "needs_review",
         "rejected",
     }
+
+
+def test_extract_structure_replays_stored_flight_chunks_for_known_layout(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from backend.modules.warehouse.service import structure_extraction as extraction
+    from backend.modules.warehouse.service.live_map_storage import WarehouseLiveMapChunkStorage
+
+    storage = WarehouseLiveMapChunkStorage(root=tmp_path)
+    monkeypatch.setattr(extraction, "warehouse_live_map_chunk_storage", storage)
+    flight_id = "known-layout-flight"
+    flight_dir = storage.flight_dir(flight_id)
+    flight_dir.mkdir(parents=True, exist_ok=True)
+    cloud = _synthetic_two_rack_warehouse_cloud()
+    (flight_dir / "rgbd_colored_000001-deadbeefdeadbeef.xyz32").write_bytes(
+        np.ascontiguousarray(cloud, dtype=np.float32).tobytes()
+    )
+
+    result = extraction.extract_structure_from_flight(
+        flight_id,
+        params=extraction.StructureExtractionParams(axis_deg=0.0).sanitized(),
+        odom_to_warehouse_map_transform={
+            "translation": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "rotation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+        },
+    )
+
+    assert result.summary["localization_applied"] is True
+    assert result.summary["counts"]["racks"] >= 1
+    assert result.summary["target_counts"]["candidate"] > 0
+    assert result.summary["racks"][0]["shelf_detection"]["levels_m"]
+
+
+def test_extract_structure_uses_operator_rack_template_overrides() -> None:
+    from backend.modules.warehouse.service.structure_extraction import (
+        StructureExtractionParams,
+        extract_structure,
+    )
+
+    cloud = _synthetic_two_rack_warehouse_cloud()
+
+    result = extract_structure(
+        cloud,
+        params=StructureExtractionParams(
+            axis_deg=0.0,
+            rack_template_bay_width_m=2.0,
+            rack_template_bin_count=2,
+            rack_template_shelf_levels_m=(0.75, 1.5),
+            max_bins_per_rack_face=8,
+        ).sanitized(),
+        occupancy_grid=None,
+    )
+
+    assert result.targets
+    assert {target.bin_code for target in result.targets} <= {"B1", "B2"}
+    assert {target.shelf_level for target in result.targets} <= {0, 1}
+    assert result.summary["params"]["rack_template_bin_count"] == 2
+    assert result.summary["params"]["rack_template_shelf_levels_m"] == [0.75, 1.5]
+    assert result.summary["racks"][0]["template_fit"]["applied"] is True
+    assert result.summary["candidate_targets"][0]["confidence"] > 0.0
+
+
+def test_extract_structure_uses_occupancy_free_space_graph() -> None:
+    from backend.modules.warehouse.service.structure_extraction import (
+        StructureExtractionParams,
+        extract_structure,
+    )
+
+    cloud = _synthetic_two_rack_warehouse_cloud()
+    grid = OccupancyGrid(
+        resolution_m=0.5,
+        width=20,
+        height=12,
+        origin_x_m=-1.0,
+        origin_y_m=-1.0,
+        default_state=OccupancyState.OCCUPIED,
+    )
+    grid.set_cells(((x, 5) for x in range(2, 18)), OccupancyState.FREE)
+
+    result = extract_structure(
+        cloud,
+        params=StructureExtractionParams(axis_deg=0.0).sanitized(),
+        occupancy_grid=grid,
+    )
+
+    assert result.summary["aisle_graph"]["source"] == "occupancy_free_space"
+    assert result.summary["routing"]["mode"] == "occupancy_astar"
+
+
+def test_density_fallback_outputs_require_review(monkeypatch: pytest.MonkeyPatch) -> None:
+    from backend.modules.warehouse.service import structure_extraction as extraction
+
+    cloud = _synthetic_two_rack_warehouse_cloud()
+
+    def fallback_rows(**_kwargs):
+        return [extraction._Band(0.0, 0.4)], [], True
+
+    monkeypatch.setattr(extraction, "_extract_vertical_plane_rows", fallback_rows)
+
+    result = extraction.extract_structure(
+        cloud,
+        params=extraction.StructureExtractionParams(axis_deg=0.0).sanitized(),
+        occupancy_grid=None,
+    )
+
+    assert result.summary["algorithm_core"]["fallback_used"] is True
+    assert result.targets
+    assert {target.clearance_status for target in result.targets} <= {"needs_review", "rejected"}
+    assert "fallback_extractor" in result.summary["candidate_targets"][0]["confidence_breakdown"]
 
 
 def test_shelf_detection_caps_noisy_vertical_peaks() -> None:
@@ -460,3 +735,61 @@ async def test_mock_scanner_returns_expected_barcode() -> None:
 
     assert result.status == "success"
     assert result.detected_barcode == "CODE-4"
+
+
+def test_inspection_feedback_reconstructs_observed_target_and_rescan_waypoints() -> None:
+    from backend.modules.warehouse.service.inspection_feedback import (
+        observed_target_point,
+        rescan_waypoints_for_result,
+    )
+
+    target = _target(5, x_m=10.0)
+    target.standoff_m = 1.2
+    target.shelf_normal_local_json = {
+        "frame_id": "warehouse_map",
+        "x": 1.0,
+        "y": 0.0,
+        "z": 0.0,
+    }
+    target.scan_pose_local_json = {
+        "frame_id": "warehouse_map",
+        "x_m": 10.0,
+        "y_m": 0.0,
+        "z_m": 1.5,
+        "yaw_deg": 0.0,
+    }
+    result = WarehouseInspectionResult(
+        id=77,
+        mission_id=1,
+        target_id=5,
+        status="failed",
+        confidence=0.2,
+        drone_pose_local_json=target.scan_pose_local_json,
+        scanned_at=datetime.now(UTC),
+    )
+
+    observed = observed_target_point(target, result)
+    rescan = rescan_waypoints_for_result(target, result)
+
+    assert observed is not None
+    assert observed["x_m"] == pytest.approx(11.2)
+    assert len(rescan) > 0
+    assert all(waypoint.metadata.get("rescan") is True for waypoint in rescan)
+
+
+@pytest.mark.asyncio
+async def test_inspection_relocalizes_before_execution() -> None:
+    from backend.modules.warehouse.service.inspection import _relocalize_before_inspection
+
+    class Slam:
+        called = False
+
+        async def relocalize(self, timeout_s: float) -> bool:
+            self.called = timeout_s == pytest.approx(12.0)
+            return True
+
+    navigator = type("Navigator", (), {"slam_provider": Slam()})()
+
+    await _relocalize_before_inspection(navigator, timeout_s=12.0)
+
+    assert navigator.slam_provider.called is True

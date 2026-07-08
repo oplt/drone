@@ -1,0 +1,4274 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 28,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "frontend/src/modules/warehouse/tests/useWarehouseMapPlacement.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 89,
+      "nonEmptyLines": 83,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/useWarehouseMappingStack.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 54,
+      "nonEmptyLines": 47,
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/useWarehousePreflightRun.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 63,
+      "nonEmptyLines": 59,
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/warehouseFlightApi.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 29,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/warehouseLiveMapApi.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 319,
+      "nonEmptyLines": 296,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/warehouseMapPlacement.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 57,
+      "nonEmptyLines": 53,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/warehouseMissionsApi.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 79,
+      "nonEmptyLines": 70,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/warehousePreflightApi.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 164,
+      "nonEmptyLines": 155,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/tests/warehouseSceneCoordinates.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 55,
+      "nonEmptyLines": 51,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/types.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 249,
+      "nonEmptyLines": 226,
+      "exports": [
+        {
+          "name": "DEFAULT_WAREHOUSE_SENSOR_EXTRINSICS",
+          "line": 130,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/types/missions.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 132,
+      "nonEmptyLines": 122,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/liveMapChunkDecoders.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 270,
+      "nonEmptyLines": 230,
+      "functions": [
+        {
+          "name": "colorizeByHeight",
+          "startLine": 5,
+          "endLine": 15,
+          "params": [
+            "z",
+            "minZ",
+            "maxZ"
+          ]
+        },
+        {
+          "name": "colorizeByRange",
+          "startLine": 17,
+          "endLine": 27,
+          "params": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        {
+          "name": "decodeXyz32",
+          "startLine": 34,
+          "endLine": 96,
+          "params": [
+            "buffer",
+            "options"
+          ]
+        },
+        {
+          "name": "decodeXyzrgb32",
+          "startLine": 98,
+          "endLine": 168,
+          "params": [
+            "buffer",
+            "options"
+          ]
+        },
+        {
+          "name": "decodePointCloudBuffer",
+          "startLine": 170,
+          "endLine": 190,
+          "params": [
+            "buffer",
+            "encoding",
+            "options"
+          ]
+        },
+        {
+          "name": "decodeXyzrgbFloat",
+          "startLine": 192,
+          "endLine": 232,
+          "params": [
+            "buffer",
+            "options"
+          ]
+        },
+        {
+          "name": "decimateBufferGeometry",
+          "startLine": 234,
+          "endLine": 270,
+          "params": [
+            "geometry",
+            "maxPoints"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "decodeXyz32",
+          "line": 34,
+          "isDefault": false
+        },
+        {
+          "name": "decodeXyzrgb32",
+          "line": 98,
+          "isDefault": false
+        },
+        {
+          "name": "decodePointCloudBuffer",
+          "line": 170,
+          "isDefault": false
+        },
+        {
+          "name": "decimateBufferGeometry",
+          "line": 234,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "colorizeByHeight",
+          "callee": "Math.max",
+          "lineNumber": 10
+        },
+        {
+          "caller": "colorizeByHeight",
+          "callee": "THREE.MathUtils.clamp",
+          "lineNumber": 11
+        },
+        {
+          "caller": "colorizeByHeight",
+          "callee": "color.setHSL",
+          "lineNumber": 13
+        },
+        {
+          "caller": "colorizeByRange",
+          "callee": "Math.sqrt",
+          "lineNumber": 22
+        },
+        {
+          "caller": "colorizeByRange",
+          "callee": "THREE.MathUtils.clamp",
+          "lineNumber": 23
+        },
+        {
+          "caller": "colorizeByRange",
+          "callee": "color.setHSL",
+          "lineNumber": 25
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "Math.floor",
+          "lineNumber": 43
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "Number.isFinite",
+          "lineNumber": 54
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "Math.min",
+          "lineNumber": 55
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "Math.max",
+          "lineNumber": 56
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "Number.isFinite",
+          "lineNumber": 60
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "Number.isFinite",
+          "lineNumber": 60
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "layerColor",
+          "lineNumber": 65
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "colorizeByRange",
+          "lineNumber": 80
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "colorizeByHeight",
+          "lineNumber": 82
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "geometry.setAttribute",
+          "lineNumber": 91
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "geometry.setAttribute",
+          "lineNumber": 92
+        },
+        {
+          "caller": "decodeXyz32",
+          "callee": "geometry.computeBoundingSphere",
+          "lineNumber": 93
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "Math.floor",
+          "lineNumber": 106
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "Number.isFinite",
+          "lineNumber": 120
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "Math.min",
+          "lineNumber": 121
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "Math.max",
+          "lineNumber": 122
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "Number.isFinite",
+          "lineNumber": 126
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "Number.isFinite",
+          "lineNumber": 126
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "layerColor",
+          "lineNumber": 131
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "colorizeByRange",
+          "lineNumber": 152
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "colorizeByHeight",
+          "lineNumber": 154
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "geometry.setAttribute",
+          "lineNumber": 163
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "geometry.setAttribute",
+          "lineNumber": 164
+        },
+        {
+          "caller": "decodeXyzrgb32",
+          "callee": "geometry.computeBoundingSphere",
+          "lineNumber": 165
+        },
+        {
+          "caller": "decodePointCloudBuffer",
+          "callee": "decodeXyzrgb32",
+          "lineNumber": 180
+        },
+        {
+          "caller": "decodePointCloudBuffer",
+          "callee": "decodeXyzrgbFloat",
+          "lineNumber": 186
+        },
+        {
+          "caller": "decodePointCloudBuffer",
+          "callee": "decodeXyz32",
+          "lineNumber": 189
+        },
+        {
+          "caller": "decodeXyzrgbFloat",
+          "callee": "Math.floor",
+          "lineNumber": 200
+        },
+        {
+          "caller": "decodeXyzrgbFloat",
+          "callee": "layerColor",
+          "lineNumber": 204
+        },
+        {
+          "caller": "decodeXyzrgbFloat",
+          "callee": "colorizeByHeight",
+          "lineNumber": 220
+        },
+        {
+          "caller": "decodeXyzrgbFloat",
+          "callee": "geometry.setAttribute",
+          "lineNumber": 228
+        },
+        {
+          "caller": "decodeXyzrgbFloat",
+          "callee": "geometry.setAttribute",
+          "lineNumber": 229
+        },
+        {
+          "caller": "decodeXyzrgbFloat",
+          "callee": "geometry.computeBoundingSphere",
+          "lineNumber": 230
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "geometry.getAttribute",
+          "lineNumber": 238
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "Math.max",
+          "lineNumber": 243
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "Math.ceil",
+          "lineNumber": 243
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "Math.ceil",
+          "lineNumber": 244
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "geometry.getAttribute",
+          "lineNumber": 246
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "position.getX",
+          "lineNumber": 251
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "position.getY",
+          "lineNumber": 252
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "position.getZ",
+          "lineNumber": 253
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "colorAttr.getX",
+          "lineNumber": 255
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "colorAttr.getY",
+          "lineNumber": 256
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "colorAttr.getZ",
+          "lineNumber": 257
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "next.setAttribute",
+          "lineNumber": 263
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "next.setAttribute",
+          "lineNumber": 265
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "next.computeBoundingSphere",
+          "lineNumber": 267
+        },
+        {
+          "caller": "decimateBufferGeometry",
+          "callee": "geometry.dispose",
+          "lineNumber": 268
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 4,
+        "functionCount": 7,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/liveMapChunkRetention.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 138,
+      "nonEmptyLines": 117,
+      "functions": [
+        {
+          "name": "chunkSourceKey",
+          "startLine": 18,
+          "endLine": 22,
+          "params": [
+            "chunk"
+          ]
+        },
+        {
+          "name": "chunkStateKey",
+          "startLine": 25,
+          "endLine": 27,
+          "params": [
+            "chunk"
+          ]
+        },
+        {
+          "name": "chunkCacheKey",
+          "startLine": 30,
+          "endLine": 35,
+          "params": [
+            "flightId",
+            "chunk"
+          ]
+        },
+        {
+          "name": "getChunkRetentionLayer",
+          "startLine": 37,
+          "endLine": 51,
+          "params": [
+            "chunk"
+          ]
+        },
+        {
+          "name": "sortLayerChunks",
+          "startLine": 53,
+          "endLine": 62,
+          "params": [
+            "chunks"
+          ]
+        },
+        {
+          "name": "limitChunksPerLayer",
+          "startLine": 64,
+          "endLine": 84,
+          "params": [
+            "chunks",
+            "limits"
+          ]
+        },
+        {
+          "name": "selectDownloadableChunksPerLayer",
+          "startLine": 86,
+          "endLine": 138,
+          "params": [
+            "chunks",
+            "mode",
+            "options"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MAX_CHUNKS_PER_LAYER",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "LIVE_MAX_CACHED_CHUNKS_PER_LAYER",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "LIVE_MAX_CACHED_CHUNKS_RAW_LIDAR",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "chunkSourceKey",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "chunkStateKey",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "chunkCacheKey",
+          "line": 30,
+          "isDefault": false
+        },
+        {
+          "name": "getChunkRetentionLayer",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "sortLayerChunks",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "limitChunksPerLayer",
+          "line": 64,
+          "isDefault": false
+        },
+        {
+          "name": "selectDownloadableChunksPerLayer",
+          "line": 86,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "chunkSourceKey",
+          "callee": "getChunkRetentionLayer",
+          "lineNumber": 21
+        },
+        {
+          "caller": "chunkStateKey",
+          "callee": "chunkSourceKey",
+          "lineNumber": 26
+        },
+        {
+          "caller": "chunkCacheKey",
+          "callee": "chunkStateKey",
+          "lineNumber": 34
+        },
+        {
+          "caller": "getChunkRetentionLayer",
+          "callee": "chunk.id.toLowerCase",
+          "lineNumber": 42
+        },
+        {
+          "caller": "getChunkRetentionLayer",
+          "callee": "id.startsWith",
+          "lineNumber": 43
+        },
+        {
+          "caller": "getChunkRetentionLayer",
+          "callee": "id.startsWith",
+          "lineNumber": 44
+        },
+        {
+          "caller": "getChunkRetentionLayer",
+          "callee": "id.startsWith",
+          "lineNumber": 45
+        },
+        {
+          "caller": "getChunkRetentionLayer",
+          "callee": "id.startsWith",
+          "lineNumber": 46
+        },
+        {
+          "caller": "getChunkRetentionLayer",
+          "callee": "id.startsWith",
+          "lineNumber": 47
+        },
+        {
+          "caller": "getChunkRetentionLayer",
+          "callee": "id.startsWith",
+          "lineNumber": 48
+        },
+        {
+          "caller": "sortLayerChunks",
+          "callee": "[...chunks].sort",
+          "lineNumber": 56
+        },
+        {
+          "caller": "sortLayerChunks",
+          "callee": "String(left.id).localeCompare",
+          "lineNumber": 60
+        },
+        {
+          "caller": "sortLayerChunks",
+          "callee": "String",
+          "lineNumber": 60
+        },
+        {
+          "caller": "sortLayerChunks",
+          "callee": "String",
+          "lineNumber": 60
+        },
+        {
+          "caller": "limitChunksPerLayer",
+          "callee": "getChunkRetentionLayer",
+          "lineNumber": 71
+        },
+        {
+          "caller": "limitChunksPerLayer",
+          "callee": "grouped.get",
+          "lineNumber": 72
+        },
+        {
+          "caller": "limitChunksPerLayer",
+          "callee": "current.push",
+          "lineNumber": 73
+        },
+        {
+          "caller": "limitChunksPerLayer",
+          "callee": "grouped.set",
+          "lineNumber": 74
+        },
+        {
+          "caller": "limitChunksPerLayer",
+          "callee": "result.push",
+          "lineNumber": 80
+        },
+        {
+          "caller": "limitChunksPerLayer",
+          "callee": "sortLayerChunks(layerChunks).slice",
+          "lineNumber": 80
+        },
+        {
+          "caller": "limitChunksPerLayer",
+          "callee": "sortLayerChunks",
+          "lineNumber": 80
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "chunks.filter",
+          "lineNumber": 102
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "Boolean",
+          "lineNumber": 103
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "getChunkRetentionLayer",
+          "lineNumber": 108
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "grouped.set",
+          "lineNumber": 109
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "grouped.get",
+          "lineNumber": 109
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "grouped.entries",
+          "lineNumber": 113
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "sortLayerChunks(layerChunks).filter",
+          "lineNumber": 114
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "sortLayerChunks",
+          "lineNumber": 114
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "Math.min",
+          "lineNumber": 121
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "selected.push",
+          "lineNumber": 123
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "sorted.slice",
+          "lineNumber": 123
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "selected.push",
+          "lineNumber": 127
+        },
+        {
+          "caller": "selectDownloadableChunksPerLayer",
+          "callee": "sortLayerChunks",
+          "lineNumber": 137
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 10,
+        "functionCount": 7,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/liveMapDebug.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 20,
+      "functions": [
+        {
+          "name": "isLiveMapDebugEnabled",
+          "startLine": 1,
+          "endLine": 12,
+          "params": []
+        },
+        {
+          "name": "liveMapDebugLog",
+          "startLine": 14,
+          "endLine": 21,
+          "params": [
+            "event",
+            "payload"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "isLiveMapDebugEnabled",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "liveMapDebugLog",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "isLiveMapDebugEnabled",
+          "callee": "window.localStorage.getItem",
+          "lineNumber": 7
+        },
+        {
+          "caller": "liveMapDebugLog",
+          "callee": "isLiveMapDebugEnabled",
+          "lineNumber": 15
+        },
+        {
+          "caller": "liveMapDebugLog",
+          "callee": "console.debug",
+          "lineNumber": 17
+        },
+        {
+          "caller": "liveMapDebugLog",
+          "callee": "console.debug",
+          "lineNumber": 19
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/liveMapLayerUtils.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 283,
+      "nonEmptyLines": 252,
+      "functions": [
+        {
+          "name": "inferLayerKey",
+          "startLine": 75,
+          "endLine": 112,
+          "params": [
+            "chunk"
+          ]
+        },
+        {
+          "name": "layerColor",
+          "startLine": 114,
+          "endLine": 116,
+          "params": [
+            "layer"
+          ]
+        },
+        {
+          "name": "countPointsByLayer",
+          "startLine": 118,
+          "endLine": 139,
+          "params": [
+            "chunks"
+          ]
+        },
+        {
+          "name": "hasColoredMapLayers",
+          "startLine": 141,
+          "endLine": 148,
+          "params": [
+            "chunks"
+          ]
+        },
+        {
+          "name": "isRawLidarOnlyMap",
+          "startLine": 150,
+          "endLine": 160,
+          "params": [
+            "chunks",
+            "manifest"
+          ]
+        },
+        {
+          "name": "defaultLayerVisibilityForChunks",
+          "startLine": 164,
+          "endLine": 198,
+          "params": [
+            "chunks",
+            "manifest"
+          ]
+        },
+        {
+          "name": "countChunksByLayerKey",
+          "startLine": 216,
+          "endLine": 242,
+          "params": [
+            "chunks"
+          ]
+        },
+        {
+          "name": "chunksAvailableByLayer",
+          "startLine": 244,
+          "endLine": 262,
+          "params": [
+            "chunks",
+            "manifest"
+          ]
+        },
+        {
+          "name": "layerHasStoredChunks",
+          "startLine": 264,
+          "endLine": 273,
+          "params": [
+            "layerKey",
+            "chunks",
+            "manifest"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MAP_INSPECTION_LAYER_KEYS",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "LIVE_MAP_LAYER_LABELS",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "DEFAULT_LAYER_VISIBILITY",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "DEFAULT_LAYER_POINT_BUDGET",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "inferLayerKey",
+          "line": 75,
+          "isDefault": false
+        },
+        {
+          "name": "layerColor",
+          "line": 114,
+          "isDefault": false
+        },
+        {
+          "name": "countPointsByLayer",
+          "line": 118,
+          "isDefault": false
+        },
+        {
+          "name": "hasColoredMapLayers",
+          "line": 141,
+          "isDefault": false
+        },
+        {
+          "name": "isRawLidarOnlyMap",
+          "line": 150,
+          "isDefault": false
+        },
+        {
+          "name": "WarehouseLiveMapManifestSummary",
+          "line": 162,
+          "isDefault": false
+        },
+        {
+          "name": "defaultLayerVisibilityForChunks",
+          "line": 164,
+          "isDefault": false
+        },
+        {
+          "name": "LAYER_CAPTURE_UNAVAILABLE",
+          "line": 211,
+          "isDefault": false
+        },
+        {
+          "name": "countChunksByLayerKey",
+          "line": 216,
+          "isDefault": false
+        },
+        {
+          "name": "chunksAvailableByLayer",
+          "line": 244,
+          "isDefault": false
+        },
+        {
+          "name": "layerHasStoredChunks",
+          "line": 264,
+          "isDefault": false
+        },
+        {
+          "name": "WAREHOUSE_MAP_SOURCE_TOPICS",
+          "line": 275,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "inferLayerKey",
+          "callee": "chunk.id.toLowerCase",
+          "lineNumber": 99
+        },
+        {
+          "caller": "inferLayerKey",
+          "callee": "id.startsWith",
+          "lineNumber": 100
+        },
+        {
+          "caller": "inferLayerKey",
+          "callee": "id.startsWith",
+          "lineNumber": 101
+        },
+        {
+          "caller": "inferLayerKey",
+          "callee": "id.startsWith",
+          "lineNumber": 102
+        },
+        {
+          "caller": "inferLayerKey",
+          "callee": "id.startsWith",
+          "lineNumber": 103
+        },
+        {
+          "caller": "inferLayerKey",
+          "callee": "id.startsWith",
+          "lineNumber": 104
+        },
+        {
+          "caller": "inferLayerKey",
+          "callee": "id.startsWith",
+          "lineNumber": 105
+        },
+        {
+          "caller": "inferLayerKey",
+          "callee": "id.startsWith",
+          "lineNumber": 106
+        },
+        {
+          "caller": "inferLayerKey",
+          "callee": "id.startsWith",
+          "lineNumber": 107
+        },
+        {
+          "caller": "countPointsByLayer",
+          "callee": "inferLayerKey",
+          "lineNumber": 134
+        },
+        {
+          "caller": "hasColoredMapLayers",
+          "callee": "chunks.some",
+          "lineNumber": 142
+        },
+        {
+          "caller": "hasColoredMapLayers",
+          "callee": "inferLayerKey",
+          "lineNumber": 143
+        },
+        {
+          "caller": "isRawLidarOnlyMap",
+          "callee": "chunks.some",
+          "lineNumber": 158
+        },
+        {
+          "caller": "isRawLidarOnlyMap",
+          "callee": "inferLayerKey",
+          "lineNumber": 158
+        },
+        {
+          "caller": "isRawLidarOnlyMap",
+          "callee": "hasColoredMapLayers",
+          "lineNumber": 159
+        },
+        {
+          "caller": "defaultLayerVisibilityForChunks",
+          "callee": "chunksAvailableByLayer",
+          "lineNumber": 168
+        },
+        {
+          "caller": "defaultLayerVisibilityForChunks",
+          "callee": "isRawLidarOnlyMap",
+          "lineNumber": 181
+        },
+        {
+          "caller": "defaultLayerVisibilityForChunks",
+          "callee": "[MANIFEST_SOURCE_TO_LAYER_KEY[preferred], \"rgbdColored\", \"rgbdDepth\", \"nvbloxEsdf\", \"nvbloxMesh\", \"mid360LiDAR\"].filter",
+          "lineNumber": 188
+        },
+        {
+          "caller": "defaultLayerVisibilityForChunks",
+          "callee": "Boolean",
+          "lineNumber": 189
+        },
+        {
+          "caller": "defaultLayerVisibilityForChunks",
+          "callee": "priority.find",
+          "lineNumber": 192
+        },
+        {
+          "caller": "countChunksByLayerKey",
+          "callee": "Boolean",
+          "lineNumber": 233
+        },
+        {
+          "caller": "countChunksByLayerKey",
+          "callee": "Boolean",
+          "lineNumber": 235
+        },
+        {
+          "caller": "countChunksByLayerKey",
+          "callee": "Boolean",
+          "lineNumber": 236
+        },
+        {
+          "caller": "countChunksByLayerKey",
+          "callee": "inferLayerKey",
+          "lineNumber": 238
+        },
+        {
+          "caller": "chunksAvailableByLayer",
+          "callee": "countChunksByLayerKey",
+          "lineNumber": 248
+        },
+        {
+          "caller": "chunksAvailableByLayer",
+          "callee": "Object.entries",
+          "lineNumber": 252
+        },
+        {
+          "caller": "chunksAvailableByLayer",
+          "callee": "Number",
+          "lineNumber": 254
+        },
+        {
+          "caller": "chunksAvailableByLayer",
+          "callee": "Number.isFinite",
+          "lineNumber": 255
+        },
+        {
+          "caller": "chunksAvailableByLayer",
+          "callee": "Math.max",
+          "lineNumber": 256
+        },
+        {
+          "caller": "layerHasStoredChunks",
+          "callee": "chunksAvailableByLayer",
+          "lineNumber": 272
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 16,
+        "functionCount": 9,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/liveMapRenderModel.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 110,
+      "nonEmptyLines": 104,
+      "functions": [
+        {
+          "name": "centerFromBbox",
+          "startLine": 19,
+          "endLine": 25,
+          "params": [
+            "bbox"
+          ]
+        },
+        {
+          "name": "sizeFromBbox",
+          "startLine": 27,
+          "endLine": 33,
+          "params": [
+            "bbox"
+          ]
+        },
+        {
+          "name": "normalizePreviewPoints",
+          "startLine": 35,
+          "endLine": 51,
+          "params": [
+            "raw"
+          ]
+        },
+        {
+          "name": "toRenderChunks",
+          "startLine": 53,
+          "endLine": 103,
+          "params": [
+            "chunks"
+          ]
+        },
+        {
+          "name": "poseToVec3",
+          "startLine": 105,
+          "endLine": 110,
+          "params": [
+            "pose"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "toRenderChunks",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "poseToVec3",
+          "line": 105,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "sizeFromBbox",
+          "callee": "Math.max",
+          "lineNumber": 29
+        },
+        {
+          "caller": "sizeFromBbox",
+          "callee": "Math.max",
+          "lineNumber": 30
+        },
+        {
+          "caller": "sizeFromBbox",
+          "callee": "Math.max",
+          "lineNumber": 31
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "Array.isArray",
+          "lineNumber": 38
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "Array.isArray",
+          "lineNumber": 41
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "Number",
+          "lineNumber": 42
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "Number",
+          "lineNumber": 43
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "Number",
+          "lineNumber": 44
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "Number.isFinite",
+          "lineNumber": 45
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "Number.isFinite",
+          "lineNumber": 45
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "Number.isFinite",
+          "lineNumber": 45
+        },
+        {
+          "caller": "normalizePreviewPoints",
+          "callee": "points.push",
+          "lineNumber": 48
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "chunks.map",
+          "lineNumber": 56
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "Array.isArray",
+          "lineNumber": 58
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "normalizePreviewPoints",
+          "lineNumber": 61
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "Math.floor",
+          "lineNumber": 62
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "Math.cos",
+          "lineNumber": 65
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "Math.sin",
+          "lineNumber": 66
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "previewPoints.reduce",
+          "lineNumber": 70
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "centerFromBbox",
+          "lineNumber": 80
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "chunkStateKey",
+          "lineNumber": 90
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "sizeFromBbox",
+          "lineNumber": 94
+        },
+        {
+          "caller": "toRenderChunks",
+          "callee": "Boolean",
+          "lineNumber": 97
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/liveMapUpdateMerge.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 73,
+      "nonEmptyLines": 66,
+      "functions": [
+        {
+          "name": "mergeUpdate",
+          "startLine": 25,
+          "endLine": 58,
+          "params": [
+            "current",
+            "update"
+          ]
+        },
+        {
+          "name": "applyWarehouseLiveMapMessage",
+          "startLine": 60,
+          "endLine": 73,
+          "params": [
+            "current",
+            "message"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "mergeUpdate",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "applyWarehouseLiveMapMessage",
+          "line": 60,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "mergeUpdate",
+          "callee": "chunksById.delete",
+          "lineNumber": 35
+        },
+        {
+          "caller": "mergeUpdate",
+          "callee": "chunksById.keys",
+          "lineNumber": 36
+        },
+        {
+          "caller": "mergeUpdate",
+          "callee": "key.endsWith",
+          "lineNumber": 37
+        },
+        {
+          "caller": "mergeUpdate",
+          "callee": "chunksById.delete",
+          "lineNumber": 37
+        },
+        {
+          "caller": "mergeUpdate",
+          "callee": "chunksById.get",
+          "lineNumber": 41
+        },
+        {
+          "caller": "mergeUpdate",
+          "callee": "chunksById.set",
+          "lineNumber": 47
+        },
+        {
+          "caller": "mergeUpdate",
+          "callee": "[\n      ...(sameFlight ? current.scanPath : []),\n      ...update.scan_path_sample,\n    ].slice",
+          "lineNumber": 52
+        },
+        {
+          "caller": "applyWarehouseLiveMapMessage",
+          "callee": "isWarehouseLiveMapSnapshot",
+          "lineNumber": 64
+        },
+        {
+          "caller": "applyWarehouseLiveMapMessage",
+          "callee": "message.updates.reduce",
+          "lineNumber": 65
+        },
+        {
+          "caller": "applyWarehouseLiveMapMessage",
+          "callee": "mergeUpdate",
+          "lineNumber": 66
+        },
+        {
+          "caller": "applyWarehouseLiveMapMessage",
+          "callee": "isWarehouseLiveMapUpdate",
+          "lineNumber": 70
+        },
+        {
+          "caller": "applyWarehouseLiveMapMessage",
+          "callee": "mergeUpdate",
+          "lineNumber": 71
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/mergeReplaySnapshot.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 37,
+      "nonEmptyLines": 34,
+      "functions": [
+        {
+          "name": "mergeReplaySnapshot",
+          "startLine": 6,
+          "endLine": 37,
+          "params": [
+            "snapshot"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "mergeReplaySnapshot",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "chunksById.delete",
+          "lineNumber": 17
+        },
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "chunksById.keys",
+          "lineNumber": 18
+        },
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "key.endsWith",
+          "lineNumber": 19
+        },
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "chunksById.delete",
+          "lineNumber": 20
+        },
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "chunksById.set",
+          "lineNumber": 25
+        },
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "Array.from(chunksById.values()).sort",
+          "lineNumber": 31
+        },
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "Array.from",
+          "lineNumber": 31
+        },
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "chunksById.values",
+          "lineNumber": 31
+        },
+        {
+          "caller": "mergeReplaySnapshot",
+          "callee": "snapshot.updates.at",
+          "lineNumber": 35
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/structureQualityCopy.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 19,
+      "functions": [
+        {
+          "name": "describeStructureQualityReasons",
+          "startLine": 11,
+          "endLine": 13,
+          "params": [
+            "reasons"
+          ]
+        },
+        {
+          "name": "structureNeedsReviewMessage",
+          "startLine": 15,
+          "endLine": 21,
+          "params": [
+            "reasons"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "describeStructureQualityReasons",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "structureNeedsReviewMessage",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "describeStructureQualityReasons",
+          "callee": "reasons.map",
+          "lineNumber": 12
+        },
+        {
+          "caller": "describeStructureQualityReasons",
+          "callee": "reason.replaceAll",
+          "lineNumber": 12
+        },
+        {
+          "caller": "structureNeedsReviewMessage",
+          "callee": "describeStructureQualityReasons",
+          "lineNumber": 16
+        },
+        {
+          "caller": "structureNeedsReviewMessage",
+          "callee": "descriptions.join",
+          "lineNumber": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/warehouseMapPlacement.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 60,
+      "nonEmptyLines": 54,
+      "functions": [
+        {
+          "name": "formatMapPoint",
+          "startLine": 26,
+          "endLine": 28,
+          "params": [
+            "point"
+          ]
+        },
+        {
+          "name": "shelfNormalFromFacing",
+          "startLine": 30,
+          "endLine": 38,
+          "params": [
+            "facingId"
+          ]
+        },
+        {
+          "name": "scanTargetsForMapMarkers",
+          "startLine": 40,
+          "endLine": 60,
+          "params": [
+            "targets"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WAREHOUSE_MAP_FRAME_ID",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "SHELF_FACE_OPTIONS",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "formatMapPoint",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "shelfNormalFromFacing",
+          "line": 30,
+          "isDefault": false
+        },
+        {
+          "name": "scanTargetsForMapMarkers",
+          "line": 40,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatMapPoint",
+          "callee": "point.x_m.toFixed",
+          "lineNumber": 27
+        },
+        {
+          "caller": "formatMapPoint",
+          "callee": "point.y_m.toFixed",
+          "lineNumber": 27
+        },
+        {
+          "caller": "formatMapPoint",
+          "callee": "point.z_m.toFixed",
+          "lineNumber": 27
+        },
+        {
+          "caller": "shelfNormalFromFacing",
+          "callee": "SHELF_FACE_OPTIONS.find",
+          "lineNumber": 32
+        },
+        {
+          "caller": "scanTargetsForMapMarkers",
+          "callee": "targets.map",
+          "lineNumber": 48
+        },
+        {
+          "caller": "scanTargetsForMapMarkers",
+          "callee": "[target.aisle_code, target.rack_code, target.bin_code]\n      .filter(Boolean)\n      .join",
+          "lineNumber": 50
+        },
+        {
+          "caller": "scanTargetsForMapMarkers",
+          "callee": "[target.aisle_code, target.rack_code, target.bin_code]\n      .filter",
+          "lineNumber": 50
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 5,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/utils/warehouseSceneCoordinates.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 69,
+      "nonEmptyLines": 61,
+      "functions": [
+        {
+          "name": "matrixFromCoordinateFrame",
+          "startLine": 15,
+          "endLine": 22,
+          "params": [
+            "frame"
+          ]
+        },
+        {
+          "name": "createWarehouseSceneTransform",
+          "startLine": 24,
+          "endLine": 45,
+          "params": [
+            "displayFrameId",
+            "frame"
+          ]
+        },
+        {
+          "name": "transformPoint",
+          "startLine": 47,
+          "endLine": 50,
+          "params": [
+            "point",
+            "matrix"
+          ]
+        },
+        {
+          "name": "sceneToWarehouseMap",
+          "startLine": 52,
+          "endLine": 57,
+          "params": [
+            "point",
+            "transform"
+          ]
+        },
+        {
+          "name": "warehouseMapToScene",
+          "startLine": 59,
+          "endLine": 64,
+          "params": [
+            "point",
+            "transform"
+          ]
+        },
+        {
+          "name": "resolveDisplayedFrame",
+          "startLine": 66,
+          "endLine": 69,
+          "params": [
+            "frameIds"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WAREHOUSE_MAP_FRAME",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "createWarehouseSceneTransform",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "sceneToWarehouseMap",
+          "line": 52,
+          "isDefault": false
+        },
+        {
+          "name": "warehouseMapToScene",
+          "line": 59,
+          "isDefault": false
+        },
+        {
+          "name": "resolveDisplayedFrame",
+          "line": 66,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "matrixFromCoordinateFrame",
+          "callee": "new THREE.Matrix4().compose",
+          "lineNumber": 17
+        },
+        {
+          "caller": "createWarehouseSceneTransform",
+          "callee": "matrixFromCoordinateFrame",
+          "lineNumber": 29
+        },
+        {
+          "caller": "createWarehouseSceneTransform",
+          "callee": "sceneToWarehouse.clone().invert",
+          "lineNumber": 43
+        },
+        {
+          "caller": "createWarehouseSceneTransform",
+          "callee": "sceneToWarehouse.clone",
+          "lineNumber": 43
+        },
+        {
+          "caller": "transformPoint",
+          "callee": "new THREE.Vector3(point.x_m, point.y_m, point.z_m).applyMatrix4",
+          "lineNumber": 48
+        },
+        {
+          "caller": "sceneToWarehouseMap",
+          "callee": "transformPoint",
+          "lineNumber": 56
+        },
+        {
+          "caller": "warehouseMapToScene",
+          "callee": "transformPoint",
+          "lineNumber": 63
+        },
+        {
+          "caller": "resolveDisplayedFrame",
+          "callee": "frameIds.map((value) => value?.trim()).filter",
+          "lineNumber": 67
+        },
+        {
+          "caller": "resolveDisplayedFrame",
+          "callee": "frameIds.map",
+          "lineNumber": 67
+        },
+        {
+          "caller": "resolveDisplayedFrame",
+          "callee": "value?.trim",
+          "lineNumber": 67
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 5,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/views/Warehouse.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 1420,
+      "nonEmptyLines": 1344,
+      "functions": [
+        {
+          "name": "WarehousePage",
+          "startLine": 111,
+          "endLine": 1420,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "WarehousePage",
+          "line": 111,
+          "isDefault": true
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "WarehousePage",
+          "callee": "useTaskPreflightCommandsDrawer",
+          "lineNumber": 112
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useTaskPreflightCommandsDrawer",
+          "lineNumber": 113
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useTaskPreflightCommandsDrawer",
+          "lineNumber": 114
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 116
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseSetupDrawer.closeDrawer",
+          "lineNumber": 118
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseChecksDrawer.closeDrawer",
+          "lineNumber": 119
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseMissionDrawer.closeDrawer",
+          "lineNumber": 120
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 125
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseSetupDrawer.onOpenChange",
+          "lineNumber": 127
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "closeOtherWarehouseDrawers",
+          "lineNumber": 128
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 133
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseChecksDrawer.onOpenChange",
+          "lineNumber": 135
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "closeOtherWarehouseDrawers",
+          "lineNumber": 136
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 141
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseMissionDrawer.onOpenChange",
+          "lineNumber": 143
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "closeOtherWarehouseDrawers",
+          "lineNumber": 144
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 149
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 152
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 153
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 154
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 157
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 158
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 159
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 162
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 163
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 164
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 165
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 166
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 167
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 171
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 172
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 173
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 174
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 176
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 177
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 178
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 179
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 182
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 185
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 186
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 189
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 191
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 192
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useRef",
+          "lineNumber": 196
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useRef",
+          "lineNumber": 197
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useRef",
+          "lineNumber": 198
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useErrors",
+          "lineNumber": 199
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "(apiBaseRaw || \"http://localhost:8000\").replace",
+          "lineNumber": 202
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 203
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 204
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useMemo",
+          "lineNumber": 205
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "authToken.slice",
+          "lineNumber": 206
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useRunWarehousePreflight",
+          "lineNumber": 217
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useWarehouseFlightReadiness",
+          "lineNumber": 222
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Boolean",
+          "lineNumber": 225
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useWarehouseMapPlacement",
+          "lineNumber": 231
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 240
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setMapPlacementPickMode",
+          "lineNumber": 242
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 246
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setMapDetailTab",
+          "lineNumber": 248
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useState",
+          "lineNumber": 252
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useWarehouseMissionRuntimeController",
+          "lineNumber": 268
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useMemo",
+          "lineNumber": 273
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "selectScannedMap",
+          "lineNumber": 274
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Boolean",
+          "lineNumber": 278
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Boolean",
+          "lineNumber": 280
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useWarehouseLiveVoxelMap",
+          "lineNumber": 284
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Boolean",
+          "lineNumber": 285
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useWarehouseMappingStack",
+          "lineNumber": 289
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Boolean",
+          "lineNumber": 290
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useMemo",
+          "lineNumber": 294
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "selectScannedMap",
+          "lineNumber": 295
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useWarehouseScannedMapReplay",
+          "lineNumber": 299
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Boolean",
+          "lineNumber": 312
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 314
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 316
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setLoadingScannedMaps",
+          "lineNumber": 319
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "listWarehouseScannedMaps",
+          "lineNumber": 321
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScannedMaps",
+          "lineNumber": 325
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedMapJobId",
+          "lineNumber": 329
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setViewerMapJobId",
+          "lineNumber": 331
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedMapJobId",
+          "lineNumber": 334
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "records.some",
+          "lineNumber": 337
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 346
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 347
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setLoadingScannedMaps",
+          "lineNumber": 351
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 357
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadScannedMaps({ selectJobId: jobId, showInViewer: true }).then",
+          "lineNumber": 359
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadScannedMaps",
+          "lineNumber": 359
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "viewerSectionRef.current?.scrollIntoView",
+          "lineNumber": 361
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 367
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 374
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 375
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setLoadingMissionDefaults",
+          "lineNumber": 378
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "fetchWarehouseMissionDefaults",
+          "lineNumber": 380
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setMissionDefaultsDraft",
+          "lineNumber": 381
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toWarehouseMissionDefaultsDraft",
+          "lineNumber": 381
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 383
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 384
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setLoadingMissionDefaults",
+          "lineNumber": 387
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 391
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 392
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setLoadingWarehouseMaps",
+          "lineNumber": 394
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "listWarehouseMaps",
+          "lineNumber": 396
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setWarehouseMaps",
+          "lineNumber": 397
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedWarehouseMapId",
+          "lineNumber": 399
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "maps.some",
+          "lineNumber": 400
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 405
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 405
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setLoadingWarehouseMaps",
+          "lineNumber": 407
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 411
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 412
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setLoadingSensorRigs",
+          "lineNumber": 414
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "listWarehouseSensorRigs",
+          "lineNumber": 416
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSensorRigs",
+          "lineNumber": 417
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedSensorRigId",
+          "lineNumber": 418
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "rigs.some",
+          "lineNumber": 419
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 424
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 424
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setLoadingSensorRigs",
+          "lineNumber": 426
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 430
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 432
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSensorRigHealth",
+          "lineNumber": 436
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "fetchWarehouseSensorRigHealth",
+          "lineNumber": 440
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSensorRigHealth",
+          "lineNumber": 442
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSensorRigHealth",
+          "lineNumber": 445
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 446
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 446
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 452
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 454
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "createMapForm.name.trim",
+          "lineNumber": 456
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 458
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Number",
+          "lineNumber": 461
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Number",
+          "lineNumber": 462
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Number.isFinite",
+          "lineNumber": 463
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 464
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Number.isFinite",
+          "lineNumber": 467
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 468
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setCreatingMap",
+          "lineNumber": 471
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "createWarehouseMap",
+          "lineNumber": 473
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadWarehouseMaps",
+          "lineNumber": 477
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedWarehouseMapId",
+          "lineNumber": 478
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 479
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 483
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 487
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 487
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setCreatingMap",
+          "lineNumber": 491
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 497
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 499
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 501
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseMaps.find",
+          "lineNumber": 504
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeletingWarehouseMap",
+          "lineNumber": 509
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "deleteWarehouseMap",
+          "lineNumber": 511
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedDockId",
+          "lineNumber": 513
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedWarehouseMapId",
+          "lineNumber": 515
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadWarehouseMaps",
+          "lineNumber": 516
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 517
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 519
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 519
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeletingWarehouseMap",
+          "lineNumber": 521
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeleteTarget",
+          "lineNumber": 522
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 526
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 528
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 530
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getWarehouseName",
+          "lineNumber": 534
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeletingScannedMap",
+          "lineNumber": 536
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "deleteWarehouseScannedMap",
+          "lineNumber": 538
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedMapJobId",
+          "lineNumber": 539
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setViewerMapJobId",
+          "lineNumber": 540
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadScannedMaps",
+          "lineNumber": 541
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 542
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 544
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 544
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeletingScannedMap",
+          "lineNumber": 546
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeleteTarget",
+          "lineNumber": 547
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 551
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 553
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sensorRigForm.name.trim",
+          "lineNumber": 555
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sensorRigForm.camera_model.trim",
+          "lineNumber": 556
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 558
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 562
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sensorRigForm.stereo_baseline_m.trim",
+          "lineNumber": 565
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Number",
+          "lineNumber": 566
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Number.isFinite",
+          "lineNumber": 569
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "Number",
+          "lineNumber": 569
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 571
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSavingSensorRig",
+          "lineNumber": 574
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "createWarehouseSensorRig",
+          "lineNumber": 576
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sensorRigForm.intrinsics_url.trim",
+          "lineNumber": 581
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sensorRigForm.extrinsics_url.trim",
+          "lineNumber": 582
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sensorRigForm.firmware_version.trim",
+          "lineNumber": 584
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigs",
+          "lineNumber": 589
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedSensorRigId",
+          "lineNumber": 590
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigHealth",
+          "lineNumber": 591
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 594
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 594
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSavingSensorRig",
+          "lineNumber": 597
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 603
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 605
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 607
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sensorRigs.find",
+          "lineNumber": 610
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeletingSensorRig",
+          "lineNumber": 613
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "deleteWarehouseSensorRig",
+          "lineNumber": 615
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedSensorRigId",
+          "lineNumber": 616
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSensorRigHealth",
+          "lineNumber": 617
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigs",
+          "lineNumber": 618
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 619
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 621
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 621
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeletingSensorRig",
+          "lineNumber": 623
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeleteTarget",
+          "lineNumber": 624
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 628
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 629
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sensorRigs.find",
+          "lineNumber": 631
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSavingSensorRig",
+          "lineNumber": 633
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "updateWarehouseSensorRigCalibration",
+          "lineNumber": 635
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "new Date().toISOString",
+          "lineNumber": 646
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigs",
+          "lineNumber": 651
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigHealth",
+          "lineNumber": 652
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 654
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 654
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSavingSensorRig",
+          "lineNumber": 656
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 666
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadScannedMaps",
+          "lineNumber": 667
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 670
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadMissionDefaults",
+          "lineNumber": 671
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 674
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadWarehouseMaps",
+          "lineNumber": 675
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 678
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigs",
+          "lineNumber": 679
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 682
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigHealth",
+          "lineNumber": 683
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 686
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "window.localStorage.getItem",
+          "lineNumber": 688
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "JSON.parse",
+          "lineNumber": 690
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedWarehouseMapId",
+          "lineNumber": 697
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedSensorRigId",
+          "lineNumber": 700
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedDockId",
+          "lineNumber": 703
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSetupTab",
+          "lineNumber": 706
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "window.localStorage.removeItem",
+          "lineNumber": 709
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 713
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "window.localStorage.setItem",
+          "lineNumber": 715
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "JSON.stringify",
+          "lineNumber": 717
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 735
+        },
+        {
+          "caller": "refreshVisibleMaps",
+          "callee": "loadScannedMaps",
+          "lineNumber": 737
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "window.setInterval",
+          "lineNumber": 739
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "document.addEventListener",
+          "lineNumber": 743
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "window.clearInterval",
+          "lineNumber": 745
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "document.removeEventListener",
+          "lineNumber": 746
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useEffect",
+          "lineNumber": 750
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadScannedMaps",
+          "lineNumber": 757
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 762
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 763
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 765
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 769
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 773
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseMaps.find",
+          "lineNumber": 779
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setStartingScan",
+          "lineNumber": 783
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 784
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "startWarehouseScan",
+          "lineNumber": 786
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "scannedMaps.find",
+          "lineNumber": 795
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getWarehouseMapId",
+          "lineNumber": 796
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setPendingFlightId",
+          "lineNumber": 802
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "refetchWarehouseFlightReadiness",
+          "lineNumber": 803
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "launch.warehouse_name.trim",
+          "lineNumber": 804
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 805
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadScannedMaps",
+          "lineNumber": 808
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getWarehouseStartPreflight",
+          "lineNumber": 810
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 811
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 812
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getWarehouseStartMessage",
+          "lineNumber": 813
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setStartingScan",
+          "lineNumber": 816
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 832
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 834
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 836
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setFlightCommandBusy",
+          "lineNumber": 839
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "sendWarehouseFlightCommand",
+          "lineNumber": 841
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "refetchWarehouseFlightReadiness",
+          "lineNumber": 842
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 844
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 847
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 847
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setFlightCommandBusy",
+          "lineNumber": 849
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 855
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setPendingFlightId",
+          "lineNumber": 857
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "launch.warehouse_name.trim",
+          "lineNumber": 858
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 859
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 866
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getWarehouseStartPreflight",
+          "lineNumber": 868
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 869
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 870
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 870
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 875
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setMissionDefaultsDraft",
+          "lineNumber": 877
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setMissionDefaultsMessage",
+          "lineNumber": 885
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 890
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getToken",
+          "lineNumber": 891
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 893
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 899
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toWarehouseMissionDefaultsPayload",
+          "lineNumber": 905
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 907
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 907
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSavingMissionDefaults",
+          "lineNumber": 911
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setMissionDefaultsMessage",
+          "lineNumber": 912
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "updateWarehouseMissionDefaults",
+          "lineNumber": 914
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setMissionDefaultsDraft",
+          "lineNumber": 915
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toWarehouseMissionDefaultsDraft",
+          "lineNumber": 915
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setMissionDefaultsMessage",
+          "lineNumber": 916
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "addError",
+          "lineNumber": 918
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "toMessage",
+          "lineNumber": 919
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSavingMissionDefaults",
+          "lineNumber": 922
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useMemo",
+          "lineNumber": 946
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "warehouseMaps.find",
+          "lineNumber": 949
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useMemo",
+          "lineNumber": 954
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "scannedMaps.filter",
+          "lineNumber": 955
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getWarehouseMapId",
+          "lineNumber": 957
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useMemo",
+          "lineNumber": 963
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "useCallback",
+          "lineNumber": 1022
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setScanLaunchMessage",
+          "lineNumber": 1025
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedMapJobId",
+          "lineNumber": 1122
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setViewerMapJobId",
+          "lineNumber": 1123
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadScannedMaps",
+          "lineNumber": 1125
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeleteTarget",
+          "lineNumber": 1128
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "getWarehouseName",
+          "lineNumber": 1130
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleDeleteScannedMap",
+          "lineNumber": 1131
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSetupTab",
+          "lineNumber": 1209
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedWarehouseMapId",
+          "lineNumber": 1235
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setSelectedDockId",
+          "lineNumber": 1236
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadWarehouseMaps",
+          "lineNumber": 1238
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeleteTarget",
+          "lineNumber": 1241
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleDeleteWarehouseMap",
+          "lineNumber": 1245
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigs",
+          "lineNumber": 1268
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "loadSensorRigHealth",
+          "lineNumber": 1269
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleMarkSensorRigCalibrated",
+          "lineNumber": 1271
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeleteTarget",
+          "lineNumber": 1274
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleDeleteSensorRig",
+          "lineNumber": 1278
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleUpdateMissionDefaults",
+          "lineNumber": 1314
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "runWarehousePreflightChecks",
+          "lineNumber": 1337
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleStartWarehouseScan",
+          "lineNumber": 1372
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleFlightCommand",
+          "lineNumber": 1373
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleFlightCommand",
+          "lineNumber": 1374
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "handleFlightCommand",
+          "lineNumber": 1375
+        },
+        {
+          "caller": "WarehousePage",
+          "callee": "setDeleteTarget",
+          "lineNumber": 1416
+        }
+      ],
+      "metrics": {
+        "importCount": 34,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/warehouseMissionDefaults.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 310,
+      "nonEmptyLines": 299,
+      "functions": [
+        {
+          "name": "toMissionDefaultColumns",
+          "startLine": 170,
+          "endLine": 181,
+          "params": [
+            "showAdvanced"
+          ]
+        },
+        {
+          "name": "toWarehouseMissionDefaultsDraft",
+          "startLine": 210,
+          "endLine": 231,
+          "params": [
+            "defaults"
+          ]
+        },
+        {
+          "name": "parseRequiredNumber",
+          "startLine": 233,
+          "endLine": 250,
+          "params": [
+            "label",
+            "raw",
+            "integer"
+          ]
+        },
+        {
+          "name": "parseOptionalNumber",
+          "startLine": 252,
+          "endLine": 263,
+          "params": [
+            "label",
+            "raw"
+          ]
+        },
+        {
+          "name": "toWarehouseMissionDefaultsPayload",
+          "startLine": 265,
+          "endLine": 310,
+          "params": [
+            "draft"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WAREHOUSE_MISSION_DEFAULT_ROWS",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "ADVANCED_MISSION_DEFAULT_KEYS",
+          "line": 154,
+          "isDefault": false
+        },
+        {
+          "name": "toMissionDefaultColumns",
+          "line": 170,
+          "isDefault": false
+        },
+        {
+          "name": "MISSION_DEFAULT_VALUE_SX",
+          "line": 183,
+          "isDefault": false
+        },
+        {
+          "name": "toWarehouseMissionDefaultsDraft",
+          "line": 210,
+          "isDefault": false
+        },
+        {
+          "name": "parseRequiredNumber",
+          "line": 233,
+          "isDefault": false
+        },
+        {
+          "name": "parseOptionalNumber",
+          "line": 252,
+          "isDefault": false
+        },
+        {
+          "name": "toWarehouseMissionDefaultsPayload",
+          "line": 265,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "toMissionDefaultColumns",
+          "callee": "WAREHOUSE_MISSION_DEFAULT_ROWS.filter",
+          "lineNumber": 173
+        },
+        {
+          "caller": "toMissionDefaultColumns",
+          "callee": "ADVANCED_MISSION_DEFAULT_KEYS.has",
+          "lineNumber": 174
+        },
+        {
+          "caller": "toMissionDefaultColumns",
+          "callee": "Math.ceil",
+          "lineNumber": 177
+        },
+        {
+          "caller": "toMissionDefaultColumns",
+          "callee": "Array.from({ length: columnCount }, (_, index) =>\n    visibleRows.slice(index * rowsPerColumn, (index + 1) * rowsPerColumn),\n  ).filter",
+          "lineNumber": 178
+        },
+        {
+          "caller": "toMissionDefaultColumns",
+          "callee": "Array.from",
+          "lineNumber": 178
+        },
+        {
+          "caller": "toMissionDefaultColumns",
+          "callee": "visibleRows.slice",
+          "lineNumber": 179
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 213
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 214
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 216
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 217
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 218
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 222
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 223
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 224
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 225
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 226
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 227
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 228
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 229
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsDraft",
+          "callee": "String",
+          "lineNumber": 230
+        },
+        {
+          "caller": "parseRequiredNumber",
+          "callee": "raw.trim",
+          "lineNumber": 238
+        },
+        {
+          "caller": "parseRequiredNumber",
+          "callee": "Number",
+          "lineNumber": 242
+        },
+        {
+          "caller": "parseRequiredNumber",
+          "callee": "Number.isFinite",
+          "lineNumber": 243
+        },
+        {
+          "caller": "parseRequiredNumber",
+          "callee": "Number.isInteger",
+          "lineNumber": 246
+        },
+        {
+          "caller": "parseOptionalNumber",
+          "callee": "raw.trim",
+          "lineNumber": 256
+        },
+        {
+          "caller": "parseOptionalNumber",
+          "callee": "Number.parseFloat",
+          "lineNumber": 258
+        },
+        {
+          "caller": "parseOptionalNumber",
+          "callee": "Number.isFinite",
+          "lineNumber": 259
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 268
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 269
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseOptionalNumber",
+          "lineNumber": 273
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 274
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 275
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 284
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 285
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 286
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 290
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 294
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 295
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 299
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 300
+        },
+        {
+          "caller": "toWarehouseMissionDefaultsPayload",
+          "callee": "parseRequiredNumber",
+          "lineNumber": 305
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 8,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/modules/warehouse/warehousePageSupport.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 260,
+      "nonEmptyLines": 247,
+      "functions": [
+        {
+          "name": "formatWarehouseSensorKeys",
+          "startLine": 33,
+          "endLine": 36,
+          "params": [
+            "keys"
+          ]
+        },
+        {
+          "name": "toMessage",
+          "startLine": 168,
+          "endLine": 169,
+          "params": [
+            "error"
+          ]
+        },
+        {
+          "name": "getWarehouseStartPreflight",
+          "startLine": 171,
+          "endLine": 178,
+          "params": [
+            "error"
+          ]
+        },
+        {
+          "name": "getWarehouseStartReadiness",
+          "startLine": 180,
+          "endLine": 191,
+          "params": [
+            "error"
+          ]
+        },
+        {
+          "name": "getWarehouseStartMessage",
+          "startLine": 193,
+          "endLine": 260,
+          "params": [
+            "error"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "WAREHOUSE_SENSOR_TOPIC_LABELS",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "formatWarehouseSensorKeys",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "SCANNED_MAP_REFRESH_MS",
+          "line": 102,
+          "isDefault": false
+        },
+        {
+          "name": "COMPACT_FIELD_SX",
+          "line": 104,
+          "isDefault": false
+        },
+        {
+          "name": "SENSOR_RIG_CREATE_FIELDS",
+          "line": 129,
+          "isDefault": false
+        },
+        {
+          "name": "toMessage",
+          "line": 168,
+          "isDefault": false
+        },
+        {
+          "name": "getWarehouseStartPreflight",
+          "line": 171,
+          "isDefault": false
+        },
+        {
+          "name": "getWarehouseStartReadiness",
+          "line": 180,
+          "isDefault": false
+        },
+        {
+          "name": "getWarehouseStartMessage",
+          "line": 193,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "formatWarehouseSensorKeys",
+          "callee": "[\n    ...new Set(keys.map((key) => WAREHOUSE_SENSOR_TOPIC_LABELS[key] ?? key)),\n  ].join",
+          "lineNumber": 34
+        },
+        {
+          "caller": "formatWarehouseSensorKeys",
+          "callee": "keys.map",
+          "lineNumber": 35
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "[\n      (typeof detail.user_message === \"string\" && detail.user_message) ||\n        (typeof detail.message === \"string\" && detail.message) ||\n        \"\",\n    ].filter",
+          "lineNumber": 199
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "Array.isArray",
+          "lineNumber": 209
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "Array.isArray",
+          "lineNumber": 217
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "parts.push",
+          "lineNumber": 223
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "formatWarehouseSensorKeys",
+          "lineNumber": 223
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "parts.push",
+          "lineNumber": 226
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "formatWarehouseSensorKeys",
+          "lineNumber": 226
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "parts.push",
+          "lineNumber": 230
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "nvbloxMissing.join",
+          "lineNumber": 230
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "parts.push",
+          "lineNumber": 234
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "Array.isArray",
+          "lineNumber": 236
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "parts.push",
+          "lineNumber": 240
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "blockingReasons.join",
+          "lineNumber": 240
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "getWarehouseStartReadiness",
+          "lineNumber": 243
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "parts.push",
+          "lineNumber": 249
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "blocking.join",
+          "lineNumber": 249
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "parts.join",
+          "lineNumber": 251
+        },
+        {
+          "caller": "getWarehouseStartMessage",
+          "callee": "toMessage",
+          "lineNumber": 259
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 9,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/test/msw/server.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 3,
+      "nonEmptyLines": 2,
+      "exports": [
+        {
+          "name": "server",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/test/renderWithProviders.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 16,
+      "nonEmptyLines": 12,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/test/renderWithProviders.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 52,
+      "nonEmptyLines": 45,
+      "functions": [
+        {
+          "name": "createTestQueryClient",
+          "startLine": 18,
+          "endLine": 22,
+          "params": [
+            "defaultOptions"
+          ]
+        },
+        {
+          "name": "createTestQueryWrapper",
+          "startLine": 24,
+          "endLine": 32,
+          "params": [
+            "queryClient"
+          ]
+        },
+        {
+          "name": "renderWithProviders",
+          "startLine": 34,
+          "endLine": 52,
+          "params": [
+            "ui",
+            "{ router, ...options }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "createTestQueryClient",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "createTestQueryWrapper",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "renderWithProviders",
+          "line": 34,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "createTestQueryWrapper",
+          "callee": "createTestQueryClient",
+          "lineNumber": 25
+        },
+        {
+          "caller": "renderWithProviders",
+          "callee": "createTestQueryClient",
+          "lineNumber": 38
+        },
+        {
+          "caller": "renderWithProviders",
+          "callee": "render",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "frontend/src/test/setup.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 19,
+      "nonEmptyLines": 18,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

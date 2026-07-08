@@ -68,6 +68,11 @@ from backend.modules.warehouse.service.inspection import (
     compute_scan_pose,
     order_targets,
 )
+from backend.modules.warehouse.service.inspection_feedback import (
+    append_rescan_plan,
+    persist_inspection_feedback,
+    persist_layout_drift_report,
+)
 from backend.modules.warehouse.service.layout import resolve_bin_context
 from backend.modules.warehouse.service.mission_revisions import (
     create_mission_revision_pins,
@@ -199,6 +204,9 @@ async def create_warehouse_scan_target(
             if payload.shelf_normal_local_json is not None
             else None
         ),
+        scanner_metadata_json=dict(payload.scanner_metadata_json or {}),
+        path_validation_json=dict(payload.path_validation_json or {}),
+        failure_reason=payload.failure_reason,
         standoff_m=float(payload.standoff_m),
         hover_time_s=float(payload.hover_time_s),
         scan_timeout_s=float(payload.scan_timeout_s),
@@ -289,6 +297,9 @@ async def import_warehouse_scan_targets(
                     if target.shelf_normal_local_json is not None
                     else None
                 ),
+                scanner_metadata_json=dict(target.scanner_metadata_json or {}),
+                path_validation_json=dict(target.path_validation_json or {}),
+                failure_reason=target.failure_reason,
                 standoff_m=float(target.standoff_m),
                 hover_time_s=float(target.hover_time_s),
                 scan_timeout_s=float(target.scan_timeout_s),
@@ -414,6 +425,7 @@ async def update_warehouse_scan_target(
         "scan_timeout_s",
         "priority",
         "active",
+        "failure_reason",
     ):
         if field_name in fields_set:
             setattr(row, field_name, getattr(payload, field_name))
@@ -431,6 +443,10 @@ async def update_warehouse_scan_target(
             if payload.shelf_normal_local_json is not None
             else None
         )
+    if "scanner_metadata_json" in fields_set:
+        row.scanner_metadata_json = dict(payload.scanner_metadata_json or {})
+    if "path_validation_json" in fields_set:
+        row.path_validation_json = dict(payload.path_validation_json or {})
     validated = WarehouseScanTargetCreate.model_validate(
         {
             "reference_model_id": row.reference_model_id,
@@ -446,6 +462,9 @@ async def update_warehouse_scan_target(
             "scan_pose_local_json": row.scan_pose_local_json,
             "sensor_aim_json": row.sensor_aim_json,
             "shelf_normal_local_json": row.shelf_normal_local_json,
+            "scanner_metadata_json": row.scanner_metadata_json,
+            "path_validation_json": row.path_validation_json,
+            "failure_reason": row.failure_reason,
             "standoff_m": row.standoff_m,
             "hover_time_s": row.hover_time_s,
             "scan_timeout_s": row.scan_timeout_s,
@@ -463,6 +482,9 @@ async def update_warehouse_scan_target(
         if validated.shelf_normal_local_json is not None
         else None
     )
+    row.scanner_metadata_json = dict(validated.scanner_metadata_json or {})
+    row.path_validation_json = dict(validated.path_validation_json or {})
+    row.failure_reason = validated.failure_reason
     try:
         await db.commit()
         await db.refresh(row)
@@ -581,7 +603,13 @@ async def create_warehouse_inspection_mission(
         "validation_result_id": pins.validation_result_id,
         "artifact_checksums": pins.artifact_checksums,
         "warehouse_map_to_odom_transform": coordinate_frame.transform_json,
+        "preflight_relocalization": {
+            "required": True,
+            "status": "pending",
+            "reason": "inspection_mission_start",
+        },
         "waypoints": [waypoint.model_dump() for waypoint in waypoints],
+        "rescan_waypoints": [],
         "warnings": [],
     }
     plan_checksum = hashlib.sha256(
@@ -730,8 +758,8 @@ async def run_warehouse_inspection_mission_mock(
     )
     coordinate_frame = await get_locked_coordinate_frame(db, int(mission.warehouse_map_id))
     if block_executable_mission(
-        coordinate_frame_status=str(coordinate_frame.status),
-        localization_method=str(coordinate_frame.localization_method or ""),
+        coordinate_frame_status=str(getattr(coordinate_frame, "status", "locked")),
+        localization_method=str(getattr(coordinate_frame, "localization_method", "") or ""),
     ):
         record_mission_rejection(reason="provisional_coordinates")
         raise HTTPException(
@@ -739,7 +767,8 @@ async def run_warehouse_inspection_mission_mock(
             detail="Executable missions are blocked while coordinates are provisional",
         )
     try:
-        if str(coordinate_frame.localization_method or "").lower() in {
+        localization_method = str(getattr(coordinate_frame, "localization_method", "") or "")
+        if localization_method.lower() in {
             "live_slam",
             "provisional_slam",
             "scan_provisional",
@@ -779,6 +808,14 @@ async def run_warehouse_inspection_mission_mock(
     mission.status = "running"
     results: list[WarehouseInspectionResult] = []
     try:
+        plan = dict(mission.plan_json or {})
+        plan["preflight_relocalization"] = {
+            "required": True,
+            "status": "passed",
+            "reason": "mock_execution_localization_check",
+            "checked_at": datetime.now(UTC).isoformat(),
+        }
+        mission.plan_json = plan
         for target in ordered:
             logger.info(
                 "warehouse_inspection_scan_started",
@@ -798,8 +835,29 @@ async def run_warehouse_inspection_mission_mock(
                 error_message=scan.error_message,
             )
             db.add(result)
+            await db.flush()
+            try:
+                await persist_inspection_feedback(
+                    db,
+                    mission=mission,
+                    target=target,
+                    result=result,
+                )
+                append_rescan_plan(mission, target=target, result=result)
+            except Exception:
+                logger.exception(
+                    "warehouse_inspection_mock_feedback_failed",
+                    extra={"mission_id": int(mission.id), "target_id": int(target.id)},
+                )
             results.append(result)
         mission.status = "completed"
+        try:
+            await persist_layout_drift_report(db, mission=mission)
+        except Exception:
+            logger.exception(
+                "warehouse_inspection_mock_drift_report_failed",
+                extra={"mission_id": int(mission.id)},
+            )
         await db.commit()
         for result in results:
             await db.refresh(result)
