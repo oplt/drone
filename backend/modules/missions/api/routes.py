@@ -7,12 +7,14 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import pairwise
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from backend.core.config.runtime import env_truthy, settings
+from backend.core.errors.public import public_error
 from backend.core.events import (
     FlightEventEnvelopeV1,
     FlightEventPayloadV1,
@@ -23,6 +25,9 @@ from backend.core.events import (
     next_runtime_sequence,
     utc_now,
 )
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
+from backend.infrastructure.jobs import enqueue_task
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.deliverables.service import mission_export_service
 from backend.modules.identity.dependencies import require_user
 from backend.modules.missions.api.preview_routes import router as preview_router
@@ -529,7 +534,6 @@ async def execute_mission(
     try:
         await mission.execute(orch, alt=cruise_alt)
         logger.info("✅ Mission '%s' completed successfully", mission_name)
-        print(f"✅ Mission '{mission_name}' completed successfully")
     except MissionAbortRequested as exc:
         terminal_state = "aborted"
         terminal_error = str(exc)
@@ -549,12 +553,17 @@ async def execute_mission(
     except asyncio.CancelledError:
         terminal_state = "failed"
         terminal_error = "Mission task cancelled unexpectedly"
-        logger.exception("❌ Mission '%s' was cancelled unexpectedly", mission_name)
+        logger.exception(
+            "Mission execution was cancelled",
+            extra={"mission_id": runtime_id},
+        )
     except Exception as exc:
         terminal_state = "failed"
         terminal_error = str(exc)
-        logger.exception("❌ Mission '%s' failed", mission_name)
-        print(f"❌ Mission '{mission_name}' failed: {exc}")
+        logger.exception(
+            "Mission execution failed",
+            extra={"mission_id": runtime_id},
+        )
     finally:
         db_row = await mission_application.finalize_execution(
             runtime_id,
@@ -719,21 +728,36 @@ async def _apply_mission_command(
     else:
         success = False
         if command == "pause":
-            success = await asyncio.to_thread(orch.drone.pause_mission)
+            success = await run_blocking(
+                orch.drone.pause_mission,
+                boundary="mavlink",
+                operation="pause_mission",
+                timeout_s=10.0,
+            )
             message = (
                 "Mission paused."
                 if success
                 else "Pause command could not be applied on current drone connection."
             )
         elif command == "resume":
-            success = await asyncio.to_thread(orch.drone.resume_mission)
+            success = await run_blocking(
+                orch.drone.resume_mission,
+                boundary="mavlink",
+                operation="resume_mission",
+                timeout_s=10.0,
+            )
             message = (
                 "Mission resumed."
                 if success
                 else "Resume command could not be applied on current drone connection."
             )
         elif command == "abort":
-            success = await asyncio.to_thread(orch.drone.abort_mission)
+            success = await run_blocking(
+                orch.drone.abort_mission,
+                boundary="mavlink",
+                operation="abort_mission",
+                timeout_s=10.0,
+            )
             # Abort is stateful even if transport call fails; mission task checks abort flag.
             # The adapter sets the abort flag before mode-switch attempts.
             if not success:
@@ -744,7 +768,13 @@ async def _apply_mission_command(
             message = "Mission aborted by operator."
         elif command == "rth":
             try:
-                await asyncio.to_thread(orch.drone.set_mode, "RTL")
+                await run_blocking(
+                    orch.drone.set_mode,
+                    "RTL",
+                    boundary="mavlink",
+                    operation="set_mode_rtl",
+                    timeout_s=10.0,
+                )
                 success = True
                 message = "Return-to-home initiated."
             except Exception as exc:
@@ -756,7 +786,12 @@ async def _apply_mission_command(
                 message = f"RTH command failed: {exc}"
         elif command == "land":
             try:
-                await asyncio.to_thread(orch.drone.land)
+                await run_blocking(
+                    orch.drone.land,
+                    boundary="mavlink",
+                    operation="land",
+                    timeout_s=10.0,
+                )
                 success = True
                 message = "Land-in-place initiated."
             except Exception as exc:
@@ -937,7 +972,7 @@ async def run_preflight(
     try:
         mission, _ = build_mission(payload, owner_id=int(user.id))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Mission inputs are invalid.") from exc
 
     orch = await get_orchestrator()
     active_task = getattr(orch, "_active_mission_task", None)
@@ -959,11 +994,11 @@ async def run_preflight(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.exception("Manual preflight run failed")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Preflight execution failed: {exc}",
-        ) from exc
+        logger.exception(
+            "Manual preflight run failed",
+            extra={"user_id": int(user.id), "mission_id": payload.name},
+        )
+        raise public_error(500, "PREFLIGHT_FAILED", "Preflight execution failed") from exc
 
     rec = await _store_preflight_run(
         user_id=int(user.id),
@@ -1080,14 +1115,24 @@ def _build_state_timeline(
     return [e for _, e in events]
 
 
-@router.get("/missions", response_model=list[MissionRuntimeOut])
+@router.get("/missions", response_model=Page[MissionRuntimeOut])
 async def list_missions(
-    limit: int = 50,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     user=Depends(require_user),
 ):
     """List recent mission runtimes for the current user (newest first)."""
-    rows = await mission_application.list_recent(user_id=int(user.id), limit=min(limit, 200))
-    return [_runtime_to_out(_MissionRuntimeRecord.from_db(r)) for r in rows]
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    rows = await mission_application.list_recent(
+        user_id=int(user.id), limit=page_limit + 1, offset=page_offset
+    )
+    return page_from_offset(
+        [_runtime_to_out(_MissionRuntimeRecord.from_db(r)) for r in rows],
+        limit=page_limit,
+        offset=page_offset,
+    )
 
 
 @router.get("/missions/active", response_model=MissionRuntimeOut)
@@ -1104,9 +1149,11 @@ async def get_active_mission(
     return _runtime_to_out(runtime)
 
 
-@router.get("/missions/resumable", response_model=list[ResumableMissionOut])
+@router.get("/missions/resumable", response_model=Page[ResumableMissionOut])
 async def list_resumable_missions(
-    limit: int = 20,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     user=Depends(require_user),
 ):
     """List terminal missions that have checkpointed progress and can be re-launched.
@@ -1115,7 +1162,11 @@ async def list_resumable_missions(
     its ``resume_metadata`` contains at least one checkpoint key that a mission
     executor can use to skip already-completed work.
     """
-    rows = await mission_application.list_resumable(user_id=int(user.id), limit=min(limit, 100))
+    page_limit = clamp_page_limit(limit, maximum=100)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    rows = await mission_application.list_resumable(
+        user_id=int(user.id), limit=page_limit + 1, offset=page_offset
+    )
     result = []
     for r in rows:
         ended_ts = r.ended_at.timestamp() if isinstance(r.ended_at, datetime) else None
@@ -1132,7 +1183,7 @@ async def list_resumable_missions(
                 mission_params=dict(r.mission_params or {}),
             )
         )
-    return result
+    return page_from_offset(result, limit=page_limit, offset=page_offset)
 
 
 @router.get("/missions/{flight_id}", response_model=MissionRuntimeOut)
@@ -1146,9 +1197,12 @@ async def get_mission_runtime(
     return _runtime_to_out(runtime)
 
 
-@router.get("/missions/{flight_id}/transitions", response_model=list[StateTransitionOut])
+@router.get("/missions/{flight_id}/transitions", response_model=Page[StateTransitionOut])
 async def get_mission_state_transitions(
     flight_id: str,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     user=Depends(require_user),
 ):
     """Return a chronological timeline of state transitions for a mission.
@@ -1162,19 +1216,34 @@ async def get_mission_state_transitions(
     db_row = await mission_application.get_by_client_id_for_user(flight_id, int(user.id))
     if db_row is None:
         raise HTTPException(status_code=404, detail="Mission not found")
-    commands = await mission_application.list_commands(flight_id)
-    return _build_state_timeline(db_row, commands)
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    commands = await mission_application.list_commands(
+        flight_id, limit=page_limit + 1, offset=page_offset
+    )
+    return page_from_offset(
+        _build_state_timeline(db_row, commands),
+        limit=page_limit,
+        offset=page_offset,
+    )
 
 
-@router.get("/missions/{flight_id}/commands", response_model=list[MissionCommandAuditOut])
+@router.get("/missions/{flight_id}/commands", response_model=Page[MissionCommandAuditOut])
 async def get_mission_command_audit(
     flight_id: str,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     user=Depends(require_user),
 ):
     # Ownership check — raises 404 if not found or wrong user.
     await _get_runtime_for_user(flight_id, user_id=int(user.id))
-    rows = await mission_application.list_commands(flight_id)
-    return [
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    rows = await mission_application.list_commands(
+        flight_id, limit=page_limit + 1, offset=page_offset
+    )
+    items = [
         MissionCommandAuditOut(
             command_id=row.command_id,
             command=row.command,
@@ -1189,6 +1258,7 @@ async def get_mission_command_audit(
         )
         for row in rows
     ]
+    return page_from_offset(items, limit=page_limit, offset=page_offset)
 
 
 @router.post(
@@ -1388,11 +1458,11 @@ async def preview_private_patrol(
             )
             waypoints = repeat_patrol_loops(plan.waypoints, loops=int(payload.patrol_loops))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Patrol planning inputs are invalid.") from exc
 
     total_route_m = 0.0
     if len(waypoints) >= 2:
-        for a, b in zip(waypoints, waypoints[1:]):
+        for a, b in pairwise(waypoints):
             total_route_m += math.hypot(
                 (float(b.lat) - float(a.lat)) * 111_132.0,
                 (float(b.lon) - float(a.lon))
@@ -1430,7 +1500,8 @@ async def preview_private_patrol(
     if payload.task_type == "event_triggered_patrol":
         response_mode = (
             "incident_response"
-            if payload.trigger_event_location_lonlat and len(payload.trigger_event_location_lonlat) == 2
+            if payload.trigger_event_location_lonlat
+            and len(payload.trigger_event_location_lonlat) == 2
             else "detection_search"
         )
         travel_s = total_route_m / max(0.1, float(payload.speed_mps))
@@ -1544,10 +1615,12 @@ async def get_mission_preflight(
     )
 
 
-@router.get("/missions/{flight_id}/events", response_model=list[FlightEventOut])
+@router.get("/missions/{flight_id}/events", response_model=Page[FlightEventOut])
 async def get_mission_flight_events(
     flight_id: str,
-    limit: int = 200,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     user=Depends(require_user),
 ):
     """Return flight events for a mission in chronological order (audit timeline)."""
@@ -1557,11 +1630,15 @@ async def get_mission_flight_events(
 
     db_flight_id = getattr(db_row, "flight_id", None)
     if db_flight_id is None:
-        return []
+        return Page(items=[])
 
-    events = await mission_application.list_events(flight_id=db_flight_id, limit=limit)
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    events = await mission_application.list_events(
+        flight_id=db_flight_id, limit=page_limit + 1, offset=page_offset
+    )
 
-    return [
+    items = [
         FlightEventOut(
             id=ev.id,
             type=ev.type,
@@ -1570,6 +1647,7 @@ async def get_mission_flight_events(
         )
         for ev in events
     ]
+    return page_from_offset(items, limit=page_limit, offset=page_offset)
 
 
 # ---------------------------------------------------------------------------
@@ -1582,13 +1660,18 @@ async def start_mission_export(
     flight_id: str,
     user=Depends(require_user),
 ):
-    from backend.entrypoints.workers.export_tasks import generate_mission_export
-
     job = await mission_export_service.create_for_user(flight_id=flight_id, user=user)
     if job is None:
         raise HTTPException(status_code=404, detail="Mission not found")
 
-    generate_mission_export.delay(flight_id, user.id, user.org_id, job.id)
+    enqueue_task(
+        "backend.tasks.export_tasks.generate_mission_export",
+        queue="exports",
+        flight_id=flight_id,
+        user_id=user.id,
+        org_id=user.org_id,
+        job_id=job.id,
+    )
     return {"job_id": job.id}
 
 

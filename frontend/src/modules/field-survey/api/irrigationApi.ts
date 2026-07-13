@@ -1,7 +1,7 @@
 import { httpRequest } from "../../../shared/api/httpClient";
 import type {
   IrrigationMissionSummary,
-  IrrigationProcessedFieldLayer,
+  IrrigationProcessingJob,
 } from "../types/irrigation";
 
 export async function fetchIrrigationMissionSummary(
@@ -17,9 +17,9 @@ export async function fetchIrrigationMissionSummary(
 export async function triggerIrrigationMissionProcessing(
   missionId: string,
   token?: string | null,
-): Promise<IrrigationProcessedFieldLayer> {
-  return httpRequest<IrrigationProcessedFieldLayer>(
-    `/irrigation/missions/${encodeURIComponent(missionId)}/process`,
+): Promise<IrrigationProcessingJob> {
+  return httpRequest<IrrigationProcessingJob>(
+    `/irrigation/missions/${encodeURIComponent(missionId)}/process-job`,
     { method: "POST", token, skipUnauthorizedRedirect: true },
   );
 }

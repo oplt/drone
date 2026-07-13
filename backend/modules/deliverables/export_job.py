@@ -42,22 +42,44 @@ async def run_mission_export(flight_id: str, user_id: int, org_id: int | None, j
 
             flight = None
             if runtime and runtime.flight_id:
-                q2 = await db.execute(select(Flight).where(Flight.id == runtime.flight_id))
-                flight = q2.scalar_one_or_none()
+                q2 = await db.execute(
+                    select(
+                        Flight.id,
+                        Flight.started_at,
+                        Flight.ended_at,
+                    ).where(Flight.id == runtime.flight_id)
+                )
+                flight = q2.one_or_none()
 
             events = []
             if flight:
-                q3 = await db.execute(select(FlightEvent).where(FlightEvent.flight_id == flight.id))
-                events = list(q3.scalars().all())
+                q3 = await db.execute(
+                    select(
+                        FlightEvent.id,
+                        FlightEvent.type,
+                        FlightEvent.created_at,
+                        FlightEvent.data,
+                    ).where(FlightEvent.flight_id == flight.id)
+                )
+                events = list(q3.all())
 
-            telemetry = []
+            telemetry_stmt = None
             if flight:
-                q4 = await db.execute(
-                    select(TelemetryRecord)
+                telemetry_stmt = (
+                    select(
+                        TelemetryRecord.created_at,
+                        TelemetryRecord.lat,
+                        TelemetryRecord.lon,
+                        TelemetryRecord.alt,
+                        TelemetryRecord.heading,
+                        TelemetryRecord.groundspeed,
+                        TelemetryRecord.battery_remaining,
+                        TelemetryRecord.mode,
+                    )
                     .where(TelemetryRecord.flight_id == flight.id)
                     .order_by(TelemetryRecord.created_at)
+                    .execution_options(yield_per=1000)
                 )
-                telemetry = list(q4.scalars().all())
 
             preflight = None
             if runtime and runtime.preflight_run_id:
@@ -69,13 +91,27 @@ async def run_mission_export(flight_id: str, user_id: int, org_id: int | None, j
             commands = []
             if runtime:
                 q6 = await db.execute(
-                    select(OperatorCommand)
+                    select(
+                        OperatorCommand.command_id,
+                        OperatorCommand.command,
+                        OperatorCommand.state_before,
+                        OperatorCommand.state_after,
+                        OperatorCommand.accepted,
+                        OperatorCommand.message,
+                        OperatorCommand.reason,
+                        OperatorCommand.requested_at,
+                    )
                     .where(OperatorCommand.client_flight_id == flight_id)
                     .order_by(OperatorCommand.requested_at)
                 )
-                commands = list(q6.scalars().all())
+                commands = list(q6.all())
 
-            # Build ZIP in memory
+            telemetry_stream = (
+                await db.stream(telemetry_stmt) if telemetry_stmt is not None else None
+            )
+
+            # The archive itself is buffered for object-storage upload, but
+            # telemetry is written row-by-row into the ZIP entry.
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
                 manifest = {
@@ -95,34 +131,36 @@ async def run_mission_export(flight_id: str, user_id: int, org_id: int | None, j
                 }
                 zf.writestr("manifest.json", json.dumps(manifest, indent=2))
 
-                csv_buf = io.StringIO()
-                writer = csv.writer(csv_buf)
-                writer.writerow(
-                    [
-                        "timestamp",
-                        "lat",
-                        "lon",
-                        "alt",
-                        "heading",
-                        "groundspeed",
-                        "battery_remaining",
-                        "mode",
-                    ]
-                )
-                for t in telemetry:
-                    writer.writerow(
-                        [
-                            t.created_at.isoformat(),
-                            t.lat,
-                            t.lon,
-                            t.alt,
-                            t.heading,
-                            t.groundspeed,
-                            t.battery_remaining,
-                            t.mode,
-                        ]
-                    )
-                zf.writestr("telemetry.csv", csv_buf.getvalue())
+                with zf.open("telemetry.csv", "w") as telemetry_file, io.TextIOWrapper(
+                    telemetry_file, encoding="utf-8", newline=""
+                ) as telemetry_text:
+                        writer = csv.writer(telemetry_text)
+                        writer.writerow(
+                            [
+                                "timestamp",
+                                "lat",
+                                "lon",
+                                "alt",
+                                "heading",
+                                "groundspeed",
+                                "battery_remaining",
+                                "mode",
+                            ]
+                        )
+                        if telemetry_stream is not None:
+                            async for t in telemetry_stream:
+                                writer.writerow(
+                                    [
+                                        t.created_at.isoformat(),
+                                        t.lat,
+                                        t.lon,
+                                        t.alt,
+                                        t.heading,
+                                        t.groundspeed,
+                                        t.battery_remaining,
+                                        t.mode,
+                                    ]
+                                )
 
                 events_data = [
                     {

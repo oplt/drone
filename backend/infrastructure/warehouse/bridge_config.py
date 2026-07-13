@@ -6,8 +6,10 @@ Preflight compares live ``ros2 topic list`` / ``gz topic -l`` output against tha
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import random
 import subprocess
 import time
 from dataclasses import dataclass
@@ -17,9 +19,13 @@ from typing import Any
 import yaml
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.cache.local import BoundedTTLCache
+from backend.infrastructure.runtime.blocking import blocking_process_runner, run_blocking
 
 GZ_TO_ROS = "GZ_TO_ROS"
 ROS_TO_GZ = "ROS_TO_GZ"
+_BRIDGE_DIAGNOSTICS_CACHE = BoundedTTLCache[dict[str, Any]](max_entries=32)
+_BRIDGE_DIAGNOSTICS_LOCK = asyncio.Lock()
 
 
 def _raw_lidar_required() -> bool:
@@ -158,8 +164,40 @@ def list_ros2_topics_with_retry(
         if ready:
             return last
         if attempt + 1 < attempts:
-            time.sleep(max(0.2, pause_s))
+            retry_pause = max(0.2, pause_s) * random.uniform(0.8, 1.2)
+            time.sleep(retry_pause)
     return last
+
+
+async def list_ros2_topics_async(ros2_ws: Path) -> set[str]:
+    """Event-loop-safe ROS topic listing adapter."""
+    return await run_blocking(
+        list_ros2_topics,
+        ros2_ws,
+        boundary="process",
+        operation="ros_topic_list",
+        call_timeout_s=10.0,
+    )
+
+
+async def list_ros2_topics_with_retry_async(
+    ros2_ws: Path,
+    *,
+    attempts: int | None = None,
+    pause_s: float | None = None,
+    required_topics: set[str] | None = None,
+) -> set[str]:
+    """Async adapter for topic discovery/retry polling."""
+    return await run_blocking(
+        list_ros2_topics_with_retry,
+        ros2_ws,
+        attempts=attempts,
+        pause_s=pause_s,
+        required_topics=required_topics,
+        boundary="process",
+        operation="ros_topic_probe_retry",
+        call_timeout_s=30.0,
+    )
 
 
 def list_ros2_topics(ros2_ws: Path) -> set[str]:
@@ -172,7 +210,7 @@ def list_ros2_topics(ros2_ws: Path) -> set[str]:
         f"source {setup} && "
         "ros2 topic list --no-daemon"
     )
-    result = subprocess.run(
+    result = blocking_process_runner.run(
         ["bash", "-lc", cmd],
         cwd=str(ws),
         capture_output=True,
@@ -238,7 +276,7 @@ def count_topic_publishers(
     env["PROBE_SCRIPT"] = _PUBLISHER_COUNT_SCRIPT
     env["PROBE_TOPICS"] = json.dumps(sorted(topics))
     try:
-        result = subprocess.run(
+        result = blocking_process_runner.run(
             ["bash", "-lc", cmd],
             cwd=str(ws),
             capture_output=True,
@@ -306,8 +344,19 @@ def quick_ros_bridge_check(ros2_ws: Path) -> tuple[bool | None, str]:
     return None, "ROS graph reachable, but no /warehouse topics are publishing yet."
 
 
+async def quick_ros_bridge_check_async(ros2_ws: Path) -> tuple[bool | None, str]:
+    """Event-loop-safe bridge readiness adapter."""
+    return await run_blocking(
+        quick_ros_bridge_check,
+        ros2_ws,
+        boundary="process",
+        operation="ros_bridge_probe",
+        call_timeout_s=30.0,
+    )
+
+
 def list_gz_topics() -> tuple[set[str], str | None]:
-    result = subprocess.run(
+    result = blocking_process_runner.run(
         ["bash", "-lc", "gz topic -l"],
         capture_output=True,
         timeout=3,
@@ -429,6 +478,7 @@ def bridge_probe_to_components(overlay: dict[str, Any]) -> dict[str, Any]:
         "ros2_graph": ros_graph_ok,
         "ros2_cli": ros_graph_ok,
         "camera_topics": rgb_depth_imu_ok,
+        "sensors_ok": sensors_ok,
         "stereo_camera": rgb_depth_imu_ok,
         "imu_healthy": imu_ok,
         "imu": imu_ok,
@@ -604,3 +654,30 @@ def missing_critical_topic_blockers(overlay: dict[str, Any]) -> list[str]:
         if topic and topic in missing:
             blockers.append(f"{label} missing from ROS graph: {topic} {suffix}")
     return blockers
+
+
+async def probe_bridge_topics_async(
+    ros2_ws: Path,
+    *,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Probe ROS/Gazebo diagnostics off-loop with short non-authoritative cache."""
+    key = str(ros2_ws.resolve())
+    if not force:
+        cached = _BRIDGE_DIAGNOSTICS_CACHE.get(key, ttl_seconds=2.0)
+        if cached is not None:
+            return dict(cached)
+    async with _BRIDGE_DIAGNOSTICS_LOCK:
+        if not force:
+            cached = _BRIDGE_DIAGNOSTICS_CACHE.get(key, ttl_seconds=2.0)
+            if cached is not None:
+                return dict(cached)
+        payload = await run_blocking(
+            probe_bridge_topics,
+            ros2_ws,
+            boundary="process",
+            operation="ros_bridge_topic_probe",
+            call_timeout_s=45.0,
+        )
+        _BRIDGE_DIAGNOSTICS_CACHE.set(key, dict(payload))
+        return payload

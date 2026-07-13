@@ -50,12 +50,13 @@ export function useWarehouseStructure(
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generatedAtRef = useRef<string | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
   const fetchOnce =
-    useCallback(async (): Promise<WarehouseStructureResponse | null> => {
+    useCallback(async (signal?: AbortSignal): Promise<WarehouseStructureResponse | null> => {
       if (warehouseMapId == null) return null;
       try {
-        const result = await fetchWarehouseStructure(warehouseMapId, token);
+        const result = await fetchWarehouseStructure(warehouseMapId, token, signal);
         generatedAtRef.current = result.generated_at ?? null;
         setExtractionStatus(result.status);
         setStructure(
@@ -78,6 +79,7 @@ export function useWarehouseStructure(
         );
         return result;
       } catch (cause) {
+        if (signal?.aborted) return null;
         setStructure(null);
         setExtractionStatus("not_started");
         setError(`Warehouse structure could not be loaded: ${toMessage(cause)}`);
@@ -86,9 +88,12 @@ export function useWarehouseStructure(
     }, [token, warehouseMapId]);
 
   const refresh = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     try {
-      await fetchOnce();
+      await fetchOnce(controller.signal);
     } finally {
       setLoading(false);
     }
@@ -96,6 +101,7 @@ export function useWarehouseStructure(
 
   useEffect(() => {
     if (warehouseMapId == null) {
+      requestRef.current?.abort();
       setStructure(null);
       setExtractionStatus("not_started");
       generatedAtRef.current = null;
@@ -113,11 +119,17 @@ export function useWarehouseStructure(
         ? POLL_INTERVAL_MS
         : PASSIVE_REFRESH_MS;
     const timer = window.setInterval(() => {
-      if (!cancelled) void fetchOnce();
+      if (!cancelled) {
+        requestRef.current?.abort();
+        const controller = new AbortController();
+        requestRef.current = controller;
+        void fetchOnce(controller.signal);
+      }
     }, intervalMs);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      requestRef.current?.abort();
     };
   }, [
     extracting,

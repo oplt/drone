@@ -169,6 +169,7 @@ export function ManualFlightControlPanel({
         >
           {MANUAL_CONTROL_BUTTONS.map((button) => {
             const isActive = activeManualCommands.includes(button.command);
+            const isOneShot = button.command === "takeoff" || button.command === "land";
             return (
               <Tooltip key={button.id} title={button.hint} placement="top" arrow>
                 <span>
@@ -177,14 +178,17 @@ export function ManualFlightControlPanel({
                     variant={isActive ? "contained" : "outlined"}
                     color={button.command === "hold" ? "warning" : "primary"}
                     disabled={!manualControlReady}
-                    onMouseDown={() => beginManualControl(button.id, button.command, "button")}
-                    onMouseUp={() => endManualControl(button.id, "button")}
-                    onMouseLeave={() => endManualControl(button.id, "button")}
+                    onClick={isOneShot ? () => void beginManualControl(button.id, button.command, "button") : undefined}
+                    onMouseDown={isOneShot ? undefined : () => beginManualControl(button.id, button.command, "button")}
+                    onMouseUp={isOneShot ? undefined : () => endManualControl(button.id, "button")}
+                    onMouseLeave={isOneShot ? undefined : () => endManualControl(button.id, "button")}
                     onTouchStart={(event) => {
+                      if (isOneShot) return;
                       event.preventDefault();
                       beginManualControl(button.id, button.command, "button");
                     }}
                     onTouchEnd={(event) => {
+                      if (isOneShot) return;
                       event.preventDefault();
                       endManualControl(button.id, "button");
                     }}

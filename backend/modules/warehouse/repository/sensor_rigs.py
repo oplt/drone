@@ -139,6 +139,7 @@ class WarehouseSensorRigMixin:
         org_id: int | None = None,
         allow_org_access: bool = False,
         limit: int = 100,
+        offset: int = 0,
     ) -> list[WarehouseSensorRig]:
         scope = self._sensor_scope(
             owner_id=owner_id,
@@ -151,6 +152,7 @@ class WarehouseSensorRigMixin:
                     select(WarehouseSensorRig)
                     .where(scope, WarehouseSensorRig.active.is_(True))
                     .order_by(WarehouseSensorRig.id.desc())
+                    .offset(max(0, offset))
                     .limit(clamp_list_limit(limit, default=100))
                 )
             )

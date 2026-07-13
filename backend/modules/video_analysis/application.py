@@ -8,6 +8,7 @@ import aiofiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.fields.service import field_service
 from backend.modules.identity.models import User
 from backend.modules.missions.repository import mission_runtime_repo
@@ -75,7 +76,14 @@ class VideoAnalysisApplication:
         ):
             raise VideoAnalysisNotFound("Mission not found")
 
-        UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+        await run_blocking(
+            UPLOAD_ROOT.mkdir,
+            parents=True,
+            exist_ok=True,
+            boundary="filesystem",
+            operation="video_upload_directory",
+            timeout_s=30.0,
+        )
         storage_path = UPLOAD_ROOT / f"{uuid4()}_{safe_name}"
         size = 0
         try:
@@ -86,7 +94,13 @@ class VideoAnalysisApplication:
                         raise VideoAnalysisUploadError("Video exceeds 1 GB upload limit.")
                     await output.write(chunk)
         except Exception:
-            storage_path.unlink(missing_ok=True)
+            await run_blocking(
+                storage_path.unlink,
+                missing_ok=True,
+                boundary="filesystem",
+                operation="video_upload_cleanup",
+                timeout_s=30.0,
+            )
             raise
         finally:
             await file.close()
@@ -102,7 +116,13 @@ class VideoAnalysisApplication:
                 uploaded_by_user_id=user.id,
             )
         except Exception:
-            storage_path.unlink(missing_ok=True)
+            await run_blocking(
+                storage_path.unlink,
+                missing_ok=True,
+                boundary="filesystem",
+                operation="video_upload_repository_cleanup",
+                timeout_s=30.0,
+            )
             raise
 
     async def start_analysis(

@@ -26,6 +26,7 @@ class CheckSpec:
     priority: Priority
     is_gate: bool  # if True and FAIL occurs, fail_fast may short-circuit
     coro: Any  # awaitable factory (lambda returning coroutine)
+    concurrent_safe: bool = False  # opt in only for immutable/read-only contexts
 
 
 class BasePreflightChecks:
@@ -1069,7 +1070,14 @@ class BasePreflightChecks:
 
             pairs: list[tuple[CheckSpec, list[CheckResult]]]
 
-            if concurrent_within_priority and len(batch) > 1:
+            if (
+                concurrent_within_priority
+                and len(batch) > 1
+                and (
+                    all(spec.concurrent_safe for spec in batch)
+                    or self.ctx.precomputed is not None
+                )
+            ):
                 pairs = await asyncio.gather(*(run_spec(s) for s in batch))
             else:
                 pairs = []

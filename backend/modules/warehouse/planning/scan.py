@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from backend.core.config.runtime import settings
 from backend.core.tokens import safe_token
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.infrastructure.vehicle.frame_conversion import local_ned_position_to_enu
 from backend.modules.missions.flight_models import FlightStatus
@@ -339,10 +340,15 @@ class WarehouseScanMission:
         self._last_speed_mps = None
         plan, _ = self._build_plan()
 
-        capture_session_service = WarehouseCaptureSessionService()
+        capture_session_service = await run_blocking(
+            WarehouseCaptureSessionService,
+            boundary="filesystem",
+            operation="warehouse_capture_service_init",
+            timeout_s=30.0,
+        )
         mapping_service = WarehouseScanMappingService()
-        session = capture_session_service.start_session(
-            flight_id=getattr(orch, "_flight_id", "unknown")
+        session = await capture_session_service.start_session_async(
+            flight_id=getattr(orch, "_flight_id", "unknown"),
         )
         await self._add_event_safe(
             orch,
@@ -403,7 +409,7 @@ class WarehouseScanMission:
                 startup_timing,
             )
 
-            await asyncio.to_thread(orch.drone.arm_and_takeoff, float(self.base_height_m))
+            await orch.async_drone.arm_and_takeoff(float(self.base_height_m))
             airborne = True
             self._runtime_safety.reset_for_takeoff()
             await self._add_event_safe(
@@ -442,8 +448,8 @@ class WarehouseScanMission:
             if airborne:
                 try:
                     await self._add_event_safe(orch, "landing_command_sent", {})
-                    await asyncio.to_thread(orch.drone.land)
-                    await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
+                    await orch.async_drone.land()
+                    await orch.async_drone.wait_until_disarmed(900)
                     await self._add_event_safe(orch, "landed_dock", {})
                 except Exception as exc:
                     if mission_error is None:
@@ -511,8 +517,7 @@ class WarehouseScanMission:
                     destination_dir=str(session.session_dir),
                 )
                 capture_paths = [*perception_paths, *fallback_paths]
-                imported_direct = await asyncio.to_thread(
-                    capture_session_service.import_external_files,
+                imported_direct = await capture_session_service.import_external_files_async(
                     session,
                     capture_paths=capture_paths,
                 )
@@ -525,14 +530,12 @@ class WarehouseScanMission:
                     },
                 )
 
-                sync_trigger = await asyncio.to_thread(
-                    capture_session_service.trigger_external_sync,
+                sync_trigger = await capture_session_service.trigger_external_sync_async(
                     session,
                 )
                 await self._add_event_safe(orch, "warehouse_scan_external_sync", sync_trigger)
 
-                sync_result = await asyncio.to_thread(
-                    capture_session_service.finalize_session,
+                sync_result = await capture_session_service.finalize_session_async(
                     session,
                     min_files=self.capture_min_files if self.await_capture_sync else 0,
                     timeout_s=self.capture_sync_wait_timeout_s if self.await_capture_sync else 0.0,
@@ -556,6 +559,8 @@ class WarehouseScanMission:
                             if Path(path).suffix.lower() in {".db3", ".mcap", ".bag"}
                         ],
                     },
+                    operation="warehouse_capture_finalize",
+                    call_timeout_s=max(1.0, self.capture_sync_wait_timeout_s + 30.0),
                 )
                 await self._add_event_safe(
                     orch,
@@ -966,7 +971,7 @@ class WarehouseScanMission:
         )
 
         try:
-            await asyncio.to_thread(orch.drone.follow_enu_setpoints, local_segment)
+            await orch.async_drone.follow_enu_setpoints(local_segment)
         except NotImplementedError as exc:
             raise RuntimeError(
                 "The active drone adapter does not support ENU local setpoint control "
@@ -1001,7 +1006,7 @@ class WarehouseScanMission:
         *,
         plan: WarehousePlanResult,
     ) -> WarehouseExecutionFrame:
-        telemetry = await asyncio.to_thread(orch.drone.get_telemetry)
+        telemetry = await orch.async_drone.get_telemetry()
         north = getattr(telemetry, "local_north_m", None)
         east = getattr(telemetry, "local_east_m", None)
         down = getattr(telemetry, "local_down_m", None)
@@ -1749,11 +1754,10 @@ class WarehouseScanMission:
             "start_scan_capture",
             "start_lidar_capture",
         ):
-            fn = getattr(orch.drone, name, None)
-            if not callable(fn):
+            if not callable(getattr(orch.drone, name, None)):
                 continue
             try:
-                await asyncio.to_thread(fn)
+                await orch.async_drone.optional_call(name)
                 await self._add_event_safe(
                     orch, "warehouse_scan_capture_started", {"handler": name}
                 )
@@ -1764,11 +1768,10 @@ class WarehouseScanMission:
 
     async def _stop_capture_if_supported(self, orch: Orchestrator) -> None:
         for name in ("stop_mapping_capture", "stop_scan_capture", "stop_lidar_capture"):
-            fn = getattr(orch.drone, name, None)
-            if not callable(fn):
+            if not callable(getattr(orch.drone, name, None)):
                 continue
             try:
-                await asyncio.to_thread(fn)
+                await orch.async_drone.optional_call(name)
                 await self._add_event_safe(
                     orch, "warehouse_scan_capture_stopped", {"handler": name}
                 )
@@ -1788,14 +1791,15 @@ class WarehouseScanMission:
             "download_lidar_capture",
             "download_scan_capture",
         ):
-            fn = getattr(orch.drone, name, None)
-            if not callable(fn):
+            if not callable(getattr(orch.drone, name, None)):
                 continue
             try:
                 try:
-                    result = await asyncio.to_thread(fn, destination_dir=destination_dir)
+                    result = await orch.async_drone.optional_call(
+                        name, destination_dir=destination_dir
+                    )
                 except TypeError:
-                    result = await asyncio.to_thread(fn, destination_dir)
+                    result = await orch.async_drone.optional_call(name, destination_dir)
                 if isinstance(result, list):
                     downloaded.extend(str(item) for item in result)
             except Exception:
@@ -1849,10 +1853,9 @@ class WarehouseScanMission:
             logger.exception("Failed to start backend warehouse video recording")
 
         drone_started = False
-        drone_start = getattr(orch.drone, "start_video_recording", None)
-        if callable(drone_start):
+        if callable(getattr(orch.drone, "start_video_recording", None)):
             try:
-                drone_started = bool(await asyncio.to_thread(drone_start))
+                drone_started = await orch.async_drone.start_video_recording()
             except Exception:
                 logger.exception("Failed to trigger drone-side video recording hook")
 
@@ -1876,10 +1879,9 @@ class WarehouseScanMission:
             logger.exception("Failed to stop backend warehouse video recording")
 
         drone_stopped = False
-        drone_stop = getattr(orch.drone, "stop_video_recording", None)
-        if callable(drone_stop):
+        if callable(getattr(orch.drone, "stop_video_recording", None)):
             try:
-                drone_stopped = bool(await asyncio.to_thread(drone_stop))
+                drone_stopped = await orch.async_drone.stop_video_recording()
             except Exception:
                 logger.exception("Failed to stop drone-side video recording hook")
 

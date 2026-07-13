@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { sessionKeys } from "../../../app/config/queryKeys";
 import { ApiError } from "../../../shared/api/apiError";
 import * as sessionApi from "../api/sessionApi";
 import { clearSessionMarker } from "../sessionCookies";
 
 export function useCurrentUser() {
-  const navigate = useNavigate();
   const query = useQuery({
     queryKey: sessionKeys.currentUser(),
     queryFn: ({ signal }) => sessionApi.fetchCurrentUser(signal),
@@ -18,8 +16,10 @@ export function useCurrentUser() {
     if (!(query.error instanceof ApiError)) return;
     if (query.error.status !== 401 && query.error.status !== 403) return;
     clearSessionMarker();
-    navigate("/signin", { replace: true });
-  }, [navigate, query.error]);
+    if (typeof window !== "undefined" && window.location.pathname !== "/signin") {
+      window.location.replace("/signin");
+    }
+  }, [query.error]);
 
   return {
     user: query.data ?? null,

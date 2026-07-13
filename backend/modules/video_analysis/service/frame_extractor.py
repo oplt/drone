@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+import asyncio
+from collections.abc import AsyncIterator, Iterator
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
 import numpy as np
+
+from backend.infrastructure.runtime.blocking import run_blocking
+
+MAX_FRAME_BUFFER = 2
 
 
 @dataclass(frozen=True)
@@ -45,6 +51,17 @@ def read_video_metadata(video_path: str | Path) -> VideoMetadata:
     )
 
 
+async def read_video_metadata_async(video_path: str | Path) -> VideoMetadata:
+    """Async boundary for OpenCV metadata reads."""
+    return await run_blocking(
+        read_video_metadata,
+        video_path,
+        boundary="media",
+        operation="read_video_metadata",
+        timeout_s=30.0,
+    )
+
+
 def iter_frames(
     video_path: str | Path,
     *,
@@ -65,18 +82,10 @@ def iter_frames(
     fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
     stride_frames = max(1, round(fps * every_seconds))
 
-    frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
     try:
-        # For sparse analysis, seek directly to sampled frames instead of decoding all frames.
-        if stride_frames >= max(8, int(fps / 2)) and frame_count > 0:
-            for frame_index in range(0, frame_count, stride_frames):
-                capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
-                ok, frame = capture.read()
-                if not ok:
-                    break
-                yield ExtractedFrame(frame_index, frame_index / fps, frame)
-            return
-
+        # Decode sequentially. Repeated random seeks are expensive and often
+        # inaccurate for compressed video because each seek may decode from a
+        # keyframe. Sampling still bounds inference work without extra seeks.
         frame_index = 0
         while True:
             ok, frame = capture.read()
@@ -87,3 +96,52 @@ def iter_frames(
             frame_index += 1
     finally:
         capture.release()
+
+
+def _next_frame_or_none(iterator: Iterator[ExtractedFrame]) -> ExtractedFrame | None:
+    return next(iterator, None)
+
+
+async def async_iter_frames(
+    video_path: str | Path,
+    *,
+    every_seconds: float = 1.0,
+) -> AsyncIterator[ExtractedFrame]:
+    """Yield OpenCV frames without blocking the worker event loop.
+
+    The producer has a small bounded buffer, so decode cannot outrun CPU-heavy
+    inference indefinitely.
+    """
+    iterator = iter_frames(video_path, every_seconds=every_seconds)
+    queue: asyncio.Queue[object] = asyncio.Queue(maxsize=MAX_FRAME_BUFFER)
+
+    async def _decode() -> None:
+        try:
+            while True:
+                frame = await run_blocking(
+                    _next_frame_or_none,
+                    iterator,
+                    boundary="media",
+                    operation="decode_video_frame",
+                    timeout_s=30.0,
+                )
+                await queue.put(frame)
+                if frame is None:
+                    return
+        except Exception as exc:
+            await queue.put(exc)
+            await queue.put(None)
+
+    producer = asyncio.create_task(_decode())
+    try:
+        while True:
+            item = await queue.get()
+            if isinstance(item, Exception):
+                raise item
+            if item is None:
+                return
+            yield item
+    finally:
+        producer.cancel()
+        with suppress(asyncio.CancelledError):
+            await producer

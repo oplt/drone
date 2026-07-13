@@ -7,13 +7,12 @@ import math
 import os
 import shlex
 import signal
-import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.runtime.blocking import blocking_process_runner, run_blocking
 from backend.infrastructure.warehouse.bridge_config import ros_command_env
 
 logger = logging.getLogger(__name__)
@@ -153,8 +152,8 @@ def _parse_clock_time(stdout: str) -> float | None:
 async def _read_clock_once(timeout_s: float = 3.0) -> float | None:
     timeout_s = _safe_float(timeout_s, 3.0, min_value=0.5)
     try:
-        result = await asyncio.to_thread(
-            subprocess.run,
+        result = await run_blocking(
+            blocking_process_runner.run,
             _sourced_ros_cmd(
                 f"timeout {shlex.quote(str(max(2.0, timeout_s)))} ros2 topic echo /clock --once"
             ),
@@ -163,6 +162,8 @@ async def _read_clock_once(timeout_s: float = 3.0) -> float | None:
             text=True,
             timeout=max(4.5, timeout_s + 2.0),
             check=False,
+            boundary="process",
+            operation="ros_clock_once",
         )
     except Exception:
         logger.debug("Failed to read /clock once", exc_info=True)
@@ -188,8 +189,8 @@ def _normalize_clock_samples(raw_samples: object, *, max_samples: int = 256) -> 
 
 async def _probe_clock_with_rclpy_script(window: float) -> list[float]:
     try:
-        result = await asyncio.to_thread(
-            subprocess.run,
+        result = await run_blocking(
+            blocking_process_runner.run,
             _sourced_ros_cmd('python3 -c "$CLOCK_PROBE_SCRIPT" "$CLOCK_WINDOW_S"'),
             env={
                 **ros_command_env(),
@@ -200,6 +201,8 @@ async def _probe_clock_with_rclpy_script(window: float) -> list[float]:
             text=True,
             timeout=max(3.0, window + 3.0),
             check=False,
+            boundary="process",
+            operation="ros_clock_probe",
         )
         if result.returncode != 0 and not result.stdout.strip():
             return []
@@ -277,8 +280,8 @@ async def wait_for_tf_stable(
         remaining = max(0.1, deadline - time.monotonic())
         cli_timeout = min(3.0, max(1.0, remaining + 0.5))
         try:
-            result = await asyncio.to_thread(
-                subprocess.run,
+            result = await run_blocking(
+                blocking_process_runner.run,
                 _sourced_ros_cmd(
                     f"timeout {shlex.quote(str(cli_timeout))} ros2 run tf2_ros tf2_echo {parent} {child}"
                 ),
@@ -287,6 +290,8 @@ async def wait_for_tf_stable(
                 text=True,
                 timeout=min(5.5, cli_timeout + 2.5),
                 check=False,
+                boundary="process",
+                operation="ros_tf_stability_probe",
             )
             stdout = result.stdout or ""
             if "At time" in stdout:
@@ -329,14 +334,16 @@ async def kill_stale_nvblox_processes(keep_pgids: set[int] | None = None) -> Non
     """
     protected = {int(p) for p in (keep_pgids or set()) if p}
     try:
-        result = await asyncio.to_thread(
-            subprocess.run,
+        result = await run_blocking(
+            blocking_process_runner.run,
             ["ps", "-eo", "pid=,pgid=,command="],
             capture_output=True,
             text=True,
             timeout=3.0,
             check=False,
             env=ros_command_env(),
+            boundary="process",
+            operation="list_processes",
         )
     except Exception:
         logger.debug("Could not list processes for stale nvBlox cleanup", exc_info=True)

@@ -16,7 +16,7 @@ import {
   normalizeLonLatRing,
   zoomToHeightMeters,
 } from "../utils/cesiumCameraGeometry";
-import droneIconUrl from "../../../assets/Drone.svg?url";
+import droneIconUrl from "../../../assets/Drone.svg?url"; import { frontendLogger } from "../../../shared/logging";
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt: number };
@@ -490,7 +490,7 @@ export default function CesiumMap({
       viewer.scene.primitives.add(tileset);
       fieldTilesetRef.current = tileset;
     } catch (error) {
-      console.error("Failed to load field 3D tileset", error);
+      frontendLogger.error("frontend", "Failed to load field 3D tileset", { message: error instanceof Error ? error.message : String(error) });
     }
   }
 

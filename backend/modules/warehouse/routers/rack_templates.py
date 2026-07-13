@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
 from backend.modules.warehouse.http_access import get_map_or_404
 from backend.modules.warehouse.models import (
@@ -31,6 +32,9 @@ from backend.modules.warehouse.service.rack_templates import (
 )
 
 router = APIRouter(tags=["warehouse-rack-templates"])
+
+
+RackTemplatePage = Page[dict[str, Any]]
 
 
 class RackTemplateSpecIn(BaseModel):
@@ -114,13 +118,21 @@ def _template_out(
     return payload
 
 
-@router.get("/maps/{warehouse_map_id}/rack-templates")
+@router.get(
+    "/maps/{warehouse_map_id}/rack-templates",
+    response_model=RackTemplatePage,
+)
 async def list_rack_templates(
     warehouse_map_id: int,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
     await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
     rows = (
         await db.execute(
             select(WarehouseRackTemplate, WarehouseRackTemplateVersion)
@@ -133,7 +145,14 @@ async def list_rack_templates(
                 WarehouseRackTemplate.warehouse_map_id == int(warehouse_map_id),
                 WarehouseRackTemplate.active.is_(True),
             )
-            .order_by(WarehouseRackTemplate.name, WarehouseRackTemplateVersion.version.desc())
+            .order_by(
+                WarehouseRackTemplate.name,
+                WarehouseRackTemplate.id,
+                WarehouseRackTemplateVersion.version.desc(),
+                WarehouseRackTemplateVersion.id.desc(),
+            )
+            .offset(page_offset)
+            .limit(page_limit + 1)
         )
     ).all()
     seen: set[int] = set()
@@ -143,7 +162,9 @@ async def list_rack_templates(
             continue
         seen.add(int(template.id))
         items.append(_template_out(template, version))
-    return {"items": items}
+    return {
+        **page_from_offset(items, limit=page_limit, offset=page_offset).model_dump(),
+    }
 
 
 @router.post("/maps/{warehouse_map_id}/rack-templates", status_code=201)
@@ -180,10 +201,16 @@ async def create_rack_template(
     return _template_out(template, version)
 
 
-@router.get("/maps/{warehouse_map_id}/rack-templates/{template_id}/versions")
+@router.get(
+    "/maps/{warehouse_map_id}/rack-templates/{template_id}/versions",
+    response_model=RackTemplatePage,
+)
 async def list_rack_template_versions(
     warehouse_map_id: int,
     template_id: int,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
@@ -191,23 +218,29 @@ async def list_rack_template_versions(
     template = await db.get(WarehouseRackTemplate, int(template_id))
     if template is None or template.warehouse_map_id != int(warehouse_map_id):
         raise HTTPException(404, "Rack template not found")
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
     versions = (
         (
             await db.execute(
                 select(WarehouseRackTemplateVersion)
                 .where(WarehouseRackTemplateVersion.template_id == int(template_id))
-                .order_by(WarehouseRackTemplateVersion.version.desc())
+                .order_by(
+                    WarehouseRackTemplateVersion.version.desc(),
+                    WarehouseRackTemplateVersion.id.desc(),
+                )
+                .offset(page_offset)
+                .limit(page_limit + 1)
             )
         )
         .scalars()
         .all()
     )
-    return {
-        "items": [
+    items = [
             template_summary(template, version) | {"status": version.status}
             for version in versions
         ]
-    }
+    return page_from_offset(items, limit=page_limit, offset=page_offset).model_dump()
 
 
 @router.post("/maps/{warehouse_map_id}/rack-templates/{template_id}/versions", status_code=201)

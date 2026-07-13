@@ -89,3 +89,16 @@ export type IrrigationMissionSummary = {
     capture_count?: number;
   } & Record<string, unknown>;
 };
+
+export type IrrigationProcessingJob = {
+  id: string;
+  mission_id: string;
+  input_checksum: string;
+  force: boolean;
+  status: "queued" | "running" | "completed" | "failed" | string;
+  celery_task_id?: string | null;
+  error?: string | null;
+  created_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+};

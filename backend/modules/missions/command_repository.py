@@ -58,13 +58,15 @@ class OperatorCommandRepository:
         client_flight_id: str,
         *,
         limit: int = 400,
+        offset: int = 0,
     ) -> list[OperatorCommand]:
         async with self._sf() as s:
             result = await s.execute(
                 select(OperatorCommand)
                 .where(OperatorCommand.client_flight_id == client_flight_id)
-                .order_by(OperatorCommand.requested_at.asc())
-                .limit(limit)
+                .order_by(OperatorCommand.requested_at.asc(), OperatorCommand.id.asc())
+                .offset(max(0, offset))
+                .limit(max(1, limit))
             )
             return list(result.scalars().all())
 

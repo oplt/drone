@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_mission_exec,
@@ -52,7 +53,6 @@ from backend.modules.warehouse.schemas import (
     WarehouseScanPoseComputeOut,
     WarehouseScanTargetCreate,
     WarehouseScanTargetImport,
-    WarehouseScanTargetPage,
     WarehouseScanTargetRead,
     WarehouseScanTargetUpdate,
     WarehouseStructureExtractIn,
@@ -119,20 +119,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
 
 
-@router.get("/maps", response_model=list[WarehouseMapOut])
+@router.get("/maps", response_model=Page[WarehouseMapOut])
 async def list_warehouse_maps(
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
-) -> list[WarehouseMapOut]:
+) -> Page[WarehouseMapOut]:
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
     rows = await repo.list_warehouse_maps(
         db,
         owner_id=int(org_user.user.id),
         org_id=org_user.user.org_id,
         allow_org_access=can_access_org_scope(org_user.user),
-        limit=limit,
+        limit=page_limit + 1,
+        offset=page_offset,
     )
-    return [map_out(row) for row in rows]
+    return page_from_offset(
+        [map_out(row) for row in rows], limit=page_limit, offset=page_offset
+    )
 
 
 @router.post("/maps", response_model=WarehouseMapOut, status_code=status.HTTP_201_CREATED)

@@ -42,6 +42,7 @@ class LLMChatRequest(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
     stream: bool = False
+    response_format: dict[str, Any] | None = None
 
 
 class LLMChatResponse(BaseModel):
@@ -67,8 +68,19 @@ class LLMHealth(BaseModel):
 
 
 class BaseLLMClient(ABC):
-    def __init__(self, config: LLMProviderConfig) -> None:
+    def __init__(self, config: LLMProviderConfig, *, session_registry: Any | None = None) -> None:
         self.config = config
+        self._session_registry = session_registry
+
+    async def _session(self):
+        if self._session_registry is None:
+            from backend.infrastructure.ai.http import shared_http_sessions
+
+            self._session_registry = shared_http_sessions
+        return await self._session_registry.get(
+            provider=self.config.provider,
+            api_base=self.config.api_base,
+        )
 
     @abstractmethod
     async def health_check(self) -> LLMHealth:

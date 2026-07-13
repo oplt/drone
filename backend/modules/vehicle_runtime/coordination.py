@@ -16,6 +16,7 @@ from backend.modules.telemetry.repository import TelemetryBatcher, TelemetryRepo
 from backend.modules.vehicle_runtime.types import Coordinate
 from backend.modules.vehicle_runtime.vehicle_port import DroneClient
 
+from .async_port import AsyncDronePort
 from .ports import (
     MapPort,
     MessagePublisherPort,
@@ -63,6 +64,7 @@ class RuntimeCoordinationMixin:
         shared_video: SharedVideoRuntimePort | None = None,
     ):
         self.drone = drone
+        self.async_drone = AsyncDronePort(drone)
         self.maps = maps
         self.mqtt = mqtt
         self.video = video

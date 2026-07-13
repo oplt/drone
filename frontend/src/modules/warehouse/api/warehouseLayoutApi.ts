@@ -1,4 +1,5 @@
 import { httpRequest } from "../../../shared/api/httpClient";
+import { unwrapPage, type PageResponse } from "../../../shared/api/pagination";
 
 export type LayoutKind = "aisles" | "racks" | "shelves" | "bins" | "zones";
 
@@ -42,7 +43,9 @@ export type LayoutCandidate = {
 const base = (mapId: number) => `/warehouse/maps/${mapId}/layout-versions`;
 
 export const listLayoutVersions = (mapId: number, token?: string | null) =>
-  httpRequest<LayoutVersion[]>(base(mapId), { token });
+  httpRequest<PageResponse<LayoutVersion>>(base(mapId), { token }).then(
+    unwrapPage,
+  );
 
 export const createLayoutVersion = (mapId: number, token?: string | null) =>
   httpRequest<LayoutVersion>(base(mapId), {

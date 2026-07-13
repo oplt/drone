@@ -99,8 +99,6 @@ export type WarehouseMissionStatus = {
   warehouse_mapping?: WarehouseMappingRuntimeStatus | null;
 };
 
-export const SCANNED_MAP_REFRESH_MS = 30000;
-
 export const COMPACT_FIELD_SX = {
   minWidth: 0,
   "& .MuiFilledInput-root": {

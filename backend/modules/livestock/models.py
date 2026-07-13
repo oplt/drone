@@ -101,7 +101,10 @@ class AnimalPosition(Base):
 
     animal: Mapped[Animal] = relationship(back_populates="positions")
 
-    __table_args__ = (Index("idx_animal_pos_animal_time", "animal_id", "created_at"),)
+    __table_args__ = (
+        Index("idx_animal_pos_animal_time", "animal_id", "created_at"),
+        Index("idx_animal_pos_animal_time_id", "animal_id", "created_at", "id"),
+    )
 
 
 class HerdTask(Base):

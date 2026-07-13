@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query
 
 from backend.core.database.session import get_db
+from backend.core.errors.public import public_error
 from backend.modules.agents.context_builders import (
     build_field_survey_context,
     build_warehouse_inspection_context,
@@ -13,7 +15,6 @@ from backend.modules.agents.registry import get, list_agents
 from backend.modules.agents.repository import AgentRunRepository
 from backend.modules.agents.schemas import (
     AgentContext,
-    AgentPhase,
     AgentResult,
     AgentRunOut,
     AgentRunRequest,
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/api/ai/agents", tags=["agents"])
 
 
 @router.get("/")
-async def list_agent_definitions():
+async def list_agent_definitions() -> list[dict[str, Any]]:
     return [
         {
             "id": definition.id.value,
@@ -42,8 +43,8 @@ async def list_agent_definitions():
 async def list_agent_runs(
     mission_runtime_id: int = Query(..., ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
-    _user=Depends(require_user),
+    db: Any = Depends(get_db),
+    _user: Any = Depends(require_user),
 ) -> list[AgentRunOut]:
     rows = await AgentRunRepository().list_for_mission(
         db, mission_runtime_id=mission_runtime_id, limit=limit
@@ -55,13 +56,13 @@ async def list_agent_runs(
 async def run_agent_on_demand(
     agent_id: MissionAgentId,
     payload: AgentRunRequest,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    db: Any = Depends(get_db),
+    user: Any = Depends(require_user),
 ) -> AgentResult:
     try:
         get(agent_id)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise public_error(404, "AGENT_NOT_FOUND", "Agent definition not found") from exc
 
     structured = dict(payload.structured_payload)
     if payload.warehouse_map_id is not None:
@@ -108,5 +109,5 @@ async def run_agent_on_demand(
     result = await mission_agent_service.run(agent_id, context, db=db, persist=True)
     await db.commit()
     if result.status == "error":
-        raise HTTPException(status_code=503, detail=result.error_message or "Agent run failed")
+        raise public_error(503, "AGENT_UNAVAILABLE", "Agent run could not be completed")
     return result

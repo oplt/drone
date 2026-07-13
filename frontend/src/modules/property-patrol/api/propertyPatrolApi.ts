@@ -1,4 +1,5 @@
 import { httpRequest } from "../../../shared/api/httpClient";
+import { unwrapPage, type PageResponse } from "../../../shared/api/pagination";
 
 export type GeoPoint = { lat: number; lon: number; alt?: number | null };
 export type GeoJsonPolygon = { type: "Polygon"; coordinates: number[][][] };
@@ -81,7 +82,10 @@ export type PatrolIncident = {
 };
 
 export function listPropertyPatrolSites(token?: string | null) {
-  return httpRequest<PropertyPatrolSite[]>("/api/property-patrol/sites?limit=100&offset=0", { token });
+  return httpRequest<PageResponse<PropertyPatrolSite>>(
+    "/api/property-patrol/sites?limit=100&offset=0",
+    { token },
+  ).then(unwrapPage);
 }
 
 export function createPropertyPatrolSite(
@@ -95,11 +99,17 @@ export function createPropertyPatrolSite(
   });
 }
 
-export function listPropertyPatrolTemplates(siteId?: number | null, token?: string | null) {
+export function listPropertyPatrolTemplates(
+  siteId?: number | null,
+  token?: string | null,
+) {
   const qs = siteId
     ? `?site_id=${siteId}&limit=100&offset=0`
     : "?limit=100&offset=0";
-  return httpRequest<PatrolTemplate[]>(`/api/property-patrol/templates${qs}`, { token });
+  return httpRequest<PageResponse<PatrolTemplate>>(
+    `/api/property-patrol/templates${qs}`,
+    { token },
+  ).then(unwrapPage);
 }
 
 export function createPropertyPatrolTemplate(
@@ -134,7 +144,11 @@ export function previewPropertyPatrolRoute(
 }
 
 export function startPropertyPatrolMission(
-  body: { site_id: number; template_id?: number | null; mission_type: "manual" | "scheduled" | "sensor_triggered" },
+  body: {
+    site_id: number;
+    template_id?: number | null;
+    mission_type: "manual" | "scheduled" | "sensor_triggered";
+  },
   token?: string | null,
 ) {
   return httpRequest("/api/property-patrol/missions/start", {
@@ -144,9 +158,15 @@ export function startPropertyPatrolMission(
   });
 }
 
-export function listPropertyPatrolIncidents(siteId?: number | null, token?: string | null) {
+export function listPropertyPatrolIncidents(
+  siteId?: number | null,
+  token?: string | null,
+) {
   const qs = siteId
     ? `?site_id=${siteId}&limit=100&offset=0`
     : "?limit=100&offset=0";
-  return httpRequest<PatrolIncident[]>(`/api/property-patrol/incidents${qs}`, { token });
+  return httpRequest<PageResponse<PatrolIncident>>(
+    `/api/property-patrol/incidents${qs}`,
+    { token },
+  ).then(unwrapPage);
 }

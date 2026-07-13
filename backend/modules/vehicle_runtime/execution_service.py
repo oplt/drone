@@ -10,6 +10,7 @@ from backend.core.events import (
     FlightEventSeverityV1,
     MissionLifecyclePayloadV1,
 )
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.core.logging import emit_app_log
 from backend.modules.missions.flight_models import FlightStatus
 from backend.modules.telemetry.repository import TelemetryBatcher
@@ -54,7 +55,7 @@ class RuntimeExecutionServiceMixin:
             return waypoints[0], waypoints[-1], "mission_waypoints"
 
         try:
-            telemetry = await asyncio.to_thread(self.drone.get_telemetry)
+            telemetry = await self.async_drone.get_telemetry()
         except Exception:
             logger.exception("Failed to read telemetry while resolving local-mission flight anchor")
             telemetry = None
@@ -133,7 +134,12 @@ class RuntimeExecutionServiceMixin:
                         "Connecting to drone for mission",
                         extra={"source": "drone", "operation": "mission_connect"},
                     )
-                    await asyncio.to_thread(self.drone.connect)
+                    await run_blocking(
+                        self.drone.connect,
+                        boundary="mavlink",
+                        operation="connect",
+                        timeout_s=30.0,
+                    )
                     logger.info(
                         "Drone connected successfully",
                         extra={"source": "drone", "operation": "mission_connect"},
@@ -170,6 +176,7 @@ class RuntimeExecutionServiceMixin:
                     dest_lon=dest.lon,
                     dest_alt=alt,
                     status=FlightStatus.ACTIVE,
+                    org_id=getattr(mission, "org_id", None),
                 )
                 self._telemetry_batcher = TelemetryBatcher(self._repo, self._flight_id)
                 await self.record_flight_event(

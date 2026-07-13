@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { getApiBaseUrl } from "../../../app/config/env";
 import { getToken } from "../../../modules/session";
 import { useErrors } from "../../../shared/hooks/useErrors";
+import { useNotice } from "../../../shared/ui/NoticeContext";
 import { useMissionWebsocketRuntime } from "../../../modules/mission-runtime";
 import {
   useFieldTileset,
@@ -29,6 +30,7 @@ export function usePhotogrammetryPage() {
   );
 
   const { errors, addError, clearErrors, dismissError } = useErrors();
+  const { notify } = useNotice();
 
   const API_BASE_CLEAN = getApiBaseUrl();
 
@@ -119,12 +121,12 @@ export function usePhotogrammetryPage() {
       fieldBoundary.setSelectedFieldId(data?.id ?? null);
 
       if (options?.announce ?? true) {
-        alert(`Saved field "${data.name}" (id=${data.id})`);
+        notify(`Saved field "${data.name}" (id=${data.id})`, "success");
       }
 
       return data;
     },
-    [fieldBoundary],
+    [fieldBoundary, notify],
   );
 
   const mapping = usePhotogrammetryMapping({

@@ -15,6 +15,7 @@ class GoogleMapsClient:
         *,
         elevation_cache_precision_deg: float = 1e-5,
         elevation_cache_max_entries: int = 20_000,
+        geocode_cache_max_entries: int = 4_096,
         elevation_batch_size: int = 250,
     ):
         self.client = googlemaps.Client(api_key)
@@ -24,13 +25,14 @@ class GoogleMapsClient:
         self._elevation_cache: OrderedDict[tuple[int, int], float] = OrderedDict()
         self._elevation_cache_lock = threading.Lock()
         self._geocode_cache: dict[str, Coordinate] = {}
+        self._geocode_cache_max_entries = max(1, int(geocode_cache_max_entries))
         self._geocode_cache_lock = threading.Lock()
 
     def _elevation_cache_key(self, lat: float, lon: float) -> tuple[int, int]:
         precision = self._elevation_cache_precision_deg
         return (
-            int(round(float(lat) / precision)),
-            int(round(float(lon) / precision)),
+            round(float(lat) / precision),
+            round(float(lon) / precision),
         )
 
     def _elevation_cache_get(self, key: tuple[int, int]) -> float | None:
@@ -62,6 +64,8 @@ class GoogleMapsClient:
         coord = Coordinate(lat=loc["lat"], lon=loc["lng"])
         with self._geocode_cache_lock:
             self._geocode_cache[key] = coord
+            if len(self._geocode_cache) > self._geocode_cache_max_entries:
+                self._geocode_cache.pop(next(iter(self._geocode_cache)))
         return coord
 
     def waypoints_between(self, start: Coordinate, end: Coordinate, steps: int = 5):
@@ -82,7 +86,6 @@ class GoogleMapsClient:
 
     # ✅ NEW: Google Elevation API (batch)
     def elevations_m(self, coords: list[tuple[float, float]]) -> list[float]:
-        # coords: [(lat, lon), ...]
         if not coords:
             return []
 

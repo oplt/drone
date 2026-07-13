@@ -11,6 +11,9 @@ export type ErrorStateProps = {
   onRetry?: () => void;
   retryLabel?: string;
   action?: ReactNode;
+  requestId?: string | null;
+  stale?: boolean;
+  refreshing?: boolean;
 };
 
 export default function ErrorState({
@@ -19,6 +22,9 @@ export default function ErrorState({
   onRetry,
   retryLabel = "Try again",
   action,
+  requestId,
+  stale = false,
+  refreshing = false,
 }: ErrorStateProps) {
   return (
     <Box
@@ -36,8 +42,18 @@ export default function ErrorState({
         <Typography variant="h5" component="h2">
           {title}
         </Typography>
+        {stale ? (
+          <Alert severity="warning" sx={{ width: "100%" }}>
+            Showing the last known data. {refreshing ? "Refreshing…" : "Refresh when connection returns."}
+          </Alert>
+        ) : null}
         <Alert severity="error" sx={{ width: "100%" }}>
           {message}
+          {requestId ? (
+            <Typography component="span" variant="caption" sx={{ display: "block", mt: 0.5 }}>
+              Request ID: {requestId}
+            </Typography>
+          ) : null}
         </Alert>
         {(onRetry || action) && (
           <Stack direction="row" spacing={0.5}>

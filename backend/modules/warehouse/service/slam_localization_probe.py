@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from backend.infrastructure.warehouse.bridge_config import list_ros2_topics
+from backend.infrastructure.warehouse.bridge_config import list_ros2_topics_async
 from backend.modules.warehouse.service.live_map_readiness import (
     _ros2_workspace,
     _topic_message_text,
@@ -17,7 +17,7 @@ async def refresh_slam_localization_from_ros(*, timeout_s: float = 2.0) -> dict[
     """Probe the ROS SLAM status topic and update the in-process monitor."""
     ws = _ros2_workspace()
     try:
-        topics = set(await asyncio.to_thread(list_ros2_topics, ws))
+        topics = set(await list_ros2_topics_async(ws))
     except RuntimeError:
         return {"ingested": False, "reason": "ros_unavailable"}
 

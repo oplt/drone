@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
 import type { TerraDraw } from "terra-draw";
+import { useNotice } from "../../../shared/ui/NoticeContext";
 import { stripClosedRing, type FieldOutDTO, type LonLat } from "../../fields";
 import type { TerraDrawEditorMode } from "../../maps";
 import type { TerraFeature } from "../types";
@@ -51,6 +52,7 @@ export function useFieldBorderEditor({
   onSaveSuccess?: (field: FieldOutDTO) => void;
   onUpdateSuccess?: (field: FieldOutDTO) => void;
 }) {
+  const { notify } = useNotice();
   const loadedRingRef = useRef<LonLat[] | null>(null);
   const boundaryClickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
 
@@ -198,7 +200,7 @@ export function useFieldBorderEditor({
       if (onSaveSuccess) {
         onSaveSuccess(data);
       } else {
-        alert(`Saved field "${data.name}" (id=${data.id})`);
+        notify(`Saved field "${data.name}" (id=${data.id})`, "success");
       }
       refreshFields();
       setSelectedFieldId(data?.id ?? null);
@@ -215,6 +217,7 @@ export function useFieldBorderEditor({
     onSaveSuccess,
     refreshFields,
     setSelectedFieldId,
+    notify,
   ]);
 
   const updateFieldBorder = useCallback(async () => {
@@ -239,7 +242,7 @@ export function useFieldBorderEditor({
       if (onUpdateSuccess) {
         onUpdateSuccess(data);
       } else {
-        alert(`Updated field "${data.name}" (id=${data.id})`);
+        notify(`Updated field "${data.name}" (id=${data.id})`, "success");
       }
       refreshFields();
     } catch (e: unknown) {
@@ -253,6 +256,7 @@ export function useFieldBorderEditor({
     refreshFields,
     selectedFieldId,
     updateFieldRecord,
+    notify,
   ]);
 
   const mountEditablePolygon = useCallback(

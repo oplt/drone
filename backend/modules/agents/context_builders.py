@@ -5,7 +5,6 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.modules.agents.schemas import AgentContext, AgentPhase
 from backend.modules.missions.runtime_models import MissionRuntime
 from backend.modules.patrol.models import PatrolDetection, PatrolIncident
 from backend.modules.property_patrol.models import PropertyPatrolIncident, PropertyPatrolSite
@@ -15,7 +14,10 @@ from backend.modules.warehouse.models import (
     WarehouseMap,
     WarehouseScanTarget,
 )
-from backend.modules.warehouse.service.structure_jobs import get_extraction_state
+from backend.modules.warehouse.service.structure_jobs import (
+    get_durable_extraction_state,
+    get_extraction_state,
+)
 
 
 async def build_patrol_incident_context(
@@ -101,6 +103,8 @@ async def build_warehouse_scan_context(
         )
     )
     structure = get_extraction_state(warehouse_map_id)
+    if structure is None:
+        structure = await get_durable_extraction_state(db, warehouse_map_id)
     payload: dict[str, Any] = {
         "warehouse_map": {
             "id": warehouse_map.id,

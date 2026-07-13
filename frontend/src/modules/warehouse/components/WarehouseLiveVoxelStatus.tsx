@@ -143,11 +143,18 @@ export function WarehouseLiveVoxelMetrics({
   mappingStackStatus,
   pointsByLayer,
   cachedBytes,
+  renderStats,
 }: {
   state: WarehouseLiveVoxelMapState;
   mappingStackStatus?: WarehouseMappingStackStatus | null;
   pointsByLayer?: Record<LiveMapLayerKey, number>;
   cachedBytes?: number;
+  renderStats?: {
+    renderedPointEstimate: number;
+    pointBudget: number;
+    droppedChunkCount: number;
+    maxConcurrentDownloads: number;
+  };
 }) {
   const pose = state.latestUpdate?.pose ?? null;
   const lastChunk = state.chunks.at(-1);
@@ -170,6 +177,13 @@ export function WarehouseLiveVoxelMetrics({
     ["Chunks", String(state.chunks.length)],
     ["Path samples", String(state.scanPath.length)],
     ["Cached", `${((cachedBytes ?? 0) / 1048576).toFixed(1)} MB`],
+    ...(renderStats
+      ? [
+          ["Render budget", `${renderStats.renderedPointEstimate.toLocaleString()} / ${renderStats.pointBudget.toLocaleString()} pts`],
+          ["Dropped chunks", String(renderStats.droppedChunkCount)],
+          ["Download slots", String(renderStats.maxConcurrentDownloads)],
+        ] as const
+      : []),
   ] as const;
 
   return (

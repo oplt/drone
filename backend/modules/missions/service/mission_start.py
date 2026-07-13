@@ -54,18 +54,17 @@ async def _get_preflight_run(run_id: str) -> Any | None:
 
 async def _ensure_drone_ready_for_preflight(orch: Any, *, profile: FlightProfile) -> None:
     try:
-        await asyncio.to_thread(orch.drone.get_telemetry)
-        if getattr(getattr(orch, "drone", None), "vehicle", None) is not None:
+        await orch.async_drone.get_telemetry()
+        if orch.async_drone.vehicle is not None:
             return
     except Exception:
         logger.info("Telemetry unavailable, attempting to connect drone for mission start")
 
     try:
-        await asyncio.to_thread(
-            orch.drone.connect,
+        await orch.async_drone.connect(
             home_fallback_allowed=profile.allows_home_fallback,
         )
-        await asyncio.to_thread(orch.drone.get_telemetry)
+        await orch.async_drone.get_telemetry()
     except Exception as exc:
         raise HTTPException(
             status_code=503,
@@ -105,7 +104,8 @@ async def start_mission_for_user(
             raise HTTPException(
                 status_code=412,
                 detail=(
-                    f"Preflight status '{rec.overall_status}' does not satisfy mission start policy."
+                    f"Preflight status '{rec.overall_status}' does not satisfy "
+                    "mission start policy."
                 ),
             )
     elif REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION:
@@ -139,7 +139,10 @@ async def start_mission_for_user(
     if active_task is not None and not active_task.done():
         raise HTTPException(
             status_code=409,
-            detail="Another mission is already running. Wait for it to complete before starting a new one.",
+            detail=(
+                "Another mission is already running. Wait for it to complete "
+                "before starting a new one."
+            ),
         )
 
     profile = flight_profile_for_payload(payload)
@@ -148,9 +151,10 @@ async def start_mission_for_user(
     except HTTPException:
         raise
     except Exception as exc:
+        logger.exception("Drone connection failed during mission preflight")
         raise HTTPException(
             status_code=503,
-            detail=f"Drone connection could not be established: {exc}",
+            detail="Drone connection could not be established",
         ) from exc
 
     orch.current_mission_name = payload.name

@@ -7,6 +7,8 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
+from backend.infrastructure.cache.local import BoundedTTLCache
+
 from .async_invocation import call_maybe_async
 from .cache import DistanceCache, TerrainCache, optimized_distance
 
@@ -129,7 +131,7 @@ class MissionDataPreprocessor:
     def __init__(self, terrain_cache: TerrainCache | None = None):
         self.terrain_cache = terrain_cache or TerrainCache()
         self.distance_cache = DistanceCache()
-        self._precomputed: dict[str, PrecomputedMissionData] = {}
+        self._precomputed = BoundedTTLCache[PrecomputedMissionData](max_entries=256)
 
     @staticmethod
     def _cache_key(waypoints: list[Any]) -> str:
@@ -180,7 +182,7 @@ class MissionDataPreprocessor:
         if terrain_data is not None:
             await self._populate_terrain(precomputed, terrain_data)
 
-        self._precomputed[cache_key] = precomputed
+        self._precomputed.set(cache_key, precomputed)
         return precomputed
 
     async def _populate_terrain(self, data: PrecomputedMissionData, terrain_data: Any) -> None:

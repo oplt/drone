@@ -73,4 +73,10 @@ class WebhookDelivery(Base):
     __table_args__ = (
         Index("idx_webhook_delivery_endpoint_time", "endpoint_id", "created_at"),
         Index("idx_webhook_delivery_status_retry", "status", "next_retry_at"),
+        Index(
+            "idx_webhook_delivery_endpoint_status_created",
+            "endpoint_id",
+            "status",
+            "created_at",
+        ),
     )

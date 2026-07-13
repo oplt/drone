@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from collections import OrderedDict
 from datetime import UTC, datetime
 from typing import Any
 
 from backend.modules.warehouse.service.preflight_cache import clear_preflight_snapshot_cache
+from backend.infrastructure.cache.redis import get_sync_redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,16 @@ _PREFLIGHT_RUNS: OrderedDict[str, Any] = OrderedDict()
 _PREFLIGHT_RUNS_MAX = 50
 _PREFLIGHT_RUNS_TTL_S = 60 * 60
 _BACKGROUND_TASKS: set[asyncio.Task[None]] = set()
+_PREFLIGHT_RUN_KEY_PREFIX = "warehouse:preflight:refresh:v1"
+
+
+def _run_key(run_id: str) -> str:
+    return f"{_PREFLIGHT_RUN_KEY_PREFIX}:{run_id}"
+
+
+def _run_payload(run: Any) -> str:
+    value = run.model_dump(mode="json") if hasattr(run, "model_dump") else run
+    return json.dumps(value, separators=(",", ":"), default=str)
 
 
 def remember_preflight_run(run: Any) -> None:
@@ -29,9 +41,25 @@ def remember_preflight_run(run: Any) -> None:
         _PREFLIGHT_RUNS.pop(key, None)
     while len(_PREFLIGHT_RUNS) > _PREFLIGHT_RUNS_MAX:
         _PREFLIGHT_RUNS.popitem(last=False)
+    try:
+        get_sync_redis_client().setex(
+            _run_key(str(run.run_id)),
+            _PREFLIGHT_RUNS_TTL_S,
+            _run_payload(run),
+        )
+    except Exception:
+        logger.debug("preflight_refresh_shared_state_unavailable", exc_info=True)
 
 
 def get_preflight_run(run_id: str) -> Any | None:
+    try:
+        payload = get_sync_redis_client().get(_run_key(run_id))
+        if payload:
+            from backend.modules.warehouse.http_models import WarehousePreflightRefreshOut
+
+            return WarehousePreflightRefreshOut.model_validate(json.loads(payload))
+    except Exception:
+        logger.debug("preflight_refresh_shared_state_read_failed", exc_info=True)
     return _PREFLIGHT_RUNS.get(run_id)
 
 

@@ -152,6 +152,8 @@ def instrument_celery(celery_app: Any) -> None:
             request_id=headers.get(_REQUEST_ID_HEADER),
             correlation_id=headers.get(_CORRELATION_HEADER),
             job_id=task_id,
+            queue=queue,
+            task_id=task_id,
         )
         set_job_id(task_id)
 

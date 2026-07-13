@@ -55,6 +55,7 @@ class TelemetryRecord(Base):
         UniqueConstraint("flight_id", "frame_id", name="uq_telemetry_flight_frame_id"),
         # optimised for flight_id + timestamp range reads (e.g. replay, analytics)
         Index("idx_telemetry_flight_time", "flight_id", "created_at"),
+        Index("idx_telemetry_created_at", "created_at"),
     )
 
 

@@ -41,6 +41,15 @@ async def put_settings(payload: SettingsDoc, request: Request):
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     saved = await svc.put_settings_doc(payload.model_dump())
+    # The generic settings endpoint can update AI routing too; invalidate the
+    # shared AI read-through cache just like the dedicated AI routes.
+    await AISettingsService(svc).invalidate_shared_cache()
+    try:
+        from backend.modules.warehouse.service.live_map_readiness import invalidate_readiness_caches
+
+        invalidate_readiness_caches()
+    except Exception:
+        pass
 
     # Refresh runtime settings for this process
     request.app.state.settings_doc = await svc.get_effective_settings_doc()

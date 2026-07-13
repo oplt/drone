@@ -60,20 +60,27 @@ export function useMappingJobs(options?: {
   useEffect(() => {
     if (activeJobId == null) return;
     let cancelled = false;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const tick = async () => {
       try {
-        await refreshJob(activeJobId);
+        const next = await refreshJob(activeJobId);
+        if (next?.status === "ready" || next?.status === "failed") return;
+        attempt = Math.min(attempt + 1, 5);
       } catch (e: unknown) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Failed to refresh mapping progress");
+          attempt = Math.min(attempt + 1, 5);
         }
+      }
+      if (!cancelled) {
+        timer = setTimeout(() => void tick(), Math.min(30_000, 3_000 * 2 ** attempt));
       }
     };
     void tick();
-    const id = setInterval(() => void tick(), 3000);
     return () => {
       cancelled = true;
-      clearInterval(id);
+      if (timer) clearTimeout(timer);
     };
   }, [activeJobId, refreshJob]);
 

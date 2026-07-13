@@ -4,7 +4,7 @@
     "limit": 180
   },
   "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx": {
-    "effective_lines": 1126,
+    "effective_lines": 1128,
     "limit": 180
   },
   "frontend/src/modules/controlled-flight/hooks/useControlledPreflight.ts": {
@@ -12,11 +12,11 @@
     "limit": 160
   },
   "frontend/src/modules/controlled-flight/hooks/useManualFlightControls.ts": {
-    "effective_lines": 180,
+    "effective_lines": 193,
     "limit": 160
   },
   "frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx": {
-    "effective_lines": 774,
+    "effective_lines": 782,
     "limit": 180
   },
   "frontend/src/modules/dashboard/components/CustomizedTreeView.tsx": {
@@ -40,11 +40,11 @@
     "limit": 220
   },
   "frontend/src/modules/field-survey/hooks/useFieldSurveyMap.ts": {
-    "effective_lines": 437,
+    "effective_lines": 287,
     "limit": 160
   },
   "frontend/src/modules/field-survey/hooks/useFieldSurveyMission.ts": {
-    "effective_lines": 198,
+    "effective_lines": 200,
     "limit": 160
   },
   "frontend/src/modules/fleet/views/FleetPage.tsx": {
@@ -84,7 +84,7 @@
     "limit": 160
   },
   "frontend/src/modules/mission-workflow/hooks/useFieldBorderEditor.ts": {
-    "effective_lines": 326,
+    "effective_lines": 330,
     "limit": 160
   },
   "frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts": {
@@ -96,19 +96,19 @@
     "limit": 220
   },
   "frontend/src/modules/photogrammetry/hooks/useMappingJobs.ts": {
-    "effective_lines": 178,
+    "effective_lines": 185,
     "limit": 160
   },
   "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMap.ts": {
-    "effective_lines": 390,
+    "effective_lines": 229,
     "limit": 160
   },
   "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMapping.ts": {
-    "effective_lines": 164,
+    "effective_lines": 174,
     "limit": 160
   },
   "frontend/src/modules/photogrammetry/hooks/usePhotogrammetryMission.ts": {
-    "effective_lines": 267,
+    "effective_lines": 269,
     "limit": 160
   },
   "frontend/src/modules/private-patrol/components/PrivatePatrolMapColumn.tsx": {
@@ -132,7 +132,7 @@
     "limit": 160
   },
   "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMap.ts": {
-    "effective_lines": 486,
+    "effective_lines": 323,
     "limit": 160
   },
   "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts": {
@@ -164,7 +164,7 @@
     "limit": 220
   },
   "frontend/src/modules/settings/views/SettingsPage.tsx": {
-    "effective_lines": 942,
+    "effective_lines": 912,
     "limit": 180
   },
   "frontend/src/modules/templates/views/TemplatesPage.tsx": {
@@ -172,19 +172,19 @@
     "limit": 180
   },
   "frontend/src/modules/warehouse/api/warehouseInspectionApi.ts": {
-    "effective_lines": 585,
+    "effective_lines": 614,
     "limit": 220
   },
   "frontend/src/modules/warehouse/api/warehouseLiveMapApi.ts": {
-    "effective_lines": 502,
+    "effective_lines": 549,
     "limit": 220
   },
   "frontend/src/modules/warehouse/api/warehouseMissionsApi.ts": {
-    "effective_lines": 241,
+    "effective_lines": 243,
     "limit": 220
   },
   "frontend/src/modules/warehouse/components/WarehouseCoordinateSetupPanel.tsx": {
-    "effective_lines": 707,
+    "effective_lines": 814,
     "limit": 220
   },
   "frontend/src/modules/warehouse/components/WarehouseDockPanel.tsx": {
@@ -204,7 +204,7 @@
     "limit": 220
   },
   "frontend/src/modules/warehouse/components/WarehouseLiveVoxelMapViewer.tsx": {
-    "effective_lines": 521,
+    "effective_lines": 555,
     "limit": 220
   },
   "frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx": {
@@ -212,7 +212,7 @@
     "limit": 220
   },
   "frontend/src/modules/warehouse/components/WarehouseLiveVoxelStatus.tsx": {
-    "effective_lines": 327,
+    "effective_lines": 341,
     "limit": 220
   },
   "frontend/src/modules/warehouse/components/WarehouseMapSetupPanel.tsx": {
@@ -224,15 +224,15 @@
     "limit": 220
   },
   "frontend/src/modules/warehouse/hooks/useLiveMapChunkCache.ts": {
-    "effective_lines": 494,
+    "effective_lines": 506,
     "limit": 160
   },
   "frontend/src/modules/warehouse/hooks/useRunWarehousePreflight.ts": {
-    "effective_lines": 280,
+    "effective_lines": 275,
     "limit": 160
   },
   "frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts": {
-    "effective_lines": 411,
+    "effective_lines": 407,
     "limit": 160
   },
   "frontend/src/modules/warehouse/hooks/useWarehouseManualMapping.ts": {
@@ -244,11 +244,11 @@
     "limit": 160
   },
   "frontend/src/modules/warehouse/hooks/useWarehouseStructure.ts": {
-    "effective_lines": 178,
+    "effective_lines": 192,
     "limit": 160
   },
   "frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts": {
-    "effective_lines": 662,
+    "effective_lines": 661,
     "limit": 400
   },
   "frontend/src/modules/warehouse/types.ts": {

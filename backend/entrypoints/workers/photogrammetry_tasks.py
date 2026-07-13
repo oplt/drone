@@ -7,6 +7,7 @@ from collections.abc import Coroutine
 from typing import Any
 
 from backend.core.config.runtime import env_truthy, settings, setup_logging
+from backend.core.retry import retry_delay_seconds
 from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.infrastructure.mapping import build_mapping_job
@@ -65,7 +66,10 @@ if ENABLE_NATIVE_ASYNC_TASK:
         try:
             return await _run_photogrammetry_pipeline(self, job_id)
         except Exception as exc:
-            raise self.retry(exc=exc, countdown=30) from exc
+            raise self.retry(
+                exc=exc,
+                countdown=retry_delay_seconds(attempt=self.request.retries),
+            ) from exc
 
 else:
 
@@ -82,4 +86,7 @@ else:
         try:
             return _run_on_worker_loop(_run_photogrammetry_pipeline(self, job_id))
         except Exception as exc:
-            raise self.retry(exc=exc, countdown=30) from exc
+            raise self.retry(
+                exc=exc,
+                countdown=retry_delay_seconds(attempt=self.request.retries),
+            ) from exc

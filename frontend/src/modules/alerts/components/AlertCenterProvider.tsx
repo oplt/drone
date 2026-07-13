@@ -126,7 +126,11 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
         }
       });
 
-    const interval = window.setInterval(() => {
+    // Alert events arrive on the shared telemetry stream. Refresh only when
+    // returning to a visible tab; a fixed poll duplicated stream traffic and
+    // made every dashboard instance hit both alert endpoints indefinitely.
+    const refreshWhenVisible = () => {
+      if (document.hidden || cancelled) return;
       void Promise.all([fetchAlerts(), fetchOpenCount()]).catch((error) => {
         if (!cancelled) {
           frontendLogger.warn("frontend", "Failed to refresh alert center", {
@@ -134,11 +138,12 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
           });
         }
       });
-    }, 30000);
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [fetchAlerts, fetchOpenCount, token]);
 

@@ -32,9 +32,18 @@ from typing import TYPE_CHECKING, Literal, Protocol
 
 from shapely.geometry import LineString, Point, Polygon
 
+from backend.core.geometry.algorithm_runtime import (
+    GEOMETRY_ALGORITHM_VERSION,
+    geometry_plan_cache,
+    workload_label,
+)
 from backend.core.geometry.projection import (
     lonlat_to_xy_m as _lonlat_to_xy_m,
+)
+from backend.core.geometry.projection import (
     polygon_centroid_lonlat as _shared_polygon_centroid_lonlat,
+)
+from backend.core.geometry.projection import (
     xy_m_to_lonlat as _xy_m_to_lonlat,
 )
 from backend.core.types.geo import coord_from_home
@@ -449,6 +458,48 @@ class GridPlanner:
         row_stride: int = 1,
         row_phase_m: float = 0.0,
     ) -> GridPlanResult:
+        payload = {
+            "polygon": [[float(lon), float(lat)] for lon, lat in poly_lonlat],
+            "spacing_m": float(spacing_m),
+            "angle_deg": float(angle_deg),
+            "inset_m": float(inset_m),
+            "min_segment_m": float(min_segment_m),
+            "start_corner": start_corner,
+            "lane_strategy": lane_strategy,
+            "row_stride": int(row_stride),
+            "row_phase_m": float(row_phase_m),
+        }
+        return geometry_plan_cache.get_or_compute(
+            namespace="grid_plan",
+            algorithm_version=GEOMETRY_ALGORITHM_VERSION,
+            payload=payload,
+            workload=workload_label(vertices=len(poly_lonlat)),
+            compute=lambda: GridPlanner._generate_uncached(
+                poly_lonlat,
+                spacing_m,
+                angle_deg,
+                inset_m=inset_m,
+                min_segment_m=min_segment_m,
+                start_corner=start_corner,
+                lane_strategy=lane_strategy,
+                row_stride=row_stride,
+                row_phase_m=row_phase_m,
+            ),
+        )
+
+    @staticmethod
+    def _generate_uncached(
+        poly_lonlat: list[tuple[float, float]],
+        spacing_m: float,
+        angle_deg: float,
+        *,
+        inset_m: float = 1.5,
+        min_segment_m: float = 3.0,
+        start_corner: Literal["auto", "nw", "ne", "sw", "se"] = "auto",
+        lane_strategy: Literal["serpentine", "one_way"] = "serpentine",
+        row_stride: int = 1,
+        row_phase_m: float = 0.0,
+    ) -> GridPlanResult:
         """Generate a clipped lawnmower route inside *poly_lonlat*.
 
         Returns
@@ -566,6 +617,13 @@ class GridPlanner:
                 "lane_strategy": lane_strategy,
                 "row_stride": int(row_stride),
                 "row_phase_m": round(phase_m, 3),
+                "limits": {
+                    "max_rows": MAX_GRID_ROWS,
+                    "max_waypoints": MAX_GRID_WAYPOINTS,
+                    "max_route_m": MAX_GRID_ROUTE_M,
+                    "max_path_points": MAX_GRID_PATH_POINTS,
+                    "retry_limit": 0,
+                },
             },
         )
 
@@ -797,7 +855,7 @@ class GridMission:
 
         takeoff_alt_m = float(self.agl_m if self.terrain_follow else self.cruise_alt_m)
         await asyncio.sleep(1.0)
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, takeoff_alt_m)
+        await orch.async_drone.arm_and_takeoff(takeoff_alt_m)
 
         await self._add_event_safe(orch, "takeoff", {})
 
@@ -851,14 +909,14 @@ class GridMission:
                 },
             )
 
-        await asyncio.to_thread(orch.drone.follow_waypoints, path)
+        await orch.async_drone.follow_waypoints(path)
 
         await self._add_event_safe(orch, "reached_destination", {})
 
-        await asyncio.to_thread(orch.drone.land)
+        await orch.async_drone.land()
         await self._add_event_safe(orch, "landing_command_sent", {})
 
-        await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
+        await orch.async_drone.wait_until_disarmed(900)
 
         await self._add_event_safe(orch, "landed_home", {})
         flight_id = getattr(orch, "_flight_id", None)

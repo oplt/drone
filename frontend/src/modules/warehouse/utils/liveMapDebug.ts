@@ -1,3 +1,5 @@
+import { frontendLogger } from "../../../shared/logging";
+
 export function isLiveMapDebugEnabled(): boolean {
   if (typeof window === "undefined") return false;
   if (!import.meta.env.DEV) return false;
@@ -14,8 +16,8 @@ export function isLiveMapDebugEnabled(): boolean {
 export function liveMapDebugLog(event: string, payload?: Record<string, unknown>): void {
   if (!isLiveMapDebugEnabled()) return;
   if (payload) {
-    console.debug(`[live-map] ${event}`, payload);
+    frontendLogger.debug("frontend", `[live-map] ${event}`, payload);
   } else {
-    console.debug(`[live-map] ${event}`);
+    frontendLogger.debug("frontend", `[live-map] ${event}`);
   }
 }

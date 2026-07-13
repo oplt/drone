@@ -1,22 +1,28 @@
 from __future__ import annotations
 
 import math
-import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 from backend.core.types.geo import haversine_km
+from backend.infrastructure.cache.local import BoundedTTLCache
 
 
 class TerrainCache:
     """Small in-memory TTL cache for terrain elevation lookups."""
 
-    def __init__(self, precision: float = 1e-5, ttl_seconds: float | None = 300):
+    def __init__(
+        self,
+        precision: float = 1e-5,
+        ttl_seconds: float | None = 300,
+        *,
+        max_entries: int = 4096,
+    ):
         self.precision = max(float(precision), 1e-9)
         self.ttl = ttl_seconds
-        self.decimal_places = max(0, -int(math.floor(math.log10(self.precision))))
+        self.decimal_places = max(0, -math.floor(math.log10(self.precision)))
 
-        self._cache: dict[str, tuple[float, float]] = {}
+        self._cache = BoundedTTLCache[float](max_entries=max_entries)
         self._hits = 0
         self._misses = 0
 
@@ -28,24 +34,16 @@ class TerrainCache:
 
     def get(self, lat: float, lon: float) -> float | None:
         key = self._make_key(lat, lon)
-        item = self._cache.get(key)
-
-        if item is None:
+        elevation = self._cache.get(key, ttl_seconds=self.ttl)
+        if elevation is None:
             self._misses += 1
             return None
-
-        elevation, ts = item
-        if self.ttl is None or (time.time() - ts) < float(self.ttl):
-            self._hits += 1
-            return elevation
-
-        self._cache.pop(key, None)
-        self._misses += 1
-        return None
+        self._hits += 1
+        return elevation
 
     def set(self, lat: float, lon: float, elevation: float | None) -> None:
         if elevation is not None:
-            self._cache[self._make_key(lat, lon)] = (float(elevation), time.time())
+            self._cache.set(self._make_key(lat, lon), float(elevation))
 
     def clear(self) -> None:
         self._cache.clear()
@@ -80,8 +78,8 @@ class TerrainCache:
 class DistanceCache:
     """Cache for pairwise distances in meters."""
 
-    def __init__(self) -> None:
-        self._cache: dict[tuple[float, float, float, float], float] = {}
+    def __init__(self, *, max_entries: int = 8192) -> None:
+        self._cache = BoundedTTLCache[float](max_entries=max_entries)
         self._hits = 0
         self._misses = 0
 
@@ -109,7 +107,7 @@ class DistanceCache:
         return value
 
     def set(self, lat1: float, lon1: float, lat2: float, lon2: float, distance: float) -> None:
-        self._cache[self._make_key(lat1, lon1, lat2, lon2)] = float(distance)
+        self._cache.set(self._make_key(lat1, lon1, lat2, lon2), float(distance))
 
     def clear(self) -> None:
         self._cache.clear()

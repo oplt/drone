@@ -21,6 +21,9 @@ class MLRuntimeSettings(BaseSettings):
     detector_model_path: str = "yolo26n.pt"
     detector_conf: float = 0.35
     detector_iou: float = 0.45
+    detector_class_confidence: dict[str, float] = Field(default_factory=dict)
+    tracker_max_center_distance_px: float = Field(default=180.0, ge=1.0)
+    tracker_confidence_smoothing_alpha: float = Field(default=0.35, gt=0.0, le=1.0)
     frame_stride: int = Field(default=2, ge=1)
     target_fps: int = Field(default=8, ge=1)
     enable_motion_prefilter: bool = True

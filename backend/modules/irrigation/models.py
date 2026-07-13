@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -99,6 +100,34 @@ class ProcessedFieldLayer(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class IrrigationProcessingJob(Base):
+    """Durable state for asynchronous field processing."""
+
+    __tablename__ = "irrigation_processing_jobs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    mission_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("mission_runtimes.client_flight_id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), index=True
+    )
+    requested_by_user_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    input_checksum: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    force: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="queued", index=True)
+    celery_task_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 

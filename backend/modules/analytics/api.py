@@ -1,21 +1,78 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from statistics import mean
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from pydantic import BaseModel
+from sqlalchemy import and_, case, func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.config.runtime import settings
 from backend.core.database.session import Session, get_db
+from backend.infrastructure.cache.redis import get_redis_client
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
-from backend.modules.identity.dependencies import require_user
+from backend.modules.identity.dependencies import OrgUser, require_org_user, require_user
 from backend.modules.missions.flight_models import Flight, FlightEvent
 from backend.modules.telemetry.models import TelemetryRecord
 from backend.modules.telemetry.repository import TelemetryRepository
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+
+class AnalyticsSummary(BaseModel):
+    active_flights: int
+    flights_24h: int
+    telemetry_24h: int
+    flight_hours_7d: float
+    avg_battery_24h: float | None
+
+
+class AnalyticsTrends(BaseModel):
+    days: list[str]
+    flight_hours: list[float]
+    flight_counts: list[int]
+    telemetry_counts: list[int]
+
+
+class AnalyticsCoveragePoint(BaseModel):
+    label: str
+    value: float
+
+
+class AnalyticsRecentFlight(BaseModel):
+    id: int
+    name: str
+    status: str
+    started_at: str
+    ended_at: str | None
+    duration_min: float
+    distance_km: float
+    telemetry_points: int
+
+
+class AnalyticsEvent(BaseModel):
+    id: int
+    flight_id: int
+    type: str
+    created_at: str
+    data: dict[str, Any]
+
+
+class AnalyticsSystem(BaseModel):
+    telemetry_running: bool
+    active_connections: int
+    last_update: Any = None
+    mavlink_connected: bool
+
+
+class AnalyticsOverviewResponse(BaseModel):
+    summary: AnalyticsSummary
+    trends: AnalyticsTrends
+    coverage: list[AnalyticsCoveragePoint]
+    recent_flights: list[AnalyticsRecentFlight]
+    events: list[AnalyticsEvent]
+    system: AnalyticsSystem
 
 
 def _date_key(dt: datetime) -> str:
@@ -43,52 +100,83 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-@router.get("/overview")
+
+
+@router.get("/overview", response_model=AnalyticsOverviewResponse)
 async def overview(
     db: AsyncSession = Depends(get_db),
-    user=Depends(require_user),
+    org_user: OrgUser = Depends(require_org_user),
 ) -> dict[str, Any]:
+    from backend.modules.analytics.cache import get_cached_overview, set_cached_overview
+
+    org_id = org_user.org_id
+    redis = get_redis_client()
+    cached = await get_cached_overview(redis, org_id)
+    if cached is not None:
+        return cached
+
+    flight_scope = Flight.org_id == org_id
+    telemetry_scope = TelemetryRecord.flight_id.in_(
+        select(Flight.id).where(flight_scope)
+    )
+    event_scope = FlightEvent.flight_id.in_(select(Flight.id).where(flight_scope))
     now = datetime.now(UTC)
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
     last_30d = now - timedelta(days=30)
 
-    active_flights = await db.scalar(
-        select(func.count()).select_from(Flight).where(Flight.ended_at.is_(None))
-    )
-    flights_24h = await db.scalar(
-        select(func.count()).select_from(Flight).where(Flight.started_at >= last_24h)
-    )
-    telemetry_24h = await db.scalar(
-        select(func.count())
-        .select_from(TelemetryRecord)
-        .where(TelemetryRecord.created_at >= last_24h)
-    )
-    avg_battery_24h = await db.scalar(
-        select(func.avg(TelemetryRecord.battery_remaining))
-        .select_from(TelemetryRecord)
-        .where(
-            TelemetryRecord.created_at >= last_24h,
-            TelemetryRecord.battery_remaining.isnot(None),
-        )
-    )
-
-    flights_last_7 = (
+    flight_summary = (
         await db.execute(
             select(
+                func.count(case((Flight.ended_at.is_(None), 1))).label("active_flights"),
+                func.count(case((Flight.started_at >= last_24h, 1))).label("flights_24h"),
                 func.coalesce(
                     func.sum(
-                        func.extract(
-                            "epoch",
-                            func.coalesce(Flight.ended_at, now) - Flight.started_at,
+                        case(
+                            (
+                                Flight.started_at >= last_7d,
+                                func.extract(
+                                    "epoch",
+                                    func.coalesce(Flight.ended_at, now) - Flight.started_at,
+                                ),
+                            ),
+                            else_=0.0,
                         )
                     ),
                     0.0,
-                )
-            ).where(Flight.started_at >= last_7d)
+                ).label("flight_seconds_7d"),
+            ).where(flight_scope)
         )
-    ).scalar_one()
+    ).one()
+    active_flights = flight_summary.active_flights
+    flights_24h = flight_summary.flights_24h
+    flights_last_7 = flight_summary.flight_seconds_7d
     flight_hours_7d = float(flights_last_7 or 0.0) / 3600.0
+
+    telemetry_summary = (
+        await db.execute(
+            select(
+                func.count(case((TelemetryRecord.created_at >= last_24h, 1))).label(
+                    "telemetry_24h"
+                ),
+                func.avg(
+                    case(
+                        (
+                            and_(
+                                TelemetryRecord.created_at >= last_24h,
+                                TelemetryRecord.battery_remaining.isnot(None),
+                            ),
+                            TelemetryRecord.battery_remaining,
+                        )
+                    )
+                ).label("avg_battery_24h"),
+            )
+            .select_from(TelemetryRecord)
+            .where(telemetry_scope)
+        )
+    ).one()
+    telemetry_24h = telemetry_summary.telemetry_24h
+    avg_battery_24h = telemetry_summary.avg_battery_24h
 
     day_bucket = func.date(Flight.started_at)
     flight_hour_rows = (
@@ -106,15 +194,11 @@ async def overview(
                     0.0,
                 ),
             )
-            .where(Flight.started_at >= last_30d)
+            .where(flight_scope, Flight.started_at >= last_30d)
             .group_by(day_bucket)
             .order_by(day_bucket)
         )
     ).all()
-
-    flights_last_30 = (
-        (await db.execute(select(Flight).where(Flight.started_at >= last_30d))).scalars().all()
-    )
 
     # Build day buckets
     days = _daterange(now, 30)
@@ -135,7 +219,7 @@ async def overview(
     telemetry_rows = (
         await db.execute(
             select(day_bucket, func.count())
-            .where(TelemetryRecord.created_at >= last_30d)
+            .where(telemetry_scope, TelemetryRecord.created_at >= last_30d)
             .group_by(day_bucket)
             .order_by(day_bucket)
         )
@@ -146,49 +230,111 @@ async def overview(
             continue
         telemetry_by_day[str(day_value)] = int(count or 0)
 
-    # Coverage distribution (quadrants relative to centroid)
-    coverage = []
-    if flights_last_30:
-        avg_lat = mean([f.start_lat for f in flights_last_30])
-        avg_lon = mean([f.start_lon for f in flights_last_30])
-        quadrants = {
-            "North East": 0,
-            "South East": 0,
-            "South West": 0,
-            "North West": 0,
-        }
-        for f in flights_last_30:
-            north = f.start_lat >= avg_lat
-            east = f.start_lon >= avg_lon
-            if north and east:
-                quadrants["North East"] += 1
-            elif not north and east:
-                quadrants["South East"] += 1
-            elif not north and not east:
-                quadrants["South West"] += 1
-            else:
-                quadrants["North West"] += 1
-
-        total = max(1, sum(quadrants.values()))
-        coverage = [
+    # Coverage distribution (quadrants relative to centroid). Keep this as a
+    # database projection: the endpoint never materializes the 30-day flight set.
+    centroid = (
+        select(
+            func.avg(Flight.start_lat).label("avg_lat"),
+            func.avg(Flight.start_lon).label("avg_lon"),
+        )
+        .where(flight_scope, Flight.started_at >= last_30d)
+        .cte("flight_centroid")
+    )
+    quadrant_row = (
+        await db.execute(
+            select(
+                func.count(
+                    case(
+                        (
+                            and_(
+                                Flight.start_lat >= centroid.c.avg_lat,
+                                Flight.start_lon >= centroid.c.avg_lon,
+                            ),
+                            1,
+                        )
+                    )
+                ).label("north_east"),
+                func.count(
+                    case(
+                        (
+                            and_(
+                                Flight.start_lat < centroid.c.avg_lat,
+                                Flight.start_lon >= centroid.c.avg_lon,
+                            ),
+                            1,
+                        )
+                    )
+                ).label("south_east"),
+                func.count(
+                    case(
+                        (
+                            and_(
+                                Flight.start_lat < centroid.c.avg_lat,
+                                Flight.start_lon < centroid.c.avg_lon,
+                            ),
+                            1,
+                        )
+                    )
+                ).label("south_west"),
+                func.count(
+                    case(
+                        (
+                            and_(
+                                Flight.start_lat >= centroid.c.avg_lat,
+                                Flight.start_lon < centroid.c.avg_lon,
+                            ),
+                            1,
+                        )
+                    )
+                ).label("north_west"),
+            )
+            .select_from(Flight)
+            .join(centroid, true())
+            .where(flight_scope, Flight.started_at >= last_30d)
+        )
+    ).one()
+    quadrants = {
+        "North East": int(quadrant_row.north_east or 0),
+        "South East": int(quadrant_row.south_east or 0),
+        "South West": int(quadrant_row.south_west or 0),
+        "North West": int(quadrant_row.north_west or 0),
+    }
+    total = sum(quadrants.values())
+    coverage = (
+        [
             {"label": label, "value": round((count / total) * 100, 1)}
             for label, count in quadrants.items()
         ]
+        if total
+        else []
+    )
 
     # Recent flights
     recent = (
-        (await db.execute(select(Flight).order_by(Flight.started_at.desc()).limit(12)))
-        .scalars()
-        .all()
-    )
+        await db.execute(
+            select(
+                Flight.id,
+                Flight.status,
+                Flight.started_at,
+                Flight.ended_at,
+                Flight.start_lat,
+                Flight.start_lon,
+                Flight.dest_lat,
+                Flight.dest_lon,
+            )
+            .where(flight_scope)
+            .order_by(Flight.started_at.desc(), Flight.id.desc())
+            .limit(12)
+        )
+    ).all()
 
-    flight_ids = [f.id for f in recent]
+    flight_ids = [int(f.id) for f in recent]
     telemetry_counts = {}
     if flight_ids:
         counts = (
             await db.execute(
                 select(TelemetryRecord.flight_id, func.count())
-                .where(TelemetryRecord.flight_id.in_(flight_ids))
+                .where(telemetry_scope, TelemetryRecord.flight_id.in_(flight_ids))
                 .group_by(TelemetryRecord.flight_id)
             )
         ).all()
@@ -215,7 +361,11 @@ async def overview(
 
     # Recent events (best-effort)
     events = (
-        (await db.execute(select(FlightEvent).order_by(FlightEvent.created_at.desc()).limit(10)))
+        (
+            await db.execute(
+                select(FlightEvent).where(event_scope).order_by(FlightEvent.created_at.desc()).limit(10)
+            )
+        )
         .scalars()
         .all()
     )
@@ -238,7 +388,7 @@ async def overview(
         "mavlink_connected": telemetry["source_connected"],
     }
 
-    return {
+    response = {
         "summary": {
             "active_flights": int(active_flights or 0),
             "flights_24h": int(flights_24h or 0),
@@ -259,6 +409,13 @@ async def overview(
         "events": recent_events,
         "system": system,
     }
+    await set_cached_overview(
+        redis,
+        org_id,
+        response,
+        ttl=max(1, int(settings.analytics_cache_ttl_sec)),
+    )
+    return response
 
 
 _VALID_RESOLUTIONS = {1, 10, 60}

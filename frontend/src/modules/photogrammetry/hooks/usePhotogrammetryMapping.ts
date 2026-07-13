@@ -26,6 +26,7 @@ export function usePhotogrammetryMapping({
   );
   const [mappingInputFiles, setMappingInputFiles] = useState<File[]>([]);
   const [mappingSyncSourceDir, setMappingSyncSourceDir] = useState("");
+  const [pendingDeleteJobId, setPendingDeleteJobId] = useState<number | null>(null);
 
   const mappingJobs = useMappingJobs({
     onJobReady: () => onJobReady(),
@@ -121,22 +122,29 @@ export function usePhotogrammetryMapping({
   ]);
 
   const handleDeleteJob = useCallback(
-    async (jobId: number) => {
+    (jobId: number) => {
       if (!getToken()) {
         addError("Not authenticated");
         return;
       }
-      if (!window.confirm(`Are you sure you want to delete job #${jobId}?`)) {
-        return;
-      }
-      try {
-        await mappingJobs.removeJob(jobId);
-      } catch (e: unknown) {
-        addError(e instanceof Error ? e.message : `Failed to delete job #${jobId}`);
-      }
+      setPendingDeleteJobId(jobId);
     },
-    [addError, mappingJobs]
+    [addError],
   );
+
+  const confirmDeleteJob = useCallback(async () => {
+    if (pendingDeleteJobId == null) return;
+      try {
+        await mappingJobs.removeJob(pendingDeleteJobId);
+        setPendingDeleteJobId(null);
+      } catch (e: unknown) {
+        addError(
+          e instanceof Error
+            ? e.message
+            : `Failed to delete job #${pendingDeleteJobId}`,
+        );
+      }
+  }, [addError, mappingJobs, pendingDeleteJobId]);
 
   const handleResumeJob = useCallback(
     async (jobId: number) => {
@@ -167,6 +175,9 @@ export function usePhotogrammetryMapping({
     mappingFieldReady,
     create3DFieldMap,
     handleDeleteJob,
+    pendingDeleteJobId,
+    closeDeleteJobDialog: () => setPendingDeleteJobId(null),
+    confirmDeleteJob,
     handleResumeJob,
     jobs: mappingJobs.jobs,
     jobStatus: mappingJobs.status,

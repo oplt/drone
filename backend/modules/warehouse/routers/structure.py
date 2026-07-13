@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.config.runtime import settings
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_mission_exec,
@@ -100,10 +101,13 @@ from backend.modules.warehouse.service.preflight_snapshot import (
 )
 from backend.modules.warehouse.service.structure_jobs import (
     STRUCTURE_ASSET_TYPE,
+    create_durable_extraction_job,
     dry_run_structure_extraction,
     ensure_structure_quality_summary,
     get_extraction_state,
+    get_durable_extraction_state,
     record_extraction_queued,
+    update_durable_extraction_job,
     resolve_latest_model_flight,
     warehouse_mapping_worker_ready,
 )
@@ -197,17 +201,36 @@ async def extract_warehouse_structure_endpoint(
 
     task_id: str | None = None
     try:
-        from backend.entrypoints.workers.warehouse_mapping_tasks import (
-            extract_warehouse_structure,
-        )
-
-        async_result = extract_warehouse_structure.delay(
+        durable_job = await create_durable_extraction_job(
+            db,
             warehouse_map_id=int(warehouse_map_id),
             model_id=int(model_id),
             client_flight_id=client_flight_id,
             params=params_payload,
         )
-        task_id = getattr(async_result, "id", None)
+        await db.commit()
+        task_id = durable_job.processor_task_id
+        if task_id is None:
+            from backend.infrastructure.jobs import enqueue_task
+
+            task_id = enqueue_task(
+                "warehouse_mapping.extract_structure",
+                queue=settings.celery_warehouse_mapping_queue,
+                warehouse_map_id=int(warehouse_map_id),
+                model_id=int(model_id),
+                client_flight_id=client_flight_id,
+                params=params_payload,
+                extraction_job_id=int(durable_job.id),
+            )
+            await update_durable_extraction_job(
+                db,
+                warehouse_map_id=int(warehouse_map_id),
+                model_id=int(model_id),
+                status="queued",
+                task_id=task_id,
+                job_id=int(durable_job.id),
+            )
+            await db.commit()
         record_extraction_queued(
             warehouse_map_id=int(warehouse_map_id),
             model_id=int(model_id),
@@ -216,6 +239,19 @@ async def extract_warehouse_structure_endpoint(
             source="api",
         )
     except Exception as exc:
+        await db.rollback()
+        try:
+            await update_durable_extraction_job(
+                db,
+                warehouse_map_id=int(warehouse_map_id),
+                model_id=int(model_id),
+                status="failed",
+                error=str(exc),
+                job_id=int(locals().get("durable_job").id) if locals().get("durable_job") else None,
+            )
+            await db.commit()
+        except Exception:
+            await db.rollback()
         logger.exception("warehouse_structure_extraction_enqueue_failed_api")
         raise HTTPException(
             status_code=503,
@@ -257,13 +293,13 @@ async def dry_run_warehouse_structure_endpoint(
             detail="No ready 3D map with a live-map flight is available to extract from.",
         )
     model_id, client_flight_id = resolved
-    from backend.entrypoints.workers.warehouse_mapping_tasks import _params_from_payload
+    from backend.modules.warehouse.service.structure_jobs import params_from_payload
 
     result = await dry_run_structure_extraction(
         warehouse_map_id=int(warehouse_map_id),
         model_id=int(model_id),
         client_flight_id=client_flight_id,
-        params=_params_from_payload(
+        params=params_from_payload(
             await _resolve_template_payload(
                 db,
                 warehouse_map_id=warehouse_map_id,
@@ -300,6 +336,8 @@ async def get_warehouse_structure(
     if asset is None:
         task_state = get_extraction_state(warehouse_map_id) or {}
         if not task_state:
+            task_state = await get_durable_extraction_state(db, warehouse_map_id) or {}
+        if not task_state:
             resolved = await resolve_latest_model_flight(db, warehouse_map_id=warehouse_map_id)
             if resolved is not None:
                 model_id, client_flight_id = resolved
@@ -312,7 +350,7 @@ async def get_warehouse_structure(
         structure_status: Literal["not_started", "queued", "running", "ready", "needs_review", "failed"]
         if raw_status == "queued":
             structure_status = "queued"
-        elif raw_status == "running":
+        elif raw_status in {"running", "processing"}:
             structure_status = "running"
         elif raw_status == "ready":
             structure_status = "ready"

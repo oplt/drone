@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import { useConfirm } from "../../../shared/ui/ConfirmContext";
 import { missionKeys } from "../../../app/config/queryKeys";
 import { getSessionMarker } from "../../session";
 import {
@@ -36,6 +37,7 @@ export function useMissionCommands({
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { confirm } = useConfirm();
 
   const lifecycleState = missionStatus?.mission_lifecycle?.state ?? null;
 
@@ -101,11 +103,21 @@ export function useMissionCommands({
 
   const issueCommand = useCallback(
     async (command: MissionCommand) => {
+      if (command === "abort") {
+        const current = lifecycleState ?? "unknown";
+        const accepted = await confirm({
+          title: "Abort mission?",
+          description: `Current: ${current}. Target: aborted. Pending: the drone will stop mission execution and the action will be audited.`,
+          confirmLabel: "Abort mission",
+          confirmColor: "error",
+        });
+        if (!accepted) return;
+      }
       setMessage(null);
       setError(null);
       await commandMutation.mutateAsync(command);
     },
-    [commandMutation],
+    [commandMutation, confirm, lifecycleState],
   );
 
   const recentAudit = useMemo(

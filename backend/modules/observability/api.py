@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import OrgUser, require_org_user
@@ -32,7 +33,7 @@ async def status(_org_user: OrgUser = Depends(require_org_user)) -> Observabilit
 @router.get("/context-options", response_model=ObservabilityContextOptions)
 async def context_options(
     org_user: OrgUser = Depends(require_org_user),
-    db: AsyncSession = Depends(get_db),
+    db: Any = Depends(get_db),
 ) -> ObservabilityContextOptions:
     return await get_observability_context_options(
         db,

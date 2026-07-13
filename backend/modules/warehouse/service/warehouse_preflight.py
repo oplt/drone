@@ -383,7 +383,7 @@ async def _probe_warehouse_perception_status(
     force: bool = False,
 ) -> WarehousePerceptionStatus:
     from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
-    from backend.infrastructure.warehouse.bridge_config import probe_bridge_topics
+    from backend.infrastructure.warehouse.bridge_config import probe_bridge_topics_async
     from backend.modules.warehouse.ros_bridge_runtime import ensure_ros_bridge_running, ros2_workspace
 
     bridge_start_error: str | None = None
@@ -399,7 +399,8 @@ async def _probe_warehouse_perception_status(
     overlay: dict[str, Any] = {}
     if ws.exists() and (deep or force):
         try:
-            overlay = await asyncio.to_thread(probe_bridge_topics, ws)
+            # Readiness is a safety decision; bypass the UI diagnostics cache.
+            overlay = await probe_bridge_topics_async(ws, force=True)
         except Exception as exc:
             logger.warning("Warehouse ROS topic probe failed during preflight: %s", exc)
 

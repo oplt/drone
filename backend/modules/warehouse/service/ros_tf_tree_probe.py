@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import shlex
-import subprocess
 from typing import Any
 
+from backend.infrastructure.runtime.blocking import blocking_process_runner, run_blocking
 from backend.infrastructure.warehouse.bridge_config import ros_command_env
 from backend.modules.warehouse.service.frame_contract import REQUIRED_FRAME_EDGES
 from backend.modules.warehouse.service.sim_time_tf_readiness import _sourced_ros_cmd
@@ -23,8 +23,8 @@ async def probe_ros_tf_edge(
     child = shlex.quote(str(child_frame).strip())
     cli_timeout = max(1.0, min(3.0, float(timeout_s)))
     try:
-        result = await asyncio.to_thread(
-            subprocess.run,
+        result = await run_blocking(
+            blocking_process_runner.run,
             _sourced_ros_cmd(
                 f"timeout {shlex.quote(str(cli_timeout))} ros2 run tf2_ros tf2_echo {parent} {child}"
             ),
@@ -32,6 +32,8 @@ async def probe_ros_tf_edge(
             capture_output=True,
             text=True,
             timeout=cli_timeout + 2.5,
+            boundary="process",
+            operation="ros_tf_edge_probe",
         )
         stdout = result.stdout or ""
         stderr = result.stderr or ""

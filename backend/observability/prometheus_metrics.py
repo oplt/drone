@@ -68,6 +68,19 @@ job_dead_letter_total = Counter(
     ["job_name", "queue"],
 )
 
+blocking_boundary_duration_seconds = Histogram(
+    "blocking_boundary_duration_seconds",
+    "Duration of process, filesystem, and CPU adapter calls",
+    ["boundary", "operation"],
+    buckets=(0.001, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 30.0, 120.0, 600.0),
+)
+
+blocking_boundary_failures_total = Counter(
+    "blocking_boundary_failures_total",
+    "Failures in blocking adapter calls",
+    ["boundary", "operation"],
+)
+
 queue_lag_seconds = Histogram(
     "queue_lag_seconds",
     "Time between job enqueue and worker start in seconds",
@@ -79,6 +92,81 @@ queue_depth = Gauge(
     "queue_depth",
     "Number of pending messages in a queue",
     ["queue"],
+)
+
+cache_hits_total = Counter(
+    "cache_hits_total",
+    "Read-through cache hits",
+    ["cache"],
+)
+
+cache_misses_total = Counter(
+    "cache_misses_total",
+    "Read-through cache misses",
+    ["cache"],
+)
+
+analytics_overview_cache_latency_seconds = Histogram(
+    "analytics_overview_cache_latency_seconds",
+    "Analytics overview cache operation latency",
+    ["operation"],
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0),
+)
+
+
+celery_workers_ready = Gauge(
+    "celery_workers_ready",
+    "Number of Celery workers responding to readiness probes",
+    ["queue"],
+)
+
+ai_requests_total = Counter(
+    "ai_requests_total",
+    "AI gateway requests by task, provider, and outcome",
+    ["task", "provider", "status"],
+)
+
+ai_request_duration_seconds = Histogram(
+    "ai_request_duration_seconds",
+    "AI gateway request latency",
+    ["task"],
+    buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0),
+)
+
+ai_fallback_total = Counter(
+    "ai_fallback_total",
+    "AI gateway fallback provider selections",
+    ["task"],
+)
+
+ai_abstentions_total = Counter(
+    "ai_abstentions_total",
+    "AI outputs below confidence threshold or requiring abstention",
+    ["task"],
+)
+
+ai_tokens_total = Counter(
+    "ai_tokens_total",
+    "AI provider-reported token usage by task/provider/kind",
+    ["task", "provider", "kind"],
+)
+
+video_inference_queue_depth = Gauge(
+    "video_inference_queue_depth",
+    "Pending video detections waiting for persistence",
+    ["job_id"],
+)
+
+event_loop_lag_seconds = Gauge(
+    "event_loop_lag_seconds",
+    "Observed asyncio event-loop scheduling lag",
+)
+
+profiling_stage_duration_seconds = Histogram(
+    "profiling_stage_duration_seconds",
+    "Measured duration of geometry, planning, and parsing stages",
+    ["stage", "workload"],
+    buckets=(0.001, 0.01, 0.1, 0.5, 1.0, 5.0, 15.0, 60.0, 300.0),
 )
 
 # --- Database ---

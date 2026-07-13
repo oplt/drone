@@ -11,6 +11,7 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
           if (id.includes("cesium") || id.includes("resium")) return "vendor-cesium";
+          if (id.includes("three") || id.includes("@react-three")) return "vendor-3d";
           if (id.includes("maplibre") || id.includes("leaflet")) return "vendor-maps";
           if (id.includes("@mui") || id.includes("@emotion")) return "vendor-mui";
           if (id.includes("@react-google-maps") || id.includes("@googlemaps")) {

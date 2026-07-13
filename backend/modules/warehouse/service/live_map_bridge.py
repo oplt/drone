@@ -22,6 +22,7 @@ from backend.infrastructure.warehouse.bridge_config import (
     load_bridge_config,
     ros_command_env,
 )
+from backend.infrastructure.runtime.blocking import blocking_process_runner
 from backend.modules.warehouse.service.map_source_config import WAREHOUSE_LIVE_MAP_SOURCES
 from backend.modules.warehouse.service.nvblox_status import nvblox_status_tracker
 from backend.modules.warehouse.service.live_map_stream import (
@@ -166,7 +167,7 @@ def _run_ros2_command(
         f"ros2 {' '.join(shlex.quote(str(arg)) for arg in ros_args)}"
     )
     try:
-        return subprocess.run(
+        return blocking_process_runner.run(
             ["bash", "-lc", command],
             cwd=str(ws),
             capture_output=True,

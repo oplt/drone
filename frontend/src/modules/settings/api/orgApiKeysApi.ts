@@ -1,4 +1,5 @@
 import { httpRequest } from "../../../shared/api/httpClient";
+import { unwrapPage, type PageResponse } from "../../../shared/api/pagination";
 
 export type OrgApiKey = {
   id: number;
@@ -16,7 +17,9 @@ export type OrgApiKeyCreated = OrgApiKey & {
 };
 
 export function listOrgApiKeys(token?: string | null) {
-  return httpRequest<OrgApiKey[]>("/tasks/api-keys", { token });
+  return httpRequest<PageResponse<OrgApiKey>>("/tasks/api-keys", {
+    token,
+  }).then(unwrapPage);
 }
 
 export function createOrgApiKey(name: string, token?: string | null) {

@@ -19,6 +19,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_mission_exec,
@@ -43,13 +44,11 @@ from backend.modules.warehouse.models import (
 from backend.modules.warehouse.schemas import (
     WarehouseInspectionMissionCreate,
     WarehouseInspectionMissionRead,
-    WarehouseInspectionResultPage,
     WarehouseInspectionResultRead,
     WarehouseScanPoseComputeIn,
     WarehouseScanPoseComputeOut,
     WarehouseScanTargetCreate,
     WarehouseScanTargetImport,
-    WarehouseScanTargetPage,
     WarehouseScanTargetRead,
     WarehouseScanTargetUpdate,
 )
@@ -100,17 +99,20 @@ def _set_scan_target_cache_headers(response: Response, *, offset: int) -> None:
     response.headers["Vary"] = "Authorization"
 
 
-@router.get("/maps/{warehouse_map_id}/scan-targets", response_model=WarehouseScanTargetPage)
+@router.get("/maps/{warehouse_map_id}/scan-targets", response_model=Page[WarehouseScanTargetRead])
 async def list_warehouse_scan_targets(
     warehouse_map_id: int,
     response: Response,
     active: bool | None = Query(default=None),
-    limit: int = Query(default=200, ge=1, le=2000),
+    limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
-) -> WarehouseScanTargetPage:
-    _set_scan_target_cache_headers(response, offset=offset)
+) -> Page[WarehouseScanTargetRead]:
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    _set_scan_target_cache_headers(response, offset=page_offset)
     await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     clauses = [WarehouseScanTarget.warehouse_map_id == warehouse_map_id]
     if active is not None:
@@ -133,18 +135,18 @@ async def list_warehouse_scan_targets(
                     WarehouseScanTarget.bin_code.asc(),
                     WarehouseScanTarget.id.asc(),
                 )
-                .limit(limit)
-                .offset(offset)
+                .limit(page_limit + 1)
+                .offset(page_offset)
             )
         )
         .scalars()
         .all()
     )
-    return WarehouseScanTargetPage(
-        items=[scan_target_out(row) for row in rows],
+    return page_from_offset(
+        [scan_target_out(row) for row in rows],
+        limit=page_limit,
+        offset=page_offset,
         total=total,
-        limit=limit,
-        offset=offset,
     )
 
 
@@ -874,15 +876,18 @@ async def run_warehouse_inspection_mission_mock(
 
 @router.get(
     "/inspection-missions/{mission_id}/results",
-    response_model=WarehouseInspectionResultPage,
+    response_model=Page[WarehouseInspectionResultRead],
 )
 async def list_warehouse_inspection_results(
     mission_id: int,
-    limit: int = Query(default=200, ge=1, le=2000),
+    limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
-) -> WarehouseInspectionResultPage:
+) -> Page[WarehouseInspectionResultRead]:
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
     mission = (
         await db.execute(
             select(WarehouseInspectionMission).where(WarehouseInspectionMission.id == mission_id)
@@ -910,16 +915,16 @@ async def list_warehouse_inspection_results(
                     WarehouseInspectionResult.scanned_at.asc(),
                     WarehouseInspectionResult.id.asc(),
                 )
-                .limit(limit)
-                .offset(offset)
+                .limit(page_limit + 1)
+                .offset(page_offset)
             )
         )
         .scalars()
         .all()
     )
-    return WarehouseInspectionResultPage(
-        items=[inspection_result_out(row) for row in rows],
+    return page_from_offset(
+        [inspection_result_out(row) for row in rows],
+        limit=page_limit,
+        offset=page_offset,
         total=total,
-        limit=limit,
-        offset=offset,
     )

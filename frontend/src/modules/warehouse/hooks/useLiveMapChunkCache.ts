@@ -79,6 +79,9 @@ export type LiveMapChunkCacheResult = {
   cachedChunks: CachedLiveMapChunk[];
   downloadedChunkIds: ReadonlySet<string>;
   inFlightChunkIds: ReadonlySet<string>;
+  candidateChunkCount: number;
+  droppedChunkCount: number;
+  maxConcurrentDownloads: number;
 };
 
 function normalizeKind(value: unknown): CachedLiveMapChunkKind {
@@ -311,6 +314,12 @@ export function useLiveMapChunkCache(
       : withUrls;
     return selectDownloadableChunks(layerFiltered, mode);
   }, [chunks, config.preferred_layer, mode, visibleLayers]);
+  const candidateChunkCount = useMemo(() => {
+    const withUrls = chunks.filter((chunk) => Boolean(chunk.url));
+    return visibleLayers
+      ? filterChunksForDownload(withUrls, visibleLayers, config.preferred_layer).length
+      : withUrls.length;
+  }, [chunks, config.preferred_layer, visibleLayers]);
 
   const candidateByKey = useMemo(() => {
     if (!flightId) return new Map<string, WarehouseLiveVoxelChunk>();
@@ -550,5 +559,8 @@ export function useLiveMapChunkCache(
     cachedChunks,
     downloadedChunkIds,
     inFlightChunkIds,
+    candidateChunkCount,
+    droppedChunkCount: Math.max(0, candidateChunkCount - candidates.length),
+    maxConcurrentDownloads: config.frontend.max_concurrent_chunk_downloads,
   };
 }

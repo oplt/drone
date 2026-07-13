@@ -52,6 +52,7 @@ export const MANUAL_KEY_BINDINGS: Record<string, ManualFlightCommand> = {
 };
 
 export const MANUAL_CONTROL_BUTTONS: ManualControlButtonConfig[] = [
+  { id: "btn-takeoff", label: "Takeoff", hint: "T · confirm", command: "takeoff" },
   { id: "btn-up", label: "Ascend", hint: "R", command: "up" },
   { id: "btn-forward", label: "Forward", hint: "W / ↑", command: "forward" },
   { id: "btn-yaw-left", label: "Yaw Left", hint: "Q", command: "yaw_left" },
@@ -61,6 +62,7 @@ export const MANUAL_CONTROL_BUTTONS: ManualControlButtonConfig[] = [
   { id: "btn-yaw-right", label: "Yaw Right", hint: "E", command: "yaw_right" },
   { id: "btn-backward", label: "Backward", hint: "S / ↓", command: "backward" },
   { id: "btn-down", label: "Descend", hint: "F", command: "down" },
+  { id: "btn-land", label: "Land", hint: "L · confirm", command: "land" },
 ];
 
 export const MANUAL_CONTROL_REPEAT_MS = 180;

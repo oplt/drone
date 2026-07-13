@@ -1,4 +1,5 @@
 import { httpRequest } from "../../../shared/api/httpClient";
+import type { PageResponse } from "../../../shared/api/pagination";
 
 export type WarehouseCoordinateFrame = {
   id: number;
@@ -145,10 +146,11 @@ export type WarehouseCoordinateDiagnostics = {
 export async function fetchWarehouseCoordinateDiagnostics(
   warehouseMapId: number,
   token?: string | null,
+  signal?: AbortSignal,
 ): Promise<WarehouseCoordinateDiagnostics> {
   return httpRequest<WarehouseCoordinateDiagnostics>(
     `/warehouse/maps/${warehouseMapId}/coordinate-diagnostics`,
-    { token, skipUnauthorizedRedirect: true },
+    { token, signal, skipUnauthorizedRedirect: true },
   );
 }
 
@@ -290,10 +292,11 @@ export type WarehouseLayout = {
 export async function fetchActiveWarehouseLayout(
   warehouseMapId: number,
   token?: string | null,
+  signal?: AbortSignal,
 ): Promise<WarehouseLayout> {
   return httpRequest<WarehouseLayout>(
     `/warehouse/maps/${warehouseMapId}/layouts/active`,
-    { token, skipUnauthorizedRedirect: true },
+    { token, signal, skipUnauthorizedRedirect: true },
   );
 }
 
@@ -336,12 +339,8 @@ export type WarehouseInspectionResult = {
   scanned_at: string;
 };
 
-export type WarehouseInspectionResultPage = {
-  items: WarehouseInspectionResult[];
-  total: number;
-  limit: number;
-  offset: number;
-};
+export type WarehouseInspectionResultPage =
+  PageResponse<WarehouseInspectionResult>;
 
 export type WarehouseStructureAisle = {
   code: string;
@@ -475,10 +474,11 @@ export type WarehouseStructureDryRunResponse = WarehouseStructureResponse & {
 export async function fetchWarehouseStructure(
   warehouseMapId: number,
   token?: string | null,
+  signal?: AbortSignal,
 ): Promise<WarehouseStructureResponse> {
   return httpRequest<WarehouseStructureResponse>(
     `/warehouse/maps/${warehouseMapId}/structure`,
-    { token, skipUnauthorizedRedirect: true },
+    { token, signal, skipUnauthorizedRedirect: true },
   );
 }
 
@@ -526,26 +526,33 @@ export async function computeWarehouseScanPose(
   );
 }
 
-export type WarehouseScanTargetPage = {
-  items: WarehouseScanTarget[];
+export type WarehouseScanTargetPage = PageResponse<WarehouseScanTarget> & {
   total: number;
-  limit: number;
-  offset: number;
+  /** Legacy client-only fields retained for old fixtures; server no longer emits them. */
+  limit?: number;
+  offset?: number;
 };
 
 export async function listWarehouseScanTargets(
   warehouseMapId: number,
   token?: string | null,
-  params?: { limit?: number; offset?: number; active?: boolean },
+  params?: {
+    limit?: number;
+    offset?: number;
+    cursor?: string;
+    active?: boolean;
+  },
+  signal?: AbortSignal,
 ): Promise<WarehouseScanTargetPage> {
   const search = new URLSearchParams();
   if (params?.limit != null) search.set("limit", String(params.limit));
   if (params?.offset != null) search.set("offset", String(params.offset));
+  if (params?.cursor != null) search.set("cursor", params.cursor);
   if (params?.active != null) search.set("active", String(params.active));
   const query = search.toString();
   return httpRequest<WarehouseScanTargetPage>(
     `/warehouse/maps/${warehouseMapId}/scan-targets${query ? `?${query}` : ""}`,
-    { token, skipUnauthorizedRedirect: true },
+    { token, signal, skipUnauthorizedRedirect: true },
   );
 }
 

@@ -12,6 +12,7 @@ from backend.core.events import (
     next_runtime_sequence,
     utc_now,
 )
+from backend.core.pagination import PageMeta
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.alerts.repository import AlertRepository
 from backend.modules.alerts.schemas import (
@@ -64,6 +65,12 @@ async def list_alerts(
     return AlertListResponse(
         items=[OperationalAlertOut.model_validate(item) for item in items],
         total=total,
+        page=PageMeta(
+            limit=limit,
+            offset=offset,
+            total=total,
+            next_offset=offset + limit if offset + limit < total else None,
+        ),
     )
 
 

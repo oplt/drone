@@ -1,19 +1,23 @@
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
-from backend.core.config.runtime import settings, setup_logging
+from backend.core.config.production import validate_production_security
+from backend.core.config.runtime import bootstrap, settings, setup_logging
 from backend.core.database.session import close_db, engine, init_db
 from backend.core.errors.handlers import register_error_handlers
-from backend.observability.correlation import CorrelationMiddleware
+from backend.core.errors.request_limits import UploadBodyLimitMiddleware
+from backend.infrastructure.ai.gateway import ai_gateway
+from backend.infrastructure.cache.redis import close_redis_client
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.admin.api import router as admin_router
-from backend.modules.ai.api import router as ai_router
 from backend.modules.agents.api import router as agents_router
+from backend.modules.ai.api import router as ai_router
 from backend.modules.alerts.api import router as alerts_router
 from backend.modules.alerts.evaluation_service import alert_engine
 from backend.modules.analytics.api import router as analytics_router
@@ -30,7 +34,7 @@ from backend.modules.identity.api_keys import router as apikeys_router
 from backend.modules.integrations.api import router as integrations_router
 from backend.modules.integrations.webhooks.api import router as webhooks_router
 from backend.modules.irrigation.api import router as irrigation_router
-from backend.modules.irrigation.monitor import irrigation_monitor
+from backend.modules.irrigation.asset_api import router as irrigation_asset_router
 from backend.modules.livestock.api import router as animal_farm_router
 from backend.modules.mapping.api import router as mapping_router
 from backend.modules.media.api import router as video_router
@@ -56,6 +60,8 @@ from backend.modules.telemetry.websocket_api import router as websockets_router
 from backend.modules.vehicle_runtime.cleanup import start_cleanup_jobs, stop_cleanup_jobs
 from backend.modules.video_analysis.api import router as video_analysis_router
 from backend.modules.warehouse.api import router as warehouse_router
+from backend.observability.correlation import CorrelationMiddleware
+from backend.observability.event_loop_lag import event_loop_lag_monitor
 from backend.observability.metrics import setup_metrics
 from backend.observability.tracing import setup_tracing
 
@@ -63,9 +69,11 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Lifespan context manager for startup/shutdown"""
+    validate_production_security(settings, bootstrap)
     setup_logging(log_format=settings.log_format)
+    await event_loop_lag_monitor.start()
     # Startup
     logger.info("Starting application...")
     await init_db()
@@ -78,9 +86,6 @@ async def lifespan(app: FastAPI):
 
     await alert_engine.start()
     logger.info("Operational alert engine started")
-
-    await irrigation_monitor.start()
-    logger.info("Irrigation monitor started")
 
     await patrol_event_trigger_mqtt.start()
 
@@ -97,22 +102,33 @@ async def lifespan(app: FastAPI):
     await alert_engine.stop()
     logger.info("Operational alert engine stopped")
 
-    await irrigation_monitor.stop()
-    logger.info("Irrigation monitor stopped")
-
     await patrol_event_trigger_mqtt.stop()
     logger.info("Patrol event-trigger MQTT subscriber stopped")
 
+    await ai_gateway.close()
+    await close_redis_client()
+    await event_loop_lag_monitor.stop()
     await close_db()
 
 
 # Create FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
 register_error_handlers(app)
+app.add_middleware(
+    UploadBodyLimitMiddleware,
+    limits={
+        "/irrigation/captures": settings.irrigation_max_capture_bytes
+        + settings.upload_request_overhead_bytes,
+        "/video-analysis/videos": settings.video_analysis_max_upload_bytes
+        + settings.upload_request_overhead_bytes,
+    },
+)
+
 
 @app.get("/healthz", include_in_schema=False)
-async def healthz():
+async def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
 
 # Observability
 setup_metrics(app)
@@ -162,6 +178,7 @@ app.include_router(geofence_router)
 app.include_router(animal_farm_router)
 app.include_router(fields_router)
 app.include_router(irrigation_router)
+app.include_router(irrigation_asset_router)
 app.include_router(mapping_router)
 app.include_router(alerts_router)
 app.include_router(patrol_sensor_config_router)
@@ -187,6 +204,8 @@ serve_public_mapping_assets = (
     settings.photogrammetry_public_static_assets and settings.storage_backend != "s3"
 )
 if serve_public_mapping_assets:
+    from fastapi.staticfiles import StaticFiles
+
     app.mount(
         "/mapping-assets",
         StaticFiles(directory=str(mapping_assets_dir)),
@@ -195,17 +214,11 @@ if serve_public_mapping_assets:
 else:
     logger.info("Public mapping asset mount disabled; use signed mapping asset gateway routes")
 
-irrigation_assets_dir = Path(settings.irrigation_storage_dir).resolve()
-irrigation_assets_dir.mkdir(parents=True, exist_ok=True)
-app.mount(
-    "/irrigation-assets",
-    StaticFiles(directory=str(irrigation_assets_dir)),
-    name="irrigation-assets",
-)
+Path(settings.irrigation_storage_dir).resolve().mkdir(parents=True, exist_ok=True)
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, Any]:
     """Health check endpoint"""
     from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 

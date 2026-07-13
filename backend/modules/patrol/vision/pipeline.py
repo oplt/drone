@@ -6,21 +6,18 @@ import time
 from datetime import datetime
 from typing import Any
 
-from backend.modules.patrol.service.mission_runtime_store import mission_runtime_store
-from backend.modules.patrol.vision.anomaly import AnomalyScorer
 from backend.modules.patrol.ai_tasks import (
     PATROL_AI_TASKS,
     apply_active_ai_tasks,
-    frozenset_ai_tasks,
-    live_detection_ai_task,
-    map_anomaly_to_ai_task,
     yolo_detection_enabled,
 )
+from backend.modules.patrol.service.mission_runtime_store import mission_runtime_store
+from backend.modules.patrol.vision.anomaly import AnomalyScorer
 from backend.modules.patrol.vision.config import ml_settings
-from backend.modules.patrol.vision.evidence_policy import should_save_evidence_snapshot
 from backend.modules.patrol.vision.detector import ObjectDetector
 from backend.modules.patrol.vision.events import EventDispatcher, EventSink, PipelineEvent
 from backend.modules.patrol.vision.evidence import EvidenceRecorder
+from backend.modules.patrol.vision.evidence_policy import should_save_evidence_snapshot
 from backend.modules.patrol.vision.geo import GeoProjector
 from backend.modules.patrol.vision.live_detections import LiveDetectionSampler
 from backend.modules.patrol.vision.models import AnomalyEvent, FramePacket, GeoPoint
@@ -46,8 +43,12 @@ class DroneAnomalyPipeline:
             model_path=ml_settings.detector_model_path,
             conf=ml_settings.detector_conf,
             iou=ml_settings.detector_iou,
+            class_confidence=ml_settings.detector_class_confidence,
         )
-        self.tracker = SimpleTracker()
+        self.tracker = SimpleTracker(
+            max_center_distance_px=ml_settings.tracker_max_center_distance_px,
+            confidence_smoothing_alpha=ml_settings.tracker_confidence_smoothing_alpha,
+        )
         self.geo = GeoProjector()
         self.events = EventSink(
             mode=getattr(ml_settings, "event_sink_mode", "noop"),
@@ -95,6 +96,9 @@ class DroneAnomalyPipeline:
         self._last_error: str | None = None
         self._frames_processed = 0
         self._anomalies_emitted = 0
+        self._insufficient_telemetry_frames = 0
+        self._unknown_outcomes = 0
+        self._last_outcome = "not_started"
         self._stream_source: str | int | None = ml_settings.stream_source
         self.live_detections = LiveDetectionSampler(ml_settings.live_detection_persist_interval_s)
         self.active_ai_tasks: frozenset[str] = frozenset(PATROL_AI_TASKS)
@@ -160,6 +164,11 @@ class DroneAnomalyPipeline:
             "last_error": self._last_error,
             "frames_processed": self._frames_processed,
             "anomalies_emitted": self._anomalies_emitted,
+            "insufficient_telemetry_frames": self._insufficient_telemetry_frames,
+            "unknown_outcomes": self._unknown_outcomes,
+            "last_outcome": self._last_outcome,
+            "duplicate_suppressed": self.event_dispatcher.metrics()["duplicate_suppressed"],
+            "track_limit_suppressed": self.event_dispatcher.metrics()["track_limit_suppressed"],
             "detections": self.live_detections.current(),
             "active_ai_tasks": sorted(self.active_ai_tasks),
         }
@@ -423,6 +432,14 @@ class DroneAnomalyPipeline:
                             heading_deg=0.0 if heading_deg is None else heading_deg,
                             image_shape=getattr(packet.image, "shape", None),
                         )
+                elif tracks:
+                    self._insufficient_telemetry_frames += 1
+                    self._unknown_outcomes += 1
+                    self._last_outcome = "unknown_insufficient_telemetry"
+                elif detections:
+                    self._last_outcome = "unknown_no_georeference"
+                else:
+                    self._last_outcome = "no_detection"
 
                 anomalies = self.anomaly.score(
                     tracks=tracks,

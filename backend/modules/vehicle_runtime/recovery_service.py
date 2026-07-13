@@ -6,6 +6,7 @@ import time
 from contextlib import suppress
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.preflight.checks.schemas import CheckStatus
 from backend.modules.preflight.checks.service import PreflightOrchestrator
 from backend.modules.vehicle_runtime.types import Coordinate
@@ -146,7 +147,12 @@ class RuntimeRecoveryServiceMixin:
                 **kwargs,
             )
         else:
-            vehicle_state = await asyncio.to_thread(self.drone.get_telemetry)
+            vehicle_state = await run_blocking(
+                self.drone.get_telemetry,
+                boundary="mavlink",
+                operation="get_telemetry",
+                timeout_s=10.0,
+            )
             orchestrator = PreflightOrchestrator(config=kwargs.pop("preflight_config", {}))
             config_overrides = dict(kwargs.pop("config_overrides", {}) or {})
             runtime_preflight = {

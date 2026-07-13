@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio
+import hashlib
 import json
 import logging
 from dataclasses import dataclass
@@ -9,13 +9,13 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import cv2
-import numpy as np
 from fastapi import UploadFile
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.cache.locks import distributed_lock
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.irrigation.domain.analytics import analyze_irrigation
 from backend.modules.irrigation.domain.compositor import build_field_composite
 from backend.modules.irrigation.models import (
@@ -23,6 +23,10 @@ from backend.modules.irrigation.models import (
     CaptureRecord,
     InspectionPoint,
     ProcessedFieldLayer,
+)
+from backend.modules.irrigation.upload_validation import (
+    validate_image_metadata,
+    write_bounded_image_upload,
 )
 from backend.modules.missions.runtime_models import MissionRuntime
 from backend.modules.organizations.service import ownership_clause
@@ -48,7 +52,6 @@ class IrrigationProcessingService:
         self.capture_interval_s = max(0.25, settings.irrigation_capture_interval_s)
         self.fov_h_deg = settings.irrigation_camera_fov_h_deg
         self.fov_v_deg = settings.irrigation_camera_fov_v_deg
-        self._mission_locks: dict[str, asyncio.Lock] = {}
         self.storage_root.mkdir(parents=True, exist_ok=True)
 
     def mission_root(self, mission_id: str) -> Path:
@@ -81,7 +84,7 @@ class IrrigationProcessingService:
         db: AsyncSession,
         *,
         mission_id: str,
-        user,
+        user: Any,
     ) -> MissionRuntime | None:
         result = await db.execute(
             select(MissionRuntime)
@@ -103,22 +106,44 @@ class IrrigationProcessingService:
         upload: UploadFile,
         timestamp_utc: datetime,
     ) -> PersistedCapture:
-        extension = Path(upload.filename or "capture.jpg").suffix or ".jpg"
+        allowed_extensions = {
+            item.strip().lower()
+            for item in settings.irrigation_allowed_image_extensions.split(",")
+            if item.strip()
+        }
+        extension = validate_image_metadata(upload, allowed_extensions=allowed_extensions)
         filename = (
             f"{timestamp_utc.strftime('%Y%m%dT%H%M%S%fZ')}_{uuid4().hex[:8]}{extension.lower()}"
         )
-        destination = self.mission_captures_dir(mission_id) / filename
-        payload = await upload.read()
-        destination.write_bytes(payload)
-        image_array = np.frombuffer(payload, dtype=np.uint8)
-        decoded = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-        width = int(decoded.shape[1]) if decoded is not None else None
-        height = int(decoded.shape[0]) if decoded is not None else None
+        captures_dir = await run_blocking(
+            self.mission_captures_dir,
+            mission_id,
+            boundary="filesystem",
+            operation="irrigation_capture_dir",
+            timeout_s=30.0,
+        )
+        destination = captures_dir / filename
+        try:
+            await write_bounded_image_upload(
+                upload,
+                destination,
+                max_bytes=max(1, int(settings.irrigation_max_capture_bytes)),
+                extension=extension,
+            )
+        except Exception:
+            await run_blocking(
+                destination.unlink,
+                missing_ok=True,
+                boundary="filesystem",
+                operation="irrigation_capture_cleanup",
+                timeout_s=30.0,
+            )
+            raise
         return PersistedCapture(
             image_path=destination,
             public_uri=self.public_uri_for_path(destination),
-            width=width,
-            height=height,
+            width=None,
+            height=None,
         )
 
     async def register_capture(
@@ -159,30 +184,43 @@ class IrrigationProcessingService:
         db.add(capture)
         await db.flush()
 
-        sidecar_path = self.mission_captures_dir(mission.client_flight_id) / f"{capture.id}.json"
-        sidecar_path.write_text(
-            json.dumps(
-                {
-                    "capture_id": capture.id,
-                    "mission_id": mission.client_flight_id,
-                    "timestamp_utc": timestamp_utc.isoformat(),
-                    "lat": lat,
-                    "lon": lon,
-                    "alt_m": alt_m,
-                    "yaw_deg": yaw_deg,
-                    "pitch_deg": pitch_deg,
-                    "roll_deg": roll_deg,
-                    "waypoint_seq": waypoint_seq,
-                    "image_uri": image_uri,
-                    "meta_data": meta_data or {},
-                },
-                indent=2,
-                sort_keys=True,
-            ),
+        captures_dir = await run_blocking(
+            self.mission_captures_dir,
+            mission.client_flight_id,
+            boundary="filesystem",
+            operation="irrigation_capture_dir",
+            timeout_s=30.0,
+        )
+        sidecar_path = captures_dir / f"{capture.id}.json"
+        sidecar_payload = json.dumps(
+            {
+                "capture_id": capture.id,
+                "mission_id": mission.client_flight_id,
+                "timestamp_utc": timestamp_utc.isoformat(),
+                "lat": lat,
+                "lon": lon,
+                "alt_m": alt_m,
+                "yaw_deg": yaw_deg,
+                "pitch_deg": pitch_deg,
+                "roll_deg": roll_deg,
+                "waypoint_seq": waypoint_seq,
+                "image_uri": image_uri,
+                "meta_data": meta_data or {},
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        await run_blocking(
+            sidecar_path.write_text,
+            sidecar_payload,
             encoding="utf-8",
+            boundary="filesystem",
+            operation="irrigation_capture_sidecar",
+            timeout_s=30.0,
         )
         logger.info(
-            "Irrigation capture persisted: mission_id=%s capture_id=%s lat=%.6f lon=%.6f image_uri=%s",
+            "Irrigation capture persisted: mission_id=%s capture_id=%s "
+            "lat=%.6f lon=%.6f image_uri=%s",
             mission.client_flight_id,
             capture.id,
             lat,
@@ -191,13 +229,46 @@ class IrrigationProcessingService:
         )
         return capture
 
-    async def list_captures(self, db: AsyncSession, *, mission_id: str) -> list[CaptureRecord]:
-        result = await db.execute(
+    async def list_captures(
+        self,
+        db: AsyncSession,
+        *,
+        mission_id: str,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[CaptureRecord]:
+        stmt = (
             select(CaptureRecord)
             .where(CaptureRecord.mission_id == mission_id)
-            .order_by(CaptureRecord.timestamp_utc.asc())
+            .order_by(CaptureRecord.timestamp_utc.asc(), CaptureRecord.id.asc())
         )
+        if limit is not None:
+            stmt = stmt.offset(max(0, offset)).limit(max(1, limit))
+        result = await db.execute(stmt)
         return list(result.scalars().all())
+
+    @staticmethod
+    def capture_input_checksum(captures: list[CaptureRecord]) -> str:
+        payload = [
+            {
+                "id": capture.id,
+                "image_uri": capture.image_uri,
+                "timestamp_utc": capture.timestamp_utc.isoformat(),
+                "lat": capture.lat,
+                "lon": capture.lon,
+                "alt_m": capture.alt_m,
+                "yaw_deg": capture.yaw_deg,
+                "pitch_deg": capture.pitch_deg,
+                "roll_deg": capture.roll_deg,
+                "waypoint_seq": capture.waypoint_seq,
+            }
+            for capture in captures
+        ]
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+    async def mission_input_checksum(self, db: AsyncSession, *, mission_id: str) -> str:
+        return self.capture_input_checksum(await self.list_captures(db, mission_id=mission_id))
 
     async def get_or_create_layer(
         self, db: AsyncSession, *, mission: MissionRuntime
@@ -227,14 +298,17 @@ class IrrigationProcessingService:
         force: bool = False,
     ) -> ProcessedFieldLayer:
         mission_id = mission.client_flight_id
-        lock = self._mission_locks.setdefault(mission_id, asyncio.Lock())
-        async with lock:
+        async with distributed_lock(f"lock:irrigation:process:{mission_id}"):
             captures = await self.list_captures(db, mission_id=mission_id)
             layer = await self.get_or_create_layer(db, mission=mission)
             if layer.status == "completed" and not force:
                 return layer
             if not captures:
-                raise ValueError(f"No captures available for mission {mission_id}")
+                error = f"No captures available for mission {mission_id}"
+                layer.status = "failed"
+                layer.error = error
+                await db.commit()
+                raise ValueError(error)
 
             layer.status = "running"
             layer.error = None
@@ -242,7 +316,13 @@ class IrrigationProcessingService:
             await db.flush()
 
             try:
-                outputs_dir = self.mission_outputs_dir(mission_id)
+                outputs_dir = await run_blocking(
+                    self.mission_outputs_dir,
+                    mission_id,
+                    boundary="filesystem",
+                    operation="irrigation_output_dir",
+                    timeout_s=30.0,
+                )
                 captures_for_composite = [
                     type(
                         "CompositeCapture",
@@ -258,12 +338,15 @@ class IrrigationProcessingService:
                     for capture in captures
                 ]
 
-                composite = await asyncio.to_thread(
+                composite = await run_blocking(
                     build_field_composite,
                     captures=captures_for_composite,
                     output_dir=outputs_dir,
                     fov_h_deg=self.fov_h_deg,
                     fov_v_deg=self.fov_v_deg,
+                    boundary="cpu",
+                    operation="irrigation_composite",
+                    timeout_s=300.0,
                 )
                 if not composite.footprints:
                     raise ValueError(
@@ -284,12 +367,15 @@ class IrrigationProcessingService:
                         footprint.local_bounds_m[3] for footprint in composite.footprints
                     ),
                 }
-                analysis = await asyncio.to_thread(
+                analysis = await run_blocking(
                     analyze_irrigation,
                     preview_path=composite.preview_path,
                     resolution_m_per_px=composite.resolution_m_per_px,
                     bounds=bounds_payload,
                     capture_ids=[int(capture.id) for capture in captures],
+                    boundary="cpu",
+                    operation="irrigation_analysis",
+                    timeout_s=300.0,
                 )
 
                 await db.execute(

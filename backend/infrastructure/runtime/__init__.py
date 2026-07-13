@@ -8,6 +8,7 @@ from .adapters import (
     RuntimeAdapterBundle,
     VideoStreamFactory,
 )
+from .blocking import BlockingProcessRunner, blocking_process_runner, run_blocking
 
 __all__ = [
     "MapAdapter",
@@ -16,4 +17,7 @@ __all__ = [
     "MqttPublisherAdapter",
     "RuntimeAdapterBundle",
     "VideoStreamFactory",
+    "BlockingProcessRunner",
+    "blocking_process_runner",
+    "run_blocking",
 ]

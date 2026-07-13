@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.core.logging import emit_app_log
-from backend.modules.vehicle_runtime.factory import build_orchestrator as _build_orchestrator
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.identity.dependencies import require_admin, require_user
 from backend.modules.missions.flight_profile import (
@@ -17,6 +16,7 @@ from backend.modules.missions.flight_profile import (
 )
 from backend.modules.missions.repository import mission_runtime_repo
 from backend.modules.missions.schemas.mission_types import MissionType
+from backend.modules.vehicle_runtime.factory import build_orchestrator as _build_orchestrator
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
@@ -320,7 +320,7 @@ async def get_ops_health(user=Depends(require_user)):
             video_status = {
                 "available": True,
                 "healthy": False,
-                "error": str(exc),
+                "error": "Video health unavailable",
             }
 
     active_mission = None
@@ -445,8 +445,7 @@ async def send_manual_control(
     hold.  ``takeoff`` and ``land`` are handled as discrete one-shot commands.
     """
     orch = await _build_orchestrator()
-    drone = getattr(orch, "drone", None)
-    if drone is None:
+    if getattr(orch, "async_drone", None) is None:
         raise HTTPException(status_code=503, detail="Drone not connected")
 
     cmd = payload.command
@@ -465,7 +464,7 @@ async def send_manual_control(
 
         async def _bg_takeoff() -> None:
             try:
-                await asyncio.to_thread(drone.arm_and_takeoff, 2.0)
+                await orch.async_drone.arm_and_takeoff(2.0)
                 logger.info("Manual takeoff complete")
             except Exception:
                 logger.critical(
@@ -488,7 +487,7 @@ async def send_manual_control(
         if phase == "stop":
             return {"status": "ignored", "command": cmd, "phase": phase}
         try:
-            await asyncio.to_thread(drone.land)
+            await orch.async_drone.land()
             await emit_app_log(
                 level="info",
                 source="drone",
@@ -510,7 +509,7 @@ async def send_manual_control(
                 details={"command": cmd, "flight_id": payload.flight_id, "error": str(exc)},
                 flight_id=payload.flight_id,
             )
-            raise HTTPException(status_code=500, detail=f"Land failed: {exc}") from exc
+            raise HTTPException(status_code=503, detail="Landing command failed") from exc
 
     if phase == "stop":
         vel = (0.0, 0.0, 0.0, 0.0)
@@ -519,8 +518,8 @@ async def send_manual_control(
 
     vx, vy, vz, yaw_rate = vel
     try:
-        await asyncio.to_thread(drone.set_mode, "GUIDED")
-        await asyncio.to_thread(drone.send_velocity, vx, vy, vz, yaw_rate)
+        await orch.async_drone.set_mode("GUIDED")
+        await orch.async_drone.send_velocity(vx, vy, vz, yaw_rate)
         logger.info(
             "Manual control velocity sent command=%s phase=%s "
             "vx=%.2f vy=%.2f vz=%.2f yaw_rate=%.2f",
@@ -539,7 +538,8 @@ async def send_manual_control(
         ) from None
     except (RuntimeError, AttributeError, OSError) as exc:
         raise HTTPException(
-            status_code=503, detail=f"Drone link temporarily unavailable: {exc}"
+            status_code=503, detail="Drone link temporarily unavailable"
         ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Velocity command failed: {exc}") from exc
+        logger.exception("Velocity command failed")
+        raise HTTPException(status_code=503, detail="Velocity command failed") from exc

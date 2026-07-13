@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from backend.core.database.session import Session
+from backend.infrastructure.jobs import enqueue_task
 from backend.modules.deliverables.models import FieldDeliverable
 from backend.modules.fields.models import Field
 from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
@@ -126,9 +127,10 @@ async def create_deliverable(
 
     # Enqueue outside the DB transaction to avoid sending task before commit
     try:
-        from backend.entrypoints.workers.deliverable_tasks import generate_field_deliverable
-
-        generate_field_deliverable.delay(deliverable.id)
+        enqueue_task(
+            "backend.tasks.deliverable_tasks.generate_field_deliverable",
+            deliverable_id=deliverable.id,
+        )
         logger.info(
             "Enqueued deliverable generation: id=%s type=%s field=%s",
             deliverable.id,

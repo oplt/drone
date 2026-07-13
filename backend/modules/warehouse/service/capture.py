@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from collections.abc import Iterable
@@ -9,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.mapping.service.flight_capture import (
     IMAGE_EXTENSIONS,
     FlightCaptureSession,
@@ -21,6 +21,14 @@ from backend.modules.warehouse.service.runtime_settings import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_float(value: object, *, minimum: float, default: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, parsed)
 
 
 def _is_relative_to(child: Path, parent: Path) -> bool:
@@ -210,6 +218,21 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
                 logger.exception("Failed to import external capture path: %s", raw)
         return copied
 
+    async def import_external_files_async(
+        self,
+        session: FlightCaptureSession,
+        *,
+        capture_paths: list[str] | None,
+    ) -> int:
+        return await run_blocking(
+            self.import_external_files,
+            session,
+            capture_paths=capture_paths,
+            boundary="filesystem",
+            operation="warehouse_capture_import",
+            timeout_s=60.0,
+        )
+
     def wait_for_files(
         self,
         session: FlightCaptureSession,
@@ -299,12 +322,15 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         compatibility. Use this wrapper when calling from an event loop so the
         blocking polling and filesystem work run in a worker thread.
         """
-        return await asyncio.to_thread(
+        return await run_blocking(
             self.wait_for_files,
             session,
             min_files=min_files,
             timeout_s=timeout_s,
             poll_interval_s=poll_interval_s,
+            boundary="filesystem",
+            operation="warehouse_capture_wait",
+            call_timeout_s=max(30.0, float(timeout_s or self.default_wait_timeout_s) + 30.0),
         )
 
     def finalize_session(
@@ -375,11 +401,14 @@ class WarehouseCaptureSessionService(FlightCaptureSessionService):
         extra_meta: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Async-safe wrapper around finalize_session."""
-        return await asyncio.to_thread(
+        return await run_blocking(
             self.finalize_session,
             session,
             min_files=min_files,
             timeout_s=timeout_s,
             poll_interval_s=poll_interval_s,
             extra_meta=extra_meta,
+            boundary="filesystem",
+            operation="warehouse_capture_finalize",
+            call_timeout_s=max(30.0, float(timeout_s or self.default_wait_timeout_s) + 30.0),
         )

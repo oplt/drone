@@ -337,6 +337,13 @@ class WarehouseMappingJob(Base):
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     processor: Mapped[str] = mapped_column(String(32), nullable=False, default="warehouse_scan")
     processor_task_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    algorithm_version: Mapped[str] = mapped_column(
+        String(128), nullable=False, default="unknown", index=True
+    )
+    input_checksum: Mapped[str | None] = mapped_column(String(128), index=True)
+    extraction_params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    confidence: Mapped[float | None] = mapped_column(Float)
+    failure_reason_codes: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(

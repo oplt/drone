@@ -3,8 +3,8 @@ import type { ComponentProps, ReactNode } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { GoogleMap } from "@react-google-maps/api";
 import CesiumMap from "../adapters/CesiumMapLazy";
-import LeafletMap from "../adapters/LeafletMap";
-import MapLibreMap from "../adapters/MapLibreMap";
+import LeafletMap from "../adapters/LeafletMapLazy";
+import MapLibreMap from "../adapters/MapLibreMapLazy";
 
 type GoogleMapProps = ComponentProps<typeof GoogleMap>;
 type CesiumMapProps = ComponentProps<typeof CesiumMap>;

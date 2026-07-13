@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import logging
 
-from backend.observability.context import get_correlation_id, get_job_id, get_request_id
+from backend.observability.context import (
+    get_correlation_id,
+    get_job_id,
+    get_request_id,
+    log_context_fields,
+)
 
 
 class TraceContextFilter(logging.Filter):
@@ -15,6 +20,8 @@ class TraceContextFilter(logging.Filter):
         record.request_id = getattr(record, "request_id", get_request_id() or "")
         record.correlation_id = getattr(record, "correlation_id", get_correlation_id() or "")
         record.job_id = getattr(record, "job_id", get_job_id() or "")
+        for field in ("org_id", "user_id", "mission_id", "provider", "queue", "task_id"):
+            setattr(record, field, getattr(record, field, log_context_fields().get(field, "")))
         record.otel_trace_id = getattr(record, "otel_trace_id", "")
         record.otel_span_id = getattr(record, "otel_span_id", "")
         record.trace_id = getattr(record, "trace_id", record.otel_trace_id)

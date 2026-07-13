@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -46,6 +47,9 @@ class YoloFrameDetector:
     def __init__(self, model_name: str, confidence_threshold: float = 0.35):
         self.model_name = model_name
         self.confidence_threshold = confidence_threshold
+        self.model_path = ensure_model_file(model_name)
+        stat = Path(self.model_path).stat()
+        self.model_version = f"{model_name}:{stat.st_size}:{stat.st_mtime_ns}"
         self.model = load_yolo_model(model_name)
 
     def predict(self, image_bgr: np.ndarray) -> list[FrameDetection]:
@@ -78,6 +82,7 @@ class YoloFrameDetector:
                     y2=xyxy[3],
                     raw={
                         "model": self.model_name,
+                        "model_version": self.model_version,
                         "class_id": cls_id,
                         "xyxy": xyxy,
                     },

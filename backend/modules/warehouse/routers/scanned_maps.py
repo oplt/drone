@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_mission_exec,
@@ -118,20 +119,25 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
 
 
-@router.get("/scanned-maps", response_model=list[WarehouseScannedMapOut])
+@router.get("/scanned-maps", response_model=Page[WarehouseScannedMapOut])
 async def list_scanned_maps(
     warehouse_map_id: int | None = Query(default=None, ge=1),
     limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
-) -> list[WarehouseScannedMapOut]:
+) -> Page[WarehouseScannedMapOut]:
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
     rows = await repo.list_scanned_maps(
         db,
         owner_id=int(org_user.user.id),
         org_id=org_user.user.org_id,
         allow_org_access=can_access_org_scope(org_user.user),
         warehouse_map_id=warehouse_map_id,
-        limit=limit,
+        limit=page_limit + 1,
+        offset=page_offset,
     )
     assets = await repo.list_assets_for_models(
         db, model_ids=[int(model.id) for _job, _map, model in rows]
@@ -139,7 +145,7 @@ async def list_scanned_maps(
     by_model: dict[int, list[WarehouseAsset]] = {}
     for asset in assets:
         by_model.setdefault(int(asset.model_id), []).append(asset)
-    return [
+    items = [
         WarehouseScannedMapOut(
             job_id=int(job.id),
             model_id=int(model.id),
@@ -158,6 +164,7 @@ async def list_scanned_maps(
         )
         for job, warehouse_map, model in rows
     ]
+    return page_from_offset(items, limit=page_limit, offset=page_offset)
 
 
 @router.get(

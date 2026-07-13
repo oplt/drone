@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -126,6 +126,8 @@ export function WarehouseCoordinateSetupPanel({
   const [tableLoading, setTableLoading] = useState(false);
   const [layout, setLayout] = useState<WarehouseLayout | null>(null);
   const [selectedBinId, setSelectedBinId] = useState<number | "">("");
+  const layoutRequestRef = useRef<AbortController | null>(null);
+  const tableRequestRef = useRef<AbortController | null>(null);
 
   const { targetsLoading, refreshTargets } = mapPlacement;
   const quality = structure?.summary.quality;
@@ -172,9 +174,13 @@ export function WarehouseCoordinateSetupPanel({
       setSelectedBinId("");
       return;
     }
+    layoutRequestRef.current?.abort();
+    const controller = new AbortController();
+    layoutRequestRef.current = controller;
     try {
-      setLayout(await fetchActiveWarehouseLayout(warehouseMapId, token));
+      setLayout(await fetchActiveWarehouseLayout(warehouseMapId, token, controller.signal));
     } catch {
+      if (controller.signal.aborted) return;
       setLayout(null);
       setSelectedBinId("");
     }
@@ -190,26 +196,33 @@ export function WarehouseCoordinateSetupPanel({
       setTableTotal(0);
       return;
     }
+    tableRequestRef.current?.abort();
+    const controller = new AbortController();
+    tableRequestRef.current = controller;
     setTableLoading(true);
     try {
       const page = await listWarehouseScanTargets(warehouseMapId, token, {
         limit: TABLE_PAGE_SIZE,
         offset: tablePage * TABLE_PAGE_SIZE,
-      });
+      }, controller.signal);
       setTableRows(page.items);
       setTableTotal(page.total);
     } catch (error) {
+      if (controller.signal.aborted) return;
       onError(
         error instanceof Error ? error.message : "Scan targets could not be loaded.",
       );
     } finally {
-      setTableLoading(false);
+      if (!controller.signal.aborted) setTableLoading(false);
     }
   }, [onError, tablePage, token, warehouseMapId]);
 
   useEffect(() => {
     void loadTablePage();
+    return () => tableRequestRef.current?.abort();
   }, [loadTablePage]);
+
+  useEffect(() => () => layoutRequestRef.current?.abort(), []);
 
   const allSelected =
     tableRows.length > 0 && tableRows.every((row) => selectedIds.includes(row.id));

@@ -10,6 +10,11 @@ import numpy as np
 
 from backend.modules.irrigation.domain.geometry import clamp01, local_xy_to_latlon, polygon_area_m2
 
+NUMERICAL_EPSILON = 1e-6
+MIN_ANALYTICS_DIMENSION_PX = 32
+MIN_VALID_PIXEL_RATIO = 0.10
+IRRIGATION_ANALYTICS_CALIBRATION_VERSION = "irrigation-analytics-2026-07-13-v1"
+
 
 @dataclass(frozen=True)
 class GridIndex:
@@ -108,10 +113,36 @@ def analyze_irrigation(
         raise ValueError(f"Unable to read irrigation preview image: {preview_path}")
 
     canvas_height, canvas_width = image.shape[:2]
+    failure_reasons: list[str] = []
+    if canvas_height < MIN_ANALYTICS_DIMENSION_PX or canvas_width < MIN_ANALYTICS_DIMENSION_PX:
+        failure_reasons.append("image_too_small")
+    if not math.isfinite(float(resolution_m_per_px)) or float(resolution_m_per_px) <= 0:
+        failure_reasons.append("invalid_resolution")
+    required_bounds = ("origin_lat", "origin_lon", "min_x_m", "max_y_m")
+    for key in required_bounds:
+        try:
+            if not math.isfinite(float(bounds[key])):
+                failure_reasons.append(f"invalid_bounds_{key}")
+        except (KeyError, TypeError, ValueError):
+            failure_reasons.append(f"missing_bounds_{key}")
+    if failure_reasons:
+        return {
+            "zones": [],
+            "inspection_points": [],
+            "summary": {
+                "status": "failed",
+                "failure_reason_codes": sorted(set(failure_reasons)),
+                "image_quality": "insufficient",
+            },
+        }
+
     rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
     green_excess = np.clip((2.0 * rgb[:, :, 1]) - rgb[:, :, 0] - rgb[:, :, 2], -1.0, 1.0)
     brightness = np.mean(rgb, axis=2)
     saturation = np.max(rgb, axis=2) - np.min(rgb, axis=2)
+    mean_brightness = float(np.mean(brightness))
+    if mean_brightness <= NUMERICAL_EPSILON or mean_brightness >= 1.0 - NUMERICAL_EPSILON:
+        failure_reasons.append("blank_or_clipped_image")
 
     rows = max(1, math.ceil(canvas_height / patch_size_px))
     cols = max(1, math.ceil(canvas_width / patch_size_px))
@@ -155,8 +186,22 @@ def analyze_irrigation(
     saturation_grid = np.where(valid_grid, saturation_grid, 0.0).astype(np.float32)
 
     valid_values = valid_grid
+    valid_ratio = float(np.mean(valid_values))
+    if valid_ratio < MIN_VALID_PIXEL_RATIO:
+        failure_reasons.append("insufficient_valid_pixels")
     if not np.any(valid_values):
-        return {"zones": [], "inspection_points": [], "summary": {"status": "failed"}}
+        failure_reasons.append("no_valid_patches")
+    if failure_reasons:
+        return {
+            "zones": [],
+            "inspection_points": [],
+            "summary": {
+                "status": "failed",
+                "failure_reason_codes": sorted(set(failure_reasons)),
+                "image_quality": "insufficient",
+                "valid_pixel_ratio": valid_ratio,
+            },
+        }
 
     exg_z = np.zeros_like(exg_grid)
     bright_z = np.zeros_like(brightness_grid)
@@ -276,6 +321,9 @@ def analyze_irrigation(
     average_confidence = float(np.mean([zone["confidence"] for zone in zones])) if zones else 0.0
     summary = {
         "status": "completed",
+        "image_quality": "sufficient",
+        "valid_pixel_ratio": valid_ratio,
+        "calibration_version": IRRIGATION_ANALYTICS_CALIBRATION_VERSION,
         "total_anomaly_count": len(zones),
         "counts_by_type": {
             "under_irrigated": sum(1 for zone in zones if zone["type"] == "under_irrigated"),

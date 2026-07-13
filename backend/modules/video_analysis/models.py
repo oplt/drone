@@ -65,8 +65,15 @@ class VideoAnalysisJob(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     model_name: Mapped[str] = mapped_column(String(128), nullable=False, default="yolo26s.pt")
+    model_version: Mapped[str] = mapped_column(String(160), nullable=False, default="unknown")
+    source_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
     frame_stride_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     confidence_threshold: Mapped[float] = mapped_column(Float, nullable=False, default=0.35)
+    frames_received: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    frames_processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    frames_dropped: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    frames_failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_inference_latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

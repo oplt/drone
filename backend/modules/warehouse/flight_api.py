@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.core.database.session import get_db
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.identity.dependencies import OrgUser, require_mission_exec, require_org_user
 from backend.modules.vehicle_runtime.factory import get_orchestrator
 from backend.modules.warehouse.exceptions import WarehouseFlightNotReadyError
@@ -194,13 +195,17 @@ async def start_warehouse_flight(
 
 
 async def _run_drone_command(drone: Any, method_name: str, *args: Any) -> bool:
-    import asyncio
-
     method = getattr(drone, method_name, None)
     if not callable(method):
         raise HTTPException(status_code=501, detail=f"Drone does not support {method_name}().")
     try:
-        result = await asyncio.wait_for(asyncio.to_thread(method, *args), timeout=10.0)
+        result = await run_blocking(
+            method,
+            *args,
+            boundary="mavlink",
+            operation=method_name,
+            timeout_s=10.0,
+        )
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail=f"Drone command {method_name} timed out.") from exc
     except Exception as exc:

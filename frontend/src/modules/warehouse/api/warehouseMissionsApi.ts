@@ -1,4 +1,5 @@
 import { httpRequest } from "../../../shared/api/httpClient";
+import { unwrapPage, type PageResponse } from "../../../shared/api/pagination";
 import type { WarehouseLiveMapSnapshot } from "./warehouseLiveMapApi";
 import type {
   WarehouseExplorationProfile,
@@ -148,13 +149,14 @@ export async function listWarehouseScannedMaps(
     params.set("warehouse_map_id", String(warehouseMapId));
   }
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return httpRequest<WarehouseScannedMapResponse[]>(
+  const page = await httpRequest<PageResponse<WarehouseScannedMapResponse>>(
     `/warehouse/scanned-maps${suffix}`,
     {
       token,
       skipUnauthorizedRedirect: true,
     },
   );
+  return unwrapPage(page);
 }
 
 export async function fetchWarehouseScannedMapQuality(

@@ -35,6 +35,8 @@ class EventDispatcher:
         self.max_events_per_track = int(max_events_per_track)
         self._last_sent_at: dict[str, float] = {}
         self._track_event_counts: dict[int, int] = defaultdict(int)
+        self._duplicate_suppressed = 0
+        self._track_limit_suppressed = 0
 
     def _dedupe_key(self, event: PipelineEvent) -> str:
         track_id = event.payload.get("track_id", "na")
@@ -46,17 +48,26 @@ class EventDispatcher:
         key = self._dedupe_key(event)
         previous = self._last_sent_at.get(key)
         if previous is not None and (now - previous) < self.duplicate_window_s:
+            self._duplicate_suppressed += 1
             return False
 
         track_id = event.payload.get("track_id")
         if isinstance(track_id, int):
             count = self._track_event_counts[track_id]
             if count >= self.max_events_per_track:
+                self._track_limit_suppressed += 1
                 return False
             self._track_event_counts[track_id] = count + 1
 
         self._last_sent_at[key] = now
         return True
+
+    def metrics(self) -> dict[str, int]:
+        return {
+            "duplicate_suppressed": self._duplicate_suppressed,
+            "track_limit_suppressed": self._track_limit_suppressed,
+            "events_allowed": sum(self._track_event_counts.values()),
+        }
 
     async def dispatch(self, event: PipelineEvent) -> None:
         if not self._allow_emit(event):

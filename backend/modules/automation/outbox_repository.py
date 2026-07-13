@@ -9,6 +9,40 @@ from .models import OutboxEvent
 
 
 class OutboxRepository:
+    async def enqueue_many(
+        self, db: AsyncSession, *, events: list[dict]
+    ) -> list[OutboxEvent]:
+        """Insert a batch of idempotent outbox events with one lookup/flush."""
+        if not events:
+            return []
+        keys = [str(event["idempotency_key"]) for event in events]
+        existing = {
+            event.idempotency_key: event
+            for event in (
+                await db.scalars(
+                    select(OutboxEvent).where(OutboxEvent.idempotency_key.in_(keys))
+                )
+            ).all()
+        }
+        result: list[OutboxEvent] = []
+        for payload in events:
+            key = str(payload["idempotency_key"])
+            event = existing.get(key)
+            if event is None:
+                event = OutboxEvent(
+                    event_type=payload["event_type"],
+                    aggregate_type=payload["aggregate_type"],
+                    aggregate_id=str(payload["aggregate_id"]),
+                    idempotency_key=key,
+                    payload=payload["payload"],
+                    status="pending",
+                )
+                db.add(event)
+                existing[key] = event
+            result.append(event)
+        await db.flush()
+        return result
+
     async def enqueue(
         self,
         db: AsyncSession,

@@ -6,6 +6,7 @@ from collections.abc import Coroutine
 from typing import Any
 
 from backend.core.config.runtime import settings, setup_logging
+from backend.core.retry import retry_delay_seconds
 from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.modules.video_analysis.service.pipeline import run_video_analysis_job
@@ -42,4 +43,7 @@ def process_video_analysis_job(self, job_id: str) -> dict[str, str]:
         return result
     except Exception as exc:
         logger.exception("Video analysis task failed job_id=%s", job_id)
-        raise self.retry(exc=exc, countdown=30) from exc
+        raise self.retry(
+            exc=exc,
+            countdown=retry_delay_seconds(attempt=self.request.retries),
+        ) from exc

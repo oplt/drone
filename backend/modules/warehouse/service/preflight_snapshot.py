@@ -423,11 +423,10 @@ async def connect_drone_for_preflight() -> tuple[bool, str | None]:
     async with _preflight_drone_lock:
         try:
             orch = await build_orchestrator()
-            drone = getattr(orch, "drone", None)
-            if drone is None:
+            if getattr(orch, "async_drone", None) is None:
                 return False, "Drone runtime is not configured."
-            if getattr(drone, "vehicle", None) is None:
-                await asyncio.to_thread(drone.connect, home_fallback_allowed=True)
+            if orch.async_drone.vehicle is None:
+                await orch.async_drone.connect(home_fallback_allowed=True)
             if not telemetry_manager.runtime_snapshot()["running"]:
                 await orch.start_live_telemetry()
             for _ in range(20):

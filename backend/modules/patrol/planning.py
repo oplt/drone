@@ -10,16 +10,29 @@ from typing import Any, Literal
 
 from shapely.geometry import MultiPolygon, Polygon
 
+from backend.core.config.runtime import settings
+from backend.core.geometry.algorithm_runtime import profiled_geometry_plan
 from backend.core.geometry.projection import (
     close_lonlat_ring,
+)
+from backend.core.geometry.projection import (
     lonlat_to_xy_m as _lonlat_to_xy_m,
+)
+from backend.core.geometry.projection import (
     meters_per_deg_lat as _meters_per_deg_lat,
+)
+from backend.core.geometry.projection import (
     meters_per_deg_lon as _meters_per_deg_lon,
+)
+from backend.core.geometry.projection import (
     polygon_centroid_lonlat as _shared_polygon_centroid_lonlat,
+)
+from backend.core.geometry.projection import (
     strip_closed_ring as _strip_closed_ring,
+)
+from backend.core.geometry.projection import (
     xy_m_to_lonlat as _xy_m_to_lonlat,
 )
-from backend.core.config.runtime import settings
 from backend.core.types.geo import coord_from_home
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.missions.flight_models import FlightStatus
@@ -196,6 +209,7 @@ def estimate_camera_trigger_distance_m(
     return max(float(min_spacing_m), min(float(max_spacing_m), float(spacing_m)))
 
 
+@profiled_geometry_plan("private_patrol_plan")
 def generate_private_patrol_plan(
     polygon_lonlat: Sequence[tuple[float, float]],
     *,
@@ -276,10 +290,15 @@ def generate_private_patrol_plan(
         "planned_vertices": len(dense_xy),
         "perimeter_m": round(route_m, 1),
         "area_m2": round(float(base_poly.area), 1),
+        "limits": {
+            "max_path_points": MAX_PRIVATE_PATROL_PATH_POINTS,
+            "offset_retry_limit": 16,
+        },
     }
     return PrivatePatrolPlan(waypoints=waypoints, stats=stats)
 
 
+@profiled_geometry_plan("waypoint_patrol_plan")
 def generate_waypoint_patrol_plan(
     key_points_lonlat: Sequence[tuple[float, float]],
     *,
@@ -318,6 +337,7 @@ def generate_waypoint_patrol_plan(
     )
 
 
+@profiled_geometry_plan("grid_surveillance_plan")
 def generate_grid_surveillance_plan(
     polygon_lonlat: Sequence[tuple[float, float]],
     *,
@@ -734,7 +754,7 @@ class PrivatePatrolMission:
         )
 
         try:
-            speed_set = await asyncio.to_thread(orch.drone.set_groundspeed, float(self.speed_mps))
+            speed_set = await orch.async_drone.set_groundspeed(float(self.speed_mps))
             await self._add_event_safe(
                 orch,
                 "private_patrol_speed_configured",
@@ -748,14 +768,13 @@ class PrivatePatrolMission:
             )
 
         await asyncio.sleep(1.0)
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, float(cruise_alt_m))
+        await orch.async_drone.arm_and_takeoff(float(cruise_alt_m))
         await self._add_event_safe(orch, "takeoff", {})
 
         capture_started = False
         try:
             capture_started = bool(
-                await asyncio.to_thread(
-                    orch.drone.start_image_capture,
+                await orch.async_drone.start_image_capture(
                     mode="distance",
                     distance_m=float(trigger_distance_m),
                 )
@@ -800,12 +819,12 @@ class PrivatePatrolMission:
             raise ValueError("Private patrol generated an empty flight path")
 
         try:
-            await asyncio.to_thread(orch.drone.follow_waypoints, path)
+            await orch.async_drone.follow_waypoints(path)
             await self._add_event_safe(orch, "reached_destination", {})
         finally:
             if capture_started:
                 try:
-                    stopped = bool(await asyncio.to_thread(orch.drone.stop_image_capture))
+                    stopped = bool(await orch.async_drone.stop_image_capture())
                     await self._add_event_safe(
                         orch,
                         "private_patrol_capture_stopped",
@@ -818,10 +837,10 @@ class PrivatePatrolMission:
                         {"error": str(exc)},
                     )
 
-        await asyncio.to_thread(orch.drone.land)
+        await orch.async_drone.land()
         await self._add_event_safe(orch, "landing_command_sent", {})
 
-        await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
+        await orch.async_drone.wait_until_disarmed(900)
         await self._add_event_safe(orch, "landed_home", {})
 
         flight_id = getattr(orch, "_flight_id", None)
@@ -940,7 +959,7 @@ class WaypointPatrolMission:
         )
 
         try:
-            speed_set = await asyncio.to_thread(orch.drone.set_groundspeed, float(self.speed_mps))
+            speed_set = await orch.async_drone.set_groundspeed(float(self.speed_mps))
             await self._add_event_safe(
                 orch,
                 "private_patrol_speed_configured",
@@ -954,11 +973,11 @@ class WaypointPatrolMission:
             )
 
         await asyncio.sleep(1.0)
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, float(cruise_alt_m))
+        await orch.async_drone.arm_and_takeoff(float(cruise_alt_m))
         await self._add_event_safe(orch, "takeoff", {})
 
         for idx, checkpoint in enumerate(keypoints, start=1):
-            await asyncio.to_thread(orch.drone.follow_waypoints, [checkpoint])
+            await orch.async_drone.follow_waypoints([checkpoint])
             orch._dest_coord = checkpoint
             await self._add_event_safe(
                 orch,
@@ -975,13 +994,13 @@ class WaypointPatrolMission:
                 checkpoint=checkpoint,
             )
 
-        await asyncio.to_thread(orch.drone.follow_waypoints, [home])
+        await orch.async_drone.follow_waypoints([home])
         await self._add_event_safe(orch, "reached_destination", {})
 
-        await asyncio.to_thread(orch.drone.land)
+        await orch.async_drone.land()
         await self._add_event_safe(orch, "landing_command_sent", {})
 
-        await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
+        await orch.async_drone.wait_until_disarmed(900)
         await self._add_event_safe(orch, "landed_home", {})
 
         flight_id = getattr(orch, "_flight_id", None)
@@ -1035,15 +1054,16 @@ class WaypointPatrolMission:
             ("set_yaw", {"yaw_deg": float(self.camera_scan_yaw_deg)}),
         ]
         for method_name, kwargs in method_specs:
-            fn = getattr(orch.drone, method_name, None)
-            if not callable(fn):
+            if not callable(getattr(orch.drone, method_name, None)):
                 continue
             try:
-                await asyncio.to_thread(fn, **kwargs)
+                await orch.async_drone.optional_call(method_name, **kwargs)
                 return {"applied": True, "method": method_name}
             except TypeError:
                 try:
-                    await asyncio.to_thread(fn, float(self.camera_scan_yaw_deg))
+                    await orch.async_drone.optional_call(
+                        method_name, float(self.camera_scan_yaw_deg)
+                    )
                     return {"applied": True, "method": method_name}
                 except Exception:
                     continue
@@ -1062,34 +1082,32 @@ class WaypointPatrolMission:
             ("trigger_camera_capture", {}),
         ]
         for method_name, kwargs in method_specs:
-            fn = getattr(orch.drone, method_name, None)
-            if not callable(fn):
+            if not callable(getattr(orch.drone, method_name, None)):
                 continue
             try:
-                await asyncio.to_thread(fn, **kwargs)
+                await orch.async_drone.optional_call(method_name, **kwargs)
                 return {"applied": True, "method": method_name}
             except TypeError:
                 try:
-                    await asyncio.to_thread(fn)
+                    await orch.async_drone.optional_call(method_name)
                     return {"applied": True, "method": method_name}
                 except Exception:
                     continue
             except Exception:
                 continue
 
-        start_capture = getattr(orch.drone, "start_image_capture", None)
-        stop_capture = getattr(orch.drone, "stop_image_capture", None)
-        if callable(start_capture) and callable(stop_capture):
+        if callable(getattr(orch.drone, "start_image_capture", None)) and callable(
+            getattr(orch.drone, "stop_image_capture", None)
+        ):
             try:
                 started = bool(
-                    await asyncio.to_thread(
-                        start_capture,
+                    await orch.async_drone.start_image_capture(
                         mode="time",
                         interval_s=0.7,
                     )
                 )
                 await asyncio.sleep(1.2)
-                await asyncio.to_thread(stop_capture)
+                await orch.async_drone.stop_image_capture()
                 return {"applied": started, "method": "start_image_capture(time)"}
             except Exception:
                 return {"applied": False, "method": None}
@@ -1221,7 +1239,7 @@ class EventTriggeredPatrolMission:
         await self._emit_trigger_events(orch, cruise_alt_m=cruise_alt_m)
         await self._configure_speed(orch)
         await asyncio.sleep(0.5)
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, float(cruise_alt_m))
+        await orch.async_drone.arm_and_takeoff(float(cruise_alt_m))
         await self._add_event_safe(orch, "takeoff", {})
 
         stream_started = await self._start_stream_if_enabled(orch)
@@ -1301,7 +1319,7 @@ class EventTriggeredPatrolMission:
 
     async def _configure_speed(self, orch: Orchestrator) -> None:
         try:
-            speed_set = await asyncio.to_thread(orch.drone.set_groundspeed, float(self.speed_mps))
+            speed_set = await orch.async_drone.set_groundspeed(float(self.speed_mps))
             await self._add_event_safe(
                 orch,
                 "private_patrol_speed_configured",
@@ -1345,7 +1363,7 @@ class EventTriggeredPatrolMission:
         verification_path: list[Coordinate],
         report: dict[str, Any],
     ) -> None:
-        await asyncio.to_thread(orch.drone.follow_waypoints, [event_point])
+        await orch.async_drone.follow_waypoints([event_point])
         orch._dest_coord = event_point
         await self._add_event_safe(
             orch,
@@ -1355,7 +1373,7 @@ class EventTriggeredPatrolMission:
 
         tracking_started, tracking_method = await self._maybe_start_tracking(orch, event_point)
         if verification_path:
-            await asyncio.to_thread(orch.drone.follow_waypoints, verification_path)
+            await orch.async_drone.follow_waypoints(verification_path)
             await self._add_event_safe(
                 orch,
                 "private_patrol_event_verification_path_completed",
@@ -1399,7 +1417,7 @@ class EventTriggeredPatrolMission:
         focused: Coordinate | None = None
         for start_idx in range(0, len(route), segment_size):
             segment = route[start_idx : start_idx + segment_size]
-            await asyncio.to_thread(orch.drone.follow_waypoints, segment)
+            await orch.async_drone.follow_waypoints(segment)
             focused = await self._poll_incident_focus(
                 orch,
                 baseline_anomalies=baseline_anomalies,
@@ -1440,7 +1458,7 @@ class EventTriggeredPatrolMission:
             return None
 
         try:
-            telemetry = await asyncio.to_thread(orch.drone.get_telemetry)
+            telemetry = await orch.async_drone.get_telemetry()
         except Exception:
             return None
 
@@ -1504,11 +1522,11 @@ class EventTriggeredPatrolMission:
         return tracking_started, tracking_method
 
     async def _return_home(self, orch: Orchestrator, home: Coordinate) -> None:
-        await asyncio.to_thread(orch.drone.follow_waypoints, [home])
+        await orch.async_drone.follow_waypoints([home])
         await self._add_event_safe(orch, "reached_destination", {})
-        await asyncio.to_thread(orch.drone.land)
+        await orch.async_drone.land()
         await self._add_event_safe(orch, "landing_command_sent", {})
-        await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
+        await orch.async_drone.wait_until_disarmed(900)
         await self._add_event_safe(orch, "landed_home", {})
 
     async def _save_trigger_report(self, orch: Orchestrator, report: dict[str, Any]) -> None:
@@ -1516,19 +1534,17 @@ class EventTriggeredPatrolMission:
         await self._add_event_safe(orch, "private_patrol_trigger_report", report)
 
     async def _start_video_stream(self, orch: Orchestrator) -> bool:
-        start_video = getattr(orch.drone, "start_video_recording", None)
-        if callable(start_video):
+        if callable(getattr(orch.drone, "start_video_recording", None)):
             try:
-                return bool(await asyncio.to_thread(start_video))
+                return await orch.async_drone.start_video_recording()
             except Exception:
                 return False
         return False
 
     async def _stop_video_stream(self, orch: Orchestrator) -> bool:
-        stop_video = getattr(orch.drone, "stop_video_recording", None)
-        if callable(stop_video):
+        if callable(getattr(orch.drone, "stop_video_recording", None)):
             try:
-                return bool(await asyncio.to_thread(stop_video))
+                return await orch.async_drone.stop_video_recording()
             except Exception:
                 return False
         return False
@@ -1545,12 +1561,11 @@ class EventTriggeredPatrolMission:
             "track_target",
         ]
         for method_name in method_names:
-            fn = getattr(orch.drone, method_name, None)
-            if not callable(fn):
+            if not callable(getattr(orch.drone, method_name, None)):
                 continue
             try:
-                result = await asyncio.to_thread(
-                    fn,
+                result = await orch.async_drone.optional_call(
+                    method_name,
                     target_label=(str(self.target_label).strip() if self.target_label else None),
                     lat=float(event_point.lat),
                     lon=float(event_point.lon),
@@ -1558,11 +1573,11 @@ class EventTriggeredPatrolMission:
                 return bool(result if result is not None else True), method_name
             except TypeError:
                 try:
-                    result = await asyncio.to_thread(fn, event_point)
+                    result = await orch.async_drone.optional_call(method_name, event_point)
                     return bool(result if result is not None else True), method_name
                 except TypeError:
                     try:
-                        result = await asyncio.to_thread(fn)
+                        result = await orch.async_drone.optional_call(method_name)
                         return bool(result if result is not None else True), method_name
                     except Exception:
                         continue
@@ -1736,7 +1751,7 @@ class GridSurveillanceMission:
         )
 
         try:
-            speed_set = await asyncio.to_thread(orch.drone.set_groundspeed, float(self.speed_mps))
+            speed_set = await orch.async_drone.set_groundspeed(float(self.speed_mps))
             await self._add_event_safe(
                 orch,
                 "private_patrol_speed_configured",
@@ -1750,15 +1765,14 @@ class GridSurveillanceMission:
             )
 
         await asyncio.sleep(1.0)
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, float(cruise_alt_m))
+        await orch.async_drone.arm_and_takeoff(float(cruise_alt_m))
         await self._add_event_safe(orch, "takeoff", {})
 
         trigger_distance_m = max(5.0, min(30.0, float(self.grid_spacing_m) * 0.8))
         capture_started = False
         try:
             capture_started = bool(
-                await asyncio.to_thread(
-                    orch.drone.start_image_capture,
+                await orch.async_drone.start_image_capture(
                     mode="distance",
                     distance_m=float(trigger_distance_m),
                 )
@@ -1803,12 +1817,12 @@ class GridSurveillanceMission:
             raise ValueError("Grid surveillance generated an empty flight path")
 
         try:
-            await asyncio.to_thread(orch.drone.follow_waypoints, path)
+            await orch.async_drone.follow_waypoints(path)
             await self._add_event_safe(orch, "reached_destination", {})
         finally:
             if capture_started:
                 try:
-                    stopped = bool(await asyncio.to_thread(orch.drone.stop_image_capture))
+                    stopped = bool(await orch.async_drone.stop_image_capture())
                     await self._add_event_safe(
                         orch,
                         "private_patrol_capture_stopped",
@@ -1821,10 +1835,10 @@ class GridSurveillanceMission:
                         {"error": str(exc)},
                     )
 
-        await asyncio.to_thread(orch.drone.land)
+        await orch.async_drone.land()
         await self._add_event_safe(orch, "landing_command_sent", {})
 
-        await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
+        await orch.async_drone.wait_until_disarmed(900)
         await self._add_event_safe(orch, "landed_home", {})
 
         flight_id = getattr(orch, "_flight_id", None)

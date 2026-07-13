@@ -17,6 +17,7 @@ import { GoogleMapsContext } from "../../../modules/maps/providers/googleMaps";
 import { OverlayView, Polyline } from "@react-google-maps/api";
 import { getToken } from "../../../modules/session";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
+import { useNotice } from "../../../shared/ui/NoticeContext";
 import { MissionCommandPanel } from "../../mission-runtime/components/MissionCommandPanel";
 import { MissionPreflightPanel } from "../../../modules/mission-runtime";
 import {
@@ -90,6 +91,7 @@ export function ControlledFlightView() {
 
   const [center, setCenter] = useState(defaultCenter);
   const { errors, addError, clearErrors, dismissError } = useErrors();
+  const { notify } = useNotice();
   const handleLocationError = useCallback((error: GeolocationPositionError) => {
     const message = `Failed to get location: ${error.message}`;
     addError(message);
@@ -189,12 +191,13 @@ export function ControlledFlightView() {
     try {
       await connectDroneTelemetry(token);
       setDroneManualConnected(true);
+      notify("Drone telemetry connected.", "success");
     } catch (e: unknown) {
       addError(e instanceof Error ? e.message : "Connect failed");
     } finally {
       setConnecting(false);
     }
-  }, [addError]);
+  }, [addError, notify]);
 
   const stopAllManualRef = useRef<() => void>(() => {});
 
@@ -407,6 +410,11 @@ export function ControlledFlightView() {
       setLastMissionId(data.flight_id ?? null);
       setAlt(altToUse);
       setAltInput(String(altToUse));
+      notify(`Controlled flight "${data.mission_name ?? name.trim()}" started.`, {
+        severity: "success",
+        autoHideDuration: 9000,
+        auditHref: data.flight_id ? `/missions/${data.flight_id}/timeline` : undefined,
+      });
     } catch (err: unknown) {
       const message =
           err instanceof Error ? err.message : "Error creating flight session";

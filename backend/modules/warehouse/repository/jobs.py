@@ -103,12 +103,18 @@ class WarehouseJobMixin:
             "reference_mapping_job_id": reference_mapping_job_id,
             "flight_id": flight_id,
         }
+        algorithm_version = str(params.get("algorithm_version") or "unknown")
+        if processor == "warehouse_structure" and algorithm_version == "unknown":
+            algorithm_version = "warehouse-structure-v1"
         job = WarehouseMappingJob(
             warehouse_map_id=int(warehouse_map_id),
             model_id=model.id,
             status="processing",
             progress=5,
             processor=processor,
+            algorithm_version=algorithm_version,
+            input_checksum=params.get("input_checksum"),
+            extraction_params=params,
             params=params,
             started_at=datetime.now(UTC),
         )
@@ -243,6 +249,7 @@ class WarehouseJobMixin:
         allow_org_access: bool = False,
         warehouse_map_id: int | None = None,
         limit: int = 50,
+        offset: int = 0,
     ) -> list[tuple[WarehouseMappingJob, WarehouseMap, WarehouseModel]]:
         scope = (
             or_(WarehouseMap.owner_id == int(owner_id), WarehouseMap.org_id == int(org_id))
@@ -260,6 +267,7 @@ class WarehouseJobMixin:
                 WarehouseModel.status.in_(["processing", "ready", "failed"]),
             )
             .order_by(WarehouseMappingJob.id.desc())
+            .offset(max(0, offset))
             .limit(clamp_list_limit(limit, default=50))
         )
         if warehouse_map_id is not None:

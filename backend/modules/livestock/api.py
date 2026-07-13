@@ -222,4 +222,4 @@ async def build_mission_plan(
             pass
         return MissionPlanOut(mission=mission_plan)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Mission plan inputs are invalid.") from exc

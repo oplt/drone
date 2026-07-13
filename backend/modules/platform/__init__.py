@@ -1,0 +1,1 @@
+"""Process lifecycle application hooks."""

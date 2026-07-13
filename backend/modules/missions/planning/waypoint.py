@@ -95,7 +95,7 @@ class WaypointsMission(BaseMission):
 
         await asyncio.sleep(1.0)
 
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, target_agl_m)
+        await orch.async_drone.arm_and_takeoff(target_agl_m)
         await orch.repo.add_event(orch._flight_id, "takeoff", {})
 
         requested_steps = max(0, int(interpolate_steps))
@@ -124,13 +124,13 @@ class WaypointsMission(BaseMission):
             target_agl_m=target_agl_m,
         )
 
-        await asyncio.to_thread(orch.drone.follow_waypoints, path)
+        await orch.async_drone.follow_waypoints(path)
         await orch.repo.add_event(orch._flight_id, "reached_destination", {})
 
-        await asyncio.to_thread(orch.drone.land)
+        await orch.async_drone.land()
         await orch.repo.add_event(orch._flight_id, "landing_command_sent", {})
 
-        await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
+        await orch.async_drone.wait_until_disarmed(900)
         await orch.repo.add_event(orch._flight_id, "landed_home", {})
 
         await orch.repo.finish_flight(

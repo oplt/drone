@@ -7,6 +7,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import Session
+from backend.infrastructure.jobs import enqueue_task
 from backend.core.logging.diagnostics import build_diagnostics_bundle, list_latest_runtime_logs
 from backend.core.logging.paths import runtime_log_root
 from backend.modules.deliverables.models import ExportJob
@@ -149,8 +150,6 @@ async def requeue_mapping_job(
     job_id: int,
     db: AsyncSession = Depends(_get_db),
 ):
-    from backend.entrypoints.workers.photogrammetry_tasks import run_photogrammetry_pipeline
-
     q = await db.execute(select(MappingJob).where(MappingJob.id == job_id))
     job = q.scalar_one_or_none()
     if not job:
@@ -164,7 +163,7 @@ async def requeue_mapping_job(
         .values(status="pending", error=None, progress=0)
     )
     await db.commit()
-    run_photogrammetry_pipeline.delay(job_id)
+    enqueue_task("photogrammetry.process_job", job_id=job_id)
     return {"ok": True, "job_id": job_id}
 
 
@@ -210,8 +209,9 @@ async def worker_health():
             "reserved_tasks": {w: len(tasks) for w, tasks in reserved.items()},
             "total_active": sum(len(t) for t in active.values()),
         }
-    except Exception as exc:
-        return {"error": str(exc), "workers": [], "total_active": 0}
+    except Exception:
+        logger.exception("Celery worker health probe failed")
+        return {"error": "Worker health unavailable", "workers": [], "total_active": 0}
 
 
 @router.get("/diagnostics/logs")

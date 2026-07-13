@@ -83,6 +83,13 @@ def _mavlink_command_name(command: int) -> str:
 
 
 class MavlinkDrone(DroneClient):
+    """Synchronous MAVLink SDK adapter.
+
+    Methods intentionally remain blocking because DroneKit/PyMAVLink owns its
+    polling model. Async services must invoke them through the shared
+    ``run_blocking(..., boundary='mavlink')`` adapter.
+    """
+
     def __init__(self, connection_str: str, heartbeat_timeout: float):
         self.connection_str = connection_str
         self.vehicle = None

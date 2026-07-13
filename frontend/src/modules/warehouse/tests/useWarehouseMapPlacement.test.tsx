@@ -19,6 +19,7 @@ describe("useWarehouseMapPlacement", () => {
     vi.clearAllMocks();
     vi.mocked(listWarehouseScanTargets).mockResolvedValue({
       items: [],
+      next_cursor: null,
       total: 0,
       limit: 200,
       offset: 0,

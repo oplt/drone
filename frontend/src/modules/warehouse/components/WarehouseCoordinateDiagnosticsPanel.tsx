@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -25,13 +25,18 @@ export function WarehouseCoordinateDiagnosticsPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<WarehouseCoordinateDiagnostics | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     setError(null);
     try {
-      setDiagnostics(await fetchWarehouseCoordinateDiagnostics(warehouseMapId, token));
+      setDiagnostics(await fetchWarehouseCoordinateDiagnostics(warehouseMapId, token, controller.signal));
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       setDiagnostics(null);
       setError(err instanceof Error ? err.message : "Failed to load coordinate diagnostics");
     } finally {
@@ -57,6 +62,7 @@ export function WarehouseCoordinateDiagnosticsPanel({
 
   useEffect(() => {
     void refresh();
+    return () => requestRef.current?.abort();
   }, [refresh]);
 
   const frame = diagnostics?.coordinate_frame;

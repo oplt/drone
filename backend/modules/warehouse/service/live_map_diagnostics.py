@@ -11,10 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from backend.infrastructure.warehouse.bridge_config import (
-    list_ros2_topics,
-    ros_command_env,
-)
+from backend.infrastructure.warehouse.bridge_config import list_ros2_topics_async, ros_command_env
+from backend.infrastructure.runtime.blocking import blocking_process_runner
 from backend.modules.warehouse.service.map_source_config import (
     LIDAR_PREFLIGHT_TOPICS,
     NVBLOX_INTERNAL_LAYER_TOPICS,
@@ -92,7 +90,7 @@ def _source_setup(ws: Path) -> str:
 def _run_sourced_ros_command(command: str, *, ws: Path, timeout_s: float) -> subprocess.CompletedProcess[str] | None:
     cmd = f"{_source_setup(ws)} && {command}"
     try:
-        return subprocess.run(
+        return blocking_process_runner.run(
             ["bash", "-lc", cmd],
             cwd=str(ws),
             capture_output=True,
@@ -190,7 +188,7 @@ async def _collect_live_map_diagnostics() -> WarehouseLiveMapDiagnostics:
     diagnostics = WarehouseLiveMapDiagnostics()
 
     try:
-        topics = set(await asyncio.to_thread(list_ros2_topics, ws))
+        topics = set(await list_ros2_topics_async(ws))
     except RuntimeError as exc:
         diagnostics.warnings.append(f"Could not list ROS topics: {exc}")
         topics = set()

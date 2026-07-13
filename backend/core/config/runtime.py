@@ -144,6 +144,12 @@ class DefaultLogRecordFieldsFilter(logging.Filter):
         "request_id": "",
         "correlation_id": "",
         "job_id": "",
+        "org_id": "",
+        "user_id": "",
+        "mission_id": "",
+        "provider": "",
+        "queue": "",
+        "task_id": "",
     }
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -176,7 +182,8 @@ def _make_formatter(log_format: str) -> logging.Formatter:
                 (
                     "%(asctime)s %(levelname)s %(name)s %(message)s "
                     "%(service_name)s %(environment)s %(trace_id)s %(span_id)s "
-                    "%(request_id)s %(correlation_id)s %(job_id)s"
+                    "%(request_id)s %(correlation_id)s %(job_id)s "
+                    "%(org_id)s %(user_id)s %(mission_id)s %(provider)s %(queue)s %(task_id)s"
                 ),
                 rename_fields={"asctime": "ts", "levelname": "level", "name": "logger"},
             )
@@ -185,7 +192,9 @@ def _make_formatter(log_format: str) -> logging.Formatter:
     return logging.Formatter(
         "%(asctime)s | %(levelname)s | %(name)s | %(service_name)s | "
         "%(environment)s | trace=%(trace_id)s span=%(span_id)s | "
-        "req=%(request_id)s corr=%(correlation_id)s job=%(job_id)s | %(message)s"
+        "req=%(request_id)s corr=%(correlation_id)s job=%(job_id)s "
+        "org=%(org_id)s user=%(user_id)s mission=%(mission_id)s provider=%(provider)s "
+        "queue=%(queue)s task=%(task_id)s | %(message)s"
     )
 
 
@@ -334,6 +343,7 @@ class RuntimeSettings(BaseSettings):
     alerts_dedupe_window_sec: int = 300
     alerts_operation_geofence_id: int | None = None
     alerts_monitor_herd_ids: str = ""
+    alerts_max_herds_per_cycle: int = 100
     alerts_herd_isolation_threshold_m: float = 250.0
     alerts_low_battery_percent: float = 25.0
     alerts_weak_link_percent: float = 35.0
@@ -677,9 +687,13 @@ class RuntimeSettings(BaseSettings):
     # Irrigation
     irrigation_storage_dir: str = "backend/storage/irrigation"
     irrigation_capture_interval_s: float = 1.5
+    irrigation_max_capture_bytes: int = 32 * 1024 * 1024
+    upload_request_overhead_bytes: int = 16 * 1024 * 1024
+    irrigation_allowed_image_extensions: str = ".jpg,.jpeg,.png,.tif,.tiff,.webp"
     irrigation_camera_fov_h_deg: float = 78.0
     irrigation_camera_fov_v_deg: float = 62.0
     irrigation_monitor_poll_s: float = 10.0
+    irrigation_job_stale_after_s: float = 3600.0
 
     # Video analysis
     video_analysis_upload_dir: str = "backend/storage/video_analysis/uploads"

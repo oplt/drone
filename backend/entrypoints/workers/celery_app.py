@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from celery import Celery
+from celery.signals import worker_shutdown
 
 from backend.core.config.runtime import settings
 
@@ -21,6 +22,13 @@ celery_app = Celery(
     broker=CELERY_BROKER_URL,
     backend=CELERY_RESULT_BACKEND,
 )
+
+
+@worker_shutdown.connect
+def _close_shared_cache_clients(**_kwargs: object) -> None:
+    from backend.modules.platform.worker_lifecycle import close_worker_cache_clients
+
+    close_worker_cache_clients()
 
 celery_app.conf.update(
     task_serializer="json",
@@ -61,6 +69,10 @@ celery_app.conf.beat_schedule = {
         "task": "backend.tasks.webhook_tasks.deliver_pending_webhooks",
         "schedule": 5.0,
     },
+    "monitor-irrigation-jobs": {
+        "task": "irrigation.monitor_tick",
+        "schedule": 30.0,
+    },
 }
 celery_app.conf.timezone = "UTC"
 
@@ -75,6 +87,7 @@ from backend.entrypoints.workers import (  # noqa: E402, F401
     agents_tasks,
     deliverable_tasks,
     export_tasks,
+    irrigation_tasks,
     outbox_tasks,
     photogrammetry_tasks,
     scheduling_tasks,

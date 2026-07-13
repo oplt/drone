@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { getToken } from "../../../modules/session";
+import { useNotice } from "../../../shared/ui/NoticeContext";
 import {
   startMissionWithPreflight,
   type PreflightRunResponse,
@@ -57,6 +58,7 @@ export function usePhotogrammetryMission({
   clearErrors: () => void;
   setPendingFlightId: (id: string | null) => void;
 }) {
+  const { notify } = useNotice();
   const missionLaunchInFlightRef = useRef(false);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const {
@@ -227,7 +229,7 @@ export function usePhotogrammetryMission({
 
       const { preflight, mission: data } = await startMissionWithPreflight(payload, token);
       setPreflightRun(preflight);
-      alert(`PhotoGrammetry Mission: "${data.mission_name}" started! Tracking flight...`);
+      notify(`PhotoGrammetry Mission: "${data.mission_name}" started. Tracking flight.`, "success");
 
       setPendingFlightId(data.flight_id ?? null);
 

@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_mission_exec,
@@ -118,20 +119,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
 
 
-@router.get("/sensor-rigs", response_model=list[WarehouseSensorRigOut])
+@router.get("/sensor-rigs", response_model=Page[WarehouseSensorRigOut])
 async def list_sensor_rigs(
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
-) -> list[WarehouseSensorRigOut]:
+) -> Page[WarehouseSensorRigOut]:
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
     rows = await repo.list_sensor_rigs(
         db,
         owner_id=int(org_user.user.id),
         org_id=org_user.user.org_id,
         allow_org_access=can_access_org_scope(org_user.user),
-        limit=limit,
+        limit=page_limit + 1,
+        offset=page_offset,
     )
-    return [sensor_rig_out(row) for row in rows]
+    return page_from_offset(
+        [sensor_rig_out(row) for row in rows], limit=page_limit, offset=page_offset
+    )
 
 
 @router.post(

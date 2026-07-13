@@ -1,23 +1,16 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
-from tenacity import (
-    AsyncRetrying,
-    before_sleep_log,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+from pydantic import BaseModel
 
-from backend.infrastructure.ai.base import LLMChatRequest, LLMMessage
-from backend.infrastructure.ai.errors import LLMNetworkError
-from backend.infrastructure.ai.local_llm_runtime import chat_with_profile
+from backend.infrastructure.ai.base import LLMMessage
+from backend.infrastructure.ai.gateway import ai_gateway
 from backend.modules.ai.schemas import LLMTaskName
-from backend.modules.ai.service import AISettingsService
 
-logger = logging.getLogger(__name__)
+
+async def close_ai_gateway() -> None:
+    await ai_gateway.close()
 
 
 async def chat_with_task(
@@ -27,13 +20,12 @@ async def chat_with_task(
     extra_system: str = "",
     temperature: float | None = None,
     max_tokens: int | None = None,
+    response_model: type[BaseModel] | None = None,
+    retry_budget: int = 1,
+    deadline_seconds: float | None = None,
 ) -> tuple[Any, Any]:
     """Resolve profile for *task* and run a chat completion."""
-    service = AISettingsService()
-    profile = await service.resolve_profile_for_task(task)
-    if profile is None:
-        raise RuntimeError(f"No enabled LLM profile for task '{task}'")
-
+    service = ai_gateway.settings_service
     settings = await service.get_settings(effective=True)
     system_parts = [settings.system_prompt.strip()]
     if extra_system.strip():
@@ -50,23 +42,13 @@ async def chat_with_task(
         else:
             request_messages.insert(0, LLMMessage(role="system", content=merged_system))
 
-    request = LLMChatRequest(
-        messages=request_messages,
-        model=profile.model,
-        temperature=temperature if temperature is not None else profile.temperature,
-        max_tokens=max_tokens if max_tokens is not None else profile.max_tokens,
-        stream=False,
+    resolved_profile, response, _ = await ai_gateway.complete_task(
+        task,
+        request_messages,
+        temperature=temperature,
+        token_budget=max_tokens,
+        response_model=response_model,
+        retry_budget=retry_budget,
+        deadline_seconds=deadline_seconds,
     )
-    response = None
-    async for attempt in AsyncRetrying(
-        retry=retry_if_exception_type(LLMNetworkError),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=True,
-    ):
-        with attempt:
-            response = await chat_with_profile(profile, request)
-    if response is None:
-        raise RuntimeError("LLM chat completed without a response")
-    return profile, response
+    return resolved_profile, response

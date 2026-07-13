@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from backend.core.pagination import PageMeta
+
 
 class OperationalAlertOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -32,6 +34,7 @@ class OperationalAlertOut(BaseModel):
 class AlertListResponse(BaseModel):
     items: list[OperationalAlertOut]
     total: int
+    page: PageMeta
 
 
 class AlertCountResponse(BaseModel):

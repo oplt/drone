@@ -1,4 +1,5 @@
 import { httpRequest } from "../../../shared/api/httpClient";
+import { unwrapPage, type PageResponse } from "../../../shared/api/pagination";
 import type {
   CreateWarehouseMapPayload,
   CreateWarehouseSensorRigPayload,
@@ -14,8 +15,14 @@ import type {
   WarehouseSensorRigHealth,
 } from "../types";
 
-export async function listWarehouseMaps(token?: string | null): Promise<WarehouseMapOut[]> {
-  return httpRequest<WarehouseMapOut[]>("/warehouse/maps", { token });
+export async function listWarehouseMaps(
+  token?: string | null,
+): Promise<WarehouseMapOut[]> {
+  const page = await httpRequest<PageResponse<WarehouseMapOut>>(
+    "/warehouse/maps",
+    { token },
+  );
+  return unwrapPage(page);
 }
 
 export async function createWarehouseMapSetup(
@@ -39,22 +46,35 @@ export async function createWarehouseMapSetup(
   token?: string | null,
 ): Promise<WarehouseMapSetup> {
   return httpRequest(`/warehouse/maps/${warehouseMapId}/setups`, {
-    method: "POST", body: payload, token,
+    method: "POST",
+    body: payload,
+    token,
   });
 }
 
 export async function previewWarehouseMapSetup(
-  warehouseMapId: number, setupId: number, token?: string | null,
+  warehouseMapId: number,
+  setupId: number,
+  token?: string | null,
 ): Promise<WarehouseMapSetupPreview> {
-  return httpRequest(`/warehouse/maps/${warehouseMapId}/setups/${setupId}/preview`, { token });
+  return httpRequest(
+    `/warehouse/maps/${warehouseMapId}/setups/${setupId}/preview`,
+    { token },
+  );
 }
 
 export async function lockWarehouseMapSetup(
-  warehouseMapId: number, setupId: number, token?: string | null,
+  warehouseMapId: number,
+  setupId: number,
+  token?: string | null,
 ): Promise<WarehouseMapSetup> {
-  return httpRequest(`/warehouse/maps/${warehouseMapId}/setups/${setupId}/lock`, {
-    method: "POST", token,
-  });
+  return httpRequest(
+    `/warehouse/maps/${warehouseMapId}/setups/${setupId}/lock`,
+    {
+      method: "POST",
+      token,
+    },
+  );
 }
 
 export async function createWarehouseMap(
@@ -83,10 +103,14 @@ export async function listWarehouseDocks(
   warehouseMapId: number,
   token?: string | null,
 ): Promise<WarehouseDockStation[]> {
-  return httpRequest<WarehouseDockStation[]>(`/warehouse/maps/${warehouseMapId}/docks`, {
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  const page = await httpRequest<PageResponse<WarehouseDockStation>>(
+    `/warehouse/maps/${warehouseMapId}/docks`,
+    {
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
+  return unwrapPage(page);
 }
 
 export async function createWarehouseDock(
@@ -94,12 +118,15 @@ export async function createWarehouseDock(
   payload: WarehouseDockPayload,
   token?: string | null,
 ): Promise<WarehouseDockStation> {
-  return httpRequest<WarehouseDockStation>(`/warehouse/maps/${warehouseMapId}/docks`, {
-    method: "POST",
-    body: payload,
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  return httpRequest<WarehouseDockStation>(
+    `/warehouse/maps/${warehouseMapId}/docks`,
+    {
+      method: "POST",
+      body: payload,
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
 }
 
 export async function updateWarehouseDock(
@@ -134,10 +161,14 @@ export async function deleteWarehouseDock(
 export async function listWarehouseSensorRigs(
   token?: string | null,
 ): Promise<WarehouseSensorRig[]> {
-  return httpRequest<WarehouseSensorRig[]>("/warehouse/sensor-rigs", {
-    token,
-    skipUnauthorizedRedirect: true,
-  });
+  const page = await httpRequest<PageResponse<WarehouseSensorRig>>(
+    "/warehouse/sensor-rigs",
+    {
+      token,
+      skipUnauthorizedRedirect: true,
+    },
+  );
+  return unwrapPage(page);
 }
 
 export async function createWarehouseSensorRig(

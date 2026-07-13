@@ -11,6 +11,7 @@ from starlette.responses import Response
 
 from backend.observability.context import (
     bind_log_context,
+    clear_log_scope,
     get_correlation_id,
     new_correlation_id,
     reset_correlation_id,
@@ -54,6 +55,7 @@ class CorrelationMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             return response
         finally:
+            clear_log_scope()
             reset_request_id(req_token)
             reset_correlation_id(corr_token)
             if response is not None:

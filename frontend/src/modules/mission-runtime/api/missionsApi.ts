@@ -1,4 +1,5 @@
 import { httpRequest } from "../../../shared/api/httpClient";
+import { unwrapPage, type PageResponse } from "../../../shared/api/pagination";
 import { ApiError } from "../../../shared/api/apiError";
 import { ensureDroneConnectionForMissionStart } from "./telemetryConnectApi";
 import type {
@@ -16,12 +17,18 @@ export async function runPreflight(
   token?: string | null,
 ): Promise<PreflightRunResponse> {
   const missionType =
-    typeof missionPayload.mission_type === "string" ? missionPayload.mission_type : null;
+    typeof missionPayload.mission_type === "string"
+      ? missionPayload.mission_type
+      : null;
   const flightEnvironment =
     typeof missionPayload.flight_environment === "string"
       ? missionPayload.flight_environment
       : null;
-  await ensureDroneConnectionForMissionStart(token, missionType, flightEnvironment);
+  await ensureDroneConnectionForMissionStart(
+    token,
+    missionType,
+    flightEnvironment,
+  );
   return httpRequest<PreflightRunResponse>("/tasks/preflight/run", {
     method: "POST",
     body: missionPayload,
@@ -45,14 +52,23 @@ export async function createMission(
 export async function startMissionWithPreflight(
   missionPayload: Record<string, unknown>,
   token?: string | null,
-): Promise<{ preflight: PreflightRunResponse; mission: MissionCreateResponse }> {
+): Promise<{
+  preflight: PreflightRunResponse;
+  mission: MissionCreateResponse;
+}> {
   const missionType =
-    typeof missionPayload.mission_type === "string" ? missionPayload.mission_type : null;
+    typeof missionPayload.mission_type === "string"
+      ? missionPayload.mission_type
+      : null;
   const flightEnvironment =
     typeof missionPayload.flight_environment === "string"
       ? missionPayload.flight_environment
       : null;
-  await ensureDroneConnectionForMissionStart(token, missionType, flightEnvironment);
+  await ensureDroneConnectionForMissionStart(
+    token,
+    missionType,
+    flightEnvironment,
+  );
   const preflight = await runPreflight(missionPayload, token);
   if (!preflight.preflight_run_id) {
     throw new ApiError(400, "Preflight run did not return a run id.");
@@ -78,7 +94,10 @@ export async function startMissionWithPreflight(
 export async function fetchFlightStatus<TStatus = Record<string, unknown>>(
   token?: string | null,
 ): Promise<TStatus> {
-  return httpRequest<TStatus>("/tasks/flight/status", { token, skipUnauthorizedRedirect: true });
+  return httpRequest<TStatus>("/tasks/flight/status", {
+    token,
+    skipUnauthorizedRedirect: true,
+  });
 }
 
 export async function fetchMissionRuntime(
@@ -114,18 +133,20 @@ export async function fetchMissionCommandAudit(
   flightId: string,
   token?: string | null,
 ): Promise<MissionCommandAuditResponse[]> {
-  return httpRequest<MissionCommandAuditResponse[]>(
+  const page = await httpRequest<PageResponse<MissionCommandAuditResponse>>(
     `/tasks/missions/${encodeURIComponent(flightId)}/commands`,
     { token, skipUnauthorizedRedirect: true },
   );
+  return unwrapPage(page);
 }
 
 export async function fetchMissionStateTransitions(
   flightId: string,
   token?: string | null,
 ): Promise<MissionStateTransitionResponse[]> {
-  return httpRequest<MissionStateTransitionResponse[]>(
+  const page = await httpRequest<PageResponse<MissionStateTransitionResponse>>(
     `/tasks/missions/${encodeURIComponent(flightId)}/transitions`,
     { token, skipUnauthorizedRedirect: true },
   );
+  return unwrapPage(page);
 }

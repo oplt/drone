@@ -28,7 +28,7 @@ def _drone_wait_detail() -> dict[str, Any]:
 
 
 @router.post("/start")
-async def start_video_stream(user=Depends(require_user)):
+async def start_video_stream(user: Any = Depends(require_user)) -> dict[str, Any]:
     if not drone_video_link_connected():
         return {
             "status": "waiting_for_drone",
@@ -45,7 +45,7 @@ async def start_video_stream(user=Depends(require_user)):
             "status": "unavailable",
             "source": current.get("source"),
             "proxy": "/video/mjpeg",
-            "message": current.get("last_error") or current.get("error"),
+            "message": "Video stream is temporarily unavailable. Retry shortly.",
             "retry_after_ms": retry_after_ms,
         }
     if current.get("state") == "warming":
@@ -76,7 +76,7 @@ async def start_video_stream(user=Depends(require_user)):
             "status": "unavailable",
             "source": availability.get("source"),
             "proxy": "/video/mjpeg",
-            "message": f"Video source is not accessible: {exc}",
+            "message": "Video source is temporarily unavailable. Retry shortly.",
         }
     return {
         "status": availability.get("status", "started"),
@@ -87,14 +87,14 @@ async def start_video_stream(user=Depends(require_user)):
 
 
 @router.get("/status")
-async def video_status(user=Depends(require_user_header_or_query)):
+async def video_status(user: Any = Depends(require_user_header_or_query)) -> dict[str, Any]:
     return await shared_video_runtime.readiness_status()
 
 
 @router.get("/mjpeg")
 async def mjpeg_proxy(
     request: Request,
-    user=Depends(require_user_header_or_query),
+    user: Any = Depends(require_user_header_or_query),
 ) -> StreamingResponse:
     if not drone_video_link_connected():
         raise HTTPException(
@@ -126,7 +126,7 @@ async def mjpeg_proxy(
             status_code=503,
             detail={
                 "message": "Camera unavailable",
-                "reason": str(exc),
+                "reason": "Video source is temporarily unavailable.",
                 "source": readiness.get("source"),
                 "retry_after_ms": retry_after_ms,
             },
@@ -145,15 +145,15 @@ async def mjpeg_proxy(
 
 
 @router.post("/recording/start")
-async def start_recording(user=Depends(require_user)):
+async def start_recording(user: Any = Depends(require_user)) -> dict[str, Any]:
     return await shared_video_runtime.start_recording()
 
 
 @router.post("/recording/stop")
-async def stop_recording(user=Depends(require_user)):
+async def stop_recording(user: Any = Depends(require_user)) -> dict[str, Any]:
     return await shared_video_runtime.stop_recording()
 
 
 @router.get("/recording/status")
-async def recording_status(user=Depends(require_user)):
+async def recording_status(user: Any = Depends(require_user)) -> dict[str, Any]:
     return await shared_video_runtime.status()

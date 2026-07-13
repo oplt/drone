@@ -17,7 +17,7 @@ import {
 } from "../../maps/hooks/useGooglePointMarkers";
 import { useMissionMapRuntime } from "../../maps/hooks/useMissionMapRuntime";
 import { useSyncTerraDrawMode } from "../../maps/hooks/useSyncTerraDrawMode";
-import type { Waypoint } from "../../mission-workflow";
+import type { Waypoint } from "../../mission-workflow"; import { frontendLogger } from "../../../shared/logging";
 
 export function useFieldSurveyMap({
   apiBase,
@@ -93,7 +93,7 @@ export function useFieldSurveyMap({
       error.code === error.PERMISSION_DENIED
         ? "Location access denied. Using default map center."
         : error.message || "Could not determine current location. Using default map center.";
-    console.warn(message);
+    frontendLogger.warn("frontend", message, { code: error.code });
     if (error.code !== error.PERMISSION_DENIED) addError(message);
     return message;
   }, [addError]);

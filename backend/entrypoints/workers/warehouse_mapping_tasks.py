@@ -12,21 +12,23 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
 from collections.abc import Coroutine
 from typing import Any
 
-from celery.signals import worker_ready
+from celery.signals import heartbeat_sent, worker_ready, worker_shutdown
 
 from backend.core.config.runtime import settings, setup_logging
+from backend.core.retry import retry_delay_seconds
 from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
-from backend.modules.warehouse.service.structure_extraction import (
-    StructureExtractionParams,
-)
 from backend.modules.warehouse.service.structure_jobs import (
     EXTRACTION_TASK_NAME,
     extract_and_persist_structure,
     record_extraction_failed,
+    clear_mapping_worker_heartbeat,
+    params_from_payload,
+    record_mapping_worker_heartbeat,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +40,9 @@ _TASK_NAME = EXTRACTION_TASK_NAME
 
 
 @worker_ready.connect
-def _verify_warehouse_mapping_tasks_registered(**_kwargs: Any) -> None:
+def _verify_warehouse_mapping_tasks_registered(sender: Any = None, **_kwargs: Any) -> None:
+    worker_name = str(getattr(sender, "hostname", f"warehouse-mapping@{socket.gethostname()}"))
+    record_mapping_worker_heartbeat(worker_name)
     logger.info(
         "warehouse_mapping_worker_ros_env",
         extra={
@@ -58,6 +62,18 @@ def _verify_warehouse_mapping_tasks_registered(**_kwargs: Any) -> None:
     logger.info("warehouse_mapping worker boot: registered task %s", _TASK_NAME)
 
 
+@heartbeat_sent.connect
+def _warehouse_mapping_worker_heartbeat(sender: Any = None, **_kwargs: Any) -> None:
+    name = str(getattr(sender, "hostname", "warehouse-mapping-worker"))
+    record_mapping_worker_heartbeat(name)
+
+
+@worker_shutdown.connect
+def _warehouse_mapping_worker_shutdown(sender: Any = None, **_kwargs: Any) -> None:
+    name = str(getattr(sender, "hostname", "warehouse-mapping-worker"))
+    clear_mapping_worker_heartbeat(name)
+
+
 def _get_worker_loop() -> asyncio.AbstractEventLoop:
     return _worker_loop.get_loop()
 
@@ -68,87 +84,6 @@ def _run_on_worker_loop(coro: Coroutine[Any, Any, dict[str, Any]]) -> dict[str, 
         raise RuntimeError("Warehouse mapping worker event loop is already running.")
     asyncio.set_event_loop(loop)
     return loop.run_until_complete(coro)
-
-
-def _params_from_payload(payload: dict[str, Any] | None) -> StructureExtractionParams:
-    payload = payload or {}
-    defaults = StructureExtractionParams(
-        voxel_m=settings.warehouse_structure_voxel_m,
-        grid_res_m=settings.warehouse_structure_grid_res_m,
-        floor_margin_m=settings.warehouse_structure_floor_margin_m,
-        ceiling_max_m=settings.warehouse_structure_ceiling_max_m,
-        min_aisle_width_m=settings.warehouse_structure_min_aisle_width_m,
-        min_rack_length_m=settings.warehouse_structure_min_rack_length_m,
-        bin_pitch_m=settings.warehouse_structure_bin_pitch_m,
-        shelf_min_spacing_m=settings.warehouse_structure_shelf_min_spacing_m,
-        max_shelf_levels=settings.warehouse_structure_max_shelf_levels,
-        max_bins_per_rack_face=settings.warehouse_structure_max_bins_per_rack_face,
-        min_target_spacing_m=settings.warehouse_structure_min_target_spacing_m,
-        review_clearance_m=settings.warehouse_structure_review_clearance_m,
-        standoff_m=settings.warehouse_structure_standoff_m,
-        drone_radius_m=settings.warehouse_structure_drone_radius_m,
-        clearance_margin_m=settings.warehouse_structure_clearance_margin_m,
-        max_points=settings.warehouse_structure_max_points,
-        min_surface_points=settings.warehouse_structure_min_surface_points,
-    )
-
-    def _override(name: str, current: float) -> float:
-        value = payload.get(name)
-        if value is None:
-            return current
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return current
-
-    defaults.voxel_m = _override("voxel_m", defaults.voxel_m)
-    defaults.grid_res_m = _override("grid_res_m", defaults.grid_res_m)
-    defaults.bin_pitch_m = _override("bin_pitch_m", defaults.bin_pitch_m)
-    defaults.standoff_m = _override("standoff_m", defaults.standoff_m)
-    defaults.drone_radius_m = _override("drone_radius_m", defaults.drone_radius_m)
-    defaults.clearance_margin_m = _override("clearance_margin_m", defaults.clearance_margin_m)
-    defaults.min_aisle_width_m = _override("min_aisle_width_m", defaults.min_aisle_width_m)
-    defaults.shelf_min_spacing_m = _override("shelf_min_spacing_m", defaults.shelf_min_spacing_m)
-    defaults.max_shelf_levels = int(_override("max_shelf_levels", defaults.max_shelf_levels))
-    defaults.max_bins_per_rack_face = int(
-        _override("max_bins_per_rack_face", defaults.max_bins_per_rack_face)
-    )
-    defaults.min_surface_points = int(
-        _override("min_surface_points", defaults.min_surface_points)
-    )
-    defaults.min_target_spacing_m = _override(
-        "min_target_spacing_m", defaults.min_target_spacing_m
-    )
-    defaults.review_clearance_m = _override(
-        "review_clearance_m", defaults.review_clearance_m
-    )
-    defaults.rack_template_bin_count = (
-        None
-        if payload.get("rack_template_bin_count") is None
-        else int(_override("rack_template_bin_count", 1.0))
-    )
-    defaults.rack_template_version_id = (
-        None
-        if payload.get("rack_template_version_id") is None
-        else int(_override("rack_template_version_id", 1.0))
-    )
-    defaults.rack_template_bay_width_m = (
-        None
-        if payload.get("rack_template_bay_width_m") is None
-        else _override("rack_template_bay_width_m", 1.0)
-    )
-    raw_levels = payload.get("rack_template_shelf_levels_m")
-    if isinstance(raw_levels, list):
-        levels: list[float] = []
-        for raw in raw_levels:
-            try:
-                levels.append(float(raw))
-            except (TypeError, ValueError):
-                continue
-        defaults.rack_template_shelf_levels_m = tuple(levels)
-    axis = payload.get("axis_deg")
-    defaults.axis_deg = None if axis is None else _override("axis_deg", 0.0)
-    return defaults.sanitized()
 
 
 @celery_app.task(
@@ -163,6 +98,7 @@ def extract_warehouse_structure(
     model_id: int,
     client_flight_id: str,
     params: dict[str, Any] | None = None,
+    extraction_job_id: int | None = None,
 ) -> dict[str, Any]:
     logger.info(
         "Starting warehouse structure extraction map_id=%s model_id=%s flight=%s",
@@ -176,7 +112,8 @@ def extract_warehouse_structure(
                 warehouse_map_id=int(warehouse_map_id),
                 model_id=int(model_id),
                 client_flight_id=str(client_flight_id),
-                params=_params_from_payload(params),
+                params=params_from_payload(params),
+                extraction_job_id=extraction_job_id,
             )
         )
         logger.info(
@@ -201,4 +138,7 @@ def extract_warehouse_structure(
                 failure_reason_codes=list(existing_state.get("failure_reason_codes") or []),
                 debug_artifact_url=existing_state.get("debug_artifact_url"),
             )
-        raise self.retry(exc=exc, countdown=30) from exc
+        raise self.retry(
+            exc=exc,
+            countdown=retry_delay_seconds(attempt=self.request.retries),
+        ) from exc

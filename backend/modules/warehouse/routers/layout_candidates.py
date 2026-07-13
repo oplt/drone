@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
 from backend.modules.warehouse.http_access import get_map_or_404
 from backend.modules.warehouse.models import (
@@ -34,6 +35,10 @@ from backend.modules.warehouse.service.scan_to_layout import (
 )
 
 router = APIRouter(tags=["warehouse-layout-candidates"])
+
+
+class LayoutCandidatePage(Page[dict[str, Any]]):
+    grouped: dict[str, Any] | None = None
 
 
 class CandidateIn(BaseModel):
@@ -230,11 +235,14 @@ async def ingest_layout_candidates(
     return {"items": [_out(row) for row in rows], "validation_warnings": []}
 
 
-@router.get("/maps/{warehouse_map_id}/layout-candidates")
+@router.get("/maps/{warehouse_map_id}/layout-candidates", response_model=LayoutCandidatePage)
 async def list_layout_candidates(
     warehouse_map_id: int,
     status: str | None = None,
     grouped: bool = Query(default=False),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
@@ -244,10 +252,21 @@ async def list_layout_candidates(
     )
     if status:
         query = query.where(WarehouseLayoutCandidate.status == status)
-    rows = (await db.execute(query.order_by(WarehouseLayoutCandidate.id))).scalars().all()
-    payload = {"items": [_out(row) for row in rows]}
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    rows = (
+        await db.execute(
+            query.order_by(WarehouseLayoutCandidate.id)
+            .offset(page_offset)
+            .limit(page_limit + 1)
+        )
+    ).scalars().all()
+    page = page_from_offset(
+        [_out(row) for row in rows], limit=page_limit, offset=page_offset
+    )
+    payload = page.model_dump()
     if grouped:
-        payload["grouped"] = _grouped(list(rows))
+        payload["grouped"] = _grouped(list(rows[:page_limit]))
     return payload
 
 

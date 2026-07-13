@@ -10,7 +10,10 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )  # also used as type in _aggregate_for_resolution
 
+from backend.infrastructure.cache.redis import get_redis_client
+from backend.modules.analytics.cache import invalidate_overview
 from backend.modules.missions.flight_models import (
+    Flight,
     FlightStatus,
     normalize_flight_status,
 )
@@ -89,7 +92,15 @@ class TelemetrySummaryMixin:
                     await s.execute(insert(TelemetrySummary).values(rows))
                 counts[res_s] = len(rows)
 
+            org_id = await s.scalar(
+                select(Flight.org_id).where(Flight.id == flight_id)
+            )
             await s.commit()
+            if org_id is not None:
+                try:
+                    await invalidate_overview(get_redis_client(), org_id)
+                except Exception:
+                    logger.debug("Analytics cache invalidation skipped", exc_info=True)
         return counts
 
     @staticmethod

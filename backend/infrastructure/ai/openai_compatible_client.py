@@ -46,11 +46,9 @@ class OpenAICompatibleClient(BaseLLMClient):
         url = f"{self.config.api_base.rstrip('/')}/models"
         headers = self._headers()
         timeout = aiohttp.ClientTimeout(total=self.config.timeout_seconds)
+        session = await self._session()
         try:
-            async with (
-                aiohttp.ClientSession(timeout=timeout) as session,
-                session.get(url, headers=headers) as response,
-            ):
+            async with session.get(url, headers=headers, timeout=timeout) as response:
                 if response.status in {401, 403}:
                     raise LLMProviderUnavailableError("Invalid API key or unauthorized.")
                 if response.status >= 400:
@@ -95,13 +93,18 @@ class OpenAICompatibleClient(BaseLLMClient):
             ),
             "stream": False,
         }
+        if request.response_format:
+            payload["response_format"] = request.response_format
         url = f"{self.config.api_base.rstrip('/')}/chat/completions"
         timeout = aiohttp.ClientTimeout(total=self.config.timeout_seconds)
+        session = await self._session()
         try:
-            async with (
-                aiohttp.ClientSession(timeout=timeout) as session,
-                session.post(url, headers=self._headers(), json=payload) as response,
-            ):
+            async with session.post(
+                url,
+                headers=self._headers(),
+                json=payload,
+                timeout=timeout,
+            ) as response:
                 if response.status in {401, 403}:
                     raise LLMProviderUnavailableError("Invalid API key or unauthorized.")
                 if response.status == 404:

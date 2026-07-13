@@ -25,6 +25,13 @@ class ObjectStorageClient:
             region_name=settings.s3_region,
         )
 
+    async def check_bucket(self) -> None:
+        """Perform a bounded authenticated bucket probe for readiness checks."""
+        from backend.core.config.runtime import settings
+
+        async with self._make_client_ctx() as client:
+            await client.head_bucket(Bucket=settings.s3_bucket_name)
+
     async def upload_file(self, local_path: Path, object_key: str) -> str:
         from backend.core.config.runtime import settings
 

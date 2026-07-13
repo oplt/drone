@@ -13,6 +13,7 @@ from backend.infrastructure.runtime import (
     MqttPublisherAdapter,
     RuntimeAdapterBundle,
 )
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.telemetry.repository import TelemetryRepository
 from backend.modules.vehicle_runtime.orchestrator import Orchestrator
 
@@ -107,7 +108,12 @@ async def reset_orchestrator() -> None:
         drone = getattr(_orch, "drone", None)
         if drone is not None:
             try:
-                await asyncio.to_thread(drone.close)
+                await run_blocking(
+                    drone.close,
+                    boundary="mavlink",
+                    operation="vehicle_close",
+                    timeout_s=30.0,
+                )
             except Exception:
                 logger.exception("Failed closing MAVLink vehicle during orchestrator reset")
         _orch = None

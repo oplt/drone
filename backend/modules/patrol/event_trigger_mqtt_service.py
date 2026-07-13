@@ -4,12 +4,14 @@ import asyncio
 import logging
 import os
 import socket
+from contextlib import suppress
 from uuid import uuid4
 
 from pydantic import ValidationError
 
 from backend.core.config.runtime import settings
 from backend.core.database.session import Session
+from backend.infrastructure.cache.redis import get_redis_client
 from backend.infrastructure.messaging.mqtt_subscriber import MqttSubscriber, decode_json_payload
 from backend.modules.identity.models import User
 from backend.modules.organizations.models import Organization
@@ -46,13 +48,33 @@ async def resolve_user_for_mqtt_topic(db, topic: str) -> User | None:
 
 
 class PatrolEventTriggerMqttService:
+    _LEASE_KEY = "leader:patrol:event-trigger-mqtt"
+    _LEASE_TTL_S = 30
+
     def __init__(self) -> None:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._subscriber: MqttSubscriber | None = None
+        self._lease_token: str | None = None
+        self._lease_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         if self._subscriber is not None:
             return
+        lease_token = uuid4().hex
+        try:
+            acquired = await get_redis_client().set(
+                self._LEASE_KEY,
+                lease_token,
+                ex=self._LEASE_TTL_S,
+                nx=True,
+            )
+        except Exception:
+            logger.warning("Patrol MQTT leader lease unavailable; subscriber not started")
+            return
+        if not acquired:
+            logger.info("Patrol MQTT subscriber owned by another API replica")
+            return
+        self._lease_token = lease_token
         self._loop = asyncio.get_running_loop()
         topic = patrol_mqtt_subscribe_pattern()
         client_id = f"patrol-event-triggers-{socket.gethostname()}-{os.getpid()}-{uuid4().hex[:8]}"
@@ -76,19 +98,70 @@ class PatrolEventTriggerMqttService:
                 settings.mqtt_port,
                 exc,
             )
+            await self._release_lease()
             return
 
         self._subscriber = subscriber
+        self._lease_task = asyncio.create_task(self._renew_lease(), name="patrol-mqtt-lease")
         logger.info("Patrol event-trigger MQTT subscriber started on %s", topic)
 
     async def stop(self) -> None:
-        if self._subscriber is None:
-            return
         try:
-            self._subscriber.close()
+            if self._subscriber is not None:
+                self._subscriber.close()
         finally:
             self._subscriber = None
+            if self._lease_task is not None:
+                self._lease_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await self._lease_task
+                self._lease_task = None
+            await self._release_lease()
             logger.info("Patrol event-trigger MQTT subscriber stopped")
+
+    async def _renew_lease(self) -> None:
+        while self._subscriber is not None and self._lease_token is not None:
+            await asyncio.sleep(self._LEASE_TTL_S / 3)
+            try:
+                redis = get_redis_client()
+                renewed = await redis.eval(
+                    "if redis.call('get', KEYS[1]) == ARGV[1] "
+                    "then return redis.call('expire', KEYS[1], ARGV[2]) "
+                    "else return 0 end",
+                    1,
+                    self._LEASE_KEY,
+                    self._lease_token,
+                    self._LEASE_TTL_S,
+                )
+                if not renewed:
+                    logger.warning("Patrol MQTT leader lease lost; stopping subscriber")
+                    subscriber, self._subscriber = self._subscriber, None
+                    if subscriber is not None:
+                        subscriber.close()
+                    await self._release_lease()
+                    return
+                await redis.expire(self._LEASE_KEY, self._LEASE_TTL_S)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.warning("Patrol MQTT leader lease renewal failed", exc_info=True)
+
+    async def _release_lease(self) -> None:
+        token, self._lease_token = self._lease_token, None
+        if token is None:
+            return
+        try:
+            redis = get_redis_client()
+            await redis.eval(
+                "if redis.call('get', KEYS[1]) == ARGV[1] "
+                "then return redis.call('del', KEYS[1]) "
+                "else return 0 end",
+                1,
+                self._LEASE_KEY,
+                token,
+            )
+        except Exception:
+            logger.debug("Patrol MQTT leader lease release failed", exc_info=True)
 
     def _handle_message_sync(self, topic: str, payload: bytes) -> None:
         if self._loop is None:
@@ -108,13 +181,21 @@ class PatrolEventTriggerMqttService:
         try:
             raw = decode_json_payload(payload)
         except (UnicodeDecodeError, ValueError) as exc:
-            logger.warning("Patrol MQTT trigger ignored (invalid JSON) topic=%s error=%s", topic, exc)
+            logger.warning(
+                "Patrol MQTT trigger ignored (invalid JSON) topic=%s error=%s",
+                topic,
+                exc,
+            )
             return
 
         try:
             trigger = PatrolSensorTriggerIn.model_validate(raw)
         except ValidationError as exc:
-            logger.warning("Patrol MQTT trigger ignored (invalid payload) topic=%s error=%s", topic, exc)
+            logger.warning(
+                "Patrol MQTT trigger ignored (invalid payload) topic=%s error=%s",
+                topic,
+                exc,
+            )
             return
 
         if not trigger.sensor_id:

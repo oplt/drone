@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import shutil
 import time
@@ -9,16 +10,22 @@ import cv2
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import Session
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.video_analysis.models import VideoDetection
 from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.service.detector import YoloFrameDetector
-from backend.modules.video_analysis.service.frame_extractor import iter_frames, read_video_metadata
+from backend.modules.video_analysis.service.frame_extractor import (
+    async_iter_frames,
+    read_video_metadata_async,
+)
 from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
+from backend.observability import prometheus_metrics
 from backend.observability.instruments import observed_span, structured_error
 from backend.observability.metrics import add as metric_add
 from backend.observability.metrics import record as metric_record
 
 logger = logging.getLogger(__name__)
+MAX_PENDING_DETECTIONS = 100
 
 
 class OfflineVideoAnalysisPipeline:
@@ -38,18 +45,37 @@ class OfflineVideoAnalysisPipeline:
         if video is None:
             raise ValueError(f"VideoAsset not found: {job.video_id}")
 
-        self._clear_prior_evidence(job.id)
+        await run_blocking(
+            self._clear_prior_evidence,
+            job.id,
+            boundary="filesystem",
+            operation="clear_video_evidence",
+            timeout_s=30.0,
+        )
         await self.repo.mark_job_running(job)
+        frames_received = 0
+        frames_processed = 0
+        frames_dropped = 0
+        frames_failed = 0
+        total_inference_latency_ms = 0.0
 
         try:
             video_path = Path(video.storage_path)
+            source_checksum = await run_blocking(
+                self._sha256_file,
+                video_path,
+                boundary="filesystem",
+                operation="hash_video_source",
+                timeout_s=120.0,
+            )
+            await self.repo.set_source_checksum(job, source_checksum)
             with observed_span(
                 "video.metadata",
                 mission_id=video.mission_id,
                 camera_name="offline_video",
                 **{"model.name": job.model_name},
             ):
-                metadata = read_video_metadata(video_path)
+                metadata = await read_video_metadata_async(video_path)
             logger.info(
                 "Processing video analysis job_id=%s video_id=%s "
                 "duration_seconds=%.2f stride_seconds=%.2f model=%s",
@@ -68,10 +94,15 @@ class OfflineVideoAnalysisPipeline:
                 status="analyzing",
             )
 
-            detector = YoloFrameDetector(
+            detector = await run_blocking(
+                YoloFrameDetector,
                 model_name=job.model_name,
                 confidence_threshold=job.confidence_threshold,
+                boundary="media",
+                operation="load_detector",
+                timeout_s=120.0,
             )
+            await self.repo.set_model_version(job, detector.model_version)
             telemetry = NearestTelemetryMatcher(video.mission_id)
 
             pending_detections: list[VideoDetection] = []
@@ -81,9 +112,13 @@ class OfflineVideoAnalysisPipeline:
                 int(metadata.duration_seconds / max(job.frame_stride_seconds, 0.1)),
             )
 
-            for processed, frame in enumerate(
-                iter_frames(video_path, every_seconds=job.frame_stride_seconds), start=1
+            processed = 0
+            async for frame in async_iter_frames(
+                video_path,
+                every_seconds=job.frame_stride_seconds,
             ):
+                processed += 1
+                frames_received += 1
                 metric_add("video_frames_received", attrs={"source": "offline_video"})
                 inference_started = time.monotonic()
                 with observed_span(
@@ -98,8 +133,27 @@ class OfflineVideoAnalysisPipeline:
                         "video.fps": metadata.fps,
                     },
                 ) as span:
-                    frame_detections = detector.predict(frame.image_bgr)
+                    try:
+                        frame_detections = await run_blocking(
+                            detector.predict,
+                            frame.image_bgr,
+                            boundary="cpu",
+                            operation="video_inference",
+                            timeout_s=120.0,
+                        )
+                    except Exception:
+                        frames_failed += 1
+                        total_inference_latency_ms += (
+                            time.monotonic() - inference_started
+                        ) * 1000.0
+                        logger.exception(
+                            "Video frame inference failed job_id=%s frame_index=%s",
+                            job.id,
+                            frame.frame_index,
+                        )
+                        continue
                     inference_latency_ms = (time.monotonic() - inference_started) * 1000.0
+                    total_inference_latency_ms += inference_latency_ms
                     if span is not None:
                         span.set_attribute("detection.count", len(frame_detections))
                         span.set_attribute("inference.latency_ms", inference_latency_ms)
@@ -114,6 +168,7 @@ class OfflineVideoAnalysisPipeline:
                         {"model": job.model_name},
                     )
                 metric_add("video_frames_processed", attrs={"source": "offline_video"})
+                frames_processed += 1
                 geo = telemetry.match(frame.timestamp_seconds)
 
                 for idx, det in enumerate(frame_detections):
@@ -128,12 +183,16 @@ class OfflineVideoAnalysisPipeline:
                             "detection.count": len(frame_detections),
                         },
                     ):
-                        evidence_path = self._save_crop(
+                        evidence_path = await run_blocking(
+                            self._save_crop,
                             job_id=job.id,
                             frame_index=frame.frame_index,
                             detection_index=idx,
                             image_bgr=frame.image_bgr,
                             xyxy=(det.x1, det.y1, det.x2, det.y2),
+                            boundary="media",
+                            operation="save_detection_crop",
+                            timeout_s=30.0,
                         )
 
                     pending_detections.append(
@@ -158,17 +217,31 @@ class OfflineVideoAnalysisPipeline:
                             raw=det.raw,
                         )
                     )
+                    prometheus_metrics.video_inference_queue_depth.labels(job_id=job.id).set(
+                        len(pending_detections)
+                    )
 
-                if processed % 20 == 0:
+                if processed % 20 == 0 or len(pending_detections) >= MAX_PENDING_DETECTIONS:
                     await self.repo.flush_batch(
                         pending_detections,
                         job=job,
                         progress=processed / estimated_total * 100.0,
                     )
                     pending_detections = []
+                    prometheus_metrics.video_inference_queue_depth.labels(job_id=job.id).set(0)
 
             if pending_detections:
                 await self.repo.flush_batch(pending_detections)
+                prometheus_metrics.video_inference_queue_depth.labels(job_id=job.id).set(0)
+            frames_dropped = max(0, estimated_total - frames_received)
+            await self.repo.update_processing_metrics(
+                job,
+                frames_received=frames_received,
+                frames_processed=frames_processed,
+                frames_dropped=frames_dropped,
+                frames_failed=frames_failed,
+                total_inference_latency_ms=total_inference_latency_ms,
+            )
             await self.repo.set_video_status(video, "analyzed")
             await self.repo.mark_job_completed(job)
             logger.info(
@@ -185,6 +258,14 @@ class OfflineVideoAnalysisPipeline:
                 mission_id=video.mission_id,
             )
             await self.db.rollback()
+            await self.repo.update_processing_metrics(
+                job,
+                frames_received=frames_received,
+                frames_processed=frames_processed,
+                frames_dropped=frames_dropped,
+                frames_failed=max(1, frames_failed),
+                total_inference_latency_ms=total_inference_latency_ms,
+            )
             error_message = (
                 str(exc)
                 if isinstance(exc, RuntimeError) and "YOLO runtime dependencies" in str(exc)
@@ -195,6 +276,14 @@ class OfflineVideoAnalysisPipeline:
                 error_message,
             )
             raise
+
+    @staticmethod
+    def _sha256_file(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
 
     def _save_crop(
         self,

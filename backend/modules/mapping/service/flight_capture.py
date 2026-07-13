@@ -4,7 +4,6 @@ import json
 import logging
 import shlex
 import shutil
-import subprocess
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -13,6 +12,7 @@ from typing import Any
 
 from backend.core.config.runtime import settings
 from backend.core.tokens import safe_token
+from backend.infrastructure.runtime.blocking import blocking_process_runner, run_blocking
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp"}
 logger = logging.getLogger(__name__)
@@ -106,6 +106,16 @@ class FlightCaptureSessionService:
         )
         return session
 
+    async def start_session_async(self, *, flight_id: Any) -> FlightCaptureSession:
+        """Mandatory event-loop-safe entrypoint for session filesystem setup."""
+        return await run_blocking(
+            self.start_session,
+            flight_id=flight_id,
+            boundary="filesystem",
+            operation="capture_session_start",
+            timeout_s=30.0,
+        )
+
     @staticmethod
     def _list_images(root: Path) -> list[Path]:
         if not root.exists():
@@ -192,7 +202,7 @@ class FlightCaptureSessionService:
 
         started = time.monotonic()
         try:
-            proc = subprocess.run(
+            proc = blocking_process_runner.run(
                 argv,
                 capture_output=True,
                 text=True,
@@ -240,6 +250,22 @@ class FlightCaptureSessionService:
                 "error": str(exc),
             }
 
+    async def trigger_external_sync_async(
+        self,
+        session: FlightCaptureSession,
+        *,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """Run external sync without allowing subprocess work on the event loop."""
+        return await run_blocking(
+            self.trigger_external_sync,
+            session,
+            force=force,
+            boundary="process",
+            operation="capture_external_sync",
+            call_timeout_s=max(1.0, self.capture_sync_timeout_s + 1.0),
+        )
+
     def import_external_images(
         self,
         session: FlightCaptureSession,
@@ -265,6 +291,21 @@ class FlightCaptureSessionService:
                 session.session_dir,
             )
         return copied
+
+    async def import_external_images_async(
+        self,
+        session: FlightCaptureSession,
+        *,
+        image_paths: list[str] | None,
+    ) -> int:
+        return await run_blocking(
+            self.import_external_images,
+            session,
+            image_paths=image_paths,
+            boundary="filesystem",
+            operation="capture_external_image_import",
+            timeout_s=60.0,
+        )
 
     def wait_for_images(
         self,
@@ -327,6 +368,25 @@ class FlightCaptureSessionService:
             )
         return images
 
+    async def wait_for_images_async(
+        self,
+        session: FlightCaptureSession,
+        *,
+        min_images: int | None = None,
+        timeout_s: float | None = None,
+        poll_interval_s: float | None = None,
+    ) -> list[Path]:
+        return await run_blocking(
+            self.wait_for_images,
+            session,
+            min_images=min_images,
+            timeout_s=timeout_s,
+            poll_interval_s=poll_interval_s,
+            boundary="filesystem",
+            operation="capture_image_wait",
+            call_timeout_s=max(30.0, float(timeout_s or self.default_wait_timeout_s) + 30.0),
+        )
+
     def finalize_session(
         self,
         session: FlightCaptureSession,
@@ -368,3 +428,24 @@ class FlightCaptureSessionService:
             self._manifest_path(session),
         )
         return payload
+
+    async def finalize_session_async(
+        self,
+        session: FlightCaptureSession,
+        *,
+        min_images: int | None = None,
+        timeout_s: float | None = None,
+        poll_interval_s: float | None = None,
+        extra_meta: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return await run_blocking(
+            self.finalize_session,
+            session,
+            min_images=min_images,
+            timeout_s=timeout_s,
+            poll_interval_s=poll_interval_s,
+            extra_meta=extra_meta,
+            boundary="filesystem",
+            operation="capture_session_finalize",
+            call_timeout_s=max(30.0, float(timeout_s or self.default_wait_timeout_s) + 30.0),
+        )

@@ -152,6 +152,37 @@ class VideoAnalysisRepository:
         job.finished_at = None
         job.error = None
         job.progress = 0.0
+        job.source_checksum = None
+        job.frames_received = 0
+        job.frames_processed = 0
+        job.frames_dropped = 0
+        job.frames_failed = 0
+        job.total_inference_latency_ms = 0.0
+        await self.db.commit()
+
+    async def set_model_version(self, job: VideoAnalysisJob, version: str) -> None:
+        job.model_version = version[:160]
+        await self.db.commit()
+
+    async def set_source_checksum(self, job: VideoAnalysisJob, checksum: str) -> None:
+        job.source_checksum = checksum[:64]
+        await self.db.commit()
+
+    async def update_processing_metrics(
+        self,
+        job: VideoAnalysisJob,
+        *,
+        frames_received: int,
+        frames_processed: int,
+        frames_dropped: int,
+        frames_failed: int,
+        total_inference_latency_ms: float,
+    ) -> None:
+        job.frames_received = max(0, int(frames_received))
+        job.frames_processed = max(0, int(frames_processed))
+        job.frames_dropped = max(0, int(frames_dropped))
+        job.frames_failed = max(0, int(frames_failed))
+        job.total_inference_latency_ms = max(0.0, float(total_inference_latency_ms))
         await self.db.commit()
 
     async def mark_job_failed(self, job: VideoAnalysisJob, error: str) -> None:

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
 from backend.modules.warehouse.http_access import get_map_or_404
 from backend.modules.warehouse.models import (
@@ -45,6 +47,10 @@ from backend.modules.warehouse.observability.warehouse_coordinate_metrics import
 )
 
 router = APIRouter(tags=["warehouse-layouts"])
+
+
+class LayoutEntityPage(Page[dict[str, Any]]):
+    revision: int
 
 
 def _publish_block(reason: str, detail: object, *, status_code: int = 409) -> HTTPException:
@@ -236,26 +242,36 @@ async def _commit_mutation(db, layout, rows) -> LayoutMutationOut:
     )
 
 
-@router.get("/maps/{warehouse_map_id}/layout-versions")
+@router.get(
+    "/maps/{warehouse_map_id}/layout-versions",
+    response_model=Page[dict[str, Any]],
+)
 async def list_layout_versions(
     warehouse_map_id: int,
     response: Response,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
     await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
     rows = (
         (
             await db.execute(
                 select(WarehouseLayoutVersion)
                 .where(WarehouseLayoutVersion.warehouse_map_id == warehouse_map_id)
-                .order_by(WarehouseLayoutVersion.version)
+                .order_by(WarehouseLayoutVersion.version, WarehouseLayoutVersion.id)
+                .offset(page_offset)
+                .limit(page_limit + 1)
             )
         )
         .scalars()
         .all()
     )
-    return [
+    items = [
         {
             "id": r.id,
             "version": r.version,
@@ -265,6 +281,7 @@ async def list_layout_versions(
         }
         for r in rows
     ]
+    return page_from_offset(items, limit=page_limit, offset=page_offset).model_dump()
 
 
 @router.get("/maps/{warehouse_map_id}/layout-versions/{version}")
@@ -652,7 +669,14 @@ async def _create_entities(db, layout, kind: str, payloads):
     return rows
 
 
-async def _entities(db, layout_id: int, kind: str):
+async def _entities(
+    db: AsyncSession,
+    layout_id: int,
+    kind: str,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+):
     if kind == "aisles":
         query = select(WarehouseAisle).where(WarehouseAisle.layout_version_id == layout_id)
     elif kind == "racks":
@@ -682,23 +706,43 @@ async def _entities(db, layout_id: int, kind: str):
         )
     else:
         raise HTTPException(404, "Unknown layout entity")
+    query = query.order_by(*[column.asc() for column in query.selected_columns if column.name == "id"])
+    if limit is not None:
+        query = query.offset(max(0, offset)).limit(max(1, limit))
     return (await db.execute(query)).scalars().all()
 
 
-@router.get("/maps/{warehouse_map_id}/layout-versions/{version}/{kind}")
+@router.get(
+    "/maps/{warehouse_map_id}/layout-versions/{version}/{kind}",
+    response_model=LayoutEntityPage,
+)
 async def list_layout_entities(
     warehouse_map_id: int,
     version: int,
     kind: str,
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
     await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = await _layout(db, warehouse_map_id, version)
-    return {
-        "revision": layout.revision,
-        "items": [_entity_dict(r) for r in await _entities(db, layout.id, kind)],
-    }
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    rows = await _entities(
+        db,
+        layout.id,
+        kind,
+        limit=page_limit + 1,
+        offset=page_offset,
+    )
+    page = page_from_offset(
+        [_entity_dict(row) for row in rows],
+        limit=page_limit,
+        offset=page_offset,
+    )
+    return {"revision": layout.revision, **page.model_dump()}
 
 
 @router.post(

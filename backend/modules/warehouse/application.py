@@ -44,20 +44,33 @@ class WarehouseApplication:
             allow_org_access=can_access_org_scope(user),
         )
 
-    async def list_maps(self, db: AsyncSession, *, user: User, limit: int) -> list[WarehouseMap]:
+    async def list_maps(
+        self, db: AsyncSession, *, user: User, limit: int, offset: int = 0
+    ) -> list[WarehouseMap]:
         return await self.maps.list_warehouse_maps(
             db,
             owner_id=int(user.id),
             org_id=user.org_id,
             allow_org_access=can_access_org_scope(user),
             limit=limit,
+            offset=offset,
         )
 
-    async def list_docks(self, db: AsyncSession, *, map_id: int) -> list[WarehouseDockStation]:
-        return await self.maps.list_dock_stations(db, warehouse_map_id=map_id)
+    async def list_docks(
+        self, db: AsyncSession, *, map_id: int, limit: int | None = None, offset: int = 0
+    ) -> list[WarehouseDockStation]:
+        return await self.maps.list_dock_stations(
+            db, warehouse_map_id=map_id, limit=limit, offset=offset
+        )
 
     async def list_scanned_maps(
-        self, db: AsyncSession, *, user: User, map_id: int | None, limit: int
+        self,
+        db: AsyncSession,
+        *,
+        user: User,
+        map_id: int | None,
+        limit: int,
+        offset: int = 0,
     ) -> list[tuple[WarehouseMappingJob, WarehouseMap, WarehouseModel]]:
         return await self.maps.list_scanned_maps(
             db,
@@ -66,6 +79,7 @@ class WarehouseApplication:
             allow_org_access=can_access_org_scope(user),
             warehouse_map_id=map_id,
             limit=limit,
+            offset=offset,
         )
 
     async def delete_scanned_map(self, db: AsyncSession, *, job_id: int, user: User) -> bool:
@@ -88,7 +102,7 @@ class WarehouseApplication:
         return await self.maps.list_assets_for_models(db, model_ids=model_ids)
 
     async def list_sensor_rigs(
-        self, db: AsyncSession, *, user: User, limit: int
+        self, db: AsyncSession, *, user: User, limit: int, offset: int = 0
     ) -> list[WarehouseSensorRig]:
         return await self.maps.list_sensor_rigs(
             db,
@@ -96,6 +110,7 @@ class WarehouseApplication:
             org_id=user.org_id,
             allow_org_access=can_access_org_scope(user),
             limit=limit,
+            offset=offset,
         )
 
     async def get_sensor_rig(

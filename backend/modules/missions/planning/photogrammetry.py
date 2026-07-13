@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from backend.core.types.geo import coord_from_home
+from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.mapping.service.flight_capture import FlightCaptureSessionService
 from backend.modules.mapping.service.mission import make_photogrammetry_plan
 from backend.modules.missions.flight_models import FlightStatus
@@ -117,7 +118,7 @@ class PhotogrammetryMission:
 
     async def _configure_capture(self, orch: Orchestrator) -> tuple[bool, str]:
         try:
-            speed_ok = await asyncio.to_thread(orch.drone.set_groundspeed, self.speed_mps)
+            speed_ok = await orch.async_drone.set_groundspeed(self.speed_mps)
             await self._add_event_safe(
                 orch,
                 "photogrammetry_speed_configured",
@@ -140,7 +141,7 @@ class PhotogrammetryMission:
             capture_meta = {"mode": "time", "interval_s": self.trigger_interval_s}
 
         try:
-            started = await asyncio.to_thread(orch.drone.start_image_capture, **capture_kwargs)
+            started = await orch.async_drone.start_image_capture(**capture_kwargs)
             if started:
                 await self._add_event_safe(
                     orch,
@@ -165,7 +166,7 @@ class PhotogrammetryMission:
 
     async def _stop_capture(self, orch: Orchestrator) -> None:
         try:
-            stopped = await asyncio.to_thread(orch.drone.stop_image_capture)
+            stopped = await orch.async_drone.stop_image_capture()
             await self._add_event_safe(
                 orch,
                 "photogrammetry_capture_stopped",
@@ -227,9 +228,14 @@ class PhotogrammetryMission:
             waypoints[-1].alt if waypoints and waypoints[-1].alt is not None else takeoff_alt_m
         )
 
-        capture_session_service = FlightCaptureSessionService()
-        session = capture_session_service.start_session(
-            flight_id=getattr(orch, "_flight_id", "unknown")
+        capture_session_service = await run_blocking(
+            FlightCaptureSessionService,
+            boundary="filesystem",
+            operation="photogrammetry_capture_service_init",
+            timeout_s=30.0,
+        )
+        session = await capture_session_service.start_session_async(
+            flight_id=getattr(orch, "_flight_id", "unknown"),
         )
         logger.info(
             "Photogrammetry capture session started: flight_id=%s source_dir=%s abs_dir=%s",
@@ -252,7 +258,7 @@ class PhotogrammetryMission:
 
         await asyncio.sleep(1.0)
         logger.info("Photogrammetry takeoff command: target_alt=%s", takeoff_alt_m)
-        await asyncio.to_thread(orch.drone.arm_and_takeoff, takeoff_alt_m)
+        await orch.async_drone.arm_and_takeoff(takeoff_alt_m)
         await self._add_event_safe(orch, "takeoff", {})
 
         capture_started, capture_error = await self._configure_capture(orch)
@@ -263,7 +269,7 @@ class PhotogrammetryMission:
 
         try:
             logger.info("Photogrammetry waypoint traversal started: count=%s", len(waypoints))
-            await asyncio.to_thread(orch.drone.follow_waypoints, waypoints)
+            await orch.async_drone.follow_waypoints(waypoints)
             await self._add_event_safe(orch, "reached_destination", {})
             logger.info("Photogrammetry waypoint traversal completed")
         except Exception as exc:
@@ -279,7 +285,7 @@ class PhotogrammetryMission:
                 await self._stop_capture(orch)
 
         try:
-            await asyncio.to_thread(orch.drone.follow_waypoints, [home])
+            await orch.async_drone.follow_waypoints([home])
             await self._add_event_safe(
                 orch,
                 "photogrammetry_return_home_completed",
@@ -297,10 +303,10 @@ class PhotogrammetryMission:
 
         try:
             logger.info("Photogrammetry landing command issued")
-            await asyncio.to_thread(orch.drone.land)
+            await orch.async_drone.land()
             await self._add_event_safe(orch, "landing_command_sent", {})
 
-            await asyncio.to_thread(orch.drone.wait_until_disarmed, 900)
+            await orch.async_drone.wait_until_disarmed(900)
             await self._add_event_safe(orch, "landed_home", {})
             status_at_touchdown = (
                 FlightStatus.COMPLETED if mission_error is None else FlightStatus.FAILED
@@ -333,17 +339,18 @@ class PhotogrammetryMission:
 
         min_images = self.image_sync_min_count if self.await_image_sync else 0
         wait_timeout = self.image_sync_wait_timeout_s if self.await_image_sync else 0.0
-        direct_download_paths = await asyncio.to_thread(
+        direct_download_paths = await run_blocking(
             orch.drone.download_captured_images,
             destination_dir=str(session.session_dir),
+            boundary="mavlink",
+            operation="download_captured_images",
+            timeout_s=60.0,
         )
-        imported_direct = await asyncio.to_thread(
-            capture_session_service.import_external_images,
+        imported_direct = await capture_session_service.import_external_images_async(
             session,
             image_paths=direct_download_paths,
         )
-        sync_trigger = await asyncio.to_thread(
-            capture_session_service.trigger_external_sync,
+        sync_trigger = await capture_session_service.trigger_external_sync_async(
             session,
         )
         logger.info(
@@ -365,8 +372,7 @@ class PhotogrammetryMission:
             "photogrammetry_external_sync",
             sync_trigger,
         )
-        sync_result = await asyncio.to_thread(
-            capture_session_service.finalize_session,
+        sync_result = await capture_session_service.finalize_session_async(
             session,
             min_images=min_images,
             timeout_s=wait_timeout,

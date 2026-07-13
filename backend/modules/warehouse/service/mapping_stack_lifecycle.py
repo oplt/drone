@@ -477,7 +477,7 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
             return
 
         from backend.infrastructure.warehouse.bridge_config import (
-            list_ros2_topics_with_retry,
+            list_ros2_topics_with_retry_async,
             preflight_core_ros_topics,
             ros_command_env,
         )
@@ -485,8 +485,7 @@ async def _maybe_start_mapping_stack_cmd(*, skip_stale_kill: bool = False) -> No
 
         ws = _ros2_workspace()
         core_required = preflight_core_ros_topics(ws)
-        topics = await asyncio.to_thread(
-            list_ros2_topics_with_retry,
+        topics = await list_ros2_topics_with_retry_async(
             ws,
             attempts=6,
             pause_s=2.0,
@@ -921,6 +920,9 @@ async def shutdown_warehouse_mapping_stack() -> None:
         ros_topic="/warehouse/front/rgbd/points",
         **{"mapping.layer": "nvblox"},
     ):
+        from backend.modules.warehouse.service.live_map_readiness import invalidate_readiness_caches
+
+        invalidate_readiness_caches()
         try:
             await stop_warehouse_live_map_bridge()
         except Exception as exc:

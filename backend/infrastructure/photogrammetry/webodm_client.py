@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import mimetypes
+import random
 import zipfile
 from collections.abc import Awaitable, Callable, Iterable
 from contextlib import ExitStack
@@ -55,7 +56,8 @@ class WebODMClient:
         self.http_retry_backoff_factor = settings.webodm_http_retry_backoff_factor
         if self.http_retry_max_delay_s < self.http_retry_min_delay_s:
             logger.warning(
-                "WEBODM_HTTP_RETRY_MAX_DELAY_S (%s) is lower than WEBODM_HTTP_RETRY_MIN_DELAY_S (%s); "
+                "WEBODM_HTTP_RETRY_MAX_DELAY_S (%s) is lower than "
+                "WEBODM_HTTP_RETRY_MIN_DELAY_S (%s); "
                 "using min delay for both.",
                 self.http_retry_max_delay_s,
                 self.http_retry_min_delay_s,
@@ -74,7 +76,8 @@ class WebODMClient:
         self.processor_backend: Literal["auto", "webodm", "nodeodm"] = configured_backend  # type: ignore[assignment]
         self._detected_backend: Literal["webodm", "nodeodm"] | None = None
         logger.info(
-            "Photogrammetry client initialized: base_url=%s project_id=%s mock_mode=%s configured_backend=%s",
+            "Photogrammetry client initialized: base_url=%s project_id=%s "
+            "mock_mode=%s configured_backend=%s",
             self.base_url,
             self.project_id,
             self.mock_mode,
@@ -144,7 +147,8 @@ class WebODMClient:
             self.api_token
         ):
             logger.info(
-                "Assuming NodeODM backend for base_url=%s because WEBODM_API_TOKEN looks like a NodeODM token",
+                "Assuming NodeODM backend for base_url=%s because "
+                "WEBODM_API_TOKEN looks like a NodeODM token",
                 self.base_url,
             )
             return "nodeodm"
@@ -159,10 +163,7 @@ class WebODMClient:
             if not s:
                 continue
             p = Path(s)
-            if not p.is_absolute():
-                p = (self.inputs_root / p).resolve()
-            else:
-                p = p.resolve()
+            p = (self.inputs_root / p).resolve() if not p.is_absolute() else p.resolve()
             if not p.exists() or not p.is_file():
                 raise FileNotFoundError(f"WebODM input image not found: {p}")
             resolved.append(p)
@@ -199,6 +200,7 @@ class WebODMClient:
                     self.http_retry_min_delay_s * (self.http_retry_backoff_factor ** (attempt - 1)),
                     self.http_retry_max_delay_s,
                 )
+                delay = min(self.http_retry_max_delay_s, delay * random.uniform(0.8, 1.2))
                 logger.warning(
                     "WebODM %s failed (attempt %s/%s): %s. Retrying in %.1fs",
                     op_name,
@@ -233,9 +235,12 @@ class WebODMClient:
         if len(resolved_images) > self.upload_batch_size:
             raise RuntimeError(
                 "WebODM upload received "
-                f"{len(resolved_images)} images, exceeding WEBODM_UPLOAD_BATCH_SIZE={self.upload_batch_size}. "
-                "This client uploads images in one multipart request (one open file descriptor per image); "
-                "increase WEBODM_UPLOAD_BATCH_SIZE only if your OS ulimit supports it, or add chunked upload support."
+                f"{len(resolved_images)} images, exceeding "
+                f"WEBODM_UPLOAD_BATCH_SIZE={self.upload_batch_size}. "
+                "This client uploads images in one multipart request "
+                "(one open file descriptor per image); increase "
+                "WEBODM_UPLOAD_BATCH_SIZE only if your OS ulimit supports it, "
+                "or add chunked upload support."
             )
 
         if backend_kind == "nodeodm":
@@ -473,13 +478,15 @@ class WebODMClient:
             destination.parent.mkdir(parents=True, exist_ok=True)
             if destination.exists():
                 destination.unlink()
-            async with httpx.AsyncClient(timeout=None, follow_redirects=True) as client:
-                async with client.stream(
+            async with (
+                httpx.AsyncClient(timeout=None, follow_redirects=True) as client,
+                client.stream(
                     "GET",
                     url,
                     headers=request_headers,
                     params=request_params,
-                ) as resp:
+                ) as resp,
+            ):
                     resp.raise_for_status()
                     with destination.open("wb") as f:
                         async for chunk in resp.aiter_bytes():

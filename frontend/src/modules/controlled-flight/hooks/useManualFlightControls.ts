@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useConfirm } from "../../../shared/ui/ConfirmContext";
 import { getSessionMarker } from "../../session";
 import { sendManualControlCommand } from "../api/manualControlApi";
 import {
@@ -39,6 +40,7 @@ export function useManualFlightControls({
     source: "keyboard" | "button";
     sentAt: string;
   } | null>(null);
+  const { confirm } = useConfirm();
 
   const sendManualFlightCommand = useCallback(
     async (
@@ -87,14 +89,25 @@ export function useManualFlightControls({
   );
 
   const beginManualControl = useCallback(
-    (keyId: string, command: ManualFlightCommand, source: "keyboard" | "button") => {
+    async (keyId: string, command: ManualFlightCommand, source: "keyboard" | "button") => {
       if (!ready) return;
       if (heldManualCommandsRef.current.get(keyId) === command) return;
+      if (command === "takeoff" || command === "land") {
+        const accepted = await confirm({
+          title: `${command === "takeoff" ? "Take off" : "Land"}?`,
+          description: `Current: manual control ready. Target: ${command}. Pending: the command will be sent to the connected drone and audited.`,
+          confirmLabel: command === "takeoff" ? "Take off" : "Land",
+          confirmColor: "warning",
+        });
+        if (!accepted || !ready) return;
+        void sendManualFlightCommand(command, "start", source);
+        return;
+      }
       heldManualCommandsRef.current.set(keyId, command);
       syncActiveManualCommands();
       void sendManualFlightCommand(command, "start", source);
     },
-    [ready, sendManualFlightCommand, syncActiveManualCommands],
+    [confirm, ready, sendManualFlightCommand, syncActiveManualCommands],
   );
 
   const endManualControl = useCallback(

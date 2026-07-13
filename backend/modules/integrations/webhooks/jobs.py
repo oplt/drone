@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from backend.core.config.runtime import settings
+from backend.core.retry import retry_delay_seconds
 from backend.core.database.session import Session
 from backend.infrastructure.webhooks import HttpWebhookSender
 
@@ -73,9 +74,18 @@ class WebhookDeliveryJob:
             except Exception as exc:
                 error = str(exc)
 
-            retry_in_s = (
+            retry_base_s = (
                 BACKOFF_SCHEDULE[delivery.attempts - 1]
                 if delivery.attempts <= len(BACKOFF_SCHEDULE)
+                else None
+            )
+            retry_in_s = (
+                retry_delay_seconds(
+                    attempt=0,
+                    base_seconds=retry_base_s,
+                    max_seconds=retry_base_s,
+                )
+                if retry_base_s is not None
                 else None
             )
             await self.repository.failed(

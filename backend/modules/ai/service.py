@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import asyncio
+import json
 import re
 import secrets
+import time
 from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
@@ -11,12 +12,13 @@ from urllib.parse import urlparse
 from backend.infrastructure.ai.base import LLMChatRequest, LLMProviderConfig
 from backend.infrastructure.ai.errors import LLMError
 from backend.infrastructure.ai.factory import create_llm_client
-from backend.infrastructure.ai.local_llm_runtime import ensure_profile_ready
 from backend.infrastructure.ai.llama_cpp_server import (
     DEFAULT_LLAMA_API_BASE,
     parse_llama_cpp_command,
     shared_llama_cpp_server,
 )
+from backend.infrastructure.ai.local_llm_runtime import ensure_profile_ready
+from backend.infrastructure.cache.redis import get_redis_client
 from backend.modules.ai.schemas import (
     LlamaCppCommandRequest,
     LlamaCppCommandResponse,
@@ -153,17 +155,94 @@ def _slugify(value: str) -> str:
 
 
 class AISettingsService:
+    SETTINGS_CACHE_TTL_SECONDS = 30.0
+    SHARED_SETTINGS_TTL_SECONDS = 60
+    _PUBLIC_SETTINGS_KEY = "ai:settings:v1:public"
+    _PROVIDER_CACHE_PREFIX = "ai:provider-cache:v1"
+
     def __init__(self, repo: SettingsRepository | None = None) -> None:
         self.repo = repo or SettingsRepository()
+        self._settings_cache: dict[bool, tuple[float, LLMSettingsResponse]] = {}
+        self._cache_revision = 0
 
     async def get_settings(self, *, effective: bool = False) -> LLMSettingsResponse:
+        # Effective settings contain decrypted provider secrets. Keep them out of
+        # Redis and out of process-local caches; the safe public routing document
+        # is the shared read-through cache.
+        if not effective:
+            cached_shared = await self._get_shared_public_settings()
+            if cached_shared is not None:
+                result = LLMSettingsResponse.model_validate(cached_shared)
+                self._settings_cache[effective] = (time.monotonic(), result)
+                return result.model_copy(deep=True)
+        cached = self._settings_cache.get(effective)
+        if (
+            cached is not None
+            and not effective
+            and time.monotonic() - cached[0] < self.SETTINGS_CACHE_TTL_SECONDS
+        ):
+            return cached[1].model_copy(deep=True)
         doc = (
             await self.repo.get_effective_settings_doc()
             if effective
             else await self.repo.get_settings_doc()
         )
         normalized = self._normalize_ai(doc.get("ai", {}), include_secret=effective)
-        return LLMSettingsResponse.model_validate(normalized)
+        result = LLMSettingsResponse.model_validate(normalized)
+        if not effective:
+            self._settings_cache[effective] = (time.monotonic(), result)
+            await self._set_shared_public_settings(normalized)
+        return result.model_copy(deep=True)
+
+    def cache_revision(self) -> int:
+        return self._cache_revision
+
+    async def shared_cache_revision(self) -> int:
+        try:
+            value = await get_redis_client().get("ai:settings:v1:revision")
+            return int(value or 0)
+        except Exception:
+            return self._cache_revision
+
+    def invalidate_cache(self) -> None:
+        self._settings_cache.clear()
+        self._cache_revision += 1
+
+    async def invalidate_shared_cache(self) -> None:
+        """Invalidate routing/model caches after any settings write."""
+        self.invalidate_cache()
+        try:
+            redis = get_redis_client()
+            await redis.delete(self._PUBLIC_SETTINGS_KEY)
+            await redis.incr("ai:settings:v1:revision")
+            keys = [
+                key async for key in redis.scan_iter(match=f"{self._PROVIDER_CACHE_PREFIX}:*")
+            ]
+            if keys:
+                await redis.delete(*keys)
+        except Exception:
+            # PostgreSQL/Vault remains authoritative when Redis is unavailable.
+            return
+
+    async def _get_shared_public_settings(self) -> dict[str, Any] | None:
+        try:
+            raw = await get_redis_client().get(self._PUBLIC_SETTINGS_KEY)
+            if not raw:
+                return None
+            value = json.loads(raw)
+            return value if isinstance(value, dict) else None
+        except Exception:
+            return None
+
+    async def _set_shared_public_settings(self, value: dict[str, Any]) -> None:
+        try:
+            await get_redis_client().set(
+                self._PUBLIC_SETTINGS_KEY,
+                json.dumps(value, separators=(",", ":"), default=str),
+                ex=self.SHARED_SETTINGS_TTL_SECONDS,
+            )
+        except Exception:
+            return
 
     async def save_settings(self, payload: LLMSettingsUpdate) -> LLMSettingsResponse:
         public_doc = await self.repo.get_settings_doc()
@@ -171,6 +250,7 @@ class AISettingsService:
         self._validate_settings(normalized)
         public_doc["ai"] = normalized
         await self.repo.put_settings_doc(public_doc)
+        await self.invalidate_shared_cache()
         return await self.get_settings()
 
     async def list_profiles(self) -> LLMProfilesResponse:
@@ -248,11 +328,12 @@ class AISettingsService:
             found = True
             raw = profile.model_dump()
             incoming = payload.model_dump()
-            if not str(incoming.get("api_key") or "").strip():
-                if profile.has_api_key or incoming.get("has_api_key"):
-                    incoming["has_api_key"] = True
-                    if profile.api_key:
-                        incoming["api_key"] = MASK
+            if not str(incoming.get("api_key") or "").strip() and (
+                profile.has_api_key or incoming.get("has_api_key")
+            ):
+                incoming["has_api_key"] = True
+                if profile.api_key:
+                    incoming["api_key"] = MASK
             raw.update(incoming)
             raw["id"] = profile_id
             raw["privacy_mode"] = self._privacy_for_provider(str(raw.get("provider") or ""))
@@ -306,13 +387,26 @@ class AISettingsService:
     async def list_profile_models(self, profile_id: str):
         profile = await self.get_profile(profile_id, effective=True)
         await ensure_profile_ready(profile)
+        cache_key = f"{self._PROVIDER_CACHE_PREFIX}:models:profile:{profile_id}"
+        cached = await self._get_json_cache(cache_key)
+        if isinstance(cached, list):
+            from backend.infrastructure.ai.base import LLMModel
+
+            return [LLMModel.model_validate(item) for item in cached]
         client = create_llm_client(self._client_config_from_profile(profile))
-        return await client.list_models()
+        models = await client.list_models()
+        await self._set_json_cache(
+            cache_key,
+            [model.model_dump(mode="json") for model in models],
+            180,
+        )
+        return models
 
     async def test_profile(self, profile_id: str):
         profile = await self.get_profile(profile_id, effective=True)
         await ensure_profile_ready(profile)
         client = create_llm_client(self._client_config_from_profile(profile))
+        # Explicit connection tests always bypass cached health and refresh it.
         return await client.health_check()
 
     async def start_llama_cpp_server(self, profile_id: str) -> LlamaCppServerStatus:
@@ -345,7 +439,19 @@ class AISettingsService:
     async def list_models(self, provider: str):
         settings = await self.get_settings(effective=True)
         client = create_llm_client(self._client_config(provider, settings.providers[provider]))
-        return await client.list_models()
+        cache_key = f"{self._PROVIDER_CACHE_PREFIX}:models:provider:{provider}"
+        cached = await self._get_json_cache(cache_key)
+        if isinstance(cached, list):
+            from backend.infrastructure.ai.base import LLMModel
+
+            return [LLMModel.model_validate(item) for item in cached]
+        models = await client.list_models()
+        await self._set_json_cache(
+            cache_key,
+            [model.model_dump(mode="json") for model in models],
+            180,
+        )
+        return models
 
     async def test_connection(self, request: LLMConnectionTestRequest):
         settings = await self.get_settings(effective=True)
@@ -403,6 +509,20 @@ class AISettingsService:
         ai["task_overrides"] = task_overrides
         doc["ai"] = ai
         await self.repo.put_settings_doc(doc)
+        await self.invalidate_shared_cache()
+
+    async def _get_json_cache(self, key: str) -> Any | None:
+        try:
+            raw = await get_redis_client().get(key)
+            return json.loads(raw) if raw else None
+        except Exception:
+            return None
+
+    async def _set_json_cache(self, key: str, value: Any, ttl: int) -> None:
+        try:
+            await get_redis_client().set(key, json.dumps(value, separators=(",", ":")), ex=ttl)
+        except Exception:
+            return
 
     def _normalize_ai(self, raw: dict[str, Any], *, include_secret: bool) -> dict[str, Any]:
         defaults = default_llm_settings()

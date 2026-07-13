@@ -1,6 +1,7 @@
 import { createContext } from "react";
 import type { ReactNode } from "react";
 import { useJsApiLoader } from "@react-google-maps/api";
+import { frontendLogger } from "../../../shared/logging";
 
 const libraries: ("geometry" | "marker")[] = ["marker", "geometry"];
 
@@ -27,7 +28,9 @@ export function GoogleMapsProvider({ children }: { children: ReactNode }) {
   });
 
   if (loadError) {
-    console.error(loadError);
+    frontendLogger.error("frontend", "Google Maps failed to load", {
+      message: loadError.message,
+    });
   }
 
   return (

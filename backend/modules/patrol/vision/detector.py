@@ -26,18 +26,25 @@ class ObjectDetector:
         conf: float = 0.35,
         iou: float = 0.45,
         allowed_labels: set[str] | frozenset[str] | None = None,
+        class_confidence: dict[str, float] | None = None,
     ):
         self.model_path = model_path
         self.conf = float(conf)
         self.iou = float(iou)
         self.allowed = frozenset(allowed_labels or DEFAULT_ALLOWED_LABELS)
+        self.class_confidence = {
+            str(label).strip().lower(): max(0.0, min(1.0, float(value)))
+            for label, value in (class_confidence or {}).items()
+        }
         self._model = None
 
     def set_allowed_labels(self, allowed_labels: set[str] | frozenset[str] | None) -> None:
         if allowed_labels is None:
             self.allowed = DEFAULT_ALLOWED_LABELS
             return
-        normalized = frozenset(str(label).strip().lower() for label in allowed_labels if str(label).strip())
+        normalized = frozenset(
+            str(label).strip().lower() for label in allowed_labels if str(label).strip()
+        )
         self.allowed = normalized if normalized else frozenset()
 
     def _ensure_model(self):
@@ -86,6 +93,8 @@ class ObjectDetector:
                 if label not in self.allowed:
                     continue
                 conf = float(box.conf[0].item())
+                if conf < self.class_confidence.get(label.lower(), self.conf):
+                    continue
                 x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                 detections.append(Detection(label=label, confidence=conf, bbox=(x1, y1, x2, y2)))
 

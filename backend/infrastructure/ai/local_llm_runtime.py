@@ -13,6 +13,7 @@ def _client_config_from_profile(profile: LLMProfile) -> LLMProviderConfig:
     import re
 
     from backend.modules.ai.service import PROVIDERS
+    from backend.modules.settings.repository import MASK
 
     model = profile.model
     if not model and profile.provider == "llama_cpp" and profile.llama_config.model_path:
@@ -20,7 +21,9 @@ def _client_config_from_profile(profile: LLMProfile) -> LLMProviderConfig:
     return LLMProviderConfig(
         provider=profile.provider,  # type: ignore[arg-type]
         api_base=profile.api_base or PROVIDERS[profile.provider].default_api_base,
-        api_key="",
+        api_key=""
+        if profile.api_key in {None, "[REDACTED]", MASK}
+        else str(profile.api_key),
         model=model,
         timeout_seconds=profile.timeout_seconds,
         temperature=profile.temperature,
@@ -92,4 +95,3 @@ async def chat_with_profile(profile: LLMProfile, request: LLMChatRequest):
     await ensure_profile_ready(profile)
     client = create_llm_client(_client_config_from_profile(profile))
     return await client.chat(request)
-

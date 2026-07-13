@@ -125,4 +125,5 @@ class MissionRuntime(Base):
     __table_args__ = (
         Index("idx_mission_runtime_state_created", "state", "created_at"),
         Index("idx_mission_runtime_user", "user_id", "created_at"),
+        Index("idx_mission_runtime_client_state", "client_flight_id", "state"),
     )

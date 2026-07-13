@@ -15,6 +15,7 @@ from backend.core.database.session import Session, get_db
 from backend.modules.identity.models import ApiKey, User, UserRole
 from backend.modules.identity.service import decode_token
 from backend.modules.organizations.models import Organization
+from backend.observability.context import bind_log_context
 
 logger = logging.getLogger(__name__)
 
@@ -160,11 +161,13 @@ async def require_user(
     access_token: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    return await resolve_user_from_request(
+    user = await resolve_user_from_request(
         db=db,
         authorization=authorization,
         access_token=access_token,
     )
+    bind_log_context(org_id=user.org_id, user_id=user.id)
+    return user
 
 
 async def require_user_header_or_query(

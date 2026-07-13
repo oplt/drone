@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import json
 import logging
 import shlex
 import subprocess
 import time
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Literal
 
-from backend.infrastructure.warehouse.bridge_config import list_ros2_topics, ros_command_env
+from backend.infrastructure.cache.redis import get_sync_redis_client
+from backend.infrastructure.runtime.blocking import blocking_process_runner, run_blocking
+from backend.infrastructure.warehouse.bridge_config import list_ros2_topics_async, ros_command_env
 from backend.modules.warehouse.service.map_source_config import (
     ESDF_TOPIC_CANDIDATES,
     NVBLOX_INTERNAL_LAYER_TOPICS,
@@ -46,6 +49,23 @@ TopicBridgeKind = Literal[
 
 _MAX_TOPIC_INFO_WORKERS = 8
 _MAX_MESSAGE_PROBE_CONCURRENCY = 4
+_RGBD_READINESS_KEY = "warehouse:readiness:rgbd:v1"
+_TOPIC_PROBE_KEY = "warehouse:readiness:topic-probe:v1"
+
+
+def invalidate_readiness_caches() -> None:
+    """Drop diagnostics after bridge/config changes; safety checks still probe fresh."""
+    global _rgbd_readiness_cache, _rgbd_readiness_cache_at
+    global _topic_probe_cache, _topic_probe_cache_at
+    _rgbd_readiness_cache = None
+    _rgbd_readiness_cache_at = 0.0
+    _topic_probe_cache = None
+    _topic_probe_cache_at = 0.0
+    try:
+        client = get_sync_redis_client()
+        client.delete(_RGBD_READINESS_KEY, _TOPIC_PROBE_KEY)
+    except Exception:
+        logger.debug("warehouse_readiness_cache_invalidation_failed", exc_info=True)
 
 
 @dataclass
@@ -153,10 +173,46 @@ def _store_rgbd_readiness_cache(result: MappingReadinessResult) -> None:
     if result.ready:
         _rgbd_readiness_cache = result
         _rgbd_readiness_cache_at = time.monotonic()
+        try:
+            get_sync_redis_client().setex(
+                _RGBD_READINESS_KEY,
+                max(1, int(_rgbd_readiness_cache_ttl_s())),
+                json.dumps(
+                    {
+                        "ready": result.ready,
+                        "missing_topics": result.missing_topics,
+                        "topic_probes": [asdict(probe) for probe in result.topic_probes],
+                        "warnings": result.warnings,
+                        "rgbd_pointcloud_topic": result.rgbd_pointcloud_topic,
+                        "rgbd_input_topics_ready": result.rgbd_input_topics_ready,
+                        "nvblox_pointcloud_topics": result.nvblox_pointcloud_topics,
+                        "timing_ms": result.timing_ms,
+                    },
+                    separators=(",", ":"),
+                ),
+            )
+        except Exception:
+            logger.debug("rgbd_readiness_shared_state_unavailable", exc_info=True)
 
 
 def peek_cached_rgbd_readiness(*, max_age_s: float | None = None) -> MappingReadinessResult | None:
     """Return a recent successful RGB-D readiness result, if any."""
+    try:
+        payload = get_sync_redis_client().get(_RGBD_READINESS_KEY)
+        if payload:
+            raw = json.loads(payload)
+            return MappingReadinessResult(
+                ready=bool(raw.get("ready")),
+                missing_topics=list(raw.get("missing_topics") or []),
+                topic_probes=[TopicTypeProbe(**item) for item in raw.get("topic_probes") or []],
+                warnings=list(raw.get("warnings") or []),
+                rgbd_pointcloud_topic=raw.get("rgbd_pointcloud_topic"),
+                rgbd_input_topics_ready=bool(raw.get("rgbd_input_topics_ready")),
+                nvblox_pointcloud_topics=list(raw.get("nvblox_pointcloud_topics") or []),
+                timing_ms=dict(raw.get("timing_ms") or {}),
+            )
+    except Exception:
+        logger.debug("rgbd_readiness_shared_state_read_failed", exc_info=True)
     if _rgbd_readiness_cache is None:
         return None
     ttl = _rgbd_readiness_cache_ttl_s() if max_age_s is None else max(0.0, max_age_s)
@@ -374,7 +430,7 @@ def _source_setup(ws: Path) -> str:
 def _run_sourced_ros_command(command: str, *, ws: Path, timeout_s: float) -> subprocess.CompletedProcess[str] | None:
     cmd = f"{_source_setup(ws)} && {command}"
     try:
-        return subprocess.run(
+        return blocking_process_runner.run(
             ["bash", "-lc", cmd],
             cwd=str(ws),
             capture_output=True,
@@ -438,7 +494,7 @@ async def refresh_structure_input_readiness(
     """Perform an uncached ROS graph and first-message check for extraction inputs."""
     ws = _ros2_workspace()
     try:
-        topics = set(await asyncio.to_thread(list_ros2_topics, ws))
+        topics = set(await list_ros2_topics_async(ws))
     except RuntimeError:
         topics = set()
 
@@ -556,6 +612,20 @@ def probe_live_map_topic_types(
     if use_cache and ttl > 0.0 and _topic_probe_cache is not None and topics is None:
         if (time.monotonic() - _topic_probe_cache_at) < ttl:
             return _topic_probe_cache
+    if use_cache and ttl > 0.0 and topics is None:
+        try:
+            payload = get_sync_redis_client().get(_TOPIC_PROBE_KEY)
+            if payload:
+                raw = json.loads(payload)
+                result = (
+                    [TopicTypeProbe(**item) for item in raw.get("probes") or []],
+                    dict(raw.get("topic_types") or {}),
+                )
+                _topic_probe_cache = result
+                _topic_probe_cache_at = time.monotonic()
+                return result
+        except Exception:
+            logger.debug("topic_probe_shared_state_read_failed", exc_info=True)
 
     ws = _ros2_workspace()
     if topics is None:
@@ -604,6 +674,20 @@ def probe_live_map_topic_types(
     if use_cache and topics is None:
         _topic_probe_cache = result
         _topic_probe_cache_at = time.monotonic()
+        try:
+            get_sync_redis_client().setex(
+                _TOPIC_PROBE_KEY,
+                max(1, int(ttl)),
+                json.dumps(
+                    {
+                        "probes": [asdict(probe) for probe in probes],
+                        "topic_types": topic_types,
+                    },
+                    separators=(",", ":"),
+                ),
+            )
+        except Exception:
+            logger.debug("topic_probe_shared_state_unavailable", exc_info=True)
     return result
 
 
@@ -666,7 +750,7 @@ async def wait_for_rgbd_mapping_topics(
 
     while loop.time() < deadline:
         try:
-            topics = set(await asyncio.to_thread(list_ros2_topics, ws))
+            topics = set(await list_ros2_topics_async(ws))
         except RuntimeError:
             topics = set()
 
@@ -727,7 +811,7 @@ async def wait_for_rgbd_mapping_topics(
         await asyncio.sleep(min(max(0.15, poll_s), max(0.15, deadline - loop.time())))
 
     try:
-        topics = set(await asyncio.to_thread(list_ros2_topics, ws))
+        topics = set(await list_ros2_topics_async(ws))
     except RuntimeError:
         topics = set()
     last_probes, topic_types = await asyncio.to_thread(probe_live_map_topic_types, topics=topics)
@@ -759,8 +843,8 @@ async def probe_mapping_tf_degraded(
 
     env = ros_command_env()
     try:
-        result = await asyncio.to_thread(
-            subprocess.run,
+        result = await run_blocking(
+            blocking_process_runner.run,
             _sourced_ros_cmd(
                 "timeout 3.0 ros2 run tf2_ros tf2_echo "
                 f"{shlex.quote(parent_frame)} {shlex.quote(child_frame)}"
@@ -769,6 +853,8 @@ async def probe_mapping_tf_degraded(
             capture_output=True,
             text=True,
             timeout=5.5,
+            boundary="process",
+            operation="ros_mapping_tf_probe",
         )
         stdout = result.stdout or ""
         ok = "At time" in stdout

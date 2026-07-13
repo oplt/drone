@@ -51,10 +51,15 @@ class MissionRuntimeReadMixin:
             return result.scalar_one_or_none()
 
     async def list_recent(
-        self, *, user_id: int | None = None, limit: int = 50
+        self, *, user_id: int | None = None, limit: int = 50, offset: int = 0
     ) -> list[MissionRuntime]:
         async with self._sf() as s:
-            q = select(MissionRuntime).order_by(MissionRuntime.created_at.desc()).limit(limit)
+            q = (
+                select(MissionRuntime)
+                .order_by(MissionRuntime.created_at.desc(), MissionRuntime.id.desc())
+                .offset(max(0, offset))
+                .limit(max(1, limit))
+            )
             if user_id is not None:
                 q = q.where(MissionRuntime.user_id == user_id)
             result = await s.execute(q)
@@ -65,6 +70,7 @@ class MissionRuntimeReadMixin:
         *,
         user_id: int | None = None,
         limit: int = 50,
+        offset: int = 0,
     ) -> list[MissionRuntime]:
         """Return terminal missions that have non-empty resume_metadata and mission_params."""
         async with self._sf() as s:
@@ -78,8 +84,9 @@ class MissionRuntimeReadMixin:
                     MissionRuntime.resume_metadata != cast({}, JSONB),
                     MissionRuntime.mission_params != cast({}, JSONB),
                 )
-                .order_by(MissionRuntime.created_at.desc())
-                .limit(limit)
+                .order_by(MissionRuntime.created_at.desc(), MissionRuntime.id.desc())
+                .offset(max(0, offset))
+                .limit(max(1, limit))
             )
             if user_id is not None:
                 q = q.where(MissionRuntime.user_id == user_id)

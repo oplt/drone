@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useContext } from "react";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
+import { useNotice } from "../../../shared/ui/NoticeContext";
 import {
   Box,
   Paper,
@@ -71,7 +72,7 @@ import {
   fetchHerdRiskAlerts,
   planLivestockTaskMission,
 } from "../api/livestockApi";
-import type { Herd, HerdAlert, HerdLatestPos } from "../types";
+import type { Herd, HerdAlert, HerdLatestPos } from "../types"; import { frontendLogger } from "../../../shared/logging";
 
 type Waypoint = { lat: number; lon: number; alt: number };
 
@@ -102,6 +103,7 @@ const containerStyle = { width: "100%", height: "400px" };
 const defaultCenter = { lat: 50.8503, lng: 4.3517 };
 
 export default function AnimalFarmPage() {
+  const { notify } = useNotice();
   const preflightCommandsDrawer = useTaskPreflightCommandsDrawer();
   const mapRef = useRef<google.maps.Map | null>(null);
   const terraDrawRef = useRef<TerraDraw | null>(null);
@@ -116,7 +118,7 @@ export default function AnimalFarmPage() {
 
   const { errors, addError, clearErrors, dismissError } = useErrors();
   const handleLocationError = useCallback((error: GeolocationPositionError) => {
-    console.error("Error getting location:", error);
+    frontendLogger.error("frontend", "Error getting location", { message: error.message, code: error.code });
     const message = `Failed to get location: ${error.message}`;
     addError(message);
     return message;
@@ -584,7 +586,7 @@ useEffect(() => {
         };
         const { preflight, mission: data } = await startMissionWithPreflight(payload, token);
         setPreflightRun(preflight);
-        alert(`Flight plan "${data.mission_name}" started! Tracking flight...`);
+        notify(`Flight plan "${data.mission_name}" started. Tracking flight.`, "success");
 
         setPendingFlightId(data.flight_id ?? null);
 

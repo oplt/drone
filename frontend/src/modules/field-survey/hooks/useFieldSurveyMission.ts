@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { getToken } from "../../../modules/session";
+import { useNotice } from "../../../shared/ui/NoticeContext";
 import {
   startMissionWithPreflight,
   type PreflightRunResponse,
@@ -37,6 +38,7 @@ export function useFieldSurveyMission({
   setLastMissionId: (id: string | null) => void;
   onMissionStarted: () => void;
 }) {
+  const { notify } = useNotice();
   const missionLaunchInFlightRef = useRef(false);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const {
@@ -155,7 +157,7 @@ export function useFieldSurveyMission({
 
       const { preflight, mission: data } = await startMissionWithPreflight(payload, token);
       setPreflightRun(preflight);
-      alert(`Grid Survey: "${data.mission_name}" started! Tracking flight...`);
+      notify(`Grid Survey: "${data.mission_name}" started. Tracking flight.`, "success");
 
       setPendingFlightId(data.flight_id ?? null);
       setLastMissionId(data.flight_id ?? null);

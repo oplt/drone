@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { GoogleMapsProvider } from "../../modules/maps/providers/googleMaps";
+import { NoticeProvider } from "../../shared/ui/NoticeProvider";
+import { ConfirmProvider } from "../../shared/ui/ConfirmProvider";
 import { QueryProvider } from "./QueryProvider";
 
 type AppProvidersProps = {
@@ -9,7 +11,11 @@ type AppProvidersProps = {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <QueryProvider>
-      <GoogleMapsProvider>{children}</GoogleMapsProvider>
+      <NoticeProvider>
+        <ConfirmProvider>
+          <GoogleMapsProvider>{children}</GoogleMapsProvider>
+        </ConfirmProvider>
+      </NoticeProvider>
     </QueryProvider>
   );
 }

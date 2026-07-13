@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 from backend.modules.agents.registry import agents_for_mission_type
+from backend.infrastructure.jobs import enqueue_task
 from backend.modules.agents.schemas import AgentContext, AgentPhase, MissionAgentId
 
 logger = logging.getLogger(__name__)
@@ -15,9 +16,8 @@ def enqueue_agent_run(
 ) -> None:
     """Best-effort enqueue; never raises to callers on the flight path."""
     try:
-        from backend.entrypoints.workers.agents_tasks import run_agent_task
-
-        run_agent_task.delay(
+        enqueue_task(
+            "agents.run_agent_task",
             agent_id=agent_id.value,
             context=context.model_dump(mode="json"),
         )

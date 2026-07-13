@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { LatLng } from "../../../shared/utils/extractLatLng";
+import { frontendLogger } from "../../../shared/logging";
 
 const GEOLOCATION_OPTIONS: PositionOptions = {
   enableHighAccuracy: true,
@@ -40,7 +41,7 @@ export function useUserLocation({
     requestedRef.current = true;
 
     if (!navigator.geolocation) {
-      console.warn(UNSUPPORTED_MESSAGE);
+      frontendLogger.warn("frontend", UNSUPPORTED_MESSAGE);
       return;
     }
 

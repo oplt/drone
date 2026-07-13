@@ -142,7 +142,7 @@ class WarehouseScanMappingService:
                 logger.exception("warehouse_scan_mapping_persist_failed")
                 raise WarehouseScanMappingError(str(exc)) from exc
 
-        _maybe_enqueue_structure_extraction(
+        await _maybe_enqueue_structure_extraction(
             warehouse_map_id=int(warehouse_map_id),
             model_id=model_id,
             capture_result=capture_result,
@@ -157,7 +157,7 @@ class WarehouseScanMappingService:
         }
 
 
-def _maybe_enqueue_structure_extraction(
+async def _maybe_enqueue_structure_extraction(
     *,
     warehouse_map_id: int,
     model_id: int,
@@ -180,11 +180,10 @@ def _maybe_enqueue_structure_extraction(
         )
         return
     try:
-        from backend.entrypoints.workers.warehouse_mapping_tasks import (
-            extract_warehouse_structure,
-        )
         from backend.modules.warehouse.service.structure_jobs import (
+            create_durable_extraction_job,
             record_extraction_queued,
+            update_durable_extraction_job,
             warehouse_mapping_worker_ready,
         )
 
@@ -198,16 +197,42 @@ def _maybe_enqueue_structure_extraction(
             )
             return
 
-        async_result = extract_warehouse_structure.delay(
-            warehouse_map_id=int(warehouse_map_id),
-            model_id=int(model_id),
-            client_flight_id=client_flight_id,
-        )
+        from backend.infrastructure.jobs import enqueue_task
+
+        async with Session() as state_db:
+            durable_job = await create_durable_extraction_job(
+                state_db,
+                warehouse_map_id=int(warehouse_map_id),
+                model_id=int(model_id),
+                client_flight_id=client_flight_id,
+                params={"capture_result": dict(capture_result)},
+            )
+            await state_db.commit()
+        task_id = durable_job.processor_task_id
+        if task_id is None:
+            task_id = enqueue_task(
+                "warehouse_mapping.extract_structure",
+                queue=settings.celery_warehouse_mapping_queue,
+                warehouse_map_id=int(warehouse_map_id),
+                model_id=int(model_id),
+                client_flight_id=client_flight_id,
+                extraction_job_id=int(durable_job.id),
+            )
+            async with Session() as state_db:
+                await update_durable_extraction_job(
+                    state_db,
+                    warehouse_map_id=int(warehouse_map_id),
+                    model_id=int(model_id),
+                    status="queued",
+                    task_id=task_id,
+                    job_id=int(durable_job.id),
+                )
+                await state_db.commit()
         record_extraction_queued(
             warehouse_map_id=int(warehouse_map_id),
             model_id=int(model_id),
             client_flight_id=client_flight_id,
-            task_id=getattr(async_result, "id", None),
+            task_id=task_id,
             source="persist_capture",
         )
         logger.info(

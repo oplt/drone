@@ -21,11 +21,15 @@ class MissionRuntimeApplication:
     async def get_active(self):
         return await mission_runtime_repo.get_active()
 
-    async def list_recent(self, *, user_id: int | None, limit: int):
-        return await mission_runtime_repo.list_recent(user_id=user_id, limit=limit)
+    async def list_recent(self, *, user_id: int | None, limit: int, offset: int = 0):
+        return await mission_runtime_repo.list_recent(
+            user_id=user_id, limit=limit, offset=offset
+        )
 
-    async def list_resumable(self, *, user_id: int | None, limit: int):
-        return await mission_runtime_repo.list_resumable(user_id=user_id, limit=limit)
+    async def list_resumable(self, *, user_id: int | None, limit: int, offset: int = 0):
+        return await mission_runtime_repo.list_resumable(
+            user_id=user_id, limit=limit, offset=offset
+        )
 
     async def set_state(self, client_flight_id: str, **values: Any) -> bool:
         return await mission_runtime_repo.set_state(client_flight_id, **values)
@@ -45,8 +49,10 @@ class MissionRuntimeApplication:
     async def record_command(self, **values: Any):
         return await operator_command_repo.create(**values)
 
-    async def list_commands(self, client_flight_id: str):
-        return await operator_command_repo.list_for_mission(client_flight_id)
+    async def list_commands(self, client_flight_id: str, *, limit: int = 400, offset: int = 0):
+        return await operator_command_repo.list_for_mission(
+            client_flight_id, limit=limit, offset=offset
+        )
 
     async def create_preflight(self, **values: Any):
         return await preflight_run_repo.create(**values)
@@ -54,8 +60,10 @@ class MissionRuntimeApplication:
     async def get_preflight(self, run_uuid: str):
         return await preflight_run_repo.get_by_uuid(run_uuid)
 
-    async def list_events(self, *, flight_id: int, limit: int):
-        return await mission_audit_repository.list_events(flight_id=flight_id, limit=limit)
+    async def list_events(self, *, flight_id: int, limit: int, offset: int = 0):
+        return await mission_audit_repository.list_events(
+            flight_id=flight_id, limit=limit, offset=offset
+        )
 
     async def set_operational_flight_status(
         self, repository: Any, flight_id: int, *, status: Any, note: str

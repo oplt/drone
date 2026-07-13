@@ -56,6 +56,15 @@ class AgentResult(BaseModel):
     structured: dict[str, Any] | None = None
     risk_level: Literal["low", "medium", "high", "critical"] | None = None
     requires_human_approval: bool = False
+    confidence: float | None = None
+    abstained: bool = False
+    decision_status: Literal[
+        "confident",
+        "no_evidence",
+        "provider_unavailable",
+        "input_stale",
+        "model_uncertain",
+    ] = "confident"
     profile_id: str | None = None
     model: str | None = None
     latency_ms: int | None = None
@@ -73,6 +82,7 @@ class AgentDefinition(BaseModel):
     prompt_version: str = "v1"
     max_turns: int = 1
     timeout_seconds: int = 30
+    retry_budget: int = Field(default=1, ge=0, le=2)
     settings_flag: str = ""
 
 

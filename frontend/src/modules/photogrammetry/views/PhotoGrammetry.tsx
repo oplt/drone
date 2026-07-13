@@ -6,6 +6,7 @@ import {
 } from "../../mission-workflow";
 import type { TelemetrySnapshot } from "../../mission-runtime/types/runtime";
 import { FieldDeleteDialog } from "../../fields/components/FieldDeleteDialog";
+import ConfirmDialog from "../../../shared/ui/ConfirmDialog";
 import { PhotogrammetryArtifactsPanel } from "../components/PhotogrammetryArtifactsPanel";
 import { PhotogrammetryFieldsBlock } from "../components/PhotogrammetryFieldsBlock";
 import { PhotogrammetryGridParamsSection } from "../components/PhotogrammetryGridParamsSection";
@@ -136,6 +137,16 @@ export default function PhotoGrammetryPage() {
         deleting={vm.deletingField}
         onClose={vm.closeDeleteFieldDialog}
         onConfirm={() => void vm.confirmDeleteSelectedField()}
+      />
+      <ConfirmDialog
+        open={mapping.pendingDeleteJobId != null}
+        title="Delete mapping job?"
+        description={`Delete mapping job #${mapping.pendingDeleteJobId ?? ""}? This cannot be undone.`}
+        confirmLabel="Delete job"
+        confirmColor="error"
+        loading={mapping.busy}
+        onCancel={mapping.closeDeleteJobDialog}
+        onConfirm={() => void mapping.confirmDeleteJob()}
       />
     </MissionWorkflowShell>
   );

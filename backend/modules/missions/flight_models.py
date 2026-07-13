@@ -96,6 +96,11 @@ class Flight(Base):
         back_populates="flight", cascade="all, delete-orphan"
     )
 
+    __table_args__ = (
+        Index("idx_flights_started_at", "started_at"),
+        Index("idx_flights_ended_at", "ended_at"),
+    )
+
 
 class FlightEvent(Base):
     __tablename__ = "flight_events"

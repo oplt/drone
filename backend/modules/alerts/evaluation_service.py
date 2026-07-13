@@ -23,6 +23,7 @@ from backend.core.events import (
     next_runtime_sequence,
     utc_now,
 )
+from backend.infrastructure.cache.locks import distributed_lock
 from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
 from backend.modules.alerts.recipient_parsing import parse_delimited_tokens
 from backend.modules.alerts.repository import AlertRepository
@@ -89,7 +90,10 @@ class AlertEngine:
             except SQLAlchemyError as exc:
                 now = time.monotonic()
                 if now - self._last_db_error_log_at >= 60.0:
-                    logger.warning("Operational alert evaluation skipped: database unavailable: %s", exc)
+                    logger.warning(
+                        "Operational alert evaluation skipped: database unavailable: %s",
+                        exc,
+                    )
                     self._last_db_error_log_at = now
             except Exception:
                 logger.exception("Operational alert evaluation failed")
@@ -100,6 +104,22 @@ class AlertEngine:
         logger.info("Operational alert engine loop stopped")
 
     async def evaluate_once(self) -> None:
+        """Run one leased evaluation cycle.
+
+        API replicas may all start the alert engine. A short Redis lease keeps
+        one replica from duplicating alert writes and notification work.
+        """
+        try:
+            async with distributed_lock(
+                "lock:alerts:evaluation",
+                timeout=max(30, int(settings.alerts_check_interval_sec or 5) * 2),
+                blocking_timeout=0.1,
+            ):
+                await self._evaluate_once()
+        except TimeoutError:
+            logger.debug("Skipping alert evaluation; another replica owns the lease")
+
+    async def _evaluate_once(self) -> None:
         if not settings.alerts_enabled:
             return
 
@@ -171,35 +191,40 @@ class AlertEngine:
                 if dedupe_key in signal_by_key:
                     continue
                 resolved = await self._repo.resolve_alert(db, alert=active, now=now)
-                # ✅ Force refresh the object to load all attributes while session is open
-                await db.refresh(resolved)
                 snapshot = AlertSnapshotV1.from_alert(resolved)
                 events.append(("resolved", snapshot, resolved.id))
 
+            outbox_events: list[dict[str, Any]] = []
             for payload, alert_id, org_id in notify_queue:
                 notified = payload.last_notified_at or now
-                await self._outbox.enqueue(
-                    db,
-                    event_type="alert.notify",
-                    aggregate_type="operational_alert",
-                    aggregate_id=str(alert_id),
-                    idempotency_key=f"alert.notify:{alert_id}:{notified.isoformat()}",
-                    payload={"alert_id": alert_id, "alert": payload.to_legacy_alert_dict()},
+                outbox_events.append(
+                    {
+                        "event_type": "alert.notify",
+                        "aggregate_type": "operational_alert",
+                        "aggregate_id": str(alert_id),
+                        "idempotency_key": f"alert.notify:{alert_id}:{notified.isoformat()}",
+                        "payload": {"alert_id": alert_id, "alert": payload.to_legacy_alert_dict()},
+                    }
                 )
                 if org_id is not None:
-                    await self._outbox.enqueue(
-                        db,
-                        event_type="webhook.dispatch",
-                        aggregate_type="alert.triggered",
-                        aggregate_id=str(alert_id),
-                        idempotency_key=f"webhook:alert.triggered:{alert_id}:{notified.isoformat()}",
-                        payload={
-                            "event": "alert.triggered",
-                            "org_id": org_id,
-                            "data": payload.to_legacy_alert_dict(),
-                            "timestamp": notified.isoformat(),
-                        },
+                    outbox_events.append(
+                        {
+                            "event_type": "webhook.dispatch",
+                            "aggregate_type": "alert.triggered",
+                            "aggregate_id": str(alert_id),
+                            "idempotency_key": (
+                                f"webhook:alert.triggered:{alert_id}:{notified.isoformat()}"
+                            ),
+                            "payload": {
+                                "event": "alert.triggered",
+                                "org_id": org_id,
+                                "data": payload.to_legacy_alert_dict(),
+                                "timestamp": notified.isoformat(),
+                            },
+                        }
                     )
+
+            await self._outbox.enqueue_many(db, events=outbox_events)
 
             await db.commit()
 
@@ -352,50 +377,53 @@ class AlertEngine:
         signals: list[AlertSignal] = []
 
         herd_ids = self._parse_int_csv(settings.alerts_monitor_herd_ids)
+        max_herds = max(1, int(getattr(settings, "alerts_max_herds_per_cycle", 100)))
         if not herd_ids:
-            rows = await db.execute(select(Herd.id))
+            rows = await db.execute(select(Herd.id).limit(max_herds))
             herd_ids = [int(r[0]) for r in rows.all()]
+        else:
+            herd_ids = herd_ids[:max_herds]
         if not herd_ids:
             return signals
 
         threshold = float(settings.alerts_herd_isolation_threshold_m or 250.0)
-        for herd_id in herd_ids:
-            try:
-                isolation_alerts = await self._risk.isolation_alerts(
-                    db,
-                    herd_id=herd_id,
-                    threshold_m=threshold,
-                )
-            except Exception:
-                logger.exception("Failed to evaluate herd isolation for herd_id=%s", herd_id)
-                continue
+        try:
+            isolation_alerts = await self._risk.isolation_alerts_for_herds(
+                db,
+                herd_ids=herd_ids,
+                threshold_m=threshold,
+            )
+        except Exception:
+            logger.exception("Failed to evaluate herd isolation for herd_ids=%s", herd_ids)
+            return signals
 
-            for item in isolation_alerts:
-                animal_id = item.get("animal_id")
-                collar_id = item.get("collar_id")
-                distance = self._to_float(item.get("distance_to_nearest_m"))
-                signals.append(
-                    AlertSignal(
-                        rule_type="herd_isolation",
-                        dedupe_key=f"herd.isolation.{herd_id}.{animal_id}",
-                        source="herd",
-                        severity="high",
-                        title="Herd Isolation",
-                        message=(
-                            f"Animal {collar_id or animal_id} in herd {herd_id} is isolated by "
-                            f"{(distance or 0.0):.0f}m (threshold {threshold:.0f}m)."
-                        ),
-                        meta_data={
-                            "herd_id": herd_id,
-                            "animal_id": animal_id,
-                            "collar_id": collar_id,
-                            "distance_to_nearest_m": distance,
-                            "threshold_m": threshold,
-                            "lat": item.get("lat"),
-                            "lon": item.get("lon"),
-                        },
-                    )
+        for item in isolation_alerts:
+            animal_id = item.get("animal_id")
+            collar_id = item.get("collar_id")
+            herd_id = int(item.get("herd_id") or 0)
+            distance = self._to_float(item.get("distance_to_nearest_m"))
+            signals.append(
+                AlertSignal(
+                    rule_type="herd_isolation",
+                    dedupe_key=f"herd.isolation.{herd_id}.{animal_id}",
+                    source="herd",
+                    severity="high",
+                    title="Herd Isolation",
+                    message=(
+                        f"Animal {collar_id or animal_id} in herd {herd_id} is isolated by "
+                        f"{(distance or 0.0):.0f}m (threshold {threshold:.0f}m)."
+                    ),
+                    meta_data={
+                        "herd_id": herd_id,
+                        "animal_id": animal_id,
+                        "collar_id": collar_id,
+                        "distance_to_nearest_m": distance,
+                        "threshold_m": threshold,
+                        "lat": item.get("lat"),
+                        "lon": item.get("lon"),
+                    },
                 )
+            )
 
         return signals
 

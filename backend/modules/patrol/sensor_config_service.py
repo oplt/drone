@@ -44,8 +44,12 @@ def _org_filters(model: Any, *, org_id: int | None, owner_id: int) -> list[Any]:
     return filters
 
 
-async def get_site(db: AsyncSession, *, site_id: int, org_id: int | None, owner_id: int) -> PatrolSite:
-    stmt = select(PatrolSite).where(PatrolSite.id == site_id, *_org_filters(PatrolSite, org_id=org_id, owner_id=owner_id))
+async def get_site(
+    db: AsyncSession, *, site_id: int, org_id: int | None, owner_id: int
+) -> PatrolSite:
+    stmt = select(PatrolSite).where(
+        PatrolSite.id == site_id, *_org_filters(PatrolSite, org_id=org_id, owner_id=owner_id)
+    )
     site = await db.scalar(stmt)
     if site is None:
         raise HTTPException(status_code=404, detail="Patrol site not found")
@@ -60,6 +64,45 @@ async def list_sites(db: AsyncSession, *, org_id: int | None, owner_id: int) -> 
         .order_by(PatrolSite.name.asc())
     )
     return list((await db.scalars(stmt)).all())
+
+
+async def find_site_for_field(
+    db: AsyncSession, *, field_id: int, org_id: int | None, owner_id: int
+) -> PatrolSite | None:
+    return await db.scalar(
+        select(PatrolSite).where(
+            PatrolSite.field_id == field_id,
+            *_org_filters(PatrolSite, org_id=org_id, owner_id=owner_id),
+        )
+    )
+
+
+async def find_profile(
+    db: AsyncSession, *, profile_id: int, org_id: int | None, owner_id: int
+) -> PatrolResponseProfile:
+    stmt = (
+        select(PatrolResponseProfile)
+        .join(PatrolSite, PatrolSite.id == PatrolResponseProfile.site_id)
+        .where(
+            PatrolResponseProfile.id == profile_id,
+            *_org_filters(PatrolSite, org_id=org_id, owner_id=owner_id),
+        )
+    )
+    profile = await db.scalar(stmt)
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Response profile not found")
+    return profile
+
+
+async def find_sensor_duplicate(
+    db: AsyncSession, *, external_sensor_id: str, org_id: int | None, owner_id: int
+) -> PatrolSensor | None:
+    return await db.scalar(
+        select(PatrolSensor).where(
+            PatrolSensor.external_sensor_id == external_sensor_id.strip(),
+            *_org_filters(PatrolSensor, org_id=org_id, owner_id=owner_id),
+        )
+    )
 
 
 async def get_accessible_field(
@@ -154,11 +197,15 @@ async def list_profiles(
     org_id: int | None,
     owner_id: int,
 ) -> list[PatrolResponseProfile]:
-    stmt = select(PatrolResponseProfile).join(PatrolSite, PatrolSite.id == PatrolResponseProfile.site_id)
+    stmt = select(PatrolResponseProfile).join(
+        PatrolSite, PatrolSite.id == PatrolResponseProfile.site_id
+    )
     filters = _org_filters(PatrolSite, org_id=org_id, owner_id=owner_id)
     if site_id is not None:
         filters.append(PatrolResponseProfile.site_id == site_id)
-    stmt = stmt.where(*filters).order_by(PatrolResponseProfile.site_id.asc(), PatrolResponseProfile.name.asc())
+    stmt = stmt.where(*filters).order_by(
+        PatrolResponseProfile.site_id.asc(), PatrolResponseProfile.name.asc()
+    )
     return list((await db.scalars(stmt)).all())
 
 
@@ -196,11 +243,16 @@ async def get_sensor_by_external_id(
     return await db.scalar(stmt)
 
 
-async def get_sensor(db: AsyncSession, *, sensor_pk: int, org_id: int | None, owner_id: int) -> PatrolSensor:
+async def get_sensor(
+    db: AsyncSession, *, sensor_pk: int, org_id: int | None, owner_id: int
+) -> PatrolSensor:
     stmt = (
         select(PatrolSensor)
         .options(selectinload(PatrolSensor.site), selectinload(PatrolSensor.response_profile))
-        .where(PatrolSensor.id == sensor_pk, *_org_filters(PatrolSensor, org_id=org_id, owner_id=owner_id))
+        .where(
+            PatrolSensor.id == sensor_pk,
+            *_org_filters(PatrolSensor, org_id=org_id, owner_id=owner_id),
+        )
     )
     sensor = await db.scalar(stmt)
     if sensor is None:
@@ -208,8 +260,14 @@ async def get_sensor(db: AsyncSession, *, sensor_pk: int, org_id: int | None, ow
     return sensor
 
 
-async def clear_default_profiles(db: AsyncSession, *, site_id: int, except_profile_id: int | None = None) -> None:
-    stmt = update(PatrolResponseProfile).where(PatrolResponseProfile.site_id == site_id).values(is_default=False)
+async def clear_default_profiles(
+    db: AsyncSession, *, site_id: int, except_profile_id: int | None = None
+) -> None:
+    stmt = (
+        update(PatrolResponseProfile)
+        .where(PatrolResponseProfile.site_id == site_id)
+        .values(is_default=False)
+    )
     if except_profile_id is not None:
         stmt = stmt.where(PatrolResponseProfile.id != except_profile_id)
     await db.execute(stmt)
@@ -298,8 +356,12 @@ async def resolve_registered_sensor_trigger(
             if payload.verification_radius_m is not None
             else fields["verification_radius_m"]
         ),
-        track_target=payload.track_target if payload.track_target is not None else fields["track_target"],
-        target_label=payload.target_label if payload.target_label is not None else fields["target_label"],
+        track_target=payload.track_target
+        if payload.track_target is not None
+        else fields["track_target"],
+        target_label=payload.target_label
+        if payload.target_label is not None
+        else fields["target_label"],
         search_grid_spacing_m=(
             payload.search_grid_spacing_m
             if payload.search_grid_spacing_m is not None
@@ -404,5 +466,7 @@ def sensor_registry_from_sensor(sensor: PatrolSensor) -> dict[str, tuple[float, 
 def validate_geofence_polygon(polygon: list[list[float]] | None) -> tuple[tuple[float, float], ...]:
     geofence = normalize_polygon_lonlat(polygon)
     if len(geofence) < 3:
-        raise HTTPException(status_code=400, detail="geofence_polygon_lonlat requires at least 3 points.")
+        raise HTTPException(
+            status_code=400, detail="geofence_polygon_lonlat requires at least 3 points."
+        )
     return geofence

@@ -93,11 +93,11 @@ async def get_flight_status() -> dict[str, Any]:
                 "abort": state in {"queued", "arming", "airborne", "running", "paused", "resumed"},
             },
         }
-    except Exception as exc:
+    except Exception:
         logger.exception("get_flight_status failed")
         telemetry = telemetry_manager.runtime_snapshot()
         return {
-            "error": str(exc),
+            "error": "Flight status temporarily unavailable",
             "telemetry": {
                 "running": telemetry["running"],
                 "source_connected": telemetry["source_connected"],
@@ -129,7 +129,8 @@ async def start_telemetry() -> dict[str, str]:
     try:
         await (await get_orchestrator()).start_live_telemetry()
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to start telemetry: {exc}") from exc
+        logger.exception("Failed to start telemetry")
+        raise HTTPException(status_code=503, detail="Telemetry start failed") from exc
     return {"status": "started", "message": "Telemetry stream started"}
 
 
@@ -140,5 +141,6 @@ async def stop_telemetry() -> dict[str, str]:
     try:
         await (await get_orchestrator()).stop_live_telemetry()
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to stop telemetry: {exc}") from exc
+        logger.exception("Failed to stop telemetry")
+        raise HTTPException(status_code=503, detail="Telemetry stop failed") from exc
     return {"status": "stopped", "message": "Telemetry stream stopped"}

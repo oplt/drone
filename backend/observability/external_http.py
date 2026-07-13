@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from contextlib import suppress
 from typing import Any
 
 import httpx
@@ -24,7 +25,7 @@ def _endpoint_group(method: str, url: str) -> str:
     if not parts:
         return "/"
     if parts[0].isdigit():
-        return f"/{{id}}"
+        return "/{id}"
     normalized: list[str] = []
     for part in parts[:3]:
         normalized.append(part if part.isalpha() else "{id}")
@@ -42,6 +43,7 @@ class InstrumentedAsyncClient:
         endpoint_group = _endpoint_group(method, url)
         started = time.perf_counter()
         span_cm: Any = None
+        span_error: tuple[type[BaseException], BaseException, Any] | None = None
         try:
             from opentelemetry import trace
 
@@ -78,6 +80,7 @@ class InstrumentedAsyncClient:
                 )
             return response
         except Exception as exc:
+            span_error = (type(exc), exc, exc.__traceback__)
             error_type = normalize_error_type(exc)
             prometheus_metrics.external_api_errors_total.labels(
                 service=self.service_name,
@@ -100,10 +103,11 @@ class InstrumentedAsyncClient:
                 endpoint_group=endpoint_group,
             ).observe(elapsed)
             if span_cm is not None:
-                try:
-                    span_cm.__exit__(None, None, None)
-                except Exception:
-                    pass
+                with suppress(Exception):
+                    if span_error:
+                        span_cm.__exit__(*span_error)
+                    else:
+                        span_cm.__exit__(None, None, None)
 
     async def aclose(self) -> None:
         await self._client.aclose()

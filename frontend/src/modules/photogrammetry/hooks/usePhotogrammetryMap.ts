@@ -16,7 +16,7 @@ import {
 } from "../../maps/hooks/useGooglePointMarkers";
 import { useMissionMapRuntime } from "../../maps/hooks/useMissionMapRuntime";
 import { useSyncTerraDrawMode } from "../../maps/hooks/useSyncTerraDrawMode";
-import type { Waypoint } from "../../mission-workflow";
+import type { Waypoint } from "../../mission-workflow"; import { frontendLogger } from "../../../shared/logging";
 
 export function usePhotogrammetryMap({
   apiBase,
@@ -84,7 +84,7 @@ export function usePhotogrammetryMap({
   );
 
   const handleLocationError = useCallback((error: GeolocationPositionError) => {
-    console.error("Error getting location:", error);
+    frontendLogger.error("frontend", "Error getting location", { message: error.message, code: error.code });
     const message = `Failed to get location: ${error.message}`;
     addError(message);
     return message;

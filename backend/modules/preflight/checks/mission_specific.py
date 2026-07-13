@@ -1,3 +1,4 @@
+import asyncio
 import math
 from collections.abc import Iterable, Sequence
 from math import atan, pi, radians, tan
@@ -5,6 +6,7 @@ from typing import Any
 
 from shapely.geometry import LineString, Point, Polygon
 
+from backend.core.config.runtime import env_truthy, settings
 from backend.modules.missions.schemas.mission_types import (
     AdaptiveAltitudeMission,
     GridMission,
@@ -15,7 +17,6 @@ from backend.modules.missions.schemas.mission_types import (
     WarehouseScanMission,
     Waypoint,
 )
-from backend.core.config.runtime import env_truthy, settings
 from backend.modules.preflight.range_estimator import SimpleWhPerKmModel
 from backend.modules.vehicle_runtime.types import Coordinate
 
@@ -150,6 +151,20 @@ class MissionPreflightBase:
             total += self._haversine_m(a.lat, a.lon, b.lat, b.lon)
         total += self._haversine_m(route[-1].lat, route[-1].lon, home.lat, home.lon)
         return total
+
+    async def _run_independent_checks(self, *checks: Any) -> list[CheckResult]:
+        """Run deterministic read-only checks concurrently, preserving order."""
+        # Context caches update hit/miss counters. Only a precomputed immutable
+        # snapshot is safe to share across worker threads; otherwise retain the
+        # deterministic sequential path.
+        if self.ctx.precomputed is not None:
+            outputs = await asyncio.gather(*(asyncio.to_thread(check) for check in checks))
+        else:
+            outputs = [check() for check in checks]
+        results: list[CheckResult] = []
+        for output in outputs:
+            results.extend(output if isinstance(output, list) else [output])
+        return results
 
     # -------------------------
     # Recommended mission-common checks (still mission-specific)
@@ -517,15 +532,15 @@ class WaypointMissionPreflight(MissionPreflightBase):
     """Generic waypoint-route mission (non-grid/orbit/patrol) checks."""
 
     async def run(self) -> list[CheckResult]:
-        results: list[CheckResult] = []
-        results.append(self.check_waypoint_count_limit())
-        results.append(self.check_speed_limits())
-        results.append(self.check_max_range_from_home())
-        results.append(self.check_geofence_containment())
-        results.append(self.check_no_fly_zones())
-        results.append(self.check_basic_terrain_clearance())
-        results.append(self.check_preflight_range())  # check parameters
-        return results
+        return await self._run_independent_checks(
+            self.check_waypoint_count_limit,
+            self.check_speed_limits,
+            self.check_max_range_from_home,
+            self.check_geofence_containment,
+            self.check_no_fly_zones,
+            self.check_basic_terrain_clearance,
+            self.check_preflight_range,
+        )
 
 
 class GridMissionPreflight(MissionPreflightBase):
@@ -610,21 +625,18 @@ class GridMissionPreflight(MissionPreflightBase):
 
     async def run(self) -> list[CheckResult]:
         """Run all grid mission checks."""
-        results: list[CheckResult] = []
-        # Common mission-specific safety/validity checks
-        results.append(self.check_waypoint_count_limit())
-        results.append(self.check_speed_limits())
-        results.append(self.check_agl_envelope_basic())
-        results.append(self.check_max_range_from_home())
-        results.append(self.check_geofence_containment())
-        results.append(self.check_no_fly_zones())
-        results.append(self.check_basic_terrain_clearance())
-        results.append(self.check_grid_turn_margin())
-
-        # Grid-specific payload/coverage checks
-        results.append(self.check_camera_footprint())
-        results.append(self.check_mission_duration())
-        return results
+        return await self._run_independent_checks(
+            self.check_waypoint_count_limit,
+            self.check_speed_limits,
+            self.check_agl_envelope_basic,
+            self.check_max_range_from_home,
+            self.check_geofence_containment,
+            self.check_no_fly_zones,
+            self.check_basic_terrain_clearance,
+            self.check_grid_turn_margin,
+            self.check_camera_footprint,
+            self.check_mission_duration,
+        )
 
 
 class TerrainFollowMissionPreflight(MissionPreflightBase):
@@ -717,15 +729,14 @@ class TerrainFollowMissionPreflight(MissionPreflightBase):
 
     async def run(self) -> list[CheckResult]:
         """Run all terrain-following mission checks."""
-        results: list[CheckResult] = []
-        results.append(self.check_waypoint_count_limit())
-        results.append(self.check_speed_limits())
-        results.append(self.check_max_range_from_home())
-        results.append(self.check_geofence_containment())
-        results.append(self.check_no_fly_zones())
-        # terrain-follow includes its own climb/descent feasibility and uses cached terrain
-        results.extend(self.check_terrain_follow_feasibility())
-        return results
+        return await self._run_independent_checks(
+            self.check_waypoint_count_limit,
+            self.check_speed_limits,
+            self.check_max_range_from_home,
+            self.check_geofence_containment,
+            self.check_no_fly_zones,
+            self.check_terrain_follow_feasibility,
+        )
 
 
 class OrbitMissionPreflight(MissionPreflightBase):
@@ -816,14 +827,14 @@ class OrbitMissionPreflight(MissionPreflightBase):
 
     async def run(self) -> list[CheckResult]:
         """Run all orbit mission checks."""
-        results: list[CheckResult] = []
-        results.append(self.check_speed_limits())
-        results.append(self.check_max_range_from_home())
-        results.append(self.check_geofence_containment())
-        results.append(self.check_no_fly_zones())
-        results.extend(self.check_turn_feasibility())
-        results.append(self.check_clearance())
-        return results
+        return await self._run_independent_checks(
+            self.check_speed_limits,
+            self.check_max_range_from_home,
+            self.check_geofence_containment,
+            self.check_no_fly_zones,
+            self.check_turn_feasibility,
+            self.check_clearance,
+        )
 
 
 class PerimeterPatrolMissionPreflight(MissionPreflightBase):
@@ -972,16 +983,16 @@ class PerimeterPatrolMissionPreflight(MissionPreflightBase):
 
     async def run(self) -> list[CheckResult]:
         """Run all perimeter patrol checks."""
-        results: list[CheckResult] = []
-        results.append(self.check_polygon_validity())
-        results.append(self.check_speed_limits())
-        results.append(self.check_agl_envelope_basic())
-        results.append(self.check_max_range_from_home())
-        results.append(self.check_geofence_containment())
-        results.append(self.check_no_fly_zones())
-        results.append(self.check_boundary_buffer())
-        results.append(self.check_cornering_limits())
-        return results
+        return await self._run_independent_checks(
+            self.check_polygon_validity,
+            self.check_speed_limits,
+            self.check_agl_envelope_basic,
+            self.check_max_range_from_home,
+            self.check_geofence_containment,
+            self.check_no_fly_zones,
+            self.check_boundary_buffer,
+            self.check_cornering_limits,
+        )
 
 
 class AdaptiveAltitudeMissionPreflight(MissionPreflightBase):

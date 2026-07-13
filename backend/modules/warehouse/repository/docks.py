@@ -74,8 +74,10 @@ class WarehouseDockMixin:
         db: AsyncSession,
         *,
         warehouse_map_id: int,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[WarehouseDockStation]:
-        rows = await db.execute(
+        stmt = (
             select(WarehouseDockStation)
             .where(
                 WarehouseDockStation.warehouse_map_id == int(warehouse_map_id),
@@ -83,6 +85,9 @@ class WarehouseDockMixin:
             )
             .order_by(WarehouseDockStation.id.asc())
         )
+        if limit is not None:
+            stmt = stmt.offset(max(0, offset)).limit(max(1, limit))
+        rows = await db.execute(stmt)
         return list(rows.scalars().all())
 
     async def create_dock_station(

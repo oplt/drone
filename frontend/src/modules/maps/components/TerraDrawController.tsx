@@ -10,6 +10,7 @@ import {
   TerraDrawSelectMode,
 } from "terra-draw";
 import { TerraDrawGoogleMapsAdapter } from "terra-draw-google-maps-adapter";
+import { frontendLogger } from "../../../shared/logging";
 
 export type TerraDrawEditorMode =
   | "polygon"
@@ -184,7 +185,9 @@ export function TerraDrawController({
         projectionListener?.remove();
         projectionListener = null;
       } catch (error) {
-        console.error("Failed to initialize TerraDraw:", error);
+        frontendLogger.error("frontend", "Failed to initialize TerraDraw", {
+          message: error instanceof Error ? error.message : String(error),
+        });
         onError?.("Failed to initialize drawing tools");
       }
     };

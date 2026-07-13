@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from backend.core.config.runtime import settings
+from backend.infrastructure.jobs import enqueue_task
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,6 @@ class MappingJobQueue:
             )
 
         try:
-            from backend.entrypoints.workers.photogrammetry_tasks import process_photogrammetry_job
             from backend.observability.instruments import observed_span
 
             with observed_span(
@@ -37,15 +37,15 @@ class MappingJobQueue:
                 job_name="photogrammetry.process_job",
                 queue="photogrammetry",
             ):
-                result = process_photogrammetry_job.delay(job_id=job_id)
+                task_id = enqueue_task(
+                    "photogrammetry.process_job",
+                    queue=settings.CELERY_PHOTOGRAMMETRY_QUEUE,
+                    job_id=job_id,
+                )
         except Exception as exc:
             raise MappingJobQueueError(
                 "Failed to enqueue mapping job. Ensure Redis broker and Celery workers are running."
             ) from exc
-
-        task_id = getattr(result, "id", None)
-        if not task_id:
-            raise MappingJobQueueError("Queue backend did not return a task id.")
 
         logger.info("Enqueued photogrammetry job job_id=%s task_id=%s", job_id, task_id)
         return task_id

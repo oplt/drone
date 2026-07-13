@@ -59,8 +59,15 @@ class VideoAnalysisJobOut(BaseModel):
     progress: float
     error: str | None = None
     model_name: str
+    model_version: str
+    source_checksum: str | None = None
     frame_stride_seconds: float
     confidence_threshold: float
+    frames_received: int = 0
+    frames_processed: int = 0
+    frames_dropped: int = 0
+    frames_failed: int = 0
+    total_inference_latency_ms: float = 0.0
     started_at: datetime | None = None
     finished_at: datetime | None = None
     created_at: datetime

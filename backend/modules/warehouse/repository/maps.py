@@ -92,6 +92,7 @@ class WarehouseMapMixin:
         org_id: int | None = None,
         allow_org_access: bool = False,
         limit: int = 100,
+        offset: int = 0,
     ) -> list[WarehouseMap]:
         scope = _scope_for_owner(
             owner_id=owner_id,
@@ -104,6 +105,7 @@ class WarehouseMapMixin:
                     select(WarehouseMap)
                     .where(scope)
                     .order_by(WarehouseMap.id.desc())
+                    .offset(max(0, offset))
                     .limit(clamp_list_limit(limit, default=100))
                 )
             )

@@ -2,11 +2,11 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
 import {
-  Alert,
   Box,
   CircularProgress,
   Paper,
@@ -21,6 +21,7 @@ import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
 import Header from "../../../shared/layout/WorkflowHeader";
 import { ApiError } from "../../../shared/api/apiError";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
+import { useNotice } from "../../../shared/ui/NoticeContext";
 import {
   MissionVideoPanel,
   type MissionLifecycleState,
@@ -35,7 +36,6 @@ import { useErrors } from "../../../shared/hooks/useErrors";
 import {
   fetchWarehouseMissionDefaults,
   deleteWarehouseScannedMap,
-  listWarehouseScannedMaps,
   startWarehouseScan,
   updateWarehouseMissionDefaults,
 } from "../api/warehouseMissionsApi";
@@ -48,7 +48,6 @@ import { useRunWarehousePreflight } from "../hooks/useRunWarehousePreflight";
 import type {
   WarehouseMissionDefaultsResponse,
   WarehouseMissionLaunchResponse,
-  WarehouseScannedMapResponse,
 } from "../types/missions";
 import {
   getWarehouseMapId,
@@ -86,15 +85,14 @@ import {
 import type { WarehouseUiStatus } from "../components/WarehouseStatusBadge";
 import {
   WarehouseDeleteConfirmationDialog,
-  type WarehouseDeleteTarget,
 } from "../components/WarehouseDeleteConfirmationDialog";
 import { useWarehouseLiveVoxelMap } from "../hooks/useWarehouseLiveVoxelMap";
 import { useWarehouseMappingStack } from "../hooks/useWarehouseMappingStack";
 import { useWarehouseScannedMapReplay } from "../hooks/useWarehouseScannedMapReplay";
 import { useWarehouseFlightReadiness } from "../hooks/useWarehouseFlightReadiness";
 import { useWarehouseMissionRuntimeController } from "../hooks/useWarehouseMissionRuntimeController";
+import { useWarehouseResourceQueries } from "../hooks/useWarehouseResourceQueries";
 import {
-  SCANNED_MAP_REFRESH_MS,
   getWarehouseStartMessage,
   getWarehouseStartPreflight,
   toMessage,
@@ -107,8 +105,35 @@ import {
   type WarehouseMissionDefaultsDraft,
   type WarehouseMissionDefaultsKey,
 } from "../warehouseMissionDefaults";
+import {
+  initialWarehousePageState,
+  warehousePageReducer,
+  type WarehousePageState,
+} from "../warehousePageState";
 
 export default function WarehousePage() {
+  const [pageState, dispatchPage] = useReducer(
+    warehousePageReducer,
+    initialWarehousePageState,
+  );
+  const { setupTab, mapDetailTab, deleteTarget } = pageState;
+  const setSetupTab = useCallback(
+    (tab: WarehousePageState["setupTab"]) =>
+      dispatchPage({ type: "set-setup-tab", tab }),
+    [],
+  );
+  const setMapDetailTab = useCallback(
+    (tab: WarehousePageState["mapDetailTab"]) =>
+      dispatchPage({ type: "set-map-detail-tab", tab }),
+    [],
+  );
+  const setDeleteTarget = useCallback(
+    (target: WarehousePageState["deleteTarget"]) =>
+      target
+        ? dispatchPage({ type: "request-delete", target })
+        : dispatchPage({ type: "cancel-delete" }),
+    [],
+  );
   const warehouseSetupDrawer = useTaskPreflightCommandsDrawer();
   const warehouseChecksDrawer = useTaskPreflightCommandsDrawer();
   const warehouseMissionDrawer = useTaskPreflightCommandsDrawer();
@@ -146,10 +171,6 @@ export default function WarehousePage() {
     [closeOtherWarehouseDrawers, warehouseMissionDrawer],
   );
 
-  const [scannedMaps, setScannedMaps] = useState<WarehouseScannedMapResponse[]>(
-    [],
-  );
-  const [loadingScannedMaps, setLoadingScannedMaps] = useState(false);
   const [selectedMapJobId, setSelectedMapJobId] = useState<number | null>(null);
   const [viewerMapJobId, setViewerMapJobId] = useState<number | null>(null);
 
@@ -159,6 +180,13 @@ export default function WarehousePage() {
   const [selectedWarehouseMapId, setSelectedWarehouseMapId] = useState<
     number | null
   >(null);
+  const resourceQueries = useWarehouseResourceQueries(selectedWarehouseMapId);
+  const scannedMaps = useMemo(
+    () => resourceQueries.scannedMaps.data ?? [],
+    [resourceQueries.scannedMaps.data],
+  );
+  const loadingScannedMaps = resourceQueries.scannedMaps.isLoading;
+  const { refetch: refetchScannedMaps } = resourceQueries.scannedMaps;
   const [selectedDockId, setSelectedDockId] = useState<number | null>(null);
   const [creatingMap, setCreatingMap] = useState(false);
   const [deletingWarehouseMap, setDeletingWarehouseMap] = useState(false);
@@ -176,22 +204,10 @@ export default function WarehousePage() {
     useState<WarehouseMissionDefaultsDraft | null>(null);
   const [loadingMissionDefaults, setLoadingMissionDefaults] = useState(false);
   const [savingMissionDefaults, setSavingMissionDefaults] = useState(false);
-  const [missionDefaultsMessage, setMissionDefaultsMessage] = useState<
-    string | null
-  >(null);
-  const [setupTab, setSetupTab] = useState<"map" | "rig" | "dock" | "defaults">(
-    "map",
-  );
   const [flyMode, setFlyMode] = useState<WarehouseFlyMode>("automated");
-  const [mapDetailTab, setMapDetailTab] = useState<
-    "layers" | "coordinateSetup"
-  >("layers");
-  const [deleteTarget, setDeleteTarget] = useState<WarehouseDeleteTarget>(null);
 
   const [startingScan, setStartingScan] = useState(false);
-  const [scanLaunchMessage, setScanLaunchMessage] = useState<string | null>(
-    null,
-  );
+  const { notify } = useNotice();
 
   const sensorRigHealthRequestRef = useRef(0);
   const viewerSectionRef = useRef<HTMLDivElement | null>(null);
@@ -247,7 +263,7 @@ export default function WarehousePage() {
     if (selectedWarehouseMapId == null) {
       setMapDetailTab("layers");
     }
-  }, [selectedWarehouseMapId]);
+  }, [selectedWarehouseMapId, setMapDetailTab]);
 
   const [flightCommandBusy, setFlightCommandBusy] = useState(false);
 
@@ -316,13 +332,8 @@ export default function WarehousePage() {
       const token = getToken();
       if (!token) return [];
 
-      setLoadingScannedMaps(true);
       try {
-        const records = await listWarehouseScannedMaps(
-          token,
-          selectedWarehouseMapId,
-        );
-        setScannedMaps(records);
+        const records = (await refetchScannedMaps()).data ?? [];
 
         const explicitJobId = options?.selectJobId;
         if (explicitJobId != null) {
@@ -347,11 +358,9 @@ export default function WarehousePage() {
           `Scanned warehouse maps could not be loaded: ${toMessage(error)}`,
         );
         return [];
-      } finally {
-        setLoadingScannedMaps(false);
       }
     },
-    [addError, selectedWarehouseMapId],
+    [addError, refetchScannedMaps],
   );
 
   const handleScanResultReady = useCallback(
@@ -364,11 +373,12 @@ export default function WarehousePage() {
           });
         },
       );
-      setScanLaunchMessage(
+      notify(
         `Scan result #${jobId} saved to Previous Scan Results.`,
+        "success",
       );
     },
-    [loadScannedMaps],
+    [loadScannedMaps, notify],
   );
 
   const loadMissionDefaults = useCallback(async () => {
@@ -476,7 +486,7 @@ export default function WarehousePage() {
         );
         await loadWarehouseMaps();
         setSelectedWarehouseMapId(created.id);
-        setScanLaunchMessage(`Warehouse map "${created.name}" saved.`);
+        notify(`Warehouse map "${created.name}" saved.`, "success");
         return true;
       } catch (error) {
         if (error instanceof ApiError && error.status === 403) {
@@ -491,7 +501,7 @@ export default function WarehousePage() {
         setCreatingMap(false);
       }
     },
-    [addError, loadWarehouseMaps],
+    [addError, loadWarehouseMaps, notify],
   );
 
   const handleDeleteWarehouseMap = useCallback(async () => {
@@ -514,14 +524,21 @@ export default function WarehousePage() {
       }
       setSelectedWarehouseMapId(null);
       await loadWarehouseMaps();
-      setScanLaunchMessage(`Deleted warehouse map "${label}".`);
+      notify(`Deleted warehouse map "${label}".`, "success");
     } catch (error) {
       addError(`Could not delete warehouse map: ${toMessage(error)}`);
     } finally {
       setDeletingWarehouseMap(false);
       setDeleteTarget(null);
     }
-  }, [addError, loadWarehouseMaps, selectedWarehouseMapId, warehouseMaps]);
+  }, [
+    addError,
+    loadWarehouseMaps,
+    selectedWarehouseMapId,
+    setDeleteTarget,
+    notify,
+    warehouseMaps,
+  ]);
 
   const handleDeleteScannedMap = useCallback(async () => {
     if (!selectedScannedMap) return;
@@ -539,14 +556,14 @@ export default function WarehousePage() {
       setSelectedMapJobId((current) => (current === jobId ? null : current));
       setViewerMapJobId((current) => (current === jobId ? null : current));
       await loadScannedMaps();
-      setScanLaunchMessage(`Deleted scan result "${label}".`);
+      notify(`Deleted scan result "${label}".`, "success");
     } catch (error) {
       addError(`Could not delete scan result: ${toMessage(error)}`);
     } finally {
       setDeletingScannedMap(false);
       setDeleteTarget(null);
     }
-  }, [addError, loadScannedMaps, selectedScannedMap]);
+  }, [addError, loadScannedMaps, notify, selectedScannedMap, setDeleteTarget]);
 
   const handleCreateSensorRig = useCallback(
     async (sensorRigForm: SensorRigForm) => {
@@ -616,14 +633,14 @@ export default function WarehousePage() {
       setSelectedSensorRigId(null);
       setSensorRigHealth(null);
       await loadSensorRigs();
-      setScanLaunchMessage(`Deleted sensor rig "${label}".`);
+      notify(`Deleted sensor rig "${label}".`, "success");
     } catch (error) {
       addError(`Could not delete sensor rig: ${toMessage(error)}`);
     } finally {
       setDeletingSensorRig(false);
       setDeleteTarget(null);
     }
-  }, [addError, loadSensorRigs, selectedSensorRigId, sensorRigs]);
+  }, [addError, loadSensorRigs, notify, selectedSensorRigId, sensorRigs, setDeleteTarget]);
 
   const handleMarkSensorRigCalibrated = useCallback(async () => {
     const token = getToken();
@@ -650,6 +667,7 @@ export default function WarehousePage() {
       );
       await loadSensorRigs();
       await loadSensorRigHealth(selectedSensorRigId);
+      notify(`Sensor rig "${rig.name}" calibration saved.`, "success");
     } catch (error) {
       addError(`Could not update sensor rig calibration: ${toMessage(error)}`);
     } finally {
@@ -661,6 +679,7 @@ export default function WarehousePage() {
     loadSensorRigs,
     selectedSensorRigId,
     sensorRigs,
+    notify,
   ]);
 
   useEffect(() => {
@@ -708,7 +727,7 @@ export default function WarehousePage() {
     } catch {
       window.localStorage.removeItem(localStorageKey);
     }
-  }, [localStorageKey]);
+  }, [localStorageKey, setSetupTab]);
 
   useEffect(() => {
     try {
@@ -731,21 +750,6 @@ export default function WarehousePage() {
     selectedWarehouseMapId,
     setupTab,
   ]);
-
-  useEffect(() => {
-    const refreshVisibleMaps = () => {
-      if (!document.hidden) void loadScannedMaps();
-    };
-    const handle = window.setInterval(
-      refreshVisibleMaps,
-      SCANNED_MAP_REFRESH_MS,
-    );
-    document.addEventListener("visibilitychange", refreshVisibleMaps);
-    return () => {
-      window.clearInterval(handle);
-      document.removeEventListener("visibilitychange", refreshVisibleMaps);
-    };
-  }, [loadScannedMaps]);
 
   useEffect(() => {
     const state = missionStatus?.mission_lifecycle?.state ?? null;
@@ -781,7 +785,6 @@ export default function WarehousePage() {
     );
 
     setStartingScan(true);
-    setScanLaunchMessage(null);
     try {
       const launch = await startWarehouseScan(
         {
@@ -802,8 +805,9 @@ export default function WarehousePage() {
       setPendingFlightId(launch.mission.flight_id);
       void refetchWarehouseFlightReadiness();
       const launchWarehouseName = launch.warehouse_name.trim() || "Warehouse";
-      setScanLaunchMessage(
+      notify(
         `Started ${launch.mission.mission_name} in ${launchWarehouseName}. Preflight ${launch.preflight.overall_status}.`,
+        "success",
       );
       void loadScannedMaps();
     } catch (error) {
@@ -826,6 +830,7 @@ export default function WarehousePage() {
     selectedWarehouseMapId,
     sensorRigHealth?.ready,
     warehouseMaps,
+    notify,
     setPendingFlightId,
   ]);
 
@@ -856,11 +861,12 @@ export default function WarehousePage() {
     (launch: WarehouseMissionLaunchResponse) => {
       setPendingFlightId(launch.mission.flight_id);
       const launchWarehouseName = launch.warehouse_name.trim() || "Warehouse";
-      setScanLaunchMessage(
+      notify(
         `Started ${launch.mission.mission_name} in ${launchWarehouseName}. Preflight ${launch.preflight.overall_status}.`,
+        "success",
       );
     },
-    [setPendingFlightId],
+    [notify, setPendingFlightId],
   );
 
   const handleExplorationError = useCallback(
@@ -882,7 +888,6 @@ export default function WarehousePage() {
             }
           : current,
       );
-      setMissionDefaultsMessage(null);
     },
     [],
   );
@@ -909,11 +914,10 @@ export default function WarehousePage() {
     }
 
     setSavingMissionDefaults(true);
-    setMissionDefaultsMessage(null);
     try {
       const saved = await updateWarehouseMissionDefaults(payload, token);
       setMissionDefaultsDraft(toWarehouseMissionDefaultsDraft(saved));
-      setMissionDefaultsMessage("Warehouse mission defaults updated.");
+      notify("Warehouse mission defaults updated.", "success");
     } catch (error) {
       addError(
         `Warehouse mission defaults could not be updated: ${toMessage(error)}`,
@@ -921,7 +925,7 @@ export default function WarehousePage() {
     } finally {
       setSavingMissionDefaults(false);
     }
-  }, [addError, missionDefaultsDraft]);
+  }, [addError, missionDefaultsDraft, notify]);
 
   const missionName =
     missionStatus?.mission_lifecycle?.mission_name ??
@@ -1022,9 +1026,9 @@ export default function WarehousePage() {
   const handleManualMappingPreflightRun = useCallback(
     (preflight: PreflightRunResponse | null) => {
       if (preflight)
-        setScanLaunchMessage(`Keyboard preflight ${preflight.overall_status}.`);
+        notify(`Keyboard preflight ${preflight.overall_status}.`, "info");
     },
-    [],
+    [notify],
   );
 
   return (
@@ -1083,12 +1087,6 @@ export default function WarehousePage() {
           onDismiss={dismissError}
           onClearAll={clearErrors}
         />
-
-        {scanLaunchMessage && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            {scanLaunchMessage}
-          </Alert>
-        )}
 
         <Stack sx={{ minWidth: 0, width: "100%" }} spacing={2}>
           <MissionVideoPanel
@@ -1309,7 +1307,7 @@ export default function WarehousePage() {
               <WarehouseMissionDefaultsPanel
                 draft={missionDefaultsDraft}
                 saving={savingMissionDefaults}
-                successMessage={missionDefaultsMessage}
+                successMessage={null}
                 onChange={handleMissionDefaultsDraftChange}
                 onSave={() => void handleUpdateMissionDefaults()}
               />
@@ -1404,7 +1402,7 @@ export default function WarehousePage() {
             warehousePreflightPassed,
             setPendingFlightId,
             onPreflightRun: handleManualMappingPreflightRun,
-            onMessage: setScanLaunchMessage,
+            onMessage: (message) => notify(message, "success"),
             onError: addError,
             onScanResultReady: handleScanResultReady,
           }}

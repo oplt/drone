@@ -5,8 +5,6 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
@@ -21,11 +19,11 @@ from backend.modules.patrol.event_trigger_config_service import (
 from backend.modules.patrol.sensor_config_schemas import (
     PatrolEventTriggerConfigIn,
     PatrolEventTriggerConfigOut,
-    PatrolSensorIntegrationOut,
     PatrolResponseProfileIn,
     PatrolResponseProfileOut,
     PatrolResponseProfileUpdate,
     PatrolSensorIn,
+    PatrolSensorIntegrationOut,
     PatrolSensorOut,
     PatrolSensorTriggerIn,
     PatrolSensorTriggerOut,
@@ -37,6 +35,9 @@ from backend.modules.patrol.sensor_config_schemas import (
 from backend.modules.patrol.sensor_config_service import (
     build_integration_info,
     clear_default_profiles,
+    find_profile,
+    find_sensor_duplicate,
+    find_site_for_field,
     get_accessible_field,
     get_profile_for_site,
     get_sensor,
@@ -51,6 +52,7 @@ from backend.modules.patrol.trigger_dispatch import dispatch_sensor_trigger
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/patrol", tags=["patrol-config"])
+AsyncSession = Any
 
 
 def _sensor_out(sensor: PatrolSensor, *, base_url: str) -> PatrolSensorOut:
@@ -91,11 +93,8 @@ async def create_patrol_site(
     db: AsyncSession = Depends(get_db),
 ) -> PatrolSiteOut:
     field = await get_accessible_field(db, field_id=payload.field_id, user=org_user.user)
-    existing = await db.scalar(
-        select(PatrolSite).where(
-            PatrolSite.org_id == org_user.org_id,
-            PatrolSite.field_id == payload.field_id,
-        )
+    existing = await find_site_for_field(
+        db, field_id=payload.field_id, org_id=org_user.org_id, owner_id=int(org_user.user.id)
     )
     if existing is not None:
         raise HTTPException(
@@ -125,17 +124,17 @@ async def update_patrol_site(
     org_user: OrgUser = Depends(require_org_write),
     db: AsyncSession = Depends(get_db),
 ) -> PatrolSiteOut:
-    site = await get_site(db, site_id=site_id, org_id=org_user.org_id, owner_id=int(org_user.user.id))
+    site = await get_site(
+        db, site_id=site_id, org_id=org_user.org_id, owner_id=int(org_user.user.id)
+    )
     data = payload.model_dump(exclude_unset=True)
     if "field_id" in data and data["field_id"] is not None:
         field = await get_accessible_field(db, field_id=data["field_id"], user=org_user.user)
-        duplicate = await db.scalar(
-            select(PatrolSite).where(
-                PatrolSite.org_id == org_user.org_id,
-                PatrolSite.field_id == data["field_id"],
-                PatrolSite.id != site_id,
-            )
+        duplicate = await find_site_for_field(
+            db, field_id=data["field_id"], org_id=org_user.org_id, owner_id=int(org_user.user.id)
         )
+        if duplicate is not None and duplicate.id == site_id:
+            duplicate = None
         if duplicate is not None:
             raise HTTPException(
                 status_code=409,
@@ -158,7 +157,9 @@ async def delete_patrol_site(
     org_user: OrgUser = Depends(require_org_write),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    site = await get_site(db, site_id=site_id, org_id=org_user.org_id, owner_id=int(org_user.user.id))
+    site = await get_site(
+        db, site_id=site_id, org_id=org_user.org_id, owner_id=int(org_user.user.id)
+    )
     await db.delete(site)
     await db.commit()
 
@@ -184,7 +185,9 @@ async def create_patrol_response_profile(
     org_user: OrgUser = Depends(require_org_write),
     db: AsyncSession = Depends(get_db),
 ) -> PatrolResponseProfileOut:
-    await get_site(db, site_id=payload.site_id, org_id=org_user.org_id, owner_id=int(org_user.user.id))
+    await get_site(
+        db, site_id=payload.site_id, org_id=org_user.org_id, owner_id=int(org_user.user.id)
+    )
     if payload.is_default:
         await clear_default_profiles(db, site_id=payload.site_id)
     profile = PatrolResponseProfile(
@@ -215,20 +218,9 @@ async def update_patrol_response_profile(
     org_user: OrgUser = Depends(require_org_write),
     db: AsyncSession = Depends(get_db),
 ) -> PatrolResponseProfileOut:
-    profile = await db.scalar(
-        select(PatrolResponseProfile)
-        .join(PatrolSite, PatrolSite.id == PatrolResponseProfile.site_id)
-        .where(
-            PatrolResponseProfile.id == profile_id,
-            *(
-                [PatrolSite.org_id == org_user.org_id]
-                if org_user.org_id is not None
-                else [PatrolSite.owner_id == int(org_user.user.id)]
-            ),
-        )
+    profile = await find_profile(
+        db, profile_id=profile_id, org_id=org_user.org_id, owner_id=int(org_user.user.id)
     )
-    if profile is None:
-        raise HTTPException(status_code=404, detail="Response profile not found")
     data = payload.model_dump(exclude_unset=True)
     if data.get("is_default"):
         await clear_default_profiles(db, site_id=profile.site_id, except_profile_id=profile.id)
@@ -245,20 +237,9 @@ async def delete_patrol_response_profile(
     org_user: OrgUser = Depends(require_org_write),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    profile = await db.scalar(
-        select(PatrolResponseProfile)
-        .join(PatrolSite, PatrolSite.id == PatrolResponseProfile.site_id)
-        .where(
-            PatrolResponseProfile.id == profile_id,
-            *(
-                [PatrolSite.org_id == org_user.org_id]
-                if org_user.org_id is not None
-                else [PatrolSite.owner_id == int(org_user.user.id)]
-            ),
-        )
+    profile = await find_profile(
+        db, profile_id=profile_id, org_id=org_user.org_id, owner_id=int(org_user.user.id)
     )
-    if profile is None:
-        raise HTTPException(status_code=404, detail="Response profile not found")
     await db.delete(profile)
     await db.commit()
 
@@ -287,7 +268,9 @@ async def create_patrol_sensor(
     org_user: OrgUser = Depends(require_org_write),
     db: AsyncSession = Depends(get_db),
 ) -> PatrolSensorOut:
-    await get_site(db, site_id=payload.site_id, org_id=org_user.org_id, owner_id=int(org_user.user.id))
+    await get_site(
+        db, site_id=payload.site_id, org_id=org_user.org_id, owner_id=int(org_user.user.id)
+    )
     if payload.response_profile_id is not None:
         await get_profile_for_site(
             db,
@@ -296,14 +279,16 @@ async def create_patrol_sensor(
             org_id=org_user.org_id,
             owner_id=int(org_user.user.id),
         )
-    duplicate = await db.scalar(
-        select(PatrolSensor).where(
-            PatrolSensor.org_id == org_user.org_id,
-            PatrolSensor.external_sensor_id == payload.external_sensor_id.strip(),
-        )
+    duplicate = await find_sensor_duplicate(
+        db,
+        external_sensor_id=payload.external_sensor_id,
+        org_id=org_user.org_id,
+        owner_id=int(org_user.user.id),
     )
     if duplicate is not None:
-        raise HTTPException(status_code=409, detail="external_sensor_id already exists for this organisation.")
+        raise HTTPException(
+            status_code=409, detail="external_sensor_id already exists for this organisation."
+        )
     sensor = PatrolSensor(
         owner_id=int(org_user.user.id),
         org_id=org_user.org_id,
@@ -339,7 +324,9 @@ async def update_patrol_sensor(
     )
     data = payload.model_dump(exclude_unset=True)
     if "site_id" in data and data["site_id"] is not None:
-        await get_site(db, site_id=data["site_id"], org_id=org_user.org_id, owner_id=int(org_user.user.id))
+        await get_site(
+            db, site_id=data["site_id"], org_id=org_user.org_id, owner_id=int(org_user.user.id)
+        )
     if "response_profile_id" in data and data["response_profile_id"] is not None:
         await get_profile_for_site(
             db,

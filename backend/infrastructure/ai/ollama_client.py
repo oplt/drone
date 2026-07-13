@@ -38,11 +38,9 @@ class OllamaClient(BaseLLMClient):
     async def list_models(self) -> list[LLMModel]:
         url = f"{self.config.api_base.rstrip('/')}/api/tags"
         timeout = aiohttp.ClientTimeout(total=self.config.timeout_seconds)
+        session = await self._session()
         try:
-            async with (
-                aiohttp.ClientSession(timeout=timeout) as session,
-                session.get(url) as response,
-            ):
+            async with session.get(url, timeout=timeout) as response:
                 if response.status >= 400:
                     raise LLMProviderUnavailableError(
                         f"Ollama model discovery failed with HTTP {response.status}."
@@ -80,13 +78,13 @@ class OllamaClient(BaseLLMClient):
                 ),
             },
         }
+        if request.response_format:
+            payload["format"] = request.response_format
         url = f"{self.config.api_base.rstrip('/')}/api/chat"
         timeout = aiohttp.ClientTimeout(total=self.config.timeout_seconds)
+        session = await self._session()
         try:
-            async with (
-                aiohttp.ClientSession(timeout=timeout) as session,
-                session.post(url, json=payload) as response,
-            ):
+            async with session.post(url, json=payload, timeout=timeout) as response:
                 if response.status == 404:
                     raise LLMProviderUnavailableError("Ollama model not found.")
                 if response.status >= 400:

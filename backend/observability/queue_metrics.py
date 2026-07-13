@@ -26,9 +26,12 @@ def refresh_queue_depth_metrics(broker_url: str | None = None) -> None:
 
     try:
         client = redis.Redis.from_url(broker_url, socket_connect_timeout=1, socket_timeout=1)
-        for queue in prometheus_metrics.KNOWN_QUEUES:
-            depth = int(client.llen(queue) or 0)
-            prometheus_metrics.queue_depth.labels(queue=queue).set(depth)
-            prometheus_metrics.redis_queue_depth.labels(queue_name=queue).set(depth)
+        try:
+            for queue in prometheus_metrics.KNOWN_QUEUES:
+                depth = int(client.llen(queue) or 0)
+                prometheus_metrics.queue_depth.labels(queue=queue).set(depth)
+                prometheus_metrics.redis_queue_depth.labels(queue_name=queue).set(depth)
+        finally:
+            client.close()
     except Exception as exc:
         logger.debug("Queue depth sampling skipped: %s", exc)

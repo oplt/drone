@@ -14,8 +14,8 @@ import json
 import logging
 import math
 import time
-from datetime import UTC, datetime
 from dataclasses import asdict
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,17 +23,34 @@ from sqlalchemy import and_, delete, select
 
 from backend.core.config.runtime import settings
 from backend.core.database.session import Session
+from backend.infrastructure.cache.local import BoundedTTLCache
+from backend.infrastructure.cache.redis import get_sync_redis_client, redis_available
 from backend.modules.warehouse.models import (
     WarehouseAsset,
     WarehouseCoordinateFrame,
     WarehouseDockStation,
     WarehouseMap,
+    WarehouseMappingJob,
     WarehouseModel,
     WarehouseScanArtifactSet,
     WarehouseScanTarget,
     WarehouseSensorRig,
 )
+from backend.modules.warehouse.observability.warehouse_coordinate_metrics import (
+    record_inspection_target_clearance_failure,
+    record_low_confidence_candidate,
+    record_structure_extraction_failure,
+)
 from backend.modules.warehouse.schemas import WarehouseLocalPose, WarehouseSensorAim
+from backend.modules.warehouse.service.drift_guard import (
+    transform_checksum,
+    validate_localization_evidence,
+)
+from backend.modules.warehouse.service.gazebo_landmark_consistency import (
+    LandmarkObservation,
+    LandmarkSpec,
+    evaluate_landmark_consistency,
+)
 from backend.modules.warehouse.service.layout import create_extracted_layout
 from backend.modules.warehouse.service.live_map_manifest import load_flight_manifest
 from backend.modules.warehouse.service.live_map_readiness import (
@@ -50,25 +67,12 @@ from backend.modules.warehouse.service.scan_to_layout import (
     extraction_confidence,
     persist_candidates,
 )
-from backend.modules.warehouse.service.gazebo_landmark_consistency import (
-    LandmarkObservation,
-    LandmarkSpec,
-    evaluate_landmark_consistency,
-)
-from backend.modules.warehouse.service.drift_guard import (
-    transform_checksum,
-    validate_localization_evidence,
-)
 from backend.modules.warehouse.service.structure_extraction import (
     StructureExtractionParams,
     StructureResult,
     extract_structure_from_flight,
 )
-from backend.modules.warehouse.observability.warehouse_coordinate_metrics import (
-    record_inspection_target_clearance_failure,
-    record_low_confidence_candidate,
-    record_structure_extraction_failure,
-)
+from backend.observability.profiling import profile_stage
 
 logger = logging.getLogger(__name__)
 STRUCTURE_EXTRACTION_ALGORITHM_VERSION = "warehouse-structure-v1"
@@ -79,11 +83,262 @@ STRUCTURE_DEBUG_ASSET_TYPE = "STRUCTURE_DEBUG"
 EXTRACTION_TASK_NAME = "warehouse_mapping.extract_structure"
 _PLACEHOLDER_FRAME_CHECKSUMS = {"", "0" * 64}
 
-# In-process extraction job state keyed by warehouse_map_id. Survives API
-# polling between enqueue (persist_capture or UI) and Celery completion.
-_EXTRACTION_STATE: dict[int, dict[str, Any]] = {}
-_EXTRACTION_CELERY_PROBE_AT: dict[int, float] = {}
+# Local read-through accelerators only. Redis/DB are authoritative and make
+# state visible across Uvicorn/Celery processes and restarts.
+_EXTRACTION_STATE_TTL_S = 24 * 60 * 60
+_EXTRACTION_STATE = BoundedTTLCache[dict[str, Any]](
+    max_entries=256,
+    ttl_seconds=_EXTRACTION_STATE_TTL_S,
+)
+_EXTRACTION_CELERY_PROBE_AT = BoundedTTLCache[float](max_entries=256, ttl_seconds=300.0)
 _WORKER_READY_CACHE: tuple[float, bool, str | None] | None = None
+_EXTRACTION_STATE_KEY_PREFIX = "warehouse:structure-extraction:v2"
+_WORKER_READY_KEY = "warehouse:readiness:warehouse-mapping-worker:v1"
+_WORKER_HEARTBEAT_PREFIX = "warehouse:readiness:warehouse-mapping-worker:heartbeat"
+
+
+def _extraction_state_key(warehouse_map_id: int) -> str:
+    return f"{_EXTRACTION_STATE_KEY_PREFIX}:{int(warehouse_map_id)}"
+
+
+def _shared_state_get(warehouse_map_id: int) -> dict[str, Any] | None:
+    try:
+        raw = get_sync_redis_client().get(_extraction_state_key(warehouse_map_id))
+        if raw:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        logger.debug("warehouse_structure_state_read_failed", exc_info=True)
+    return None
+
+
+def _shared_state_set(warehouse_map_id: int, state: dict[str, Any]) -> None:
+    try:
+        get_sync_redis_client().setex(
+            _extraction_state_key(warehouse_map_id),
+            _EXTRACTION_STATE_TTL_S,
+            json.dumps(state, separators=(",", ":"), default=str),
+        )
+    except Exception:
+        logger.debug("warehouse_structure_state_write_failed", exc_info=True)
+
+
+def _shared_state_delete(warehouse_map_id: int) -> None:
+    try:
+        get_sync_redis_client().delete(_extraction_state_key(warehouse_map_id))
+    except Exception:
+        logger.debug("warehouse_structure_state_delete_failed", exc_info=True)
+
+
+def record_mapping_worker_heartbeat(worker_name: str, *, ttl_s: int = 15) -> None:
+    try:
+        get_sync_redis_client().setex(
+            f"{_WORKER_HEARTBEAT_PREFIX}:{worker_name}",
+            max(5, int(ttl_s)),
+            str(datetime.now(UTC).timestamp()),
+        )
+    except Exception:
+        logger.debug("warehouse_worker_heartbeat_write_failed", exc_info=True)
+
+
+def clear_mapping_worker_heartbeat(worker_name: str) -> None:
+    try:
+        get_sync_redis_client().delete(f"{_WORKER_HEARTBEAT_PREFIX}:{worker_name}")
+    except Exception:
+        logger.debug("warehouse_worker_heartbeat_delete_failed", exc_info=True)
+
+
+async def create_durable_extraction_job(
+    db,
+    *,
+    warehouse_map_id: int,
+    model_id: int,
+    client_flight_id: str,
+    params: dict[str, Any] | None = None,
+) -> WarehouseMappingJob:
+    """Create/reuse the PostgreSQL extraction job used for recovery/polling."""
+    payload = dict(params or {})
+    payload["client_flight_id"] = str(client_flight_id)
+    input_checksum = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, default=str, separators=(",", ":")).encode()
+    ).hexdigest()
+    payload["input_checksum"] = input_checksum
+    candidates = (
+        await db.execute(
+            select(WarehouseMappingJob)
+            .where(
+                WarehouseMappingJob.warehouse_map_id == int(warehouse_map_id),
+                WarehouseMappingJob.model_id == int(model_id),
+                WarehouseMappingJob.processor == "warehouse_structure",
+                WarehouseMappingJob.status.in_(("queued", "processing")),
+            )
+            .order_by(WarehouseMappingJob.id.desc())
+            .limit(10)
+        )
+    ).scalars().all()
+    for existing in candidates:
+        existing_params = existing.params if isinstance(existing.params, dict) else {}
+        if existing_params.get("input_checksum") == input_checksum:
+            return existing
+    job = WarehouseMappingJob(
+        warehouse_map_id=int(warehouse_map_id),
+        model_id=int(model_id),
+        status="queued",
+        progress=0,
+        processor="warehouse_structure",
+        algorithm_version=STRUCTURE_EXTRACTION_ALGORITHM_VERSION,
+        input_checksum=input_checksum,
+        extraction_params=payload,
+        params=payload,
+    )
+    db.add(job)
+    await db.flush()
+    return job
+
+
+async def update_durable_extraction_job(
+    db,
+    *,
+    warehouse_map_id: int,
+    model_id: int,
+    status: str,
+    job_id: int | None = None,
+    task_id: str | None = None,
+    error: str | None = None,
+    progress: int | None = None,
+    confidence: float | None = None,
+    failure_reason_codes: list[str] | None = None,
+) -> None:
+    statement = (
+        select(WarehouseMappingJob)
+        .where(
+            WarehouseMappingJob.warehouse_map_id == int(warehouse_map_id),
+            WarehouseMappingJob.model_id == int(model_id),
+            WarehouseMappingJob.processor == "warehouse_structure",
+        )
+    )
+    if job_id is not None:
+        statement = statement.where(WarehouseMappingJob.id == int(job_id))
+    job = (
+        await db.execute(
+            statement
+            .order_by(WarehouseMappingJob.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        return
+    job.status = str(status)
+    if task_id:
+        job.processor_task_id = str(task_id)
+    if error is not None:
+        job.error = str(error)[:2000]
+    if progress is not None:
+        job.progress = max(0, min(100, int(progress)))
+    if confidence is not None:
+        job.confidence = max(0.0, min(1.0, float(confidence)))
+    if failure_reason_codes is not None:
+        job.failure_reason_codes = [str(code)[:128] for code in failure_reason_codes[:32]]
+    now = datetime.now(UTC)
+    if status == "processing" and job.started_at is None:
+        job.started_at = now
+    if status in {"ready", "failed"}:
+        job.finished_at = now
+    await db.flush()
+
+
+async def get_durable_extraction_state(db, warehouse_map_id: int) -> dict[str, Any] | None:
+    job = (
+        await db.execute(
+            select(WarehouseMappingJob)
+            .where(
+                WarehouseMappingJob.warehouse_map_id == int(warehouse_map_id),
+                WarehouseMappingJob.processor == "warehouse_structure",
+            )
+            .order_by(WarehouseMappingJob.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        return None
+    return {
+        "status": str(job.status),
+        "warehouse_map_id": int(job.warehouse_map_id),
+        "model_id": int(job.model_id),
+        "task_id": job.processor_task_id,
+        "error_message": job.error,
+        "progress": int(job.progress or 0),
+        "algorithm_version": job.algorithm_version,
+        "input_checksum": job.input_checksum,
+        "extraction_params": job.extraction_params,
+        "confidence": job.confidence,
+        "failure_reason_codes": list(job.failure_reason_codes or []),
+        "requested_at": job.created_at.isoformat() if job.created_at else None,
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+    }
+
+
+def params_from_payload(payload: dict[str, Any] | None) -> StructureExtractionParams:
+    payload = payload or {}
+    defaults = StructureExtractionParams(
+        voxel_m=settings.warehouse_structure_voxel_m,
+        grid_res_m=settings.warehouse_structure_grid_res_m,
+        floor_margin_m=settings.warehouse_structure_floor_margin_m,
+        ceiling_max_m=settings.warehouse_structure_ceiling_max_m,
+        min_aisle_width_m=settings.warehouse_structure_min_aisle_width_m,
+        min_rack_length_m=settings.warehouse_structure_min_rack_length_m,
+        bin_pitch_m=settings.warehouse_structure_bin_pitch_m,
+        shelf_min_spacing_m=settings.warehouse_structure_shelf_min_spacing_m,
+        max_shelf_levels=settings.warehouse_structure_max_shelf_levels,
+        max_bins_per_rack_face=settings.warehouse_structure_max_bins_per_rack_face,
+        min_target_spacing_m=settings.warehouse_structure_min_target_spacing_m,
+        review_clearance_m=settings.warehouse_structure_review_clearance_m,
+        standoff_m=settings.warehouse_structure_standoff_m,
+        drone_radius_m=settings.warehouse_structure_drone_radius_m,
+        clearance_margin_m=settings.warehouse_structure_clearance_margin_m,
+        max_points=settings.warehouse_structure_max_points,
+        min_surface_points=settings.warehouse_structure_min_surface_points,
+    )
+
+    def override(name: str, current: float) -> float:
+        value = payload.get(name)
+        if value is None:
+            return current
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return current
+
+    for name in (
+        "voxel_m", "grid_res_m", "bin_pitch_m", "standoff_m", "drone_radius_m",
+        "clearance_margin_m", "min_aisle_width_m", "shelf_min_spacing_m",
+        "min_target_spacing_m", "review_clearance_m",
+    ):
+        setattr(defaults, name, override(name, getattr(defaults, name)))
+    defaults.max_shelf_levels = int(override("max_shelf_levels", defaults.max_shelf_levels))
+    defaults.max_bins_per_rack_face = int(
+        override("max_bins_per_rack_face", defaults.max_bins_per_rack_face)
+    )
+    defaults.min_surface_points = int(override("min_surface_points", defaults.min_surface_points))
+    for name in ("rack_template_bin_count", "rack_template_version_id"):
+        value = payload.get(name)
+        setattr(defaults, name, None if value is None else int(override(name, 1.0)))
+    value = payload.get("rack_template_bay_width_m")
+    defaults.rack_template_bay_width_m = None if value is None else override(
+        "rack_template_bay_width_m", 1.0
+    )
+    raw_levels = payload.get("rack_template_shelf_levels_m")
+    if isinstance(raw_levels, list):
+        levels: list[float] = []
+        for raw in raw_levels:
+            try:
+                levels.append(float(raw))
+            except (TypeError, ValueError):
+                continue
+        defaults.rack_template_shelf_levels_m = tuple(levels)
+    defaults.axis_deg = None if payload.get("axis_deg") is None else override("axis_deg", 0.0)
+    return defaults.sanitized()
 
 
 def record_extraction_queued(
@@ -104,18 +359,24 @@ def record_extraction_queued(
         "requested_at": datetime.now(UTC).isoformat(),
         "error_message": None,
     }
-    _EXTRACTION_STATE[int(warehouse_map_id)] = state
+    _shared_state_set(int(warehouse_map_id), state)
+    _EXTRACTION_STATE.set(int(warehouse_map_id), dict(state))
     return state
 
 
 def record_extraction_running(*, warehouse_map_id: int) -> None:
-    state = _EXTRACTION_STATE.setdefault(int(warehouse_map_id), {})
+    state = _shared_state_get(int(warehouse_map_id)) or (
+        _EXTRACTION_STATE.get(int(warehouse_map_id)) or {}
+    )
     state["status"] = "running"
     state["started_at"] = datetime.now(UTC).isoformat()
+    _shared_state_set(int(warehouse_map_id), state)
+    _EXTRACTION_STATE.set(int(warehouse_map_id), dict(state))
 
 
 def record_extraction_ready(*, warehouse_map_id: int, target_count: int) -> None:
-    _EXTRACTION_STATE.pop(int(warehouse_map_id), None)
+    _shared_state_delete(int(warehouse_map_id))
+    _EXTRACTION_STATE.pop(int(warehouse_map_id))
 
 
 def record_extraction_failed(
@@ -125,12 +386,16 @@ def record_extraction_failed(
     failure_reason_codes: list[str] | None = None,
     debug_artifact_url: str | None = None,
 ) -> None:
-    state = _EXTRACTION_STATE.setdefault(int(warehouse_map_id), {})
+    state = _shared_state_get(int(warehouse_map_id)) or (
+        _EXTRACTION_STATE.get(int(warehouse_map_id)) or {}
+    )
     state["status"] = "failed"
     state["error_message"] = str(error_message or "Structure extraction failed.")[:2000]
     state["failure_reason_codes"] = list(failure_reason_codes or [])
     state["debug_artifact_url"] = debug_artifact_url
     state["finished_at"] = datetime.now(UTC).isoformat()
+    _shared_state_set(int(warehouse_map_id), state)
+    _EXTRACTION_STATE.set(int(warehouse_map_id), dict(state))
 
 
 def _celery_probe_interval_s() -> float:
@@ -143,7 +408,7 @@ def _celery_probe_interval_s() -> float:
 
 
 def get_extraction_state(warehouse_map_id: int) -> dict[str, Any] | None:
-    state = _EXTRACTION_STATE.get(int(warehouse_map_id))
+    state = _shared_state_get(int(warehouse_map_id)) or _EXTRACTION_STATE.get(int(warehouse_map_id))
     if state is None:
         return None
     task_id = state.get("task_id")
@@ -151,7 +416,7 @@ def get_extraction_state(warehouse_map_id: int) -> dict[str, Any] | None:
         return dict(state)
     raw_status = str(state.get("status") or "queued")
     now = time.monotonic()
-    last_probe = _EXTRACTION_CELERY_PROBE_AT.get(int(warehouse_map_id), 0.0)
+    last_probe = _EXTRACTION_CELERY_PROBE_AT.get(int(warehouse_map_id)) or 0.0
     if raw_status not in {"queued", "running"} or (now - last_probe) < _celery_probe_interval_s():
         return dict(state)
     try:
@@ -173,10 +438,11 @@ def get_extraction_state(warehouse_map_id: int) -> dict[str, Any] | None:
                 "status": "failed",
                 "error_message": str(result.result or state.get("error_message") or "failed"),
             }
-        _EXTRACTION_CELERY_PROBE_AT[int(warehouse_map_id)] = now
+        _EXTRACTION_CELERY_PROBE_AT.set(int(warehouse_map_id), now)
     except Exception:
         logger.debug("structure_extraction_status_probe_failed", exc_info=True)
-    _EXTRACTION_STATE[int(warehouse_map_id)] = state
+    _shared_state_set(int(warehouse_map_id), state)
+    _EXTRACTION_STATE.set(int(warehouse_map_id), state)
     return dict(state)
 
 
@@ -187,6 +453,15 @@ def warehouse_mapping_worker_ready(*, force: bool = False) -> tuple[bool, str | 
 
     ttl = max(1.0, float(getattr(settings, "warehouse_mapping_worker_probe_cache_ttl_s", 20.0)))
     now = time.monotonic()
+    if not force:
+        try:
+            raw = get_sync_redis_client().get(_WORKER_READY_KEY)
+            if raw:
+                shared = json.loads(raw)
+                if isinstance(shared, dict) and (now - float(shared.get("checked_at", 0.0))) < ttl:
+                    return bool(shared.get("ready")), shared.get("detail")
+        except Exception:
+            logger.debug("warehouse_worker_readiness_shared_state_read_failed", exc_info=True)
     if not force and _WORKER_READY_CACHE is not None:
         cached_at, ready, detail = _WORKER_READY_CACHE
         if (now - cached_at) < ttl:
@@ -195,6 +470,14 @@ def warehouse_mapping_worker_ready(*, force: bool = False) -> tuple[bool, str | 
     def _finish(ready: bool, detail: str | None) -> tuple[bool, str | None]:
         global _WORKER_READY_CACHE
         _WORKER_READY_CACHE = (now, ready, detail)
+        try:
+            get_sync_redis_client().setex(
+                _WORKER_READY_KEY,
+                max(1, int(ttl)),
+                json.dumps({"checked_at": now, "ready": ready, "detail": detail}),
+            )
+        except Exception:
+            logger.debug("warehouse_worker_readiness_shared_state_write_failed", exc_info=True)
         return ready, detail
 
     try:
@@ -221,6 +504,8 @@ def warehouse_mapping_worker_ready(*, force: bool = False) -> tuple[bool, str | 
     queue_name = settings.celery_warehouse_mapping_queue
     workers_on_queue: list[str] = []
     workers_missing_task: list[str] = []
+    workers_without_heartbeat: list[str] = []
+    shared_heartbeat_available = redis_available()
     for worker_name, queues in queues_by_worker.items():
         if not any(queue.get("name") == queue_name for queue in queues or []):
             continue
@@ -228,6 +513,13 @@ def warehouse_mapping_worker_ready(*, force: bool = False) -> tuple[bool, str | 
         worker_tasks = set(registered_by_worker.get(worker_name) or [])
         if EXTRACTION_TASK_NAME not in worker_tasks:
             workers_missing_task.append(worker_name)
+        elif shared_heartbeat_available:
+            try:
+                heartbeat_key = f"{_WORKER_HEARTBEAT_PREFIX}:{worker_name}"
+                if not get_sync_redis_client().exists(heartbeat_key):
+                    workers_without_heartbeat.append(worker_name)
+            except Exception:
+                shared_heartbeat_available = False
 
     if not workers_on_queue:
         return _finish(
@@ -240,6 +532,12 @@ def warehouse_mapping_worker_ready(*, force: bool = False) -> tuple[bool, str | 
             False,
             "Warehouse mapping worker is running but has not loaded "
             f"`{EXTRACTION_TASK_NAME}`. Restart with `make warehouse` to pick up new code.",
+        )
+    if workers_without_heartbeat:
+        return _finish(
+            False,
+            "Warehouse mapping worker is registered but its heartbeat lease is stale. "
+            "Wait for the worker heartbeat or restart it.",
         )
     return _finish(True, None)
 
@@ -1163,9 +1461,20 @@ async def extract_and_persist_structure(
     model_id: int,
     client_flight_id: str,
     params: StructureExtractionParams | None = None,
+    extraction_job_id: int | None = None,
 ) -> dict[str, Any]:
     """Run structure extraction for a flight and persist targets + asset."""
     record_extraction_running(warehouse_map_id=int(warehouse_map_id))
+    async with Session() as state_db:
+        await update_durable_extraction_job(
+            state_db,
+            warehouse_map_id=int(warehouse_map_id),
+            model_id=int(model_id),
+            status="processing",
+            job_id=extraction_job_id,
+            progress=10,
+        )
+        await state_db.commit()
     effective = (params or StructureExtractionParams()).sanitized()
     try:
         coordinate_frame_id: int | None = None
@@ -1199,13 +1508,14 @@ async def extract_and_persist_structure(
             "warehouse_structure_extract_readiness",
             extra={"warehouse_map_id": int(warehouse_map_id), **readiness.to_dict()},
         )
-        result = await asyncio.to_thread(
-            extract_structure_from_flight,
-            client_flight_id,
-            params=effective,
-            occupancy_grid=live_occupancy,
-            odom_to_warehouse_map_transform=coordinate_frame.transform_json,
-        )
+        with profile_stage("warehouse.structure_extraction", workload="production"):
+            result = await asyncio.to_thread(
+                extract_structure_from_flight,
+                client_flight_id,
+                params=effective,
+                occupancy_grid=live_occupancy,
+                odom_to_warehouse_map_transform=coordinate_frame.transform_json,
+            )
         _attach_manifest_hints(result, client_flight_id)
         result.summary["diagnostics"] = {
             **readiness.to_dict(),
@@ -1229,6 +1539,18 @@ async def extract_and_persist_structure(
             warehouse_map_id=int(warehouse_map_id),
             target_count=int(persisted.get("target_count") or 0),
         )
+        async with Session() as state_db:
+            await update_durable_extraction_job(
+                state_db,
+                warehouse_map_id=int(warehouse_map_id),
+                model_id=int(model_id),
+                status="ready",
+                job_id=extraction_job_id,
+                progress=100,
+                confidence=persisted.get("confidence"),
+                failure_reason_codes=list(persisted.get("failure_reason_codes") or []),
+            )
+            await state_db.commit()
         logger.info(
             "warehouse_coordinate_setup_detection_completed",
             extra={
@@ -1286,6 +1608,18 @@ async def extract_and_persist_structure(
             failure_reason_codes=failure_reason_codes,
             debug_artifact_url=debug_url,
         )
+        async with Session() as state_db:
+            await update_durable_extraction_job(
+                state_db,
+                warehouse_map_id=int(warehouse_map_id),
+                model_id=int(model_id),
+                status="failed",
+                job_id=extraction_job_id,
+                error=str(exc),
+                progress=100,
+                failure_reason_codes=failure_reason_codes,
+            )
+            await state_db.commit()
         raise
 
 

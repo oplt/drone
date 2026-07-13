@@ -1,10 +1,37 @@
+x-backend-environment: &backend-environment
+  DATABASE_URL: "postgresql+asyncpg://drone:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/drone"
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+  SETTINGS_VAULT_KEY: ${SETTINGS_VAULT_KEY:?set SETTINGS_VAULT_KEY}
+  GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:?set GOOGLE_MAPS_API_KEY}
+  RASPBERRY_PASSWORD: ${RASPBERRY_PASSWORD:?set RASPBERRY_PASSWORD}
+  DRONE_CONN: ${DRONE_CONN:-udp:127.0.0.1:14550}
+  DRONE_CONN_MAVPROXY: ${DRONE_CONN_MAVPROXY:-udp:127.0.0.1:14551}
+  HEARTBEAT_TIMEOUT: "5.0"
+  RASPBERRY_IP: ${RASPBERRY_IP:-127.0.0.1}
+  RASPBERRY_USER: ${RASPBERRY_USER:-operator}
+  RASPBERRY_HOST: ${RASPBERRY_HOST:-raspberrypi.local}
+  SSH_KEY_PATH: ${SSH_KEY_PATH:-/tmp/id_rsa}
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+  MAPPING_JOB_QUEUE_BACKEND: celery
+  REDIS_URL: redis://redis:6379/0
+  STORAGE_BACKEND: s3
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_ACCESS_KEY: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+  S3_BUCKET_NAME: drone-assets
+  S3_REGION: us-east-1
+  OBSERVABILITY_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4318}
+  OTEL_ENVIRONMENT: ${OTEL_ENVIRONMENT:-local}
+
 services:
   postgres:
     image: postgis/postgis:16-3.4
     environment:
       POSTGRES_DB: drone
       POSTGRES_USER: drone
-      POSTGRES_PASSWORD: drone
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -29,8 +56,8 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -43,6 +70,9 @@ services:
       retries: 5
 
   api:
+    env_file:
+      - path: ${BACKEND_ENV_FILE:-./backend/.env}
+        required: false
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -54,40 +84,15 @@ services:
       minio:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://drone:drone@postgres:5432/drone
-      SETTINGS_VAULT_KEY: BHmFE5e3ErYeWjVExeoWQooA3kDUO0Uh0bZOhZGH12c=
-      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-CHANGE-ME}
+      <<: *backend-environment
       ADMIN_EMAILS: admin@example.com
-      GOOGLE_MAPS_API_KEY: dev-placeholder
-      DRONE_CONN: udp:127.0.0.1:14550
-      DRONE_CONN_MAVPROXY: udp:127.0.0.1:14551
-      HEARTBEAT_TIMEOUT: "5.0"
-      RASPBERRY_IP: 127.0.0.1
-      RASPBERRY_USER: operator
-      RASPBERRY_HOST: raspberrypi.local
-      RASPBERRY_PASSWORD: dev-placeholder
-      SSH_KEY_PATH: /tmp/id_rsa
       DEBUG_ROUTES_ENABLED: "0"
       DB_AUTO_CREATE: "0"
       ALERTS_ENABLED: "0"
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      MAPPING_JOB_QUEUE_BACKEND: celery
       WEBODM_MOCK_MODE: "1"
-      PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: ${PHOTOGRAMMETRY_ASSET_SIGNING_SECRET:-}
       COOKIE_SECURE: "0"
       COOKIE_SAMESITE: lax
-      REDIS_URL: "redis://redis:6379/0"
-      STORAGE_BACKEND: "s3"
-      S3_ENDPOINT_URL: "http://minio:9000"
-      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
-      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
-      S3_BUCKET_NAME: "drone-assets"
-      S3_REGION: "us-east-1"
-      OBSERVABILITY_ENABLED: "true"
       OTEL_SERVICE_NAME: drone-api
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
-      OTEL_ENVIRONMENT: local
       PROMETHEUS_METRICS_ENABLED: "true"
       PROMETHEUS_METRICS_PATH: /metrics
     command: >
@@ -105,6 +110,9 @@ services:
       start_period: 30s
 
   worker:
+    env_file:
+      - path: ${BACKEND_ENV_FILE:-./backend/.env}
+        required: false
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -114,46 +122,87 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://drone:drone@postgres:5432/drone
-      SETTINGS_VAULT_KEY: BHmFE5e3ErYeWjVExeoWQooA3kDUO0Uh0bZOhZGH12c=
-      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-CHANGE-ME}
-      GOOGLE_MAPS_API_KEY: dev-placeholder
-      DRONE_CONN: udp:127.0.0.1:14550
-      DRONE_CONN_MAVPROXY: udp:127.0.0.1:14551
-      HEARTBEAT_TIMEOUT: "5.0"
-      RASPBERRY_IP: 127.0.0.1
-      RASPBERRY_USER: operator
-      RASPBERRY_HOST: raspberrypi.local
-      RASPBERRY_PASSWORD: dev-placeholder
-      SSH_KEY_PATH: /tmp/id_rsa
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      <<: *backend-environment
       CELERY_PHOTOGRAMMETRY_QUEUE: photogrammetry
-      MAPPING_JOB_QUEUE_BACKEND: celery
       WEBODM_MOCK_MODE: "1"
-      PHOTOGRAMMETRY_ASSET_SIGNING_SECRET: ${PHOTOGRAMMETRY_ASSET_SIGNING_SECRET:-}
       COOKIE_SECURE: "0"
       COOKIE_SAMESITE: lax
-      REDIS_URL: "redis://redis:6379/0"
-      STORAGE_BACKEND: "s3"
-      S3_ENDPOINT_URL: "http://minio:9000"
-      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
-      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
-      S3_BUCKET_NAME: "drone-assets"
-      S3_REGION: "us-east-1"
-      OBSERVABILITY_ENABLED: "true"
       OTEL_SERVICE_NAME: drone-worker
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
-      OTEL_ENVIRONMENT: local
     command: >
       celery -A backend.entrypoints.workers.celery_app:celery_app worker
       --loglevel=INFO
-      --queues=photogrammetry,exports,webhooks
+      --queues=default
       --hostname=worker@%h
     volumes:
       - mapping_storage:/app/backend/storage
+    healthcheck:
+      test:
+        ["CMD-SHELL", "celery -A backend.entrypoints.workers.celery_app:celery_app inspect ping --timeout=2 | grep -q pong"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  worker-warehouse:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=1 --queues=warehouse-mapping --hostname=warehouse@%h
+    healthcheck:
+      test:
+        ["CMD-SHELL", "celery -A backend.entrypoints.workers.celery_app:celery_app inspect ping --destination=warehouse@$$HOSTNAME --timeout=2 | grep -q pong"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  worker-video:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=1 --queues=video-analysis --hostname=video@%h
+
+  worker-photogrammetry:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=1 --queues=photogrammetry --hostname=photogrammetry@%h
+
+  worker-exports:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=2 --queues=exports --hostname=exports@%h
+
+  worker-webhooks:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=4 --queues=webhooks --hostname=webhooks@%h
+
+  worker-notifications:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=2 --queues=notifications --hostname=notifications@%h
+
+  worker-scheduling:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=2 --queues=scheduling --hostname=scheduling@%h
 
   beat:
+    env_file:
+      - path: ${BACKEND_ENV_FILE:-./backend/.env}
+        required: false
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -163,31 +212,8 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://drone:drone@postgres:5432/drone
-      SETTINGS_VAULT_KEY: BHmFE5e3ErYeWjVExeoWQooA3kDUO0Uh0bZOhZGH12c=
-      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-CHANGE-ME}
-      GOOGLE_MAPS_API_KEY: dev-placeholder
-      DRONE_CONN: udp:127.0.0.1:14550
-      DRONE_CONN_MAVPROXY: udp:127.0.0.1:14551
-      HEARTBEAT_TIMEOUT: "5.0"
-      RASPBERRY_IP: 127.0.0.1
-      RASPBERRY_USER: operator
-      RASPBERRY_HOST: raspberrypi.local
-      RASPBERRY_PASSWORD: dev-placeholder
-      SSH_KEY_PATH: /tmp/id_rsa
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      REDIS_URL: "redis://redis:6379/0"
-      STORAGE_BACKEND: "s3"
-      S3_ENDPOINT_URL: "http://minio:9000"
-      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
-      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
-      S3_BUCKET_NAME: "drone-assets"
-      S3_REGION: "us-east-1"
-      OBSERVABILITY_ENABLED: "true"
+      <<: *backend-environment
       OTEL_SERVICE_NAME: drone-beat
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
-      OTEL_ENVIRONMENT: local
     command: >
       celery -A backend.entrypoints.workers.celery_app:celery_app beat
       --loglevel=INFO
@@ -198,9 +224,9 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_BASE_URL: http://localhost:8000
-        VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY: dev-placeholder
-        VITE_GOOGLE_MAPS_MAP_ID: dev-placeholder
-        VITE_CESIUM_ION_TOKEN: dev-placeholder
+        VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+        VITE_GOOGLE_MAPS_MAP_ID: ${GOOGLE_MAPS_MAP_ID:-}
+        VITE_CESIUM_ION_TOKEN: ${CESIUM_ION_TOKEN:-}
     depends_on:
       api:
         condition: service_healthy

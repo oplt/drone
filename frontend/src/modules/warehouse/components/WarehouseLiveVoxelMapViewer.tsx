@@ -176,7 +176,13 @@ export function WarehouseLiveVoxelMapViewer({
 
   const resolvedCacheMode =
     cacheMode ?? (state.connectionState === "finalized" ? "replay" : "live");
-  const { cachedChunks, downloadedChunkIds, inFlightChunkIds } =
+  const {
+    cachedChunks,
+    downloadedChunkIds,
+    inFlightChunkIds,
+    droppedChunkCount,
+    maxConcurrentDownloads,
+  } =
     useLiveMapChunkCache(resolvedFlightId, state.chunks, state.token, {
       mode: resolvedCacheMode,
       visibleLayers: layers,
@@ -214,6 +220,19 @@ export function WarehouseLiveVoxelMapViewer({
       cachedChunks.reduce((sum, chunk) => sum + (chunk.point_count ?? 0), 0),
     [cachedChunks],
   );
+  const renderStats = useMemo(() => {
+    const keys = Object.keys(layerPointBudget) as LiveMapLayerKey[];
+    const pointBudget = keys
+      .filter((key) => layers[key])
+      .reduce((sum, key) => sum + (layerPointBudget[key] ?? 0), 0);
+    const renderedPointEstimate = keys
+      .filter((key) => layers[key])
+      .reduce(
+        (sum, key) => sum + Math.min(pointsByLayer[key] ?? 0, layerPointBudget[key] ?? 0),
+        0,
+      );
+    return { renderedPointEstimate, pointBudget, droppedChunkCount, maxConcurrentDownloads };
+  }, [droppedChunkCount, layerPointBudget, layers, maxConcurrentDownloads, pointsByLayer]);
   const visiblePendingChunkCount = useMemo(() => {
     if (!resolvedFlightId) return 0;
     let pending = 0;
@@ -309,6 +328,7 @@ export function WarehouseLiveVoxelMapViewer({
         mappingStackStatus={mappingStackStatus}
         pointsByLayer={pointsByLayer}
         cachedBytes={cachedBytes}
+        renderStats={renderStats}
       />
       <Typography variant="caption" color="text.secondary">
         Mode: {mapMode} · flight: {flightId ?? state.latestUpdate?.flight_id ?? "—"}
@@ -387,7 +407,18 @@ export function WarehouseLiveVoxelMapViewer({
               ? "crosshair"
               : "default",
         }}
+        role="img"
+        aria-label="Interactive warehouse voxel map"
+        aria-describedby="warehouse-voxel-map-description"
+        tabIndex={0}
       >
+        <Typography
+          id="warehouse-voxel-map-description"
+          component="span"
+          sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}
+        >
+          {state.chunks.length} chunks and {visiblePointTotal.toLocaleString()} loaded points. Use mouse or touch to orbit, pan, and zoom. Layer visibility and point budgets are listed below.
+        </Typography>
           {!hidden && (
               <WarehouseLiveVoxelScene
                   state={state}

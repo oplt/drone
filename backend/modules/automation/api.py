@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import Session
+from backend.infrastructure.jobs import enqueue_task
 from backend.modules.automation.models import MissionTemplate, ScheduledRun
 from backend.modules.identity.dependencies import OrgUser, require_org_user
 
@@ -221,8 +222,6 @@ async def trigger_template(
     org_user: OrgUser = Depends(require_org_user),
     db: AsyncSession = Depends(_get_db),
 ):
-    from backend.entrypoints.workers.scheduling_tasks import run_template_mission
-
     tmpl = await _get_template_or_404(db, template_id, org_user.org_id)
     if not tmpl.is_active:
         raise HTTPException(status_code=409, detail="Template is inactive")
@@ -236,7 +235,7 @@ async def trigger_template(
     await db.commit()
     await db.refresh(run)
 
-    run_template_mission.delay(run.id)
+    enqueue_task("backend.tasks.scheduling_tasks.run_template_mission", run_id=run.id)
     logger.info("Manually triggered template %d → scheduled_run %d", tmpl.id, run.id)
 
     return {"scheduled_run_id": run.id, "status": run.status}

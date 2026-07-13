@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
+from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_mission_exec,
@@ -117,15 +118,27 @@ from fastapi import APIRouter
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["warehouse"])
 
-@router.get("/maps/{warehouse_map_id}/docks", response_model=list[WarehouseDockOut])
+@router.get("/maps/{warehouse_map_id}/docks", response_model=Page[WarehouseDockOut])
 async def list_warehouse_docks(
     warehouse_map_id: int,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
-) -> list[WarehouseDockOut]:
+) -> Page[WarehouseDockOut]:
     await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
-    rows = await repo.list_dock_stations(db, warehouse_map_id=warehouse_map_id)
-    return [dock_out(row) for row in rows]
+    page_limit = clamp_page_limit(limit)
+    page_offset = decode_offset_cursor(cursor) if cursor else offset
+    rows = await repo.list_dock_stations(
+        db,
+        warehouse_map_id=warehouse_map_id,
+        limit=page_limit + 1,
+        offset=page_offset,
+    )
+    return page_from_offset(
+        [dock_out(row) for row in rows], limit=page_limit, offset=page_offset
+    )
 
 
 @router.post(
@@ -237,4 +250,3 @@ async def delete_warehouse_dock(
     if not deleted:
         raise HTTPException(status_code=404, detail="Warehouse dock not found")
     await db.commit()
-

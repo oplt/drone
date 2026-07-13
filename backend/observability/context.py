@@ -15,6 +15,9 @@ _correlation_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 _job_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "observability_job_id", default=None
 )
+_scope: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
+    "observability_scope", default=None
+)
 
 
 def new_correlation_id() -> str:
@@ -56,6 +59,7 @@ def log_context_fields() -> dict[str, str]:
         fields["correlation_id"] = correlation_id
     if job_id:
         fields["job_id"] = job_id
+    fields.update(_scope.get() or {})
     try:
         from opentelemetry import trace
 
@@ -88,3 +92,11 @@ def bind_log_context(**fields: Any) -> None:
         set_correlation_id(str(fields["correlation_id"]))
     if "job_id" in fields and fields["job_id"]:
         set_job_id(str(fields["job_id"]))
+    current = dict(_scope.get() or {})
+    current.update({key: str(value) for key, value in fields.items() if value is not None})
+    _scope.set(current)
+
+
+def clear_log_scope() -> None:
+    """Clear request-scoped entity fields without touching trace IDs."""
+    _scope.set(None)
