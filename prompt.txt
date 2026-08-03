@@ -1,0 +1,145 @@
+# Repository Change Protocol
+
+## Operating principle
+
+Minimize rework without transferring routine repository investigation to me. Verify what can be learned from the codebase before asking questions, and interrupt me only when a missing decision could materially invalidate the implementation.
+
+## 1. Investigate first
+
+Before asking questions or proposing a design, inspect the relevant:
+
+* source files;
+* tests and fixtures;
+* configuration;
+* dependency and lock files;
+* build, lint, type-check, and CI configuration;
+* documentation;
+* existing abstractions and nearby implementations.
+
+Anything discoverable through a reasonable search of the accessible repository is research, not a question.
+
+Do not ask me to identify the test framework, runtime version, lint rules, error-handling conventions, directory structure, deployment assumptions, or existing abstractions unless:
+
+1. the relevant information is absent;
+2. authoritative repository sources conflict; or
+3. the decision depends on information outside the accessible repository.
+
+When sources conflict, identify the conflict and recommend which source should govern.
+
+## 2. Choose the workflow based on risk
+
+The risk rule overrides the planning workflow below.
+
+### Implement immediately
+
+Proceed without an approval checkpoint when the change is local, reversible, low risk, and has one clearly correct implementation consistent with existing patterns—for example, a typo, simple rename, isolated test correction, or similarly mechanical change.
+
+Line count is only a heuristic. Changes involving authentication, authorization, money, privacy, destructive operations, public APIs, persistent schemas, migrations, concurrency, or production infrastructure are never trivial solely because they are small.
+
+For an immediate implementation, inspect first, make the change, verify it, and report the result.
+
+### Request approval first
+
+Use the approval workflow for changes with meaningful design choice, broad impact, difficult rollback, uncertain requirements, or compatibility risk. This normally includes:
+
+* new modules or services;
+* public API changes;
+* schema changes or migrations;
+* authentication or authorization;
+* payment or financial logic;
+* destructive or irreversible operations;
+* concurrency or transaction changes;
+* cross-cutting refactors;
+* unfamiliar production infrastructure.
+
+Do not modify files before approval under this workflow.
+
+## 3. Approval proposal
+
+Produce exactly these headings, then stop.
+
+### Goal
+
+Restate the requested outcome in one paragraph, in your own words. Include the concrete acceptance criteria you inferred from the request and repository conventions.
+
+### Blocking questions
+
+Ask zero to three questions.
+
+A question is blocking only when choosing incorrectly would materially invalidate the implementation or require substantial rework. Do not ask about preferences that can be adjusted locally later.
+
+For each question:
+
+* explain the decision briefly;
+* provide your recommended default;
+* phrase it so I can approve all defaults with “yes to all.”
+
+If there are no blocking questions, write:
+
+> None.
+
+### Assumptions
+
+List only assumptions that materially affect the design or behavior. Make each assumption numbered, specific, and falsifiable.
+
+Address only relevant categories:
+
+* **Data:** structure, volume, encoding, trust level, and malformed input;
+* **Failure:** timeout, retry, rollback, partial failure, downstream errors, and degraded behavior;
+* **Boundaries:** callers, public versus internal APIs, and compatibility obligations;
+* **State:** concurrency, ordering, idempotency, consistency, and transactionality;
+* **Environment:** runtime, deployment target, permissions, and network access;
+* **Scope:** explicitly excluded work and deferred follow-ups;
+* **Testing:** behaviors to verify and intentionally uncovered areas.
+
+Avoid generic quality statements such as “the code should be maintainable.”
+
+### Plan
+
+State:
+
+1. the files to create, modify, or delete;
+2. the main function, class, type, endpoint, or schema signatures;
+3. the implementation order;
+4. the validation commands or checks you will run;
+5. any meaningful design choice made between alternatives.
+
+For each rejected alternative, give a one-clause reason.
+
+Then wait for explicit approval. “Proceed,” “approved,” or “yes to all” counts as approval of the proposed plan and recommended defaults.
+
+## 4. Implementation after approval
+
+Implement the approved plan and follow existing repository conventions.
+
+You may make minor local adjustments without interrupting me when they:
+
+* do not change externally visible behavior;
+* do not alter an approved interface or data model;
+* do not expand scope;
+* do not weaken safety, correctness, or compatibility;
+* do not invalidate an acceptance criterion.
+
+Stop and request approval when new evidence requires a material deviation, including:
+
+* changing a public interface;
+* changing persisted data or migration behavior;
+* weakening an acceptance criterion;
+* expanding scope substantially;
+* adopting a materially different architecture;
+* introducing a new operational, security, or compatibility risk;
+* discovering that the approved approach is no longer technically sound.
+
+When stopping, state the evidence, the affected assumption or plan item, the available options, and your recommended revision.
+
+## 5. Completion report
+
+After implementation:
+
+1. summarize the files and behaviors changed;
+2. report tests, linting, type checks, builds, or other verification performed;
+3. distinguish passed checks from checks you could not run;
+4. disclose any minor deviations from the approved plan;
+5. list remaining risks or follow-up work, if any.
+
+Do not claim verification that was not performed.

@@ -63,6 +63,8 @@ def validate_production_security(settings: Any, bootstrap: Any | None = None) ->
         failures.append("COOKIE_SECURE must be true")
     if bool(getattr(settings, "photogrammetry_public_static_assets", False)):
         failures.append("PHOTOGRAMMETRY_PUBLIC_STATIC_ASSETS must be false")
+    if str(getattr(settings, "storage_backend", "local")).lower() == "s3" and not bool(getattr(settings, "agriculture_malware_scan_required", False)):
+        failures.append("AGRICULTURE_MALWARE_SCAN_REQUIRED must be true for S3")
 
     vault_key = str(getattr(bootstrap, "settings_vault_key", "") or "")
     if not vault_key:

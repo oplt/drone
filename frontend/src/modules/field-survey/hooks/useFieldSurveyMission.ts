@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../../../modules/session";
 import { useNotice } from "../../../shared/ui/NoticeContext";
 import {
@@ -16,11 +16,40 @@ import { cesiumZoomForMapZoom } from "../../mission-workflow/utils/cesiumZoom";
 import type { LonLat } from "../../fields";
 import type { TerraDrawEditorMode } from "../../maps";
 import type { MissionMapEngine } from "../../maps";
+import { useAgricultureProfile } from "../../agriculture";
+import type { AgricultureMissionProfile } from "../../agriculture";
 
 const DEFAULT_GRID_PARAMS = createDefaultGridParams();
 
+const DEFAULT_AGRICULTURE_PROFILE: AgricultureMissionProfile = {
+  flight_kind: "agriculture_survey",
+  preset: "rgb_weed_water",
+  crop_type: "",
+  variety: "",
+  season: "",
+  growth_stage: "",
+  row_direction_deg: null,
+  expected_row_spacing_m: null,
+  target_gsd_cm: 2,
+  speed_mps: 5,
+  front_overlap_pct: 70,
+  side_overlap_pct: 60,
+  camera_orientation: "nadir",
+  fov_h_deg: 78,
+  fov_v_deg: 62,
+  camera_resolution_width_px: 4000,
+  camera_resolution_height_px: 3000,
+  focal_length_mm: null,
+  grid_angle_deg: null,
+  sensor_inventory: ["rgb"],
+  calibration_ids: [],
+  requested_analyses: ["quality", "coverage"],
+  repeat_interval_days: null,
+};
+
 export function useFieldSurveyMission({
   fieldBorder,
+  selectedFieldId,
   mapEngine,
   terraDrawMode,
   addError,
@@ -30,6 +59,7 @@ export function useFieldSurveyMission({
   onMissionStarted,
 }: {
   fieldBorder: LonLat[] | null;
+  selectedFieldId: number | null;
   mapEngine: MissionMapEngine;
   terraDrawMode: TerraDrawEditorMode;
   addError: (message: string) => void;
@@ -54,6 +84,21 @@ export function useFieldSurveyMission({
   const [preflightRun, setPreflightRun] =
     useState<PreflightRunResponse | null>(null);
   const [gridParams, setGridParams] = useState<GridParams>(DEFAULT_GRID_PARAMS);
+  const [agricultureProfile, setAgricultureProfile] = useState<AgricultureMissionProfile>(DEFAULT_AGRICULTURE_PROFILE);
+  const agricultureFieldProfile = useAgricultureProfile(selectedFieldId);
+  useEffect(() => {
+    const saved = agricultureFieldProfile.data;
+    if (!saved) return;
+    setAgricultureProfile((current) => ({
+      ...current,
+      crop_type: saved.crop_type ?? current.crop_type,
+      variety: saved.variety ?? current.variety,
+      season: saved.season ?? current.season,
+      growth_stage: saved.growth_stage ?? current.growth_stage,
+      row_direction_deg: saved.row_direction_deg ?? current.row_direction_deg,
+      expected_row_spacing_m: saved.expected_row_spacing_m ?? current.expected_row_spacing_m,
+    }));
+  }, [agricultureFieldProfile.data]);
   const [drawMode, setDrawMode] = useState<DrawMode>("none");
 
   const {
@@ -118,6 +163,10 @@ export function useFieldSurveyMission({
       addError("Draw or select a field polygon before starting a grid survey");
       return;
     }
+    if (selectedFieldId == null) {
+      addError("Save or select field before starting agriculture flight");
+      return;
+    }
     if (gridPreview && gridPreview.length > MAX_GRID_PREVIEW_WAYPOINTS) {
       addError(
         `Grid preview is too dense for safe execution (${gridPreview.length}/${MAX_GRID_PREVIEW_WAYPOINTS} waypoints). Increase row spacing, increase row stride, or split the field.`
@@ -138,10 +187,12 @@ export function useFieldSurveyMission({
         name: name.trim(),
         cruise_alt: altToUse,
         mission_type: "grid",
+        field_id: selectedFieldId,
+        agriculture: agricultureProfile,
         grid: {
           field_polygon_lonlat: fieldBorder,
           row_spacing_m: gridParams.row_spacing_m,
-          grid_angle_deg: gridParams.grid_angle_deg,
+          grid_angle_deg: agricultureProfile.grid_angle_deg ?? gridParams.grid_angle_deg,
           slope_aware: gridParams.slope_aware,
           safety_inset_m: gridParams.safety_inset_m,
           terrain_follow: gridParams.terrain_follow,
@@ -198,6 +249,8 @@ export function useFieldSurveyMission({
     preflightRun,
     gridParams,
     setGridParams,
+    agricultureProfile,
+    setAgricultureProfile,
     drawMode,
     setDrawMode,
     gridPreview,

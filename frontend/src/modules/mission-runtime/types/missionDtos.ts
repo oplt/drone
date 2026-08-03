@@ -12,7 +12,7 @@ export type MissionLifecycleState =
   | "completed"
   | "failed";
 
-export type MissionCommand = "pause" | "resume" | "abort";
+export type MissionCommand = "pause" | "resume" | "abort" | "rth" | "land";
 
 export type PreflightRunResponse = {
   preflight_run_id: string;

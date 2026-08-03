@@ -1,4 +1,5 @@
 import type { MissionCommand, MissionLifecycleState, PreflightRunResponse } from "./missionDtos";
+import type { AgricultureEvent } from "../../agriculture/runtime";
 
 export type OpsQueueSnapshot = {
   depth: number;
@@ -94,6 +95,8 @@ export type MissionStatusPayload = {
     pause?: boolean;
     resume?: boolean;
     abort?: boolean;
+    rth?: boolean;
+    land?: boolean;
   } | null;
   orchestrator?: { drone_connected?: boolean };
   telemetry?: { running?: boolean; source_connected?: boolean };
@@ -112,6 +115,8 @@ export type MissionRuntimeFacade<TStatus extends MissionStatusPayload = MissionS
   telemetryError: string | null;
   reconnect: () => void;
   disconnect: () => void;
+  agricultureEvent: AgricultureEvent | null;
+  agricultureEventSequenceGap: boolean;
 };
 
 export type VideoStreamState = {
@@ -131,5 +136,5 @@ export type MissionCommandActions = {
   busyCommand: MissionCommand | null;
   message: string | null;
   error: string | null;
-  capabilities: { pause: boolean; resume: boolean; abort: boolean };
+  capabilities: { pause: boolean; resume: boolean; abort: boolean; rth: boolean; land: boolean };
 };

@@ -135,6 +135,9 @@ class AnomalyZone(Base):
     __tablename__ = "anomaly_zones"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    canonical_observation_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("agriculture_observations.id", ondelete="SET NULL"), index=True
+    )
     mission_id: Mapped[str] = mapped_column(
         String(64),
         ForeignKey("mission_runtimes.client_flight_id", ondelete="CASCADE"),
@@ -176,6 +179,9 @@ class InspectionPoint(Base):
     __tablename__ = "inspection_points"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    canonical_observation_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("agriculture_observations.id", ondelete="SET NULL"), index=True
+    )
     mission_id: Mapped[str] = mapped_column(
         String(64),
         ForeignKey("mission_runtimes.client_flight_id", ondelete="CASCADE"),

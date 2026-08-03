@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Any, Iterable
+
+from backend.modules.agriculture.georeferencing import interpolate_pose
 
 
 @dataclass(frozen=True)
@@ -9,24 +13,39 @@ class TelemetryMatch:
     lon: float | None
     altitude_m: float | None
     heading_deg: float | None
+    quality: str = "unresolved"
+    error_ms: float | None = None
 
 
 class NearestTelemetryMatcher:
-    """Placeholder adapter for matching a frame timestamp to mission telemetry.
+    """Repository-fed frame/pose matcher with explicit unresolved outcomes."""
 
-    Connect this to modules.telemetry.repository later. Keep it outside detector
-    logic so CV inference remains testable without MAVLink/DB dependencies.
-    """
-
-    def __init__(self, mission_id: str | None):
+    def __init__(self, mission_id: str | None, samples: Iterable[Any] | None = None, base_timestamp: datetime | None = None):
         self.mission_id = mission_id
+        self.samples = list(samples or [])
+        self.base_timestamp = base_timestamp
 
     def match(self, timestamp_seconds: float) -> TelemetryMatch:
-        # TODO: query telemetry by mission_id and interpolate nearest MAVLink event.
-        # Return empty for first MVP if video files have no telemetry timestamps yet.
+        frame_time = (
+            self.base_timestamp.astimezone(UTC) + timedelta(seconds=float(timestamp_seconds))
+            if self.base_timestamp is not None
+            else datetime.fromtimestamp(float(timestamp_seconds), tz=UTC)
+        )
+        result = interpolate_pose(self.samples, frame_time) if self.samples else None
+        if result is not None and result.pose is not None:
+            return TelemetryMatch(
+                lat=result.pose.lat,
+                lon=result.pose.lon,
+                altitude_m=result.pose.altitude_m,
+                heading_deg=result.pose.yaw_deg,
+                quality=result.status,
+                error_ms=result.error_ms,
+            )
         return TelemetryMatch(
             lat=None,
             lon=None,
             altitude_m=None,
             heading_deg=None,
+            quality=result.status if result is not None else "unresolved",
+            error_ms=result.error_ms if result is not None else None,
         )

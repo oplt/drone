@@ -57,6 +57,8 @@ export function useFieldSurveyPage() {
     telemetry,
     wsConnected,
     droneConnected,
+    agricultureEvent,
+    agricultureEventSequenceGap,
   } = useMissionWebsocketRuntime<MissionStatus>({
     apiBase: API_BASE_CLEAN,
     getTokenFn: getToken,
@@ -73,6 +75,7 @@ export function useFieldSurveyPage() {
 
   const mission = useFieldSurveyMission({
     fieldBorder: fieldBoundary.fieldBorder,
+    selectedFieldId: fieldBoundary.selectedFieldId,
     mapEngine,
     terraDrawMode,
     addError,
@@ -139,6 +142,8 @@ export function useFieldSurveyPage() {
     activeFlightId,
     trackedMissionId,
     telemetry,
+    agricultureEvent,
+    agricultureEventSequenceGap,
     fieldTilesetUrl,
     exclusionZones,
     mission,

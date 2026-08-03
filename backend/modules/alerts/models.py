@@ -48,6 +48,10 @@ class OperationalAlert(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         index=True,
     )
+    assigned_to_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     occurrences: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(

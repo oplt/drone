@@ -29,6 +29,18 @@ function createRequestId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
+function createCorrelationId(): string {
+  const key = "drone-app:correlation-id";
+  if (typeof window !== "undefined") {
+    const existing = window.sessionStorage.getItem(key);
+    if (existing) return existing;
+    const value = createRequestId();
+    window.sessionStorage.setItem(key, value);
+    return value;
+  }
+  return createRequestId();
+}
+
 export function resolveApiUrl(path: string): string {
   const base = getApiBaseUrl();
   const normalized = path.startsWith("/") ? path : `/${path}`;
@@ -42,6 +54,14 @@ function isAuthPath(url: string): boolean {
   } catch {
     return url.includes("/auth/");
   }
+}
+
+function isRawBody(payload: unknown): payload is Blob | ArrayBuffer | Uint8Array {
+  return (
+    (typeof Blob !== "undefined" && payload instanceof Blob) ||
+    (typeof ArrayBuffer !== "undefined" && payload instanceof ArrayBuffer) ||
+    (typeof Uint8Array !== "undefined" && payload instanceof Uint8Array)
+  );
 }
 
 function redirectToSignIn(): void {
@@ -131,6 +151,9 @@ async function performHttpRequestWithRetry<T>(
   if (!headers.has("X-Request-ID")) {
     headers.set("X-Request-ID", createRequestId());
   }
+  if (!headers.has("X-Correlation-ID")) {
+    headers.set("X-Correlation-ID", createCorrelationId());
+  }
   const requestId = headers.get("X-Request-ID") ?? undefined;
   const attemptOptions = { ...options, headers };
   const retryCount = options.networkRetries ?? (method === "GET" ? 2 : 0);
@@ -171,11 +194,15 @@ async function performHttpRequest<T>(
   if (!headers.has("X-Request-ID")) {
     headers.set("X-Request-ID", createRequestId());
   }
+  if (!headers.has("X-Correlation-ID")) {
+    headers.set("X-Correlation-ID", createCorrelationId());
+  }
   const requestId = headers.get("X-Request-ID") ?? undefined;
 
   const payload = options.body;
   const isFormData = payload instanceof FormData;
-  if (payload != null && !isFormData && !headers.has("Content-Type")) {
+  const rawBody = isRawBody(payload);
+  if (payload != null && !isFormData && !rawBody && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (options.token && shouldAttachBearerToken(options.token)) {
@@ -187,6 +214,8 @@ async function performHttpRequest<T>(
       ? undefined
       : isFormData
         ? payload
+        : rawBody
+          ? (payload as BodyInit)
         : JSON.stringify(payload);
 
   let response = await fetch(url, {

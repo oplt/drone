@@ -232,6 +232,7 @@ export function FieldSurveyMapColumn({
           missionId={vm.trackedMissionId ?? vm.activeFlightId}
           fieldId={vm.selectedFieldId}
           flightActive={Boolean(vm.activeFlightId)}
+          agricultureMode
         />
       }
     />

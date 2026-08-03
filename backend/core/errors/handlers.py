@@ -114,16 +114,21 @@ def _response(
     )
 
 
-def _safe_http_message(status_code: int, detail: Any) -> tuple[str, Any]:
+def _safe_http_message(status_code: int, detail: Any) -> tuple[str, Any, str | None]:
     if status_code >= 500 and status_code not in {503}:
-        return "Internal server error", {}
+        return "Internal server error", {}, None
     if isinstance(detail, str):
-        return detail, {}
+        return detail, {}, None
     if isinstance(detail, dict):
         message = str(detail.get("message", "Request failed"))
-        details = {key: value for key, value in detail.items() if key != "message"}
-        return message, details
-    return "Request failed", {}
+        code = detail.get("code")
+        details = {
+            key: value
+            for key, value in detail.items()
+            if key not in {"message", "code"}
+        }
+        return message, details, str(code) if code else None
+    return "Request failed", {}, None
 
 
 async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -168,7 +173,7 @@ async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
 
 async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     error = cast(StarletteHTTPException, exc)
-    message, details = _safe_http_message(error.status_code, error.detail)
+    message, details, detail_code = _safe_http_message(error.status_code, error.detail)
     request_id = _request_id(request)
     if error.status_code >= 500:
         logger.error(
@@ -196,7 +201,7 @@ async def http_exception_handler(request: Request, exc: Exception) -> JSONRespon
         )
     return _response(
         status_code=error.status_code,
-        code=_STATUS_CODES.get(error.status_code, f"HTTP_{error.status_code}"),
+        code=detail_code or _STATUS_CODES.get(error.status_code, f"HTTP_{error.status_code}"),
         message=message,
         details=details,
         request_id=request_id,

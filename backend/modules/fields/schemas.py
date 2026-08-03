@@ -20,7 +20,7 @@ class FieldCreateGeoJSON(BaseModel):
     owner_id: int | None = None
     workflow_scope: str | None = Field(
         default=None,
-        description="Dashboard workflow that owns this boundary (field_survey, photogrammetry, property_patrol, animal_farm).",
+        description="Dashboard workflow that owns this boundary (field_survey, agriculture, photogrammetry, property_patrol, animal_farm).",
     )
     metadata: dict[str, Any] = Field(default_factory=dict)
 

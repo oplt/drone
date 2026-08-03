@@ -1,0 +1,52 @@
+groups:
+  - name: agriculture-operations
+    rules:
+      - alert: AgricultureQueueBacklog
+        expr: max(agriculture_queue_depth) by (queue) > 25
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "Agriculture queue {{ $labels.queue }} is backlogged"}
+      - alert: AgricultureStageFailures
+        expr: sum(increase(agriculture_stage_failures_total[15m])) by (stage) >= 3
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Repeated agriculture stage failures"}
+      - alert: AgricultureTelemetryGaps
+        expr: sum(increase(agriculture_telemetry_gaps_total[15m])) > 10
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Agriculture telemetry gaps exceed threshold"}
+      - alert: AgricultureLowGeoreferenceRate
+        expr: agriculture_georeference_rate < 0.8
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "Agriculture georeference success below 80%"}
+      - alert: AgricultureWorkerSaturation
+        expr: max(agriculture_worker_saturation) by (queue, resource) > 0.9
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "Agriculture worker saturation above 90%"}
+      - alert: AgricultureStorageQuotaRisk
+        expr: max(agriculture_storage_bytes) by (tenant) > 19327352832
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "Agriculture tenant storage above 90% of default quota"}
+      - alert: AgricultureModelDrift
+        expr: max(agriculture_model_drift_score) by (model, slice) > 0.2
+        for: 30m
+        labels: {severity: warning}
+        annotations: {summary: "Agriculture model drift threshold exceeded"}
+      - alert: AgricultureRepeatedAnalysisFailures
+        expr: max(agriculture_repeated_failures) by (run_id) >= 3
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Agriculture analysis exhausted retries"}
+      - alert: AgricultureDeadLetterCreated
+        expr: sum(increase(agriculture_dead_letters_total[5m])) > 0
+        labels: {severity: critical}
+        annotations: {summary: "Agriculture job entered dead-letter queue"}
+      - alert: AgricultureRuntimeCommandFailures
+        expr: sum(increase(agriculture_runtime_command_failures_total[10m])) > 5
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Agriculture runtime commands are failing repeatedly"}

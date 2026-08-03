@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 from backend.modules.missions.flight_profile import FlightEnvironment
 from backend.modules.missions.schemas.mission_types import MissionType, Waypoint
 from backend.modules.patrol.ai_tasks import PATROL_AI_TASKS
+from backend.modules.agriculture.schemas import AgricultureMissionProfile
 
 
 class GridMissionParams(BaseModel):
@@ -28,6 +29,11 @@ class GridMissionParams(BaseModel):
     lane_strategy: Literal["serpentine", "one_way"] = "serpentine"
     row_stride: int = Field(default=1, ge=1, le=20)
     row_phase_m: float = Field(default=0.0, ge=0.0, le=500.0)
+    route_waypoints: list[Waypoint] | None = Field(
+        default=None,
+        min_length=2,
+        description="Optional immutable route snapshot supplied by the agriculture planner.",
+    )
 
 
 PatrolTaskType = Literal[
@@ -177,6 +183,9 @@ class MissionCreateIn(BaseModel):
     name: str = Field(default="mission", min_length=1, max_length=120)
     cruise_alt: float = Field(default=30.0, gt=0, le=500)
     mission_type: MissionType = MissionType.WAYPOINT
+    # Agriculture missions keep saved-field identity separate from polygon data.
+    field_id: int | None = Field(default=None, ge=1)
+    agriculture: AgricultureMissionProfile | None = None
     flight_environment: FlightEnvironment | None = Field(
         default=None,
         description=(
@@ -206,6 +215,10 @@ class MissionCreateIn(BaseModel):
 
     @model_validator(mode="after")
     def _check_payload(self) -> MissionCreateIn:
+        if self.agriculture is not None and self.field_id is None:
+            raise ValueError("Agriculture mission requires field_id")
+        if self.field_id is not None and self.mission_type not in {MissionType.GRID, MissionType.PHOTOGRAMMETRY}:
+            raise ValueError("field_id is supported only for outdoor grid or photogrammetry missions")
         if self.mission_type == MissionType.CONTROLLED:
             pass  # no extra params required
         elif self.mission_type == MissionType.WAYPOINT:

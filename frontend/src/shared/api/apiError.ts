@@ -1,8 +1,11 @@
 export class ApiError extends Error {
   readonly status: number;
+  readonly code: string | null;
   readonly detail: string | null;
+  readonly details: Record<string, unknown>;
   readonly body: unknown;
   readonly requestId: string | null;
+  readonly schemaVersion: string | null;
 
   constructor(
     status: number,
@@ -10,13 +13,19 @@ export class ApiError extends Error {
     detail: string | null = null,
     body: unknown = null,
     requestId: string | null = null,
+    code: string | null = null,
+    details: Record<string, unknown> = {},
+    schemaVersion: string | null = null,
   ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
     this.detail = detail;
+    this.details = details;
     this.body = body;
     this.requestId = requestId;
+    this.schemaVersion = schemaVersion;
   }
 
   static async fromResponse(response: Response, fallback = "Request failed"): Promise<ApiError> {
@@ -30,8 +39,19 @@ export class ApiError extends Error {
       const parsed = JSON.parse(text) as {
         detail?: unknown;
         message?: unknown;
-        error?: { message?: unknown; request_id?: unknown };
+        error?: {
+          code?: unknown;
+          message?: unknown;
+          details?: unknown;
+          request_id?: unknown;
+        };
       };
+      const errorDetails =
+        parsed.error?.details && typeof parsed.error.details === "object"
+          ? (parsed.error.details as Record<string, unknown>)
+          : {};
+      const code =
+        typeof parsed.error?.code === "string" ? parsed.error.code : null;
       const detail =
         typeof parsed.detail === "string"
           ? parsed.detail
@@ -46,6 +66,9 @@ export class ApiError extends Error {
         detail,
         parsed,
         requestId || (typeof parsed.error?.request_id === "string" ? parsed.error.request_id : null),
+        code,
+        errorDetails,
+        response.headers.get("X-Agriculture-Schema-Version"),
       );
     } catch {
       return new ApiError(response.status, text, null, text, requestId);

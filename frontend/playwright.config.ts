@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173";
 const mockAuth = process.env.E2E_MOCK_AUTH !== "0";
+const useWebServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER !== "1" && !process.env.PLAYWRIGHT_BASE_URL;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,7 +15,7 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
   },
-  webServer: {
+  webServer: useWebServer ? {
     command: "npm run dev -- --host 127.0.0.1 --port 5173",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
@@ -23,6 +24,10 @@ export default defineConfig({
       ...process.env,
       E2E_MOCK_AUTH: mockAuth ? "1" : "0",
     },
-  },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  } : undefined,
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "tablet", use: { ...devices["iPad (gen 9)"] } },
+    { name: "mobile", use: { ...devices["Pixel 7"] } },
+  ],
 });

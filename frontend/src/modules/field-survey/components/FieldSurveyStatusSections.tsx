@@ -14,6 +14,8 @@ import {
   type Waypoint,
 } from "../../mission-workflow";
 import type { useFieldSurveyIrrigation } from "../hooks/useFieldSurveyIrrigation";
+import { AgricultureLiveStatusPanel } from "../../agriculture";
+import type { AgricultureEvent } from "../../agriculture";
 
 export function FieldSurveyStatusSections({
   waypoints,
@@ -22,6 +24,9 @@ export function FieldSurveyStatusSections({
   activeFlightId,
   trackedMissionId,
   irrigation,
+  wsConnected,
+  agricultureEvent,
+  agricultureEventSequenceGap,
 }: {
   waypoints: Waypoint[];
   alt: number;
@@ -29,6 +34,9 @@ export function FieldSurveyStatusSections({
   activeFlightId: string | null;
   trackedMissionId: string | null;
   irrigation: ReturnType<typeof useFieldSurveyIrrigation>;
+  wsConnected: boolean;
+  agricultureEvent: AgricultureEvent | null;
+  agricultureEventSequenceGap: boolean;
 }) {
   return (
     <>
@@ -36,6 +44,10 @@ export function FieldSurveyStatusSections({
 
       {missionStatus && (activeFlightId || waypoints.length > 0) && (
         <MissionFlightStatusPanel missionStatus={missionStatus} />
+      )}
+
+      {trackedMissionId && (
+        <AgricultureLiveStatusPanel flightId={trackedMissionId} active={Boolean(activeFlightId && wsConnected)} event={agricultureEvent} sequenceGap={agricultureEventSequenceGap} />
       )}
 
       {trackedMissionId && (

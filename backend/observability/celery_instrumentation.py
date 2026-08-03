@@ -24,6 +24,22 @@ _BEAT_SCHEDULER_NAMES = {
     "backend.tasks.webhook_tasks.deliver_pending_webhooks": "deliver-pending-webhooks",
 }
 _LAST_SCHEDULER_RUN: dict[str, float] = {}
+_ACTIVE_BY_QUEUE: dict[str, int] = {}
+
+
+def _agriculture_capacity(queue: str) -> tuple[int, str] | None:
+    from backend.core.config.runtime import settings
+    mapping = {
+        settings.celery_agriculture_ingest_queue: (settings.agriculture_worker_ingest_concurrency, "cpu"),
+        settings.celery_agriculture_quality_queue: (settings.agriculture_worker_quality_concurrency, "cpu"),
+        settings.celery_agriculture_inference_queue: (settings.agriculture_worker_gpu_concurrency, "gpu"),
+        settings.celery_agriculture_segmentation_queue: (settings.agriculture_worker_gpu_concurrency, "gpu"),
+        settings.celery_agriculture_geospatial_queue: (settings.agriculture_worker_geospatial_concurrency, "cpu"),
+        settings.celery_agriculture_temporal_queue: (settings.agriculture_worker_temporal_concurrency, "cpu"),
+        settings.celery_agriculture_fusion_queue: (settings.agriculture_worker_fusion_concurrency, "cpu"),
+        settings.celery_agriculture_exports_queue: (settings.agriculture_worker_exports_concurrency, "cpu"),
+    }
+    return mapping.get(queue)
 
 
 def _task_name(task: Any) -> str:
@@ -175,6 +191,10 @@ def instrument_celery(celery_app: Any) -> None:
             "job_name": job_name,
             "queue": queue,
         }
+        _ACTIVE_BY_QUEUE[queue] = _ACTIVE_BY_QUEUE.get(queue, 0) + 1
+        capacity = _agriculture_capacity(queue)
+        if capacity:
+            prometheus_metrics.agriculture_worker_saturation.labels(queue=queue, resource=capacity[1]).set(min(1.0, _ACTIVE_BY_QUEUE[queue] / max(1, capacity[0])))
         prometheus_metrics.jobs_started_total.labels(job_name=job_name, queue=queue).inc()
         scheduler_name = _BEAT_SCHEDULER_NAMES.get(job_name)
         if scheduler_name:
@@ -198,6 +218,10 @@ def instrument_celery(celery_app: Any) -> None:
         elapsed = time.perf_counter() - state_info["started"]
         job_name = state_info["job_name"]
         queue = state_info["queue"]
+        _ACTIVE_BY_QUEUE[queue] = max(0, _ACTIVE_BY_QUEUE.get(queue, 1) - 1)
+        capacity = _agriculture_capacity(queue)
+        if capacity:
+            prometheus_metrics.agriculture_worker_saturation.labels(queue=queue, resource=capacity[1]).set(min(1.0, _ACTIVE_BY_QUEUE[queue] / max(1, capacity[0])))
         prometheus_metrics.job_duration_seconds.labels(job_name=job_name, queue=queue).observe(elapsed)
         prometheus_metrics.celery_task_duration_seconds.labels(
             task_name=job_name, status=state.lower()

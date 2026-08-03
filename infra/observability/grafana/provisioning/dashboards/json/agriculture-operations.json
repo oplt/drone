@@ -1,0 +1,21 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "Queue backlog and age", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "datasource": {"type": "prometheus", "uid": "Prometheus"}, "targets": [{"refId": "A", "expr": "agriculture_queue_depth", "legendFormat": "depth {{queue}}"}, {"refId": "B", "expr": "histogram_quantile(0.95, sum(rate(agriculture_queue_age_seconds_bucket[5m])) by (le, queue))", "legendFormat": "age p95 {{queue}}"}]},
+    {"id": 2, "type": "timeseries", "title": "Failed stages and dead letters", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "datasource": {"type": "prometheus", "uid": "Prometheus"}, "targets": [{"refId": "A", "expr": "sum(rate(agriculture_stage_failures_total[5m])) by (stage)", "legendFormat": "{{stage}}"}, {"refId": "B", "expr": "sum(rate(agriculture_dead_letters_total[5m])) by (task)", "legendFormat": "DLQ {{task}}"}]},
+    {"id": 3, "type": "timeseries", "title": "Telemetry and georeferencing", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}, "datasource": {"type": "prometheus", "uid": "Prometheus"}, "targets": [{"refId": "A", "expr": "sum(rate(agriculture_telemetry_gaps_total[5m]))", "legendFormat": "gaps"}, {"refId": "B", "expr": "agriculture_georeference_rate", "legendFormat": "georef {{stage}}"}]},
+    {"id": 4, "type": "timeseries", "title": "CPU/GPU worker saturation", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}, "datasource": {"type": "prometheus", "uid": "Prometheus"}, "targets": [{"refId": "A", "expr": "agriculture_worker_saturation", "legendFormat": "{{queue}} {{resource}}"}]},
+    {"id": 5, "type": "timeseries", "title": "Storage and output size", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}, "datasource": {"type": "prometheus", "uid": "Prometheus"}, "targets": [{"refId": "A", "expr": "agriculture_storage_bytes", "legendFormat": "{{tenant}}"}, {"refId": "B", "expr": "histogram_quantile(0.95, sum(rate(agriculture_output_size_bytes_bucket[5m])) by (le, stage))", "legendFormat": "output {{stage}}"}]},
+    {"id": 6, "type": "timeseries", "title": "Model drift and repeated failures", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}, "datasource": {"type": "prometheus", "uid": "Prometheus"}, "targets": [{"refId": "A", "expr": "agriculture_model_drift_score", "legendFormat": "{{model}} {{slice}}"}, {"refId": "B", "expr": "agriculture_repeated_failures", "legendFormat": "{{run_id}}"}]},
+    {"id": 7, "type": "timeseries", "title": "Runtime command outcomes", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}, "datasource": {"type": "prometheus", "uid": "Prometheus"}, "targets": [{"refId": "A", "expr": "sum(rate(agriculture_runtime_commands_total[5m])) by (command, outcome)", "legendFormat": "{{command}} {{outcome}}"}, {"refId": "B", "expr": "sum(rate(agriculture_runtime_command_failures_total[5m])) by (command, reason)", "legendFormat": "{{command}} {{reason}}"}]}
+  ],
+  "schemaVersion": 39,
+  "tags": ["agriculture", "operations"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "title": "Agriculture Operations",
+  "uid": "agriculture-operations",
+  "version": 1
+}

@@ -19,6 +19,7 @@ from backend.modules.video_analysis.service.frame_extractor import (
     read_video_metadata_async,
 )
 from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
+from backend.modules.agriculture.repository import agriculture_repository
 from backend.observability import prometheus_metrics
 from backend.observability.instruments import observed_span, structured_error
 from backend.observability.metrics import add as metric_add
@@ -103,7 +104,12 @@ class OfflineVideoAnalysisPipeline:
                 timeout_s=120.0,
             )
             await self.repo.set_model_version(job, detector.model_version)
-            telemetry = NearestTelemetryMatcher(video.mission_id)
+            telemetry_samples = (
+                await agriculture_repository.list_telemetry(self.db, flight_id=video.mission_id)
+                if video.mission_id
+                else []
+            )
+            telemetry = NearestTelemetryMatcher(video.mission_id, telemetry_samples, video.created_at)
 
             pending_detections: list[VideoDetection] = []
             detection_count = 0
@@ -214,7 +220,7 @@ class OfflineVideoAnalysisPipeline:
                             altitude_m=geo.altitude_m,
                             heading_deg=geo.heading_deg,
                             evidence_path=str(evidence_path) if evidence_path else None,
-                            raw=det.raw,
+                            raw={**det.raw, "telemetry_match_quality": geo.quality, "telemetry_error_ms": geo.error_ms},
                         )
                     )
                     prometheus_metrics.video_inference_queue_depth.labels(job_id=job.id).set(

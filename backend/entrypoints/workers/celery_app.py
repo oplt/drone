@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from celery import Celery
+from kombu import Queue
 from celery.signals import worker_shutdown
 
 from backend.core.config.runtime import settings
@@ -11,6 +12,20 @@ CELERY_DEFAULT_QUEUE = settings.celery_default_queue
 CELERY_PHOTOGRAMMETRY_QUEUE = settings.CELERY_PHOTOGRAMMETRY_QUEUE
 CELERY_WAREHOUSE_MAPPING_QUEUE = settings.celery_warehouse_mapping_queue
 CELERY_VIDEO_ANALYSIS_QUEUE = settings.celery_video_analysis_queue
+CELERY_AGRICULTURE_INFERENCE_QUEUE = settings.celery_agriculture_inference_queue
+CELERY_AGRICULTURE_QUEUES = {
+    "ingest": settings.celery_agriculture_ingest_queue,
+    "quality": settings.celery_agriculture_quality_queue,
+    "rgb_inference": settings.celery_agriculture_inference_queue,
+    "segmentation": settings.celery_agriculture_segmentation_queue,
+    "geospatial_aggregation": settings.celery_agriculture_geospatial_queue,
+    "temporal_comparison": settings.celery_agriculture_temporal_queue,
+    "sensor_fusion": settings.celery_agriculture_fusion_queue,
+    "exports": settings.celery_agriculture_exports_queue,
+    "dead_letter": settings.celery_agriculture_dead_letter_queue,
+}
+CELERY_AGRICULTURE_INFERENCE_TIME_LIMIT_SECONDS = settings.celery_agriculture_inference_time_limit_seconds
+CELERY_AGRICULTURE_INFERENCE_SOFT_TIME_LIMIT_SECONDS = settings.celery_agriculture_inference_soft_time_limit_seconds
 CELERY_WORKER_MAX_TASKS_PER_CHILD = settings.celery_worker_max_tasks_per_child
 CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS = settings.celery_photogrammetry_time_limit_seconds
 CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS = (
@@ -41,15 +56,39 @@ celery_app.conf.update(
     task_acks_late=True,
     broker_connection_retry_on_startup=True,
     task_default_queue=CELERY_DEFAULT_QUEUE,
-    task_routes={
+    task_queues=(Queue(CELERY_DEFAULT_QUEUE), *(Queue(name) for name in CELERY_AGRICULTURE_QUEUES.values())),
+        task_routes={
         "photogrammetry.process_job": {"queue": CELERY_PHOTOGRAMMETRY_QUEUE},
         "warehouse_mapping.process_job": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "warehouse_mapping.extract_structure": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "video_analysis.process_job": {"queue": CELERY_VIDEO_ANALYSIS_QUEUE},
+        "agriculture.process_run": {"queue": CELERY_AGRICULTURE_INFERENCE_QUEUE},
+        "agriculture.stage.ingest": {"queue": CELERY_AGRICULTURE_QUEUES["ingest"]},
+        "agriculture.stage.quality": {"queue": CELERY_AGRICULTURE_QUEUES["quality"]},
+        "agriculture.stage.rgb_inference": {"queue": CELERY_AGRICULTURE_QUEUES["rgb_inference"]},
+        "agriculture.stage.segmentation": {"queue": CELERY_AGRICULTURE_QUEUES["segmentation"]},
+        "agriculture.stage.geospatial_aggregation": {"queue": CELERY_AGRICULTURE_QUEUES["geospatial_aggregation"]},
+        "agriculture.stage.temporal_comparison": {"queue": CELERY_AGRICULTURE_QUEUES["temporal_comparison"]},
+        "agriculture.stage.sensor_fusion": {"queue": CELERY_AGRICULTURE_QUEUES["sensor_fusion"]},
+        "agriculture.stage.exports": {"queue": CELERY_AGRICULTURE_QUEUES["exports"]},
+        "agriculture.dead_letter": {"queue": CELERY_AGRICULTURE_QUEUES["dead_letter"]},
+        "agriculture.retention_cleanup": {"queue": settings.celery_agriculture_exports_queue},
         "agents.run_agent_task": {"queue": CELERY_DEFAULT_QUEUE},
         "agents.summarize_property_patrol_incident": {"queue": CELERY_DEFAULT_QUEUE},
     },
     worker_max_tasks_per_child=CELERY_WORKER_MAX_TASKS_PER_CHILD,
+    task_annotations={
+        "agriculture.process_run": {"rate_limit": "4/m"},
+        "agriculture.stage.ingest": {"rate_limit": "120/m"},
+        "agriculture.stage.quality": {"rate_limit": "12/m"},
+        "agriculture.stage.rgb_inference": {"rate_limit": "4/m"},
+        "agriculture.stage.segmentation": {"rate_limit": "4/m"},
+        "agriculture.stage.geospatial_aggregation": {"rate_limit": "12/m"},
+        "agriculture.stage.temporal_comparison": {"rate_limit": "12/m"},
+        "agriculture.stage.sensor_fusion": {"rate_limit": "12/m"},
+        "agriculture.stage.exports": {"rate_limit": "20/m"},
+        "agriculture.retention_cleanup": {"rate_limit": "1/h"},
+    },
     task_time_limit=CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS,
     task_soft_time_limit=CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS,
 )
@@ -73,6 +112,10 @@ celery_app.conf.beat_schedule = {
         "task": "irrigation.monitor_tick",
         "schedule": 30.0,
     },
+    "cleanup-agriculture-retention": {
+        "task": "agriculture.retention_cleanup",
+        "schedule": 3600.0,
+    },
 }
 celery_app.conf.timezone = "UTC"
 
@@ -85,6 +128,7 @@ instrument_celery(celery_app)
 # named task; relying on package ``__init__`` is not enough for this entrypoint.
 from backend.entrypoints.workers import (  # noqa: E402, F401
     agents_tasks,
+    agriculture_tasks,
     deliverable_tasks,
     export_tasks,
     irrigation_tasks,

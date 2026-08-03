@@ -8,6 +8,7 @@ import type {
 } from "../types";
 import { useMissionStatusPolling } from "./useMissionStatusPolling";
 import { useTelemetryStream } from "./useTelemetryStream";
+import { parseAgricultureEvent, type AgricultureEvent } from "../../agriculture/runtime";
 
 export function useMissionRuntime<TStatus extends MissionStatusPayload>({
   onError,
@@ -20,6 +21,9 @@ export function useMissionRuntime<TStatus extends MissionStatusPayload>({
   const pendingFlightClearTimerRef = useRef<number | null>(null);
   const [latestLifecycleMessage, setLatestLifecycleMessage] =
     useState<MissionLifecycleEvent | null>(null);
+  const [agricultureEvent, setAgricultureEvent] = useState<AgricultureEvent | null>(null);
+  const [agricultureEventSequenceGap, setAgricultureEventSequenceGap] = useState(false);
+  const lastAgricultureSequence = useRef<number | null>(null);
 
   const { status: missionStatus, activeFlightId: polledActiveFlightId } =
     useMissionStatusPolling<TStatus>({
@@ -68,6 +72,12 @@ export function useMissionRuntime<TStatus extends MissionStatusPayload>({
       if (message && typeof message === "object" && "type" in message && message.type === "mission_lifecycle") {
         setLatestLifecycleMessage(message as MissionLifecycleEvent);
       }
+      const event = parseAgricultureEvent(message);
+      if (event) {
+        if (typeof event.sequence === "number" && lastAgricultureSequence.current != null && event.sequence > lastAgricultureSequence.current + 1) setAgricultureEventSequenceGap(true);
+        if (typeof event.sequence === "number") lastAgricultureSequence.current = event.sequence;
+        setAgricultureEvent(event);
+      }
     },
   });
 
@@ -104,6 +114,8 @@ export function useMissionRuntime<TStatus extends MissionStatusPayload>({
     telemetryError,
     reconnect,
     disconnect,
+    agricultureEvent,
+    agricultureEventSequenceGap,
   };
 }
 

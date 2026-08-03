@@ -16,6 +16,9 @@ import type { PreflightRunResponse } from "../../mission-runtime";
 import { FieldSurveyFlightSection } from "./FieldSurveyFlightSection";
 import { FieldSurveyGridParamsSection } from "./FieldSurveyGridParamsSection";
 import type { GridParams } from "../../mission-planning";
+import { AgricultureProfileSection } from "../../agriculture";
+import { AgriculturePlanPreviewCard, AgriculturePreflightPanel } from "../../agriculture";
+import type { AgricultureMissionProfile } from "../../agriculture";
 
 export function FieldSurveyFieldsBlock({
   fields,
@@ -106,6 +109,8 @@ export function FieldSurveySetupPanel({
   gridPreviewTooDense,
   gridPreviewError,
   previewLoading,
+  agricultureProfile,
+  setAgricultureProfile,
 }: {
   fields: FieldFeature[];
   selectedFieldId: number | null;
@@ -132,6 +137,8 @@ export function FieldSurveySetupPanel({
   gridPreviewTooDense: boolean;
   gridPreviewError: string | null | undefined;
   previewLoading: boolean;
+  agricultureProfile: AgricultureMissionProfile;
+  setAgricultureProfile: React.Dispatch<React.SetStateAction<AgricultureMissionProfile>>;
 }) {
   return (
     <>
@@ -166,6 +173,8 @@ export function FieldSurveySetupPanel({
         gridPreviewError={gridPreviewError}
         previewLoading={previewLoading}
       />
+      <AgricultureProfileSection profile={agricultureProfile} onChange={setAgricultureProfile} />
+      <AgriculturePlanPreviewCard fieldId={selectedFieldId} fieldBorder={fieldBorder} profile={agricultureProfile} cruiseAlt={gridParams.agl_m ?? 30} routeLength={gridPreviewStats?.route_m ?? null} />
       <Typography variant="body2" color="text.secondary">
         Click on the map to add waypoints.
       </Typography>
@@ -180,6 +189,9 @@ export function FieldSurveyMissionControlsPanel({
   droneConnected,
   missionStatus,
   activeFlightId,
+  selectedFieldId,
+  agricultureProfile,
+  wsConnected,
 }: {
   apiBase: string;
   preflightRun: PreflightRunResponse | null;
@@ -187,6 +199,9 @@ export function FieldSurveyMissionControlsPanel({
   droneConnected: boolean;
   missionStatus: MissionStatus | null;
   activeFlightId: string | null;
+  selectedFieldId: number | null;
+  agricultureProfile: AgricultureMissionProfile;
+  wsConnected: boolean;
 }) {
   return (
     <Stack spacing={1.5}>
@@ -196,6 +211,7 @@ export function FieldSurveyMissionControlsPanel({
         preflightRun={preflightRun}
         telemetry={telemetry}
       />
+      <AgriculturePreflightPanel fieldId={selectedFieldId} profile={agricultureProfile} telemetry={telemetry} droneConnected={droneConnected} wsConnected={wsConnected} />
       <MissionCommandPanel
         telemetry={telemetry}
         droneConnected={droneConnected}
@@ -225,6 +241,9 @@ export function FieldSurveyFlightDrawer({
   preflightRun,
   telemetry,
   droneConnected,
+  selectedFieldId,
+  agricultureProfile,
+  wsConnected,
 }: {
   apiBase: string;
   fieldBorder: LonLat[] | null;
@@ -243,6 +262,9 @@ export function FieldSurveyFlightDrawer({
   preflightRun: PreflightRunResponse | null;
   telemetry: TelemetrySnapshot | null;
   droneConnected: boolean;
+  selectedFieldId: number | null;
+  agricultureProfile: AgricultureMissionProfile;
+  wsConnected: boolean;
 }) {
   const flightDrawer = useTaskPreflightCommandsDrawer();
 
@@ -281,6 +303,9 @@ export function FieldSurveyFlightDrawer({
         droneConnected={droneConnected}
         missionStatus={missionStatus}
         activeFlightId={activeFlightId}
+        selectedFieldId={selectedFieldId}
+        agricultureProfile={agricultureProfile}
+        wsConnected={wsConnected}
       />
     </TaskPreflightCommandsDrawer>
   );

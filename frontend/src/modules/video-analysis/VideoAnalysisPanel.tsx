@@ -29,6 +29,7 @@ type VideoAnalysisPanelProps = {
   missionId?: string | null;
   fieldId?: number | null;
   flightActive?: boolean;
+  agricultureMode?: boolean;
 };
 
 export function VideoAnalysisPanel({
@@ -36,6 +37,7 @@ export function VideoAnalysisPanel({
   missionId = null,
   fieldId = null,
   flightActive = false,
+  agricultureMode = false,
 }: VideoAnalysisPanelProps) {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -44,9 +46,9 @@ export function VideoAnalysisPanel({
   const [selected, setSelected] = useState<VideoDetection | null>(null);
   const [durationSeconds, setDurationSeconds] = useState(1);
   const [payload, setPayload] = useState<AnalyzeVideoPayload>(DEFAULT_PAYLOAD);
-  const [pinnedMissionId, setPinnedMissionId] = useState<string | null>(null);
+  const [requestedEvidenceId, setRequestedEvidenceId] = useState<string | null>(null);
 
-  const queryMissionId = missionId ?? pinnedMissionId;
+  const queryMissionId = missionId;
   const missionVideos = useMissionVideos(queryMissionId, fieldId, { flightActive });
   const refetchMissionVideos = missionVideos.refetch;
   const upload = useUploadVideo();
@@ -74,14 +76,28 @@ export function VideoAnalysisPanel({
       ?.message;
 
   useEffect(() => {
-    if (missionId) setPinnedMissionId(missionId);
-  }, [missionId]);
-
-  useEffect(() => {
     if (!flightActive && queryMissionId) {
       void refetchMissionVideos();
     }
   }, [flightActive, queryMissionId, refetchMissionVideos]);
+
+  useEffect(() => {
+    const onAgricultureEvidence = (event: Event) => {
+      const detail = (event as CustomEvent<{ evidenceIds?: string[] }>).detail;
+      setRequestedEvidenceId(detail?.evidenceIds?.[0] ?? null);
+    };
+    window.addEventListener("agriculture:evidence-select", onAgricultureEvidence);
+    return () => window.removeEventListener("agriculture:evidence-select", onAgricultureEvidence);
+  }, []);
+
+  useEffect(() => {
+    if (!requestedEvidenceId) return;
+    const match = rows.find((row) => row.id === requestedEvidenceId);
+    if (match) {
+      setSelected(match);
+      setRequestedEvidenceId(null);
+    }
+  }, [requestedEvidenceId, rows]);
 
   useEffect(() => {
     const recordings = missionVideos.data ?? [];
@@ -131,10 +147,10 @@ export function VideoAnalysisPanel({
             Offline intelligence
           </Typography>
           <Typography variant="h4" fontWeight={700}>
-            Drone video analysis
+            {agricultureMode ? "Agriculture evidence review" : "Drone video analysis"}
           </Typography>
           <Typography color="text.secondary">
-            Sample recorded footage, detect targets, inspect evidence by time and location.
+            {agricultureMode ? "Review field-health evidence, quality, detections, and georeferenced issue context." : "Sample recorded footage, detect targets, inspect evidence by time and location."}
           </Typography>
         </Box>
       ) : null}

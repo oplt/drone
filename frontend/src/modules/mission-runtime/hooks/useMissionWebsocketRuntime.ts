@@ -30,5 +30,7 @@ export function useMissionWebsocketRuntime<TStatus extends MissionStatusLike>({
     wsConnected: runtime.wsConnected,
     disconnect: runtime.disconnect,
     droneConnected: runtime.droneConnected,
+    agricultureEvent: runtime.agricultureEvent,
+    agricultureEventSequenceGap: runtime.agricultureEventSequenceGap,
   };
 }

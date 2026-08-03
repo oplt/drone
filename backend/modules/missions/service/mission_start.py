@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from backend.core.config.runtime import env_truthy, settings
+from backend.core.database.session import Session
 from backend.modules.missions.application import mission_application
 from backend.modules.missions.flight_profile import FlightProfile
 from backend.modules.missions.launch_service import mission_launch_service
@@ -21,6 +22,13 @@ from backend.modules.missions.service.mission_builder import (
     flight_profile_for_payload,
 )
 from backend.modules.vehicle_runtime.factory import get_orchestrator
+from backend.modules.fields.service import field_service
+from backend.modules.agriculture.service import agriculture_service
+from backend.modules.agriculture.events import emit_agriculture_event
+from backend.modules.agriculture.policy import agriculture_validator
+from backend.modules.agriculture.workflow import snapshot_is_usable
+from backend.modules.agriculture.workflow_models import AgricultureMissionPlan, AgriculturePreflightSnapshot
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +89,47 @@ async def start_mission_for_user(
     user: Any,
 ) -> MissionCreateOut:
     """Create and start a mission without coupling callers to HTTP route modules."""
+    if payload.field_id is not None:
+        async with Session() as validation_db:
+            field = await field_service.get_owned(validation_db, field_id=payload.field_id, user=user)
+            if field is None:
+                raise HTTPException(status_code=404, detail="Agriculture field not found")
+            if payload.agriculture is None:
+                raise HTTPException(status_code=422, detail="field_id requires agriculture profile")
+            try:
+                agriculture_service.validate_profile(
+                    profile=payload.agriculture,
+                    cruise_alt_m=payload.cruise_alt,
+                    field_polygon_lonlat=payload.grid.field_polygon_lonlat if payload.grid is not None else [],
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            if payload.agriculture.plan_id or payload.agriculture.preflight_snapshot_id:
+                plan = await validation_db.scalar(
+                    select(AgricultureMissionPlan).where(
+                        AgricultureMissionPlan.id == payload.agriculture.plan_id,
+                        AgricultureMissionPlan.field_id == payload.field_id,
+                        AgricultureMissionPlan.org_id == user.org_id,
+                    )
+                ) if payload.agriculture.plan_id else None
+                if plan is None or plan.status != "validated":
+                    raise HTTPException(status_code=412, detail={"code": "AGRICULTURE_PLAN_NOT_VALIDATED", "message": "A validated agriculture plan is required before launch"})
+                saved_route = (plan.route_geojson or {}).get("coordinates") or []
+                if payload.grid is not None and saved_route:
+                    payload.grid.route_waypoints = [
+                        {"lon": float(point[0]), "lat": float(point[1]), "alt": float(payload.grid.agl_m)}
+                        for point in saved_route
+                    ]
+                snapshot = await validation_db.scalar(
+                    select(AgriculturePreflightSnapshot).where(
+                        AgriculturePreflightSnapshot.id == payload.agriculture.preflight_snapshot_id,
+                        AgriculturePreflightSnapshot.plan_id == plan.id,
+                        AgriculturePreflightSnapshot.org_id == user.org_id,
+                    )
+                ) if payload.agriculture.preflight_snapshot_id else None
+                if snapshot is None or not snapshot_is_usable(snapshot):
+                    raise HTTPException(status_code=412, detail={"code": "AGRICULTURE_PREFLIGHT_NOT_ACKNOWLEDGED", "message": "A passing, acknowledged agriculture preflight is required before launch"})
+            await agriculture_service.get_or_create_profile(validation_db, field_id=payload.field_id, user=user)
     preflight_run_id = (payload.preflight_run_id or "").strip()
     if preflight_run_id:
         rec = await _get_preflight_run(preflight_run_id)
@@ -121,6 +170,17 @@ async def start_mission_for_user(
         mission, wps_count = build_mission(payload, owner_id=int(user.id))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if payload.agriculture is not None and payload.grid is not None:
+        route = mission.get_waypoints()
+        validation = agriculture_validator.validate(
+            profile=payload.agriculture,
+            cruise_alt_m=payload.cruise_alt,
+            field_polygon_lonlat=payload.grid.field_polygon_lonlat,
+            route_lonlat=[[float(point.lon), float(point.lat)] for point in route],
+        )
+        if not validation.valid:
+            raise HTTPException(status_code=422, detail="Agriculture route invalid: " + ", ".join(validation.errors))
 
     client_flight_id = f"flight_{int(time.time())}_{uuid.uuid4().hex[:8]}"
 
@@ -188,8 +248,46 @@ async def start_mission_for_user(
         preflight_run_uuid=preflight_run_id or None,
         ai_tasks=list(getattr(payload.private_patrol, "ai_tasks", None) or []),
         state="queued",
-        mission_params={},
+        mission_params=payload.model_dump(mode="json"),
     )
+
+    if payload.field_id is not None and payload.agriculture is not None:
+        snapshot = {
+            **payload.agriculture.model_dump(mode="json"),
+            "snapshot_version": 1,
+            "snapshot_created_at": datetime.now(UTC).isoformat(),
+            "field_id": payload.field_id,
+            "field_polygon_lonlat": payload.grid.field_polygon_lonlat if payload.grid is not None else [],
+            "route_lonlat": [[float(point.lon), float(point.lat)] for point in route],
+            "route_waypoint_count": len(route),
+            "cruise_alt_m": float(payload.cruise_alt),
+            "target_agl_m": float(payload.grid.agl_m) if payload.grid is not None else float(payload.cruise_alt),
+            "grid": payload.grid.model_dump(mode="json") if payload.grid is not None else None,
+        }
+        snapshot_blob = json.dumps(snapshot, sort_keys=True, separators=(",", ":"), default=str)
+        agriculture_flight = await agriculture_service.ensure_flight_for_mission(
+            mission_id=client_flight_id,
+            field_id=payload.field_id,
+            org_id=user.org_id,
+            profile=snapshot,
+            season=payload.agriculture.season,
+            flight_kind=payload.agriculture.flight_kind,
+            profile_snapshot_hash=hashlib.sha256(snapshot_blob.encode("utf-8")).hexdigest(),
+            status="running",
+        )
+        if payload.agriculture.preflight_snapshot_id:
+            async with Session() as workflow_db:
+                workflow_snapshot = await workflow_db.scalar(
+                    select(AgriculturePreflightSnapshot).where(
+                        AgriculturePreflightSnapshot.id == payload.agriculture.preflight_snapshot_id,
+                        AgriculturePreflightSnapshot.plan_id == payload.agriculture.plan_id,
+                        AgriculturePreflightSnapshot.org_id == user.org_id,
+                    )
+                )
+                if workflow_snapshot is not None:
+                    workflow_snapshot.flight_id = agriculture_flight.id
+                    await workflow_db.commit()
+        emit_agriculture_event("flight_started", flight_id=client_flight_id, field_id=payload.field_id)
 
     from backend.modules.missions.api.routes import execute_mission
 

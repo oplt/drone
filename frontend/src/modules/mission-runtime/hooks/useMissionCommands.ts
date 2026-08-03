@@ -48,6 +48,8 @@ export function useMissionCommands({
         pause: Boolean(caps.pause),
         resume: Boolean(caps.resume),
         abort: Boolean(caps.abort),
+        rth: Boolean(caps.rth),
+        land: Boolean(caps.land),
       };
     }
     return {
@@ -57,6 +59,8 @@ export function useMissionCommands({
         lifecycleState === "queued" ||
         lifecycleState === "running" ||
         lifecycleState === "paused",
+      rth: lifecycleState === "airborne" || lifecycleState === "running" || lifecycleState === "resumed",
+      land: lifecycleState === "airborne" || lifecycleState === "running" || lifecycleState === "paused" || lifecycleState === "resumed",
     };
   }, [lifecycleState, missionStatus?.command_capabilities]);
 

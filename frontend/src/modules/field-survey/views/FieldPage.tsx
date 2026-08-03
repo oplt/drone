@@ -83,6 +83,8 @@ export default function FieldPage() {
                   gridPreviewTooDense={mission.gridPreviewTooDense}
                   gridPreviewError={mission.gridPreviewError}
                   previewLoading={mission.previewLoading}
+                  agricultureProfile={mission.agricultureProfile}
+                  setAgricultureProfile={mission.setAgricultureProfile}
                 />
               }
             />
@@ -97,6 +99,9 @@ export default function FieldPage() {
             activeFlightId={vm.activeFlightId}
             trackedMissionId={vm.trackedMissionId}
             irrigation={irrigation}
+            wsConnected={vm.wsConnected}
+            agricultureEvent={vm.agricultureEvent}
+            agricultureEventSequenceGap={vm.agricultureEventSequenceGap}
           />
         </>
       ) : null}
@@ -119,6 +124,9 @@ export default function FieldPage() {
         preflightRun={mission.preflightRun}
         telemetry={telemetry}
         droneConnected={vm.droneConnected}
+        selectedFieldId={vm.selectedFieldId}
+        agricultureProfile={mission.agricultureProfile}
+        wsConnected={vm.wsConnected}
       />
 
       <FieldDeleteDialog

@@ -102,7 +102,7 @@ async def list_fields(
     q: str | None = Query(None, description="Name search (ILIKE)"),
     workflow_scope: str | None = Query(
         default=None,
-        description="Filter by dashboard workflow (field_survey, photogrammetry, property_patrol, animal_farm).",
+        description="Filter by dashboard workflow (field_survey, agriculture, photogrammetry, property_patrol, animal_farm).",
     ),
     limit: int = Query(50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
@@ -128,7 +128,7 @@ async def list_fields_features(
     q: str | None = Query(None, description="Name search (ILIKE)"),
     workflow_scope: str | None = Query(
         default=None,
-        description="Filter by dashboard workflow (field_survey, photogrammetry, property_patrol, animal_farm).",
+        description="Filter by dashboard workflow (field_survey, agriculture, photogrammetry, property_patrol, animal_farm).",
     ),
     limit: int = Query(500, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),

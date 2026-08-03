@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
@@ -17,6 +18,7 @@ from backend.infrastructure.messaging.websocket_publisher import telemetry_manag
 from backend.modules.alerts.repository import AlertRepository
 from backend.modules.alerts.schemas import (
     AlertCountResponse,
+    AlertAssignmentIn,
     AlertListResponse,
     OperationalAlertOut,
 )
@@ -124,4 +126,21 @@ async def resolve_alert(
     await db.commit()
     await db.refresh(alert)
     await telemetry_manager.broadcast(await _alert_event_message(action="resolved", alert=alert))
+    return alert
+
+
+@router.put("/{alert_id}/assignment", response_model=OperationalAlertOut)
+async def assign_alert(
+    alert_id: int,
+    payload: AlertAssignmentIn,
+    org_user: OrgUser = Depends(require_org_write),
+    db: AsyncSession = Depends(get_db),
+):
+    alert = await db.scalar(select(OperationalAlert).where(OperationalAlert.id == alert_id, OperationalAlert.org_id == _org_id(org_user)))
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    alert.assigned_to_user_id = payload.assigned_to_user_id
+    alert.due_at = payload.due_at
+    await db.commit(); await db.refresh(alert)
+    await telemetry_manager.broadcast(await _alert_event_message(action="assigned", alert=alert))
     return alert

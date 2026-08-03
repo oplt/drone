@@ -91,6 +91,8 @@ async def get_flight_status() -> dict[str, Any]:
                 "pause": state in {"airborne", "running"},
                 "resume": state == "paused",
                 "abort": state in {"queued", "arming", "airborne", "running", "paused", "resumed"},
+                "rth": state in {"airborne", "running", "resumed", "aborting"},
+                "land": state in {"airborne", "running", "paused", "resumed", "aborting"},
             },
         }
     except Exception:

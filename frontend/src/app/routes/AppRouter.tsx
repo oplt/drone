@@ -30,6 +30,10 @@ const PhotoGrammetryPage = lazyWithStaleChunkReload(
   () => import("../../modules/photogrammetry"),
 );
 const FieldPage = lazyWithStaleChunkReload(() => import("../../modules/field-survey"));
+const AgricultureFieldListPage = lazyWithStaleChunkReload(() => import("../../modules/agriculture/views/AgricultureFieldListPage"));
+const AgricultureFieldDetailPage = lazyWithStaleChunkReload(() => import("../../modules/agriculture/views/AgricultureFieldDetailPage"));
+const AgricultureFlightPage = lazyWithStaleChunkReload(() => import("../../modules/agriculture/views/AgricultureFlightPage"));
+const AgricultureAnalysisPage = lazyWithStaleChunkReload(() => import("../../modules/agriculture/views/AgricultureAnalysisPage"));
 const WarehousePage = lazyWithStaleChunkReload(() => import("../../modules/warehouse"));
 const AnimalFarmPage = lazyWithStaleChunkReload(() => import("../../modules/animal-farm"));
 const PrivatePatrolPage = lazyWithStaleChunkReload(
@@ -93,6 +97,10 @@ export function AppRouter() {
           <Route path="privatepatrol" element={renderLazyRoute(<PrivatePatrolPage />)} />
           <Route path="property-patrol" element={renderLazyRoute(<PropertyPatrolPage />)} />
           <Route path="field" element={renderLazyRoute(<FieldPage />)} />
+          <Route path="agriculture/fields" element={renderLazyRoute(<AgricultureFieldListPage />)} />
+          <Route path="agriculture/fields/:fieldId" element={renderLazyRoute(<AgricultureFieldDetailPage />)} />
+          <Route path="agriculture/flights/:flightId" element={renderLazyRoute(<AgricultureFlightPage />)} />
+          <Route path="agriculture/analysis/:runId" element={renderLazyRoute(<AgricultureAnalysisPage />)} />
           <Route path="warehouse" element={renderLazyRoute(<WarehousePage />)} />
           <Route path="admin" element={renderLazyRoute(<AdminPage />)} />
           <Route path="templates" element={renderLazyRoute(<TemplatesPage />)} />

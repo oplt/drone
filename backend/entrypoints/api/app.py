@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.core.config.production import validate_production_security
@@ -16,6 +16,9 @@ from backend.infrastructure.ai.gateway import ai_gateway
 from backend.infrastructure.cache.redis import close_redis_client
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.admin.api import router as admin_router
+from backend.modules.agriculture.api import router as agriculture_router
+from backend.modules.agriculture.field_context import router as agriculture_field_context_router
+from backend.modules.agriculture.governance_api import router as agriculture_governance_router
 from backend.modules.agents.api import router as agents_router
 from backend.modules.ai.api import router as ai_router
 from backend.modules.alerts.api import router as alerts_router
@@ -113,6 +116,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 # Create FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def agriculture_contract_version_header(request: Request, call_next):
+    """Make the agriculture schema version observable on success and errors."""
+    response = await call_next(request)
+    if request.url.path.startswith("/agriculture/"):
+        response.headers.setdefault("X-Agriculture-Schema-Version", "agriculture.v1")
+    return response
+
+
 register_error_handlers(app)
 app.add_middleware(
     UploadBodyLimitMiddleware,
@@ -164,6 +178,9 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(agriculture_router)
+app.include_router(agriculture_field_context_router)
+app.include_router(agriculture_governance_router)
 app.include_router(admin_router)
 app.include_router(missions_router)
 app.include_router(websockets_router)

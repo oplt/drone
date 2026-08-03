@@ -9,6 +9,14 @@ from importlib import import_module
 logger = logging.getLogger(__name__)
 
 _MODEL_MODULES = (
+    "backend.modules.agriculture.models",
+    "backend.modules.agriculture.field_context_models",
+    "backend.modules.agriculture.workflow_models",
+    "backend.modules.agriculture.temporal_models",
+    "backend.modules.agriculture.sensor_models",
+    "backend.modules.agriculture.p4_models",
+    "backend.modules.agriculture.p5_models",
+    "backend.modules.agriculture.governance_models",
     "backend.modules.agents.models",
     "backend.modules.alerts.models",
     "backend.modules.automation.models",

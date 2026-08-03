@@ -106,6 +106,22 @@ def build_mission(payload: MissionCreateIn, *, owner_id: int | None = None) -> A
 
         # Convert [[lon, lat], …] → [(lon, lat), …] tuples for GridMission.
         poly = [tuple(pt) for pt in g.field_polygon_lonlat]
+        if g.route_waypoints:
+            saved_waypoints = [
+                Coordinate(
+                    lat=point.lat,
+                    lon=point.lon,
+                    alt=point.alt if point.alt is not None else payload.cruise_alt,
+                )
+                for point in g.route_waypoints
+            ]
+            return GridMission(
+                cruise_alt_m=cruise_alt_m,
+                field_polygon_lonlat=poly,
+                waypoints=saved_waypoints,
+                agl_m=agl_m,
+                terrain_follow=g.terrain_follow,
+            ), len(saved_waypoints)
         if profile is not None:
             trigger = profile.trigger
             trigger_mode: Literal["distance", "time"]

@@ -157,6 +157,82 @@ video_inference_queue_depth = Gauge(
     ["job_id"],
 )
 
+agriculture_runs_started_total = Counter(
+    "agriculture_runs_started_total", "Agriculture analysis runs started", ["queue"]
+)
+agriculture_runs_completed_total = Counter(
+    "agriculture_runs_completed_total", "Agriculture analysis runs completed", ["queue", "status"]
+)
+agriculture_runs_failed_total = Counter(
+    "agriculture_runs_failed_total", "Agriculture analysis run failures", ["queue", "error_type"]
+)
+agriculture_run_duration_seconds = Histogram(
+    "agriculture_run_duration_seconds", "Agriculture analysis run duration", ["queue"]
+)
+agriculture_georeference_rate = Gauge(
+    "agriculture_georeference_rate", "Latest agriculture run georeference success ratio", ["stage"]
+)
+agriculture_observations_total = Gauge(
+    "agriculture_observations_total", "Latest agriculture observation count", ["stage"]
+)
+agriculture_inference_latency_seconds = Histogram(
+    "agriculture_inference_latency_seconds", "Agriculture inference stage latency", ["stage"]
+)
+agriculture_queue_age_seconds = Histogram(
+    "agriculture_queue_age_seconds", "Agriculture queue age at worker start", ["queue"]
+)
+agriculture_queue_depth = Gauge(
+    "agriculture_queue_depth", "Observed pending agriculture jobs", ["queue"]
+)
+agriculture_dead_letters_total = Counter(
+    "agriculture_dead_letters_total", "Agriculture jobs moved to dead letter", ["task"]
+)
+agriculture_stage_failures_total = Counter(
+    "agriculture_stage_failures_total", "Failed agriculture pipeline stages", ["stage", "error_type"]
+)
+agriculture_telemetry_gaps_total = Counter(
+    "agriculture_telemetry_gaps_total", "Detected agriculture telemetry gaps", ["source"]
+)
+
+agriculture_runtime_commands_total = Counter(
+    "agriculture_runtime_commands_total",
+    "Agriculture runtime commands accepted, rejected, or replayed",
+    ["command", "outcome"],
+)
+
+agriculture_runtime_command_failures_total = Counter(
+    "agriculture_runtime_command_failures_total",
+    "Agriculture runtime command failures by reason",
+    ["command", "reason"],
+)
+agriculture_frames_total = Counter(
+    "agriculture_frames_total", "Agriculture frame outcomes", ["stage", "outcome"]
+)
+agriculture_quality_rejections_total = Counter(
+    "agriculture_quality_rejections_total", "Agriculture frames rejected by quality gates", ["reason"]
+)
+agriculture_observation_area_m2 = Gauge(
+    "agriculture_observation_area_m2", "Latest total agriculture observation area", ["stage"]
+)
+agriculture_dedup_ratio = Gauge(
+    "agriculture_dedup_ratio", "Latest agriculture spatial temporal deduplication ratio", ["stage"]
+)
+agriculture_output_size_bytes = Histogram(
+    "agriculture_output_size_bytes", "Agriculture stage output bytes", ["stage"]
+)
+agriculture_storage_bytes = Gauge(
+    "agriculture_storage_bytes", "Agriculture object storage usage", ["tenant", "backend"]
+)
+agriculture_repeated_failures = Gauge(
+    "agriculture_repeated_failures", "Current retry count for an agriculture run", ["run_id"]
+)
+agriculture_model_drift_score = Gauge(
+    "agriculture_model_drift_score", "Latest agriculture model drift score", ["model", "slice"]
+)
+agriculture_worker_saturation = Gauge(
+    "agriculture_worker_saturation", "Agriculture worker saturation ratio", ["queue", "resource"]
+)
+
 event_loop_lag_seconds = Gauge(
     "event_loop_lag_seconds",
     "Observed asyncio event-loop scheduling lag",

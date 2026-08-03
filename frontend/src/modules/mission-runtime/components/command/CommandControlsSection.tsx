@@ -1,6 +1,7 @@
 import TimelineIcon from "@mui/icons-material/Timeline";
 import {
   Alert,
+  Button,
   IconButton,
   Stack,
   Tooltip,
@@ -21,7 +22,7 @@ export function CommandControlsSection({
 }: {
   flightId: string | null;
   lifecycle: MissionLifecycleSlice | null;
-  capabilities: { pause: boolean; resume: boolean; abort: boolean };
+  capabilities: { pause: boolean; resume: boolean; abort: boolean; rth: boolean; land: boolean };
   busyCommand: MissionCommand | null;
   message: string | null;
   error: string | null;
@@ -86,6 +87,12 @@ export function CommandControlsSection({
           disabled={!flightId || !capabilities.abort || busyCommand !== null}
           onClick={() => onIssueCommand("abort")}
         />
+        <Button size="small" variant="outlined" color="warning" disabled={!flightId || !capabilities.rth || busyCommand !== null} onClick={() => onIssueCommand("rth")}>
+          {busyCommand === "rth" ? "RTH…" : "Return home"}
+        </Button>
+        <Button size="small" variant="outlined" color="warning" disabled={!flightId || !capabilities.land || busyCommand !== null} onClick={() => onIssueCommand("land")}>
+          {busyCommand === "land" ? "Landing…" : "Land"}
+        </Button>
       </Stack>
     </>
   );

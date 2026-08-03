@@ -549,6 +549,24 @@ class RuntimeSettings(BaseSettings):
     celery_default_queue: str = "default"
     celery_warehouse_mapping_queue: str = "warehouse-mapping"
     celery_video_analysis_queue: str = "video-analysis"
+    celery_agriculture_ingest_queue: str = "agriculture-ingest"
+    celery_agriculture_quality_queue: str = "agriculture-quality"
+    celery_agriculture_inference_queue: str = "agriculture-rgb-inference"
+    celery_agriculture_segmentation_queue: str = "agriculture-segmentation"
+    celery_agriculture_geospatial_queue: str = "agriculture-geospatial"
+    celery_agriculture_temporal_queue: str = "agriculture-temporal"
+    celery_agriculture_fusion_queue: str = "agriculture-fusion"
+    celery_agriculture_exports_queue: str = "agriculture-exports"
+    celery_agriculture_dead_letter_queue: str = "agriculture-dead-letter"
+    agriculture_worker_ingest_concurrency: int = 4
+    agriculture_worker_quality_concurrency: int = 2
+    agriculture_worker_gpu_concurrency: int = 1
+    agriculture_worker_geospatial_concurrency: int = 2
+    agriculture_worker_temporal_concurrency: int = 2
+    agriculture_worker_fusion_concurrency: int = 2
+    agriculture_worker_exports_concurrency: int = 2
+    celery_agriculture_inference_time_limit_seconds: int = 1800
+    celery_agriculture_inference_soft_time_limit_seconds: int = 1500
     celery_worker_max_tasks_per_child: int = 5
     celery_photogrammetry_time_limit_seconds: int = 6 * 60 * 60
     celery_photogrammetry_soft_time_limit_seconds: int = 5 * 60 * 60 + 30 * 60
@@ -698,6 +716,22 @@ class RuntimeSettings(BaseSettings):
     # Video analysis
     video_analysis_upload_dir: str = "backend/storage/video_analysis/uploads"
     video_analysis_max_upload_bytes: int = 1024 * 1024 * 1024
+    agriculture_max_media_bytes: int = 1024 * 1024 * 1024
+    agriculture_org_storage_quota_bytes: int = 20 * 1024 * 1024 * 1024
+    agriculture_rate_window_seconds: int = 60
+    agriculture_rate_analysis_runs_per_window: int = 10
+    agriculture_rate_media_per_window: int = 120
+    agriculture_rate_telemetry_batches_per_window: int = 240
+    agriculture_rate_live_frames_per_window: int = 600
+    agriculture_max_active_analysis_runs_per_org: int = 3
+    agriculture_max_exports_per_org_per_day: int = 100
+    agriculture_media_retention_days: int = 30
+    agriculture_upload_session_ttl_seconds: int = 86_400
+    agriculture_upload_chunk_bytes: int = 16 * 1024 * 1024
+    agriculture_storage_sse_algorithm: str = "AES256"
+    agriculture_storage_backup_prefix: str = "backups/agriculture"
+    agriculture_malware_scan_required: bool = False
+    agriculture_stage_max_retries: int = 3
 
     # Mission / preflight TTL
     preflight_run_ttl_seconds: int = 900

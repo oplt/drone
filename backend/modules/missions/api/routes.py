@@ -570,6 +570,18 @@ async def execute_mission(
             state=terminal_state,
             error=terminal_error,
         )
+        try:
+            from backend.modules.agriculture.service import agriculture_service
+
+            await agriculture_service.reconcile_mission_terminal_state(
+                mission_id=runtime_id,
+                mission_state=terminal_state,
+            )
+        except Exception:
+            logger.exception(
+                "Failed reconciling agriculture lifecycle for mission %s",
+                runtime_id,
+            )
         if db_row is not None:
             runtime = _MissionRuntimeRecord.from_db(db_row)
             await _sync_runtime_flight_id_from_orchestrator(runtime, orch)

@@ -26,6 +26,8 @@ class OperationalAlertOut(BaseModel):
     resolved_at: datetime | None = None
     acknowledged_at: datetime | None = None
     acknowledged_by_user_id: int | None = None
+    assigned_to_user_id: int | None = None
+    due_at: datetime | None = None
     occurrences: int
     created_at: datetime
     updated_at: datetime
@@ -39,3 +41,8 @@ class AlertListResponse(BaseModel):
 
 class AlertCountResponse(BaseModel):
     open_count: int
+
+
+class AlertAssignmentIn(BaseModel):
+    assigned_to_user_id: int | None = None
+    due_at: datetime | None = None

@@ -61,14 +61,51 @@ describe("httpClient", () => {
         method: "POST",
         skipUnauthorizedRedirect: true,
       }),
-    ).rejects.toMatchObject({ message: "Video upload failed" });
+    ).rejects.toMatchObject({
+      message: "Video upload failed",
+      code: "UPLOAD_FAILED",
+    });
+  });
+
+  it("preserves agriculture error codes and details from the stable envelope", async () => {
+    server.use(
+      http.post("*/agriculture/flights/start", () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "AGRICULTURE_CONTEXT_REQUIRED",
+              message: "field_id and agriculture profile are required",
+              details: { field_id: "required" },
+              request_id: "req-agri-1",
+            },
+          },
+          {
+            status: 422,
+            headers: { "X-Agriculture-Schema-Version": "agriculture.v1" },
+          },
+        ),
+      ),
+    );
+
+    const error = await httpRequest("/agriculture/flights/start", {
+      method: "POST",
+      skipUnauthorizedRedirect: true,
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      code: "AGRICULTURE_CONTEXT_REQUIRED",
+      details: { field_id: "required" },
+      schemaVersion: "agriculture.v1",
+    });
   });
 
   it("attaches request ids and records failed API calls", async () => {
     let requestId: string | null = null;
+    let correlationId: string | null = null;
     server.use(
       http.get("*/telemetry/status", ({ request }) => {
         requestId = request.headers.get("X-Request-ID");
+        correlationId = request.headers.get("X-Correlation-ID");
         return HttpResponse.json(
           {
             error: {
@@ -90,6 +127,7 @@ describe("httpClient", () => {
     }).catch((caught: unknown) => caught);
 
     expect(requestId).toBeTruthy();
+    expect(correlationId).toBeTruthy();
     expect(error).toMatchObject({ requestId });
     expect(getAppLogs()[0]).toMatchObject({
       level: "error",

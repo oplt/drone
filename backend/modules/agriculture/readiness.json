@@ -1,0 +1,41 @@
+{
+  "schema_version": "agriculture-readiness-v1",
+  "priorities": {
+    "P0": {
+      "capabilities": ["quality", "canopy", "rows", "stand_count", "planting_gaps", "double_plants", "weeds", "standing_water", "anomaly"],
+      "contract": "backend/modules/agriculture/schemas.py",
+      "lineage": "backend/modules/agriculture/models.py",
+      "worker": "agriculture.stage.rgb_inference",
+      "ui": "frontend/src/modules/agriculture/components/AgricultureReviewWorkspace.tsx",
+      "tests": ["backend/tests/test_agriculture_p1.py", "frontend/src/modules/agriculture/components/AgricultureGeoJsonPreview.test.tsx"],
+      "acceptance": {"threshold_policy": "backend/modules/agriculture/release_governance.py", "approved_by": "agriculture-product-owner", "minimum_quality_score": 0.6, "minimum_georeference_rate": 0.8, "maximum_duplicate_ratio": 0.1, "per_crop_stage_sensor": true}
+    },
+    "P1": {
+      "capabilities": ["temporal_change", "lodging", "multispectral_stress", "thermal_water_stress"],
+      "contract": "backend/modules/agriculture/schemas.py",
+      "lineage": "backend/modules/agriculture/temporal_models.py",
+      "worker": "agriculture.stage.temporal_comparison",
+      "ui": "frontend/src/modules/agriculture/components/AgricultureTemporalWorkspace.tsx",
+      "tests": ["backend/tests/test_agriculture_p2.py", "backend/tests/test_agriculture_p3.py"],
+      "acceptance": {"minimum_alignment_score": 0.35, "required_trends": ["new", "expanding", "stable", "improving", "resolved"], "calibration_required": true}
+    },
+    "P2": {
+      "capabilities": ["disease_pest_risk", "height_biomass", "growth_stage", "yield_range"],
+      "contract": "backend/modules/agriculture/schemas.py",
+      "lineage": "backend/modules/agriculture/p4_models.py",
+      "worker": "agriculture.stage.sensor_fusion",
+      "ui": "frontend/src/modules/agriculture/components/AgricultureCropInsightsPanel.tsx",
+      "tests": ["backend/tests/test_agriculture_p4.py", "backend/tests/test_agriculture_evaluation.py"],
+      "acceptance": {"minimum_f1": 0.75, "minimum_holdout_fields": 3, "maximum_calibration_mae": 0.15, "human_review_required": true}
+    },
+    "P3": {
+      "capabilities": ["prescription_zones", "inspection_actions", "approved_exports"],
+      "contract": "backend/modules/agriculture/schemas.py",
+      "lineage": "backend/modules/agriculture/p5_models.py",
+      "worker": "agriculture.stage.exports",
+      "ui": "frontend/src/modules/agriculture/components/AgricultureActionExportPanel.tsx",
+      "tests": ["backend/tests/test_agriculture_p5.py", "backend/tests/test_agriculture_governance.py"],
+      "acceptance": {"approved_rule_required": true, "human_approval_required": true, "audit_required": true, "rollback_supported": true}
+    }
+  }
+}
