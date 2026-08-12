@@ -21,9 +21,10 @@ PRESETS: dict[str, dict[str, Any]] = {
         "repeat_interval_days": 7,
     },
     "multispectral_thermal": {
-        "sensor_inventory": ["multispectral", "thermal"], "target_gsd_cm": 3.0, "speed_mps": 3.0,
+        "sensor_inventory": ["rgb", "multispectral", "thermal"], "target_gsd_cm": 3.0, "speed_mps": 3.0,
         "front_overlap_pct": 80.0, "side_overlap_pct": 70.0,
-        "requested_analyses": ["quality", "coverage", "stress", "thermal_water"],
+        # Capture inventory only — MS/thermal analysis products remain research_blocked (ADR-003).
+        "requested_analyses": ["quality", "coverage"],
     },
 }
 

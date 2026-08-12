@@ -8,6 +8,8 @@ from backend.modules.vision_models.application_base import (
     VisionNotFound,
 )
 from backend.modules.vision_models.models import (
+    Annotation,
+    DatasetImage,
     DatasetVersion,
     TrainingRun,
     VisionClass,
@@ -32,6 +34,7 @@ class ProjectOperations:
             description=payload.description,
             crop=payload.crop,
             task_type=payload.task_type,
+            capability_id=payload.capability_id,
             status="draft",
             created_by_user_id=user.id,
             classes=[
@@ -117,12 +120,22 @@ class ProjectOperations:
         )
 
     async def create_dataset(
-        self, db: AsyncSession, project_id: str, user: User
+        self,
+        db: AsyncSession,
+        project_id: str,
+        user: User,
+        *,
+        clone_from_dataset_id: str | None = None,
     ) -> DatasetOut:
         repo = VisionRepository(db)
         project = await repo.get_project(project_id, user)
         if project is None:
             raise VisionNotFound("Vision project not found")
+        source = None
+        if clone_from_dataset_id:
+            source = await repo.get_dataset(clone_from_dataset_id, user)
+            if source is None or source.project_id != project.id:
+                raise VisionNotFound("Source dataset not found")
         latest = await db.scalar(
             select(func.max(DatasetVersion.version)).where(
                 DatasetVersion.project_id == project.id
@@ -130,6 +143,56 @@ class ProjectOperations:
         )
         dataset = DatasetVersion(project_id=project.id, version=int(latest or 0) + 1)
         db.add(dataset)
+        await db.flush()
+        if source is not None:
+            source_images = await repo.all_dataset_images(source.id)
+            for source_image in source_images:
+                clone = DatasetImage(
+                    dataset_id=dataset.id,
+                    storage_uri=source_image.storage_uri,
+                    thumbnail_uri=source_image.thumbnail_uri,
+                    source_type=source_image.source_type,
+                    source_group=source_image.source_group,
+                    source_video_id=source_image.source_video_id,
+                    mission_id=source_image.mission_id,
+                    field_id=source_image.field_id,
+                    frame_index=source_image.frame_index,
+                    timestamp_seconds=source_image.timestamp_seconds,
+                    width=source_image.width,
+                    height=source_image.height,
+                    sha256=source_image.sha256,
+                    perceptual_hash=source_image.perceptual_hash,
+                    quality_score=source_image.quality_score,
+                    selected=source_image.selected,
+                    split=None,
+                    annotation_status=source_image.annotation_status,
+                    annotation_revision=0,
+                    lat=source_image.lat,
+                    lon=source_image.lon,
+                    altitude_m=source_image.altitude_m,
+                    heading_deg=source_image.heading_deg,
+                    metadata_json={
+                        **(source_image.metadata_json or {}),
+                        "cloned_from_dataset_id": source.id,
+                        "cloned_from_image_id": source_image.id,
+                    },
+                )
+                clone.annotations = [
+                    Annotation(
+                        annotation_type=item.annotation_type,
+                        class_id=item.class_id,
+                        x1=item.x1,
+                        y1=item.y1,
+                        x2=item.x2,
+                        y2=item.y2,
+                        confidence=item.confidence,
+                        source=item.source,
+                        created_by_user_id=user.id,
+                    )
+                    for item in source_image.annotations
+                ]
+                db.add(clone)
+            await self._refresh_dataset(db, dataset)
         await db.commit()
         await db.refresh(dataset)
         return self.dataset_output(dataset)

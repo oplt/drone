@@ -39,14 +39,14 @@ export const useVisionTrainingRuns = (projectId: string | null) =>
     queryFn: () => listVisionTrainingRuns(projectId as string),
     enabled: Boolean(projectId),
     refetchInterval: (query) =>
-      query.state.data?.some((run) => ["queued", "running"].includes(run.status)) ? 2000 : false,
+      query.state.data?.some((run) => ["queued", "running", "cancelling"].includes(run.status)) ? 2000 : false,
   });
 export const useVisionTraining = (runId: string | null) =>
   useQuery({
     queryKey: visionKeys.training(runId ?? ""),
     queryFn: () => getVisionTraining(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: (query) => ["queued", "running"].includes(query.state.data?.status ?? "") ? 1500 : false,
+    refetchInterval: (query) => ["queued", "running", "cancelling"].includes(query.state.data?.status ?? "") ? 1500 : false,
   });
 export const useModelEvaluation = (versionId: string | null) =>
   useQuery({

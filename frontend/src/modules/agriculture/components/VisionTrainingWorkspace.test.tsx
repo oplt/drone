@@ -61,5 +61,7 @@ describe("vision training workspace", () => {
 
     expect(screen.getByText("Model evaluation failed.")).toBeVisible();
     expect(screen.getByText("failed")).toBeVisible();
+    expect(screen.getByRole("button", { name: /retry same snapshot/i })).toBeEnabled();
+    expect(screen.getByText(/immutable snapshot is ready to train again/i)).toBeVisible();
   });
 });

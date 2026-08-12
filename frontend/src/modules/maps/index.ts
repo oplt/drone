@@ -24,7 +24,6 @@ export {
   isFlatDrawToolSelected,
 } from "./utils/drawingToolModes";
 export { GoogleMapsContext, GoogleMapsProvider } from "./providers/googleMaps";
-/** Prefer lazy import via MissionMapViewport; direct use only for tests/tools. */
+/** Engine implementation is available only through the lazy boundary. */
 export { default as CesiumMapLazy } from "./adapters/CesiumMapLazy";
-export { default as CesiumMap } from "./adapters/CesiumMap";
 export type { DrawResult as CesiumDrawResult } from "./adapters/CesiumMap";

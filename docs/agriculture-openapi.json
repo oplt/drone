@@ -492,6 +492,64 @@
         "title": "AgentRunRequest",
         "type": "object"
       },
+      "AgricultureAnalysisReadinessOut": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/AgricultureCapabilityReadinessOut"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "capture_prerequisites": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Capture Prerequisites",
+            "type": "array"
+          },
+          "catalog_version": {
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "flight_id": {
+            "title": "Flight Id",
+            "type": "string"
+          },
+          "media_count": {
+            "title": "Media Count",
+            "type": "integer"
+          },
+          "mission_id": {
+            "title": "Mission Id",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "sensor_inventory": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sensor Inventory",
+            "type": "array"
+          }
+        },
+        "required": [
+          "catalog_version",
+          "flight_id",
+          "mission_id",
+          "ready",
+          "media_count",
+          "sensor_inventory",
+          "capture_prerequisites",
+          "capabilities"
+        ],
+        "title": "AgricultureAnalysisReadinessOut",
+        "type": "object"
+      },
       "AgricultureAssistantIn": {
         "properties": {
           "question": {
@@ -684,6 +742,88 @@
           "created_at"
         ],
         "title": "AgricultureAssistantOut",
+        "type": "object"
+      },
+      "AgricultureCapabilityReadinessOut": {
+        "properties": {
+          "action_relevance": {
+            "title": "Action Relevance",
+            "type": "string"
+          },
+          "advanced_defaults": {
+            "additionalProperties": true,
+            "title": "Advanced Defaults",
+            "type": "object"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "output_type": {
+            "title": "Output Type",
+            "type": "string"
+          },
+          "recommended": {
+            "title": "Recommended",
+            "type": "boolean"
+          },
+          "release": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release"
+          },
+          "required_media": {
+            "title": "Required Media",
+            "type": "string"
+          },
+          "required_sensor": {
+            "title": "Required Sensor",
+            "type": "string"
+          },
+          "requires_model": {
+            "title": "Requires Model",
+            "type": "boolean"
+          },
+          "unavailable_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unavailable Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "description",
+          "available",
+          "recommended",
+          "required_sensor",
+          "required_media",
+          "requires_model",
+          "output_type",
+          "action_relevance"
+        ],
+        "title": "AgricultureCapabilityReadinessOut",
         "type": "object"
       },
       "AgricultureChangeOut": {
@@ -1560,6 +1700,11 @@
             "title": "Observation Type",
             "type": "string"
           },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
           "review_due_at": {
             "anyOf": [
               {
@@ -1649,6 +1794,7 @@
           "severity",
           "confidence",
           "uncertainty",
+          "provenance",
           "trend",
           "evidence_ids",
           "sensor_values",
@@ -2921,6 +3067,17 @@
             ],
             "title": "Error"
           },
+          "execution_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Key"
+          },
           "finished_at": {
             "anyOf": [
               {
@@ -3659,6 +3816,11 @@
             "title": "Annotations",
             "type": "array"
           },
+          "expected_revision": {
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
           "reviewed": {
             "default": true,
             "title": "Reviewed",
@@ -3666,7 +3828,8 @@
           }
         },
         "required": [
-          "annotations"
+          "annotations",
+          "expected_revision"
         ],
         "title": "AnnotationReplace",
         "type": "object"
@@ -5778,6 +5941,23 @@
         "title": "CropRiskOut",
         "type": "object"
       },
+      "DatasetCreate": {
+        "properties": {
+          "clone_from_dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clone From Dataset Id"
+          }
+        },
+        "title": "DatasetCreate",
+        "type": "object"
+      },
       "DatasetExportIn": {
         "properties": {
           "annotation_ids": {
@@ -5870,6 +6050,10 @@
               }
             ],
             "title": "Altitude M"
+          },
+          "annotation_revision": {
+            "title": "Annotation Revision",
+            "type": "integer"
           },
           "annotation_status": {
             "title": "Annotation Status",
@@ -6052,6 +6236,7 @@
           "selected",
           "split",
           "annotation_status",
+          "annotation_revision",
           "annotations",
           "lat",
           "lon",
@@ -13860,6 +14045,10 @@
             "title": "Architecture",
             "type": "string"
           },
+          "capability_id": {
+            "title": "Capability Id",
+            "type": "string"
+          },
           "classes": {
             "items": {
               "type": "string"
@@ -13927,6 +14116,7 @@
           "name",
           "crop",
           "task_type",
+          "capability_id",
           "version",
           "architecture",
           "status",
@@ -22416,6 +22606,11 @@
       },
       "VideoAnalysisJobOut": {
         "properties": {
+          "attempt": {
+            "default": 0,
+            "title": "Attempt",
+            "type": "integer"
+          },
           "confidence_threshold": {
             "title": "Confidence Threshold",
             "type": "number"
@@ -22452,6 +22647,16 @@
             "title": "Frame Stride Seconds",
             "type": "number"
           },
+          "frames_attempted": {
+            "default": 0,
+            "title": "Frames Attempted",
+            "type": "integer"
+          },
+          "frames_decoded": {
+            "default": 0,
+            "title": "Frames Decoded",
+            "type": "integer"
+          },
           "frames_dropped": {
             "default": 0,
             "title": "Frames Dropped",
@@ -22460,6 +22665,11 @@
           "frames_failed": {
             "default": 0,
             "title": "Frames Failed",
+            "type": "integer"
+          },
+          "frames_persisted": {
+            "default": 0,
+            "title": "Frames Persisted",
             "type": "integer"
           },
           "frames_processed": {
@@ -22472,9 +22682,33 @@
             "title": "Frames Received",
             "type": "integer"
           },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat At"
+          },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "lease_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lease Expires At"
           },
           "mission_id": {
             "anyOf": [
@@ -22505,6 +22739,17 @@
               }
             ],
             "title": "Model Version Id"
+          },
+          "orchestration_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orchestration Key"
           },
           "progress": {
             "title": "Progress",
@@ -22541,6 +22786,28 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "terminal_reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Reason Code"
+          },
+          "terminal_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Stage"
           },
           "total_inference_latency_ms": {
             "default": 0.0,
@@ -22949,6 +23216,20 @@
       },
       "VisionProjectCreate": {
         "properties": {
+          "capability_id": {
+            "default": "object_detection",
+            "enum": [
+              "object_detection",
+              "stand_count",
+              "weed_detection",
+              "crop_health",
+              "canopy_cover",
+              "row_detection",
+              "standing_water"
+            ],
+            "title": "Capability Id",
+            "type": "string"
+          },
           "classes": {
             "items": {
               "$ref": "#/components/schemas/VisionClassIn"
@@ -22999,6 +23280,10 @@
       },
       "VisionProjectOut": {
         "properties": {
+          "capability_id": {
+            "title": "Capability Id",
+            "type": "string"
+          },
           "classes": {
             "items": {
               "$ref": "#/components/schemas/VisionClassOut"
@@ -23092,6 +23377,7 @@
           "description",
           "crop",
           "task_type",
+          "capability_id",
           "status",
           "classes",
           "created_at",
@@ -32662,6 +32948,29 @@
             }
           },
           {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 10000,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -36196,6 +36505,80 @@
           }
         },
         "summary": "Get Flight",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/flights/{flight_id}/analysis-readiness": {
+      "get": {
+        "operationId": "get_analysis_readiness_agriculture_flights__flight_id__analysis_readiness_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flight_id",
+            "required": true,
+            "schema": {
+              "title": "Flight Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgricultureAnalysisReadinessOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Analysis Readiness",
         "tags": [
           "agriculture"
         ]

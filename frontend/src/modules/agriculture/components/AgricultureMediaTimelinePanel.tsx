@@ -2,6 +2,7 @@ import { Alert, Button, Paper, Slider, Stack, TextField, Typography } from "@mui
 import { useEffect, useMemo, useState } from "react";
 import { useAgricultureMediaTimeline, useAgricultureTelemetryWindow, useAgricultureTimelineBookmarks, useSaveAgricultureTimelineBookmark } from "../hooks";
 import { AgricultureGeoJsonPreview } from "./AgricultureGeoJsonPreview";
+import { selectedDetectionEvidence } from "../../video-analysis/evidenceSelection";
 
 export function AgricultureMediaTimelinePanel({ flightId }: { flightId: string }) {
   const timeline = useAgricultureMediaTimeline(flightId);
@@ -13,14 +14,15 @@ export function AgricultureMediaTimelinePanel({ flightId }: { flightId: string }
   const saveBookmark = useSaveAgricultureTimelineBookmark();
   const bookmarked = Boolean(frame && bookmarks.data?.bookmarks.some((item) => item.frame_lineage_id === frame.id));
   useEffect(() => {
-    const selectEvidenceFrame = (event: Event) => {
-      const evidenceIds = (event as CustomEvent<{ evidenceIds?: unknown[] }>).detail?.evidenceIds;
-      if (!Array.isArray(evidenceIds) || !timeline.data?.frames.length) return;
-      const next = timeline.data.frames.findIndex((candidate) => evidenceIds.map(String).includes(candidate.id));
+    const selectEvidenceFrame = () => {
+      const evidenceId = selectedDetectionEvidence();
+      if (!evidenceId || !timeline.data?.frames.length) return;
+      const next = timeline.data.frames.findIndex((candidate) => candidate.id === evidenceId);
       if (next >= 0) setIndex(next);
     };
-    window.addEventListener("agriculture:evidence-select", selectEvidenceFrame);
-    return () => window.removeEventListener("agriculture:evidence-select", selectEvidenceFrame);
+    selectEvidenceFrame();
+    window.addEventListener("popstate", selectEvidenceFrame);
+    return () => window.removeEventListener("popstate", selectEvidenceFrame);
   }, [timeline.data?.frames]);
   const map = useMemo(() => frame?.footprint_geojson ? { features: [{ type: "Feature", geometry: frame.footprint_geojson, properties: { id: frame.id } }] } : { features: [] }, [frame]);
   if (timeline.isLoading) return <Typography variant="caption" role="status">Loading synchronized media timeline…</Typography>;

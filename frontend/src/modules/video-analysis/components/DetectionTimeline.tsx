@@ -1,4 +1,5 @@
 import { Box, Card, CardContent, Typography } from "@mui/material";
+import { useMemo } from "react";
 import type { VideoDetection } from "../types";
 
 type Props = {
@@ -10,6 +11,19 @@ type Props = {
 };
 
 export function DetectionTimeline({ detections, selected, durationSeconds, status, onSelect }: Props) {
+  const controls = useMemo(() => {
+    if (detections.length <= 100) return detections;
+    const bucketSeconds = Math.max(1, durationSeconds / 100);
+    const buckets = new Map<number, VideoDetection>();
+    detections.forEach((detection) => {
+      const bucket = Math.floor(detection.timestamp_seconds / bucketSeconds);
+      const current = buckets.get(bucket);
+      if (!current || detection.confidence > current.confidence) {
+        buckets.set(bucket, detection);
+      }
+    });
+    return [...buckets.values()];
+  }, [detections, durationSeconds]);
   return (
     <Card variant="outlined">
       <CardContent>
@@ -20,7 +34,7 @@ export function DetectionTimeline({ detections, selected, durationSeconds, statu
           </Typography>
         ) : (
           <Box sx={{ position: "relative", height: 48, bgcolor: "action.hover", borderRadius: 1 }}>
-            {detections.map((detection) => (
+            {controls.map((detection) => (
               <Box
                 component="button"
                 type="button"
@@ -32,9 +46,11 @@ export function DetectionTimeline({ detections, selected, durationSeconds, statu
                   p: 0,
                   border: 0,
                   left: `${Math.min(99, Math.max(0, (detection.timestamp_seconds / durationSeconds) * 100))}%`,
-                  top: selected?.id === detection.id ? 5 : 13,
-                  width: selected?.id === detection.id ? 8 : 5,
-                  height: selected?.id === detection.id ? 38 : 22,
+                  top: 2,
+                  width: 44,
+                  height: 44,
+                  transform: "translateX(-50%)",
+                  opacity: selected?.id === detection.id ? 1 : 0.55,
                   bgcolor: selected?.id === detection.id ? "warning.main" : "primary.main",
                   borderRadius: 1,
                   cursor: "pointer",

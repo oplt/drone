@@ -24,9 +24,9 @@ const capabilities = [
   {
     title: 'Crop health analytics',
     description:
-        'NDVI, thermal, and RGB pipelines tuned for early stress detection and prescription-ready outputs.',
+        'RGB video findings with human review. Calibrated multispectral indices and machine prescriptions stay research-gated until evidence gates pass.',
     icon: <ShieldRoundedIcon fontSize="small" />,
-    meta: 'NDVI + thermal + RGB',
+    meta: 'RGB findings + human approval',
   },
   {
     title: 'Farm system integration',

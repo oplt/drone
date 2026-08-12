@@ -46,6 +46,9 @@ class VisionProject(Base):
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     crop: Mapped[str] = mapped_column(String(120), nullable=False)
+    capability_id: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="object_detection", index=True
+    )
     task_type: Mapped[str] = mapped_column(String(40), nullable=False, default="detection")
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
     created_by_user_id: Mapped[int | None] = mapped_column(
@@ -115,6 +118,9 @@ class DatasetVersion(Base):
     val_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     test_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     manifest_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    curation_summary: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
     locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -149,6 +155,10 @@ class DatasetImage(Base):
             "annotation_status IN ('unlabeled', 'labeled', 'reviewed')",
             name="ck_vision_image_annotation_status",
         ),
+        CheckConstraint(
+            "annotation_revision >= 0",
+            name="ck_vision_image_annotation_revision_nonnegative",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -176,6 +186,7 @@ class DatasetImage(Base):
     selected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     split: Mapped[str | None] = mapped_column(String(8), nullable=True)
     annotation_status: Mapped[str] = mapped_column(String(24), nullable=False, default="unlabeled")
+    annotation_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lon: Mapped[float | None] = mapped_column(Float, nullable=True)
     altitude_m: Mapped[float | None] = mapped_column(Float, nullable=True)

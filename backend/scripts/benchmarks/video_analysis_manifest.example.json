@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "representative-offline-video",
+  "video_path": "backend/storage/video_analysis/uploads/example.mp4",
+  "model_name": "yolo26n.pt",
+  "frame_stride_seconds": 1.0,
+  "confidence_threshold": 0.35,
+  "tracking_enabled": true,
+  "expected_stage_keys": [
+    "queue_wait",
+    "decode",
+    "inference",
+    "tracking",
+    "telemetry",
+    "crop",
+    "persist",
+    "summary",
+    "total"
+  ]
+}

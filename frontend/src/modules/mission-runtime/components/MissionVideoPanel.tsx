@@ -46,7 +46,6 @@ export function MissionVideoPanel({
   disconnectedMessage,
   apiBase,
   streamKey,
-  videoToken,
   startingVideo,
   videoError,
   videoRetryCount,
@@ -197,9 +196,7 @@ export function MissionVideoPanel({
           <>
             <Box
               component="img"
-              src={`${apiBase}/video/mjpeg?key=${streamKey}${
-                videoToken ? `&token=${encodeURIComponent(videoToken)}` : ""
-              }`}
+              src={`${apiBase}/video/mjpeg?key=${streamKey}`}
               alt={imgAlt}
               onError={onVideoError}
               onLoad={onVideoLoad}

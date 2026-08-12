@@ -8,10 +8,9 @@ import json
 import struct
 import zipfile
 from datetime import UTC, datetime
-from statistics import mean
 from typing import Any
 
-from shapely.geometry import Point, shape
+from shapely.geometry import shape
 from backend.modules.agriculture.contracts_validation import validate_geojson
 
 

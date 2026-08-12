@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
-from datetime import UTC, datetime
 from typing import Any, Iterable
 
 from shapely.geometry import GeometryCollection, shape
@@ -12,6 +10,7 @@ from shapely.ops import unary_union
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.modules.agriculture.comparability import score_comparability
 from backend.modules.agriculture.models import AgricultureAnalysisLayer, AgricultureAnalysisRun, AgricultureFlight, AgricultureObservation
 from backend.modules.agriculture.repository import agriculture_repository
 from backend.modules.agriculture.temporal_models import AgricultureFlightAlignment, AgricultureObservationChange
@@ -67,8 +66,8 @@ def _comparison_state(current: AgricultureObservation, previous: AgricultureObse
 
 
 def build_changes(current: Iterable[AgricultureObservation], previous: Iterable[AgricultureObservation], *, current_flight_id: str, reference_flight_id: str, field_id: int) -> list[dict[str, Any]]:
-    current_rows = [row for row in current if row.review_state != "rejected"]
-    previous_rows = [row for row in previous if row.review_state != "rejected"]
+    current_rows = [row for row in current if row.review_state != "rejected" and not getattr(row, "merged_into_id", None)]
+    previous_rows = [row for row in previous if row.review_state != "rejected" and not getattr(row, "merged_into_id", None)]
     matched_previous: set[str] = set()
     output: list[dict[str, Any]] = []
     for row in sorted(current_rows, key=lambda item: (item.observation_type, item.id)):
@@ -113,6 +112,69 @@ class AgricultureTemporalService:
             eligible.append(flight)
         return max(eligible, key=lambda item: item.created_at, default=None)
 
+    async def list_comparable_flights(
+        self,
+        db: AsyncSession,
+        *,
+        current: AgricultureFlight,
+        min_quality_score: float = 0.6,
+        limit: int = 25,
+    ) -> list[dict[str, Any]]:
+        flights = await agriculture_repository.list_flights(
+            db,
+            field_id=current.field_id,
+            user=type("User", (), {"org_id": current.org_id})(),
+            limit=100,
+        )
+        current_run = await self._latest_run(db, current.id)
+        current_layer = None
+        if current_run is not None:
+            current_layer = await db.scalar(
+                select(AgricultureAnalysisLayer).where(
+                    AgricultureAnalysisLayer.run_id == current_run.id,
+                    AgricultureAnalysisLayer.layer_name == "quality",
+                )
+            )
+        candidates: list[dict[str, Any]] = []
+        for flight in flights:
+            if flight.id == current.id:
+                continue
+            reference_run = await self._latest_run(db, flight.id)
+            reference_layer = None
+            if reference_run is not None:
+                reference_layer = await db.scalar(
+                    select(AgricultureAnalysisLayer).where(
+                        AgricultureAnalysisLayer.run_id == reference_run.id,
+                        AgricultureAnalysisLayer.layer_name == "quality",
+                    )
+                )
+            alignment = alignment_metrics(current_layer, reference_layer)
+            comparability = score_comparability(
+                current=current,
+                reference=flight,
+                current_run=current_run,
+                reference_run=reference_run,
+                alignment=alignment,
+                min_quality_score=min_quality_score,
+            )
+            candidates.append(
+                {
+                    "flight_id": flight.id,
+                    "created_at": flight.created_at.isoformat() if flight.created_at else None,
+                    "status": flight.status,
+                    "comparability": comparability,
+                    "alignment": alignment,
+                }
+            )
+        candidates.sort(
+            key=lambda item: (
+                0 if item["comparability"]["eligible"] else 1,
+                -float(item["comparability"]["score"]),
+                str(item["flight_id"]),
+            )
+        )
+        return candidates[: max(1, limit)]
+
     async def compare(self, db: AsyncSession, *, current: AgricultureFlight, reference_flight_id: str | None = None, min_quality_score: float = 0.6) -> dict[str, Any]:
         reference = await self.select_reference_flight(db, current=current, override_flight_id=reference_flight_id, min_quality_score=min_quality_score)
         if reference is None:
@@ -123,20 +185,60 @@ class AgricultureTemporalService:
         current_layer = await db.scalar(select(AgricultureAnalysisLayer).where(AgricultureAnalysisLayer.run_id == current_run.id, AgricultureAnalysisLayer.layer_name == "quality"))
         reference_layer = await db.scalar(select(AgricultureAnalysisLayer).where(AgricultureAnalysisLayer.run_id == reference_run.id, AgricultureAnalysisLayer.layer_name == "quality"))
         alignment = alignment_metrics(current_layer, reference_layer)
+        comparability = score_comparability(
+            current=current,
+            reference=reference,
+            current_run=current_run,
+            reference_run=reference_run,
+            alignment=alignment,
+            min_quality_score=min_quality_score,
+        )
         alignment_row = await db.scalar(select(AgricultureFlightAlignment).where(AgricultureFlightAlignment.current_flight_id == current.id, AgricultureFlightAlignment.reference_flight_id == reference.id))
         if alignment_row is None:
             alignment_row = AgricultureFlightAlignment(field_id=current.field_id, current_flight_id=current.id, reference_flight_id=reference.id)
             db.add(alignment_row)
-        for key, value in alignment.items(): setattr(alignment_row, key, value)
-        if alignment.get("status") == "failed":
-            await db.commit(); return {"status": "failed", "current_flight_id": current.id, "reference_flight_id": reference.id, "alignment": alignment, "changes": []}
+        for key, value in alignment.items():
+            setattr(alignment_row, key, value)
+        alignment_row.comparability = comparability
+        if alignment.get("status") == "failed" or not comparability.get("eligible"):
+            # Never silently emit deltas for incompatible model/sensor/calibration inputs.
+            await db.execute(
+                delete(AgricultureObservationChange).where(
+                    AgricultureObservationChange.current_flight_id == current.id,
+                    AgricultureObservationChange.reference_flight_id == reference.id,
+                )
+            )
+            await db.commit()
+            status = "failed" if alignment.get("status") == "failed" else "incompatible"
+            return {
+                "status": status,
+                "current_flight_id": current.id,
+                "reference_flight_id": reference.id,
+                "alignment": alignment,
+                "comparability": comparability,
+                "changes": [],
+                "summary": {},
+            }
         current_rows = list((await db.scalars(select(AgricultureObservation).where(AgricultureObservation.run_id == current_run.id))).all())
         previous_rows = list((await db.scalars(select(AgricultureObservation).where(AgricultureObservation.run_id == reference_run.id))).all())
         payloads = build_changes(current_rows, previous_rows, current_flight_id=current.id, reference_flight_id=reference.id, field_id=current.field_id)
+        for payload in payloads:
+            uncertainty = dict(payload.get("uncertainty") or {})
+            uncertainty["comparability_warnings"] = list(comparability.get("warnings") or [])
+            uncertainty["comparability_score"] = comparability.get("score")
+            payload["uncertainty"] = uncertainty
         await db.execute(delete(AgricultureObservationChange).where(AgricultureObservationChange.current_flight_id == current.id, AgricultureObservationChange.reference_flight_id == reference.id))
         db.add_all(AgricultureObservationChange(**payload) for payload in payloads)
         await db.commit()
-        return {"status": "completed", "current_flight_id": current.id, "reference_flight_id": reference.id, "alignment": alignment, "changes": payloads, "summary": {state: sum(row["state"] == state for row in payloads) for state in ("new", "expanding", "stable", "improving", "resolved")}}
+        return {
+            "status": "completed",
+            "current_flight_id": current.id,
+            "reference_flight_id": reference.id,
+            "alignment": alignment,
+            "comparability": comparability,
+            "changes": payloads,
+            "summary": {state: sum(row["state"] == state for row in payloads) for state in ("new", "expanding", "stable", "improving", "resolved")},
+        }
 
     async def _latest_run(self, db: AsyncSession, flight_id: str) -> AgricultureAnalysisRun | None:
         return await db.scalar(select(AgricultureAnalysisRun).where(AgricultureAnalysisRun.flight_id == flight_id, AgricultureAnalysisRun.status.in_(["review", "completed", "published"])).order_by(AgricultureAnalysisRun.created_at.desc()).limit(1))

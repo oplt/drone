@@ -12,14 +12,23 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
+import { selectDetectionEvidence } from "../../video-analysis/evidenceSelection";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  useAgricultureAnalysisRuns,
   useAgricultureComparisons,
+  useAgricultureFieldPlans,
+  useAgricultureFlight,
   useAgricultureTimeline,
+  useComparableFlights,
   useCompareAgricultureFlight,
   useCreateAgricultureAnnotation,
+  useCreateAgricultureReportSnapshot,
+  useDuplicateAgriculturePlan,
   useReviewAgricultureObservation,
 } from "../hooks";
+import type { Comparability } from "../types";
 import { AgricultureGeoJsonPreview } from "./AgricultureGeoJsonPreview";
 import { FlightTimeline } from "./FlightTimeline";
 
@@ -43,12 +52,20 @@ export function AgricultureTemporalWorkspace({
   fieldId: number | null;
   currentFlightId: string;
 }) {
+  const navigate = useNavigate();
   const timeline = useAgricultureTimeline(fieldId);
   const changes = useAgricultureComparisons(currentFlightId);
+  const comparable = useComparableFlights(currentFlightId);
+  const currentFlight = useAgricultureFlight(currentFlightId);
+  const analysisRuns = useAgricultureAnalysisRuns(currentFlightId);
+  const fieldPlans = useAgricultureFieldPlans(fieldId);
   const compare = useCompareAgricultureFlight();
   const review = useReviewAgricultureObservation();
   const annotate = useCreateAgricultureAnnotation();
+  const decisionReport = useCreateAgricultureReportSnapshot();
+  const duplicatePlan = useDuplicateAgriculturePlan();
   const flights = timeline.data ?? EMPTY_FLIGHTS;
+  const comparableRows = comparable.data ?? [];
   const references = useMemo(
     () => flights.filter((flight) => flight.id !== currentFlightId),
     [currentFlightId, flights],
@@ -63,11 +80,25 @@ export function AgricultureTemporalWorkspace({
   const [severity, setSeverity] = useState(0.5);
   const [notes, setNotes] = useState("");
   const [geometry, setGeometry] = useState("{}");
+  const [comparisonId, setComparisonId] = useState<string | null>(null);
+  const [lastComparability, setLastComparability] = useState<Comparability | null>(null);
   const prefersReducedMotion = useMediaQuery(
     "(prefers-reduced-motion: reduce)",
   );
   const rows = changes.data ?? EMPTY_ROWS;
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0] ?? null;
+  const latestRunId = analysisRuns.data?.[0]?.id ?? null;
+  const planId =
+    (typeof currentFlight.data?.profile_snapshot?.plan_id === "string"
+      ? currentFlight.data.profile_snapshot.plan_id
+      : null) ??
+    fieldPlans.data?.[0]?.id ??
+    null;
+  const selectedComparable = comparableRows.find(
+    (row) => row.flight_id === (referenceFlightId || references[0]?.id),
+  );
+  const referenceBlocked =
+    selectedComparable != null && selectedComparable.comparability.eligible === false;
   const currentGeojson = useMemo(
     () => ({
       features: rows
@@ -116,11 +147,7 @@ export function AgricultureTemporalWorkspace({
   }, [prefersReducedMotion, viewMode]);
   useEffect(() => {
     if (selected)
-      window.dispatchEvent(
-        new CustomEvent("agriculture:evidence-select", {
-          detail: { evidenceIds: selected.evidence_ids },
-        }),
-      );
+      selectDetectionEvidence(selected.evidence_ids[0] ?? null);
   }, [selected]);
 
   const createAnnotation = () => {
@@ -203,10 +230,22 @@ export function AgricultureTemporalWorkspace({
                 inputProps={{ "aria-label": "Reference flight" }}
                 sx={{ minWidth: { xs: "100%", md: 220 } }}
               >
-                {references.map((flight) => (
-                  <MenuItem key={flight.id} value={flight.id}>
-                    {new Date(flight.created_at).toLocaleDateString()} ·{" "}
-                    {flight.id.slice(0, 8)}
+                {(comparableRows.length ? comparableRows : references.map((flight) => ({
+                  flight_id: flight.id,
+                  created_at: flight.created_at,
+                  status: flight.status,
+                  comparability: { eligible: true, status: "unknown", score: 0 },
+                  alignment: {},
+                }))).map((flight) => (
+                  <MenuItem
+                    key={flight.flight_id}
+                    value={flight.flight_id}
+                    disabled={flight.comparability.eligible === false}
+                  >
+                    {(flight.created_at ? new Date(flight.created_at).toLocaleDateString() : "—")} ·{" "}
+                    {flight.flight_id.slice(0, 8)} · score{" "}
+                    {Number(flight.comparability.score ?? 0).toFixed(2)} ·{" "}
+                    {flight.comparability.status}
                   </MenuItem>
                 ))}
               </Select>
@@ -215,12 +254,20 @@ export function AgricultureTemporalWorkspace({
                 variant="contained"
                 onClick={() =>
                   activeReferenceFlightId &&
-                  compare.mutate({
-                    flightId: currentFlightId,
-                    referenceFlightId: activeReferenceFlightId,
-                  })
+                  compare.mutate(
+                    {
+                      flightId: currentFlightId,
+                      referenceFlightId: activeReferenceFlightId,
+                    },
+                    {
+                      onSuccess: (result) => {
+                        setComparisonId(result.id);
+                        setLastComparability(result.comparability ?? null);
+                      },
+                    },
+                  )
                 }
-                disabled={!activeReferenceFlightId || compare.isPending}
+                disabled={!activeReferenceFlightId || compare.isPending || referenceBlocked}
               >
                 {compare.isPending ? "Comparing…" : "Compare flights"}
               </Button>
@@ -236,6 +283,78 @@ export function AgricultureTemporalWorkspace({
                 </MenuItem>
               </Select>
             </Stack>
+            {selectedComparable ? (
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                <Chip
+                  size="small"
+                  color={selectedComparable.comparability.eligible ? "success" : "warning"}
+                  label={`Comparability ${selectedComparable.comparability.status} · ${Number(selectedComparable.comparability.score ?? 0).toFixed(2)}`}
+                />
+                {(selectedComparable.comparability.warnings || []).map((warning) => (
+                  <Chip key={warning} size="small" variant="outlined" label={warning.replaceAll("_", " ")} />
+                ))}
+                {(selectedComparable.comparability.blockers || []).map((blocker) => (
+                  <Chip key={blocker} size="small" color="error" label={blocker.replaceAll("_", " ")} />
+                ))}
+              </Stack>
+            ) : null}
+            {referenceBlocked ? (
+              <Alert severity="warning">
+                Selected reference is not eligible for trustworthy comparison. Choose another flight or resolve blockers first.
+              </Alert>
+            ) : null}
+            {lastComparability ? (
+              <Alert severity={lastComparability.eligible ? "success" : "warning"}>
+                Last compare: {lastComparability.status} (score {Number(lastComparability.score ?? 0).toFixed(2)})
+                {(lastComparability.warnings || []).length
+                  ? ` · warnings: ${(lastComparability.warnings || []).join(", ")}`
+                  : ""}
+              </Alert>
+            ) : null}
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={!comparisonId || !latestRunId || decisionReport.isPending}
+                onClick={() =>
+                  latestRunId &&
+                  comparisonId &&
+                  decisionReport.mutate({
+                    runId: latestRunId,
+                    templateKey: "decision",
+                    comparisonId,
+                  })
+                }
+              >
+                {decisionReport.isPending ? "Capturing…" : "Capture decision report"}
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={!planId || duplicatePlan.isPending}
+                onClick={() =>
+                  planId &&
+                  duplicatePlan.mutate(planId, {
+                    onSuccess: (plan) => {
+                      navigate(
+                        `/dashboard/agriculture/fields/${plan.field_id}?repeatPlanId=${encodeURIComponent(plan.id)}`,
+                      );
+                    },
+                  })
+                }
+              >
+                {duplicatePlan.isPending ? "Copying plan…" : "Repeat mission"}
+              </Button>
+            </Stack>
+            {!planId ? (
+              <Typography variant="caption" color="text.secondary">
+                Repeat mission needs a prior mission plan for this field.
+              </Typography>
+            ) : (
+              <Typography variant="caption" color="text.secondary">
+                Creates a draft copy that must pass current validation and preflight before start.
+              </Typography>
+            )}
             <FlightTimeline
               flights={flights}
               value={timelineValue}

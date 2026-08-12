@@ -251,6 +251,33 @@ class AnalysisRunIn(BaseModel):
     baseline_flight_id: str | None = Field(default=None, max_length=64)
 
 
+class AgricultureCapabilityReadinessOut(BaseModel):
+    id: str
+    label: str
+    description: str
+    available: bool
+    recommended: bool
+    unavailable_reasons: list[str] = Field(default_factory=list)
+    required_sensor: str
+    required_media: str
+    requires_model: bool
+    output_type: str
+    action_relevance: str
+    advanced_defaults: dict[str, Any] = Field(default_factory=dict)
+    release: dict[str, Any] | None = None
+
+
+class AgricultureAnalysisReadinessOut(BaseModel):
+    catalog_version: str
+    flight_id: str
+    mission_id: str
+    ready: bool
+    media_count: int
+    sensor_inventory: list[str]
+    capture_prerequisites: list[dict[str, Any]]
+    capabilities: list[AgricultureCapabilityReadinessOut]
+
+
 class ReviewIn(BaseModel):
     status: Literal["confirmed", "rejected", "relabelled"]
     label: str | None = Field(default=None, max_length=128)
@@ -345,6 +372,7 @@ class AgricultureComparisonOut(BaseModel):
     current_flight_id: str
     reference_flight_id: str | None = None
     alignment: dict[str, Any] = Field(default_factory=dict)
+    comparability: dict[str, Any] = Field(default_factory=dict)
     summary: dict[str, Any] = Field(default_factory=dict)
     changes: list[AgricultureChangeOut] = Field(default_factory=list)
 
@@ -826,7 +854,8 @@ class ExportOut(BaseModel):
 
 
 class ReportSnapshotIn(BaseModel):
-    template_key: Literal["standard", "executive", "field_visit"] = "standard"
+    template_key: Literal["standard", "executive", "field_visit", "decision"] = "standard"
+    comparison_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 class ReportSnapshotOut(BaseModel):
@@ -853,6 +882,7 @@ class AnalysisStageOut(BaseModel):
     progress: float
     input_checksum: str | None = None
     output_checksum: str | None = None
+    execution_key: str | None = None
     metrics: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
     task_id: str | None = None
@@ -880,6 +910,7 @@ class AgricultureObservationOut(BaseModel):
     severity: float
     confidence: float
     uncertainty: dict[str, Any]
+    provenance: dict[str, Any]
     first_detected: datetime | None = None
     last_detected: datetime | None = None
     trend: str
@@ -892,6 +923,9 @@ class AgricultureObservationOut(BaseModel):
     assigned_to_user_id: int | None = None
     review_due_at: datetime | None = None
     reviewed_at: datetime | None = None
+    merged_into_id: str | None = None
+    split_from_id: str | None = None
+    member_observation_ids: list[Any] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -1001,3 +1035,112 @@ class AnalysisRunOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class FindingRankExplanationOut(BaseModel):
+    policy_version: str
+    score: float
+    display_status: Literal["shown", "labeled_low_confidence", "withheld"]
+    factors: dict[str, Any] = Field(default_factory=dict)
+    withhold_reasons: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
+class RankedFindingOut(BaseModel):
+    rank: int
+    finding_id: str
+    observation_id: str
+    observation_type: str | None = None
+    geometry_geojson: dict[str, Any] = Field(default_factory=dict)
+    severity: float
+    confidence: float
+    area_m2: float | None = None
+    georef_status: str | None = None
+    review_state: str | None = None
+    evidence_ids: list[Any] = Field(default_factory=list)
+    model_version: str | None = None
+    provenance: dict[str, Any] = Field(default_factory=dict)
+    assigned_to_user_id: int | None = None
+    merged_into_id: str | None = None
+    member_observation_ids: list[Any] = Field(default_factory=list)
+    score: float
+    display_status: Literal["shown", "labeled_low_confidence", "withheld"]
+    policy_version: str
+    factors: dict[str, Any] = Field(default_factory=dict)
+    withhold_reasons: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
+class RankedFindingPage(BaseModel):
+    schema_version: Literal["agriculture.v1"] = "agriculture.v1"
+    policy_version: str
+    run_id: str
+    limit: int
+    total_candidates: int
+    items: list[RankedFindingOut]
+    hotspots: dict[str, Any]
+
+
+class FindingMergeIn(BaseModel):
+    primary_observation_id: str = Field(..., min_length=1, max_length=64)
+    member_observation_ids: list[str] = Field(..., min_length=1, max_length=50)
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class FindingSplitPartIn(BaseModel):
+    geometry_geojson: dict[str, Any]
+    observation_type: str | None = Field(default=None, max_length=64)
+    severity: float | None = Field(default=None, ge=0, le=1)
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    area_m2: float | None = Field(default=None, ge=0)
+    evidence_ids: list[Any] = Field(default_factory=list, max_length=500)
+
+
+class FindingSplitIn(BaseModel):
+    parts: list[FindingSplitPartIn] = Field(..., min_length=2, max_length=20)
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class FieldOutcomeIn(BaseModel):
+    observation_id: str = Field(..., min_length=1, max_length=64)
+    outcome_status: Literal[
+        "confirmed_present",
+        "false_positive",
+        "treated",
+        "unresolved",
+        "other",
+    ]
+    notes: str | None = Field(default=None, max_length=4000)
+    model_version: str | None = Field(default=None, max_length=160)
+    capability_release_id: str | None = Field(default=None, max_length=64)
+
+
+class FieldOutcomeOut(BaseModel):
+    id: str
+    org_id: int | None = None
+    field_id: int
+    flight_id: str
+    run_id: str
+    observation_id: str
+    outcome_status: str
+    notes: str | None = None
+    model_version: str | None = None
+    capability_release_id: str | None = None
+    created_by_user_id: int | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class InspectionRouteUpdateIn(BaseModel):
+    ordered_action_ids: list[str] = Field(default_factory=list, max_length=500)
+    removed_action_ids: list[str] = Field(default_factory=list, max_length=500)
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class ComparableFlightOut(BaseModel):
+    flight_id: str
+    created_at: str | None = None
+    status: str | None = None
+    comparability: dict[str, Any] = Field(default_factory=dict)
+    alignment: dict[str, Any] = Field(default_factory=dict)

@@ -3,11 +3,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
+from backend.core.api_errors import map_domain_exception
+from backend.core.config.runtime import settings
 from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_org_user,
-    require_user_header_or_query,
+    require_user,
 )
 from backend.modules.video_analysis.application import (
     VideoAnalysisApplication,
@@ -16,12 +18,14 @@ from backend.modules.video_analysis.application import (
     VideoAnalysisNotFound,
     VideoAnalysisUploadError,
 )
+from backend.modules.video_analysis.evidence import EvidenceResolverOut
 from backend.modules.video_analysis.schemas import (
     AnalyzeVideoRequest,
     VideoAnalysisJobOut,
     VideoAnalysisSummaryOut,
     VideoAssetOut,
-    VideoDetectionOut,
+    VideoDetectionAggregateOut,
+    VideoDetectionPageOut,
 )
 from backend.observability.instruments import observed_span
 
@@ -46,21 +50,24 @@ async def list_videos(
             limit=limit,
         )
     except VideoAnalysisNotFound as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
 
 
 @router.get("/videos/{video_id}/stream")
 async def stream_video(
     video_id: str,
+    token: str | None = Query(default=None),
     db=Depends(get_db),
-    user=Depends(require_user_header_or_query),
+    user=Depends(require_user),
 ) -> FileResponse:
+    if token and not settings.allow_media_query_token:
+        raise HTTPException(status_code=401, detail="Query token authentication is disabled")
     try:
         path, content_type = await application.resolve_video_stream_path(
             db, video_id=video_id, user=user
         )
     except VideoAnalysisNotFound as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
     media_type = content_type or "video/mp4"
     return FileResponse(path, media_type=media_type, filename=path.name)
 
@@ -83,9 +90,9 @@ async def upload_video(
                 user=org_user.user,
             )
     except VideoAnalysisUploadError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
     except VideoAnalysisNotFound as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
 
 
 @router.post("/videos/{video_id}/analyze", response_model=VideoAnalysisJobOut)
@@ -105,11 +112,11 @@ async def analyze_video(
                 db, video_id=video_id, request=request, user=org_user.user
             )
     except VideoAnalysisNotFound as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
     except VideoAnalysisModelUnavailable as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
     except VideoAnalysisConflict as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
 
 
 @router.get("/jobs/{job_id}", response_model=VideoAnalysisJobOut)
@@ -121,20 +128,93 @@ async def get_job(
     try:
         return await application.get_job(db, job_id=job_id, user=org_user.user)
     except VideoAnalysisNotFound as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
 
 
-@router.get("/jobs/{job_id}/detections", response_model=list[VideoDetectionOut])
-async def list_detections(
+@router.post("/jobs/{job_id}/cancel", response_model=VideoAnalysisJobOut)
+async def cancel_job(
     job_id: str,
-    limit: int = Query(500, ge=1, le=2000),
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
-) -> list[VideoDetectionOut]:
+) -> VideoAnalysisJobOut:
     try:
-        return await application.list_detections(db, job_id=job_id, user=org_user.user, limit=limit)
+        return await application.cancel_job(db, job_id=job_id, user=org_user.user)
     except VideoAnalysisNotFound as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc
+
+
+@router.get("/jobs/{job_id}/detections", response_model=VideoDetectionPageOut)
+async def list_detections(
+    job_id: str,
+    cursor: str | None = Query(default=None),
+    since_id: str | None = Query(default=None),
+    limit: int = Query(250, ge=1, le=500),
+    db=Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> VideoDetectionPageOut:
+    try:
+        return await application.page_detections(
+            db,
+            job_id=job_id,
+            user=org_user.user,
+            limit=limit,
+            cursor=cursor,
+            since_id=since_id,
+        )
+    except VideoAnalysisNotFound as exc:
+        raise map_domain_exception(exc, domain="video_analysis") from exc
+    except VideoAnalysisConflict as exc:
+        raise map_domain_exception(exc, domain="video_analysis") from exc
+
+
+@router.get(
+    "/jobs/{job_id}/detections/aggregate",
+    response_model=VideoDetectionAggregateOut,
+)
+async def aggregate_detections(
+    job_id: str,
+    bucket_seconds: float = Query(10.0, ge=0.5, le=3600.0),
+    db=Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> VideoDetectionAggregateOut:
+    try:
+        return await application.detection_aggregates(
+            db,
+            job_id=job_id,
+            user=org_user.user,
+            bucket_seconds=bucket_seconds,
+        )
+    except VideoAnalysisNotFound as exc:
+        raise map_domain_exception(exc, domain="video_analysis") from exc
+
+
+@router.get("/evidence/{detection_id}", response_model=EvidenceResolverOut)
+async def resolve_evidence(
+    detection_id: str,
+    db=Depends(get_db),
+    user=Depends(require_user),
+) -> EvidenceResolverOut:
+    try:
+        return await application.resolve_evidence(
+            db, detection_id=detection_id, user=user
+        )
+    except VideoAnalysisNotFound as exc:
+        raise map_domain_exception(exc, domain="video_analysis") from exc
+
+
+@router.get("/evidence/{detection_id}/content")
+async def stream_evidence(
+    detection_id: str,
+    db=Depends(get_db),
+    user=Depends(require_user),
+) -> FileResponse:
+    try:
+        path, media_type = await application.resolve_evidence_content_path(
+            db, detection_id=detection_id, user=user
+        )
+    except VideoAnalysisNotFound as exc:
+        raise map_domain_exception(exc, domain="video_analysis") from exc
+    return FileResponse(path, media_type=media_type)
 
 
 @router.get("/jobs/{job_id}/summary", response_model=VideoAnalysisSummaryOut)
@@ -146,4 +226,4 @@ async def get_analysis_summary(
     try:
         return await application.get_summary(db, job_id=job_id, user=org_user.user)
     except VideoAnalysisNotFound as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_domain_exception(exc, domain="video_analysis") from exc

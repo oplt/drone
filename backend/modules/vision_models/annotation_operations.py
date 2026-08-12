@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.identity.models import User
 from backend.modules.vision_models.application_base import (
+    VisionAnnotationConflict,
     VisionNotFound,
     VisionValidationError,
 )
@@ -94,6 +95,17 @@ class AnnotationOperations:
             raise VisionValidationError(
                 "Annotation coordinates must stay within the original image bounds"
             )
+        claimed_revision = await repo.claim_annotation_revision(
+            image.id, expected_revision=payload.expected_revision
+        )
+        if claimed_revision is None:
+            await db.rollback()
+            current = await repo.get_image(image_id, user)
+            raise VisionAnnotationConflict(
+                expected_revision=payload.expected_revision,
+                current_revision=current.annotation_revision if current is not None else -1,
+            )
+        image.annotation_revision = claimed_revision
         image.annotations.clear()
         image.annotations.extend(
             Annotation(
@@ -169,6 +181,7 @@ class AnnotationOperations:
         imported = 0
         for image_id, rows in parsed.items():
             image = by_id[image_id]
+            image.annotation_revision += 1
             image.annotations.clear()
             for class_id, x1, y1, x2, y2 in rows:
                 image.annotations.append(

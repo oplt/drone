@@ -320,6 +320,7 @@ class RuntimeSettings(BaseSettings):
     cookie_secure: bool = False  # Set True in production with HTTPS
     cookie_domain: str = ""
     cookie_samesite: str = "lax"
+    allow_media_query_token: bool = False
     admin_emails: str = ""
     admin_domains: str = ""
 
@@ -716,6 +717,15 @@ class RuntimeSettings(BaseSettings):
     # Video analysis
     video_analysis_upload_dir: str = "backend/storage/video_analysis/uploads"
     video_analysis_max_upload_bytes: int = 1024 * 1024 * 1024
+    video_analysis_job_lease_seconds: int = 180
+    video_analysis_heartbeat_interval_seconds: int = 20
+    video_analysis_crop_min_confidence: float = Field(default=0.75, ge=0.0, le=1.0)
+    video_analysis_staged_object_max_age_minutes: int = Field(default=30, ge=1)
+    video_analysis_decode_stride_enabled: bool = False
+    video_analysis_inference_batch_size: int = Field(default=1, ge=1, le=32)
+    video_analysis_defer_low_confidence_crops: bool = True
+    agriculture_inference_poll_seconds: int = 15
+    agriculture_inference_wait_timeout_seconds: int = 6 * 60 * 60
     agriculture_max_media_bytes: int = 1024 * 1024 * 1024
     agriculture_org_storage_quota_bytes: int = 20 * 1024 * 1024 * 1024
     agriculture_rate_window_seconds: int = 60

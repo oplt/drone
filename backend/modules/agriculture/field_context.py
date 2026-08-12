@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database.session import get_db
 from backend.modules.agriculture.field_context_models import AgricultureFieldBoundaryRevision, AgricultureFieldZone
+from backend.modules.agriculture.models import new_id
 from backend.modules.fields.service import field_service
 from backend.modules.identity.dependencies import OrgUser, require_mission_exec, require_org_user
 

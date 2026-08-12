@@ -18,8 +18,8 @@ export function useCreateVisionDataset() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: createVisionDataset,
-    onSuccess: (_dataset, projectId) => Promise.all([
-      client.invalidateQueries({ queryKey: visionKeys.datasets(projectId) }),
+    onSuccess: (_dataset, variables) => Promise.all([
+      client.invalidateQueries({ queryKey: visionKeys.datasets(variables.projectId) }),
       client.invalidateQueries({ queryKey: visionKeys.projects() }),
     ]),
   });

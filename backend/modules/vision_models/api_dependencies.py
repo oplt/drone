@@ -1,20 +1,13 @@
-from fastapi import HTTPException
-
+from backend.core.api_errors import DomainApiError, map_domain_exception
 from backend.modules.vision_models.application import (
     VisionApplication,
-    VisionConflict,
-    VisionNotFound,
-    VisionWorkerUnavailable,
 )
 
 application = VisionApplication()
 
 
-def http_error(exc: Exception) -> HTTPException:
-    if isinstance(exc, VisionNotFound):
-        return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, VisionConflict):
-        return HTTPException(status_code=409, detail=str(exc))
-    if isinstance(exc, VisionWorkerUnavailable):
-        return HTTPException(status_code=503, detail=str(exc))
-    return HTTPException(status_code=422, detail=str(exc))
+def http_error(exc: Exception) -> DomainApiError:
+    error = map_domain_exception(exc, domain="vision")
+    if type(exc).__name__ == "VisionAnnotationConflict":
+        error.code = "VISION_ANNOTATION_REVISION_CONFLICT"
+    return error

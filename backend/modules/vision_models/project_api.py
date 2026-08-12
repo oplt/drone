@@ -9,6 +9,7 @@ from backend.modules.vision_models.application import (
     VisionValidationError,
 )
 from backend.modules.vision_models.schemas import (
+    DatasetCreate,
     DatasetOut,
     VisionProjectCreate,
     VisionProjectOut,
@@ -79,12 +80,18 @@ async def delete_project(
 @router.post("/projects/{project_id}/datasets", response_model=DatasetOut, status_code=201)
 async def create_dataset(
     project_id: str,
+    payload: DatasetCreate | None = None,
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> DatasetOut:
     try:
-        return await application.create_dataset(db, project_id, org_user.user)
-    except VisionNotFound as exc:
+        return await application.create_dataset(
+            db,
+            project_id,
+            org_user.user,
+            clone_from_dataset_id=(payload.clone_from_dataset_id if payload else None),
+        )
+    except (VisionConflict, VisionNotFound) as exc:
         raise http_error(exc) from exc
 
 

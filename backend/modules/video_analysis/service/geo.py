@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
+from backend.modules.agriculture.contracts import MissionTelemetrySample
 from backend.modules.agriculture.georeferencing import interpolate_pose
 
 
@@ -24,7 +24,7 @@ class NearestTelemetryMatcher:
     def __init__(
         self,
         mission_id: str | None,
-        samples: Iterable[Any] | None = None,
+        samples: Iterable[MissionTelemetrySample] | None = None,
         base_timestamp: datetime | None = None,
     ):
         self.mission_id = mission_id

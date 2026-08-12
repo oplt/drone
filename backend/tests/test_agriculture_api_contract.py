@@ -26,6 +26,7 @@ def test_openapi_contract_exposes_examples_and_governed_state_transitions():
     paths = app.openapi()["paths"]
     required = {
         "/agriculture/fields/overview",
+        "/agriculture/flights/{flight_id}/analysis-readiness",
         "/agriculture/flights/{flight_id}/analysis-runs",
         "/agriculture/analysis-runs/{run_id}/observations",
         "/agriculture/flights/{flight_id}/media-timeline",

@@ -88,6 +88,10 @@ def _instruments() -> dict[str, Any]:
             "drone.video.inference_latency_ms",
             unit="ms",
         ),
+        "video_stage_duration": meter.create_histogram(
+            "drone.video.stage_duration_ms",
+            unit="ms",
+        ),
         "video_detection_count": meter.create_histogram("drone.video.detection_count"),
         "api_websocket_messages": meter.create_counter("drone.api.websocket_messages"),
         "api_websocket_disconnects": meter.create_counter("drone.api.websocket_disconnects"),

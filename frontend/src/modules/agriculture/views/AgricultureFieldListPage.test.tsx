@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as agricultureApi from "../api";
+import { server } from "../../../test/msw/server";
 import AgricultureFieldListPage from "./AgricultureFieldListPage";
 
 function renderPage() {
@@ -19,7 +21,26 @@ function renderPage() {
 }
 
 describe("AgricultureFieldListPage", () => {
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    server.use(
+      http.get("*/auth/me", () =>
+        HttpResponse.json({ id: 1, email: "op@example.com", org_id: 7 }),
+      ),
+      http.get("*/api/alerts*", () => HttpResponse.json({ items: [] })),
+      http.get("*/agriculture/fields/:fieldId/boundary-context", () =>
+        HttpResponse.json({
+          field_id: 7,
+          name: "Test",
+          area_ha: 1,
+          boundary: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] },
+          current_revision: 1,
+          revisions: [],
+          zones: [],
+        }),
+      ),
+    );
+  });
 
   it("renders empty state without pretending health data exists", async () => {
     vi.spyOn(agricultureApi, "listAgricultureFieldOverviews").mockResolvedValue(

@@ -1,3 +1,6 @@
+import mimetypes
+from pathlib import Path
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
@@ -17,11 +20,23 @@ from backend.modules.vision_models.application import (
 from backend.modules.vision_models.schemas import (
     ModelEvaluationOut,
     ModelVersionOut,
+    ReleaseActionRequest,
     TrainingRunCreate,
     TrainingRunOut,
 )
 
 router = APIRouter()
+
+
+def artifact_media_type(path: Path) -> str:
+    with path.open("rb") as source:
+        signature = source.read(16)
+    if signature.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if signature.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    guessed, _ = mimetypes.guess_type(path.name)
+    return guessed or "application/octet-stream"
 
 
 @router.post(
@@ -78,7 +93,7 @@ async def cancel_training_run(
 ) -> TrainingRunOut:
     try:
         return await application.cancel_training_run(db, run_id, org_user.user)
-    except (VisionConflict, VisionNotFound) as exc:
+    except (VisionConflict, VisionNotFound, VisionValidationError) as exc:
         raise http_error(exc) from exc
 
 
@@ -105,24 +120,56 @@ async def list_model_versions(
 @router.post("/model-versions/{version_id}/deploy", response_model=ModelVersionOut)
 async def deploy_model(
     version_id: str,
+    payload: ReleaseActionRequest | None = None,
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> ModelVersionOut:
     try:
-        return await application.deploy_model(db, version_id, org_user.user)
-    except (VisionConflict, VisionNotFound) as exc:
+        return await application.deploy_model(
+            db,
+            version_id,
+            org_user.user,
+            override=payload.override if payload else False,
+            reason=payload.reason if payload else None,
+        )
+    except (VisionConflict, VisionNotFound, VisionValidationError) as exc:
         raise http_error(exc) from exc
 
 
 @router.post("/model-versions/{version_id}/archive", response_model=ModelVersionOut)
 async def archive_model(
     version_id: str,
+    payload: ReleaseActionRequest | None = None,
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> ModelVersionOut:
     try:
-        return await application.archive_model(db, version_id, org_user.user)
-    except VisionNotFound as exc:
+        return await application.archive_model(
+            db,
+            version_id,
+            org_user.user,
+            override=payload.override if payload else False,
+            reason=payload.reason if payload else None,
+        )
+    except (VisionConflict, VisionNotFound) as exc:
+        raise http_error(exc) from exc
+
+
+@router.post("/model-versions/{version_id}/rollback", response_model=ModelVersionOut)
+async def rollback_model(
+    version_id: str,
+    payload: ReleaseActionRequest | None = None,
+    db=Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> ModelVersionOut:
+    try:
+        return await application.rollback_model(
+            db,
+            version_id,
+            org_user.user,
+            reason=payload.reason if payload else None,
+        )
+    except (VisionConflict, VisionNotFound, VisionValidationError) as exc:
         raise http_error(exc) from exc
 
 
@@ -149,4 +196,9 @@ async def get_evaluation_artifact(
         path = await application.resolve_evaluation_artifact(db, version_id, name, user)
     except VisionNotFound as exc:
         raise http_error(exc) from exc
-    return FileResponse(path, media_type="image/png")
+    return FileResponse(
+        path,
+        media_type=artifact_media_type(path),
+        filename=path.name,
+        content_disposition_type="inline",
+    )

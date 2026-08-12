@@ -9,24 +9,16 @@ import {
 import { useState } from "react";
 import {
   useAgricultureAnalysisRuns,
+  useAgricultureAnalysisReadiness,
   useAgricultureFlight,
   useAgricultureFlightCoverage,
   useAgricultureFlightQuality,
   useAgricultureAnalysisQuality,
   useAgricultureRuntimeEvents,
-  useCancelAgricultureAnalysisRun,
   useCreateAgricultureAnalysisRun,
   useProcessAgricultureAnalysisRun,
-  useReplayAgricultureAnalysisRun,
-  useRetryAgricultureAnalysisStage,
 } from "../hooks";
 import type { AgricultureEvent } from "../runtime";
-import { AgricultureReviewWorkspace } from "./AgricultureReviewWorkspace";
-import { AgricultureTemporalWorkspace } from "./AgricultureTemporalWorkspace";
-import { AgricultureSensorFusionPanel } from "./AgricultureSensorFusionPanel";
-import { AgricultureCropInsightsPanel } from "./AgricultureCropInsightsPanel";
-import { AgricultureActionExportPanel } from "./AgricultureActionExportPanel";
-import { AgricultureGovernanceAssistantPanel } from "./AgricultureGovernanceAssistantPanel";
 import { AnalysisRunProgress } from "./AnalysisRunProgress";
 import { FlightQualityPanel } from "./FlightQualityPanel";
 import { AgricultureAccessibilityBoundary } from "./AgricultureAccessibilityBoundary";
@@ -37,6 +29,8 @@ import { useMissionRuntime } from "../../mission-runtime/hooks/useMissionRuntime
 import { AgricultureLiveControls } from "./AgricultureLiveControls";
 import { AgricultureLiveMap } from "./AgricultureLiveMap";
 import { useBrowserOnline } from "../hooks/useBrowserOnline";
+import { AgricultureCapabilitySelector } from "./AgricultureCapabilitySelector";
+import { AgricultureJourneyStepper } from "./AgricultureJourneyStepper";
 
 export function AgricultureLiveStatusPanel({
   flightId,
@@ -53,18 +47,34 @@ export function AgricultureLiveStatusPanel({
   const quality = useAgricultureFlightQuality(flightId, active);
   const coverage = useAgricultureFlightCoverage(flightId, active);
   const runs = useAgricultureAnalysisRuns(flightId);
+  const readiness = useAgricultureAnalysisReadiness(flightId, !active);
+  const [capabilitySelection, setCapabilitySelection] = useState<{
+    flightId: string;
+    values: string[];
+  } | null>(null);
   const [createdRun, setCreatedRun] = useState<{
     flightId: string;
     runId: string;
   } | null>(null);
   const createRun = useCreateAgricultureAnalysisRun();
   const processRun = useProcessAgricultureAnalysisRun();
-  const cancelRun = useCancelAgricultureAnalysisRun();
-  const replayRun = useReplayAgricultureAnalysisRun();
-  const retryStage = useRetryAgricultureAnalysisStage();
   const runtime = useMissionRuntime({ onError: () => undefined, alwaysConnect: active });
   const browserOnline = useBrowserOnline();
   const recoveredRuntimeEvents = useAgricultureRuntimeEvents(flightId, active);
+  const availableCapabilityIds = new Set(
+    readiness.data?.capabilities
+      .filter((capability) => capability.available)
+      .map((capability) => capability.id) ?? [],
+  );
+  const selectedCapabilities =
+    capabilitySelection &&
+    capabilitySelection.flightId === readiness.data?.flight_id
+      ? capabilitySelection.values.filter((capability) =>
+          availableCapabilityIds.has(capability),
+        )
+      : readiness.data?.capabilities
+          .filter((capability) => capability.available && capability.recommended)
+          .map((capability) => capability.id) ?? [];
   const runId =
     runs.data?.[0]?.id ??
     (createdRun?.flightId === flightId ? createdRun.runId : null);
@@ -106,7 +116,10 @@ export function AgricultureLiveStatusPanel({
   const c = (coverage.data?.coverage ?? {}) as Record<string, unknown>;
   const startPostFlight = async () => {
     if (!flightId) return;
-    const run = await createRun.mutateAsync(flightId);
+    const run = await createRun.mutateAsync({
+      flightId,
+      requestedAnalyses: selectedCapabilities,
+    });
     setCreatedRun({ flightId, runId: run.id });
     await processRun.mutateAsync(run.id);
   };
@@ -143,6 +156,11 @@ export function AgricultureLiveStatusPanel({
           />
         </Stack>
         <Typography variant="caption">Flight: {flightId}</Typography>
+        <AgricultureJourneyStepper
+          flightStatus={flight.data?.status}
+          analysisStatus={runs.data?.[0]?.status}
+          analysisRunId={runId}
+        />
         {!browserOnline ? (
           <Alert severity="error" role="alert">
             This device is offline. Live controls are locked; last-known flight data remains visible and will refresh when connectivity returns.
@@ -210,14 +228,21 @@ export function AgricultureLiveStatusPanel({
         <AgricultureMediaInventoryPanel flightId={flightId} />
         <AgricultureUploadPanel flightId={flightId} />
         {!active && !runId ? (
-          <Button
-            size="small"
-            variant="contained"
-            onClick={() => void startPostFlight()}
-            disabled={createRun.isPending || processRun.isPending}
-          >
-            Start post-flight field health analysis
-          </Button>
+          <AgricultureCapabilitySelector
+            readiness={readiness.data}
+            selected={selectedCapabilities}
+            loading={readiness.isLoading}
+            error={readiness.isError}
+            pending={createRun.isPending || processRun.isPending}
+            onSelected={(values) =>
+              setCapabilitySelection({
+                flightId: readiness.data?.flight_id ?? flightId,
+                values,
+              })
+            }
+            onRetry={() => void readiness.refetch()}
+            onStart={() => void startPostFlight()}
+          />
         ) : null}
         {createRun.error || processRun.error ? (
           <Alert severity="error">
@@ -231,57 +256,6 @@ export function AgricultureLiveStatusPanel({
             progress={runs.data[0].progress}
             error={runs.data[0].error}
             stages={analysisQuality.data?.stages ?? []}
-            onReplay={[
-              "failed",
-              "cancelled",
-              "blocked_quality",
-            ].includes(runs.data[0].status) ? () => runId && replayRun.mutate(runId) : undefined}
-            replayPending={replayRun.isPending}
-            onRetryStage={(stageName) => runId && retryStage.mutate({ runId, stageName })}
-            retryStagePending={retryStage.isPending ? retryStage.variables?.stageName : null}
-          />
-        ) : null}
-        {runId ? <AgricultureReviewWorkspace runId={runId} /> : null}
-        {runId &&
-        runs.data?.[0] &&
-        ["queued", "running"].includes(runs.data[0].status) ? (
-          <Button
-            size="small"
-            color="warning"
-            onClick={() => cancelRun.mutate(runId)}
-            disabled={cancelRun.isPending}
-          >
-            {cancelRun.isPending ? "Cancelling…" : "Cancel analysis"}
-          </Button>
-        ) : null}
-        {runId &&
-        runs.data?.[0] &&
-        ["failed", "cancelled", "blocked_quality"].includes(
-          runs.data[0].status,
-        ) ? (
-          <Button
-            size="small"
-            color="warning"
-            onClick={() => replayRun.mutate(runId)}
-            disabled={replayRun.isPending}
-          >
-            {replayRun.isPending ? "Replaying…" : "Replay analysis"}
-          </Button>
-        ) : null}
-        {runId ? (
-          <AgricultureSensorFusionPanel
-            flightId={flightId}
-            runId={runId}
-            active={active}
-          />
-        ) : null}
-        {runId ? <AgricultureCropInsightsPanel runId={runId} /> : null}
-        {runId ? <AgricultureActionExportPanel runId={runId} /> : null}
-        {runId ? <AgricultureGovernanceAssistantPanel runId={runId} /> : null}
-        {!active && flight.data?.field_id ? (
-          <AgricultureTemporalWorkspace
-            fieldId={flight.data.field_id}
-            currentFlightId={flightId}
           />
         ) : null}
       </Stack>

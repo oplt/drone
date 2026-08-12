@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [4.0, 50.0]},
+      "properties": {
+        "id": "zone-1",
+        "issue_type": "weed_detection",
+        "severity": 0.7,
+        "confidence": 0.82,
+        "status": "approved",
+        "source_ids": ["risk-1"]
+      }
+    }
+  ],
+  "metadata": {
+    "template_key": "research_inspection",
+    "uncertainty": "Research fixture only; not treatment advice."
+  }
+}

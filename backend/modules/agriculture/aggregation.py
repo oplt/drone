@@ -1,6 +1,5 @@
 """Spatial/temporal aggregation of frame detections into farmer-facing issues."""
 
-from collections import defaultdict
 from datetime import UTC, datetime
 from math import cos, radians
 from typing import Any, Iterable
@@ -71,17 +70,31 @@ def aggregate_detections(detections: Iterable[Any], *, cluster_radius_m: float =
     for group in groups:
         rows = group["detections"]
         located = bool(group["points"])
+        telemetry_qualities = [
+            str((getattr(row, "raw", {}) or {}).get("telemetry_match_quality", "unresolved"))
+            for row in rows
+        ]
+        low_spatial_confidence = any(
+            quality.startswith("low_confidence") or quality == "unresolved"
+            for quality in telemetry_qualities
+        )
         geometry, area_m2 = _local_geometry(group["points"]) if located else ({}, None)
         confidence = max(0.0, min(1.0, sum(float(row.confidence) for row in rows) / len(rows)))
         severity = max(0.0, min(1.0, confidence * min(1.0, len(rows) / 5)))
         timestamps = [datetime.fromtimestamp(float(row.timestamp_seconds), tz=UTC) for row in rows]
         output.append({
-            "observation_type": group["kind"], "geometry_geojson": geometry, "georef_status": "resolved" if located else "unresolved",
+            "observation_type": group["kind"], "geometry_geojson": geometry,
+            "georef_status": (
+                "low_confidence" if located and low_spatial_confidence
+                else "resolved" if located else "unresolved"
+            ),
             "area_m2": area_m2, "severity": severity, "confidence": confidence,
             "uncertainty": {
                 "cluster_radius_m": cluster_radius_m,
                 "detection_count": len(rows),
                 "georef": "frame_pose" if located else "missing_frame_pose",
+                "spatial_confidence": "low" if low_spatial_confidence else "standard",
+                "telemetry_match_qualities": sorted(set(telemetry_qualities)),
                 "area_m2": {"method": "convex_hull_buffer", "uncertainty_m2": round(3.14159 * cluster_radius_m**2, 3) if located else None},
                 "deduplication": "track_id_or_spatial_cluster",
             },

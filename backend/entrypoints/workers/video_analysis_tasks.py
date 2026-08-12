@@ -6,9 +6,11 @@ from collections.abc import Coroutine
 from typing import Any
 
 from backend.core.config.runtime import settings, setup_logging
+from backend.core.database.session import Session
 from backend.core.retry import retry_delay_seconds
 from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
+from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.service.pipeline import run_video_analysis_job
 
 logger = logging.getLogger(__name__)
@@ -47,3 +49,33 @@ def process_video_analysis_job(self, job_id: str) -> dict[str, str]:
             exc=exc,
             countdown=retry_delay_seconds(attempt=self.request.retries),
         ) from exc
+
+
+async def _reconcile_stale_video_jobs() -> dict[str, int]:
+    async with Session() as db:
+        reconciled = await VideoAnalysisRepository(db).reconcile_stale_jobs()
+    return {"reconciled": reconciled}
+
+
+@celery_app.task(
+    name="video_analysis.reconcile_stale_jobs",
+    queue=VIDEO_ANALYSIS_QUEUE,
+)
+def reconcile_stale_video_jobs() -> dict[str, int]:
+    return _run_on_worker_loop(_reconcile_stale_video_jobs())
+
+
+async def _reconcile_staged_storage_objects() -> dict[str, int]:
+    async with Session() as db:
+        reconciled = await VideoAnalysisRepository(db).reconcile_staged_storage_objects(
+            older_than_minutes=settings.video_analysis_staged_object_max_age_minutes
+        )
+    return {"reconciled": reconciled}
+
+
+@celery_app.task(
+    name="video_analysis.reconcile_staged_storage_objects",
+    queue=VIDEO_ANALYSIS_QUEUE,
+)
+def reconcile_staged_storage_objects() -> dict[str, int]:
+    return _run_on_worker_loop(_reconcile_staged_storage_objects())

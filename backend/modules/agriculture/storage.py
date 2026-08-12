@@ -193,6 +193,13 @@ class AgricultureStorage:
         if not path.is_file():
             return False
         path.unlink()
+        parent = path.parent
+        while parent != self.root:
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
         return True
 
     def exists(self, key: str) -> bool:

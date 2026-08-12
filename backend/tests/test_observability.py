@@ -232,6 +232,9 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
         small_object_mode: bool = False
         tracking_enabled: bool = False
         tracker_type: str = "bytetrack"
+        status: str = "queued"
+        attempt: int = 0
+        heartbeat_at: datetime | None = None
 
     @dataclass
     class FakeVideo:
@@ -250,7 +253,9 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
             return FakeVideo(id=video_id)
 
         async def mark_job_running(self, job):
-            return None
+            job.status = "running"
+            job.attempt += 1
+            return job.attempt
 
         async def update_video_metadata(self, *args, **kwargs):
             return None
@@ -262,16 +267,25 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
             return None
 
         async def update_processing_metrics(self, *args, **kwargs):
+            return True
+
+        async def heartbeat(self, *args, **kwargs):
+            return True
+
+        async def is_job_cancelled(self, *args, **kwargs):
+            return False
+
+        async def cleanup_cancelled_job(self, *args, **kwargs):
             return None
 
         async def flush_batch(self, *args, **kwargs):
-            return None
+            return True
 
         async def set_video_status(self, *args, **kwargs):
             return None
 
         async def mark_job_completed(self, *args, **kwargs):
-            return None
+            return True
 
         async def mark_job_failed(self, *args, **kwargs):
             return None
@@ -327,7 +341,9 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
         metadata,
     )
     monkeypatch.setattr(pipeline, "async_iter_frames", frames)
-    monkeypatch.setattr(pipeline.agriculture_repository, "list_telemetry", no_telemetry)
+    monkeypatch.setattr(
+        pipeline, "list_mission_telemetry_for_georef", no_telemetry
+    )
     monkeypatch.setattr(
         pipeline,
         "metric_record",
@@ -339,7 +355,11 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
 
     db = SimpleNamespace(rollback=rollback)
     analyzer = pipeline.OfflineVideoAnalysisPipeline(db, evidence_root=tmp_path)
-    monkeypatch.setattr(analyzer, "_save_crop", lambda **kwargs: Path("crop.jpg"))
+    monkeypatch.setattr(
+        analyzer,
+        "_save_crop",
+        lambda **kwargs: (Path("crop.jpg"), "a" * 64, 1),
+    )
 
     await analyzer.run("job-1")
 
@@ -373,9 +393,10 @@ def test_correlation_middleware_sets_headers():
     asyncio.run(run())
 
 
-def test_http_metrics_increment_on_request(monkeypatch):
+@pytest.mark.asyncio
+async def test_http_metrics_increment_on_request(monkeypatch):
     from fastapi import FastAPI
-    from httpx import ASGITransport, Client
+    from httpx import ASGITransport, AsyncClient
 
     from backend.observability import prometheus_metrics
     from backend.observability.metrics import setup_metrics
@@ -385,15 +406,17 @@ def test_http_metrics_increment_on_request(monkeypatch):
     setup_metrics(app)
 
     @app.get("/test-route")
-    def test_route():
+    async def test_route():
         return {"ok": True}
 
     before = prometheus_metrics.http_requests_total.labels(
         method="GET", route="/test-route", status_code="200"
     )._value.get()  # noqa: SLF001
 
-    with Client(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = client.get("/test-route")
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/test-route")
         assert response.status_code == 200
 
     after = prometheus_metrics.http_requests_total.labels(

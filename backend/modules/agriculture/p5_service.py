@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -43,6 +42,76 @@ class AgricultureSafetyService:
     async def review_action(self, db: AsyncSession, *, action: AgricultureInspectionAction, status: str, note: str | None, user_id: int | None, org_id: int | None) -> AgricultureInspectionAction:
         previous=action.status; action.status=status; action.review_note=note; action.reviewed_by_user_id=user_id; action.reviewed_at=datetime.now(UTC); await self._audit(db, org_id=org_id, entity_type="inspection_action", entity_id=action.id, user_id=user_id, action="review", from_status=previous, to_status=status, reason=note); await db.commit(); await db.refresh(action); return action
 
+    async def update_inspection_route(
+        self,
+        db: AsyncSession,
+        *,
+        run: AgricultureAnalysisRun,
+        ordered_action_ids: list[str],
+        removed_action_ids: list[str],
+        reason: str | None,
+        user_id: int | None,
+        org_id: int | None,
+    ) -> list[AgricultureInspectionAction]:
+        actions = list(
+            (
+                await db.scalars(
+                    select(AgricultureInspectionAction).where(AgricultureInspectionAction.run_id == run.id)
+                )
+            ).all()
+        )
+        by_id = {row.id: row for row in actions}
+        missing = [action_id for action_id in [*ordered_action_ids, *removed_action_ids] if action_id not in by_id]
+        if missing:
+            raise ValueError(f"unknown_inspection_actions:{','.join(missing)}")
+        for rank, action_id in enumerate(ordered_action_ids, start=1):
+            action = by_id[action_id]
+            previous_rank = action.priority_rank
+            action.priority_rank = rank
+            if previous_rank != rank:
+                await self._audit(
+                    db,
+                    org_id=org_id,
+                    entity_type="inspection_action",
+                    entity_id=action.id,
+                    user_id=user_id,
+                    action="route_reordered",
+                    from_status=str(previous_rank),
+                    to_status=str(rank),
+                    reason=reason,
+                    payload={"priority_rank": rank},
+                )
+        for action_id in removed_action_ids:
+            action = by_id[action_id]
+            previous = action.status
+            if previous == "rejected":
+                continue
+            action.status = "rejected"
+            action.review_note = reason or action.review_note
+            action.reviewed_by_user_id = user_id
+            action.reviewed_at = datetime.now(UTC)
+            await self._audit(
+                db,
+                org_id=org_id,
+                entity_type="inspection_action",
+                entity_id=action.id,
+                user_id=user_id,
+                action="route_removed",
+                from_status=previous,
+                to_status="rejected",
+                reason=reason,
+            )
+        await db.commit()
+        return list(
+            (
+                await db.scalars(
+                    select(AgricultureInspectionAction)
+                    .where(AgricultureInspectionAction.run_id == run.id)
+                    .order_by(AgricultureInspectionAction.priority_rank)
+                )
+            ).all()
+        )
+
     async def register_rule(self, db: AsyncSession, *, payload: dict[str, Any], org_id: int | None, user_id: int | None) -> AgricultureAgronomyRule:
         rule=AgricultureAgronomyRule(org_id=org_id, created_by_user_id=user_id, **payload); db.add(rule); await db.commit(); await db.refresh(rule); return rule
 
@@ -81,10 +150,48 @@ class AgricultureSafetyService:
             snapshot = await db.get(AgricultureReportSnapshot, approved_source_id) if approved_source_id else None
             if snapshot is None or snapshot.run_id != run.id or snapshot.org_id != org_id:
                 raise ValueError("report_snapshot_required")
-            features = list((snapshot.snapshot_json or {}).get("features", []))
+            snapshot_json = snapshot.snapshot_json or {}
+            features = list(snapshot_json.get("features", []))
+            if not features and snapshot.template_key == "decision":
+                for action in snapshot_json.get("approved_actions") or []:
+                    waypoint = action.get("waypoint_geojson") or {}
+                    if not waypoint:
+                        continue
+                    features.append(
+                        {
+                            "type": "Feature",
+                            "geometry": waypoint,
+                            "properties": {
+                                "id": action.get("id"),
+                                "issue_type": action.get("issue_type"),
+                                "severity": action.get("severity"),
+                                "confidence": action.get("confidence"),
+                                "status": action.get("status"),
+                                "source_ids": action.get("source_ids") or [],
+                                "priority_rank": action.get("priority_rank"),
+                            },
+                        }
+                    )
+                if not features:
+                    for change in snapshot_json.get("prioritized_changes") or []:
+                        features.append(
+                            {
+                                "type": "Feature",
+                                "geometry": {},
+                                "properties": {
+                                    "id": change.get("id"),
+                                    "issue_type": change.get("issue_type"),
+                                    "state": change.get("state"),
+                                    "confidence": change.get("confidence"),
+                                    "status": change.get("state"),
+                                    "source_ids": change.get("source_ids") or [],
+                                },
+                            }
+                        )
             source_ids = [str(item.get("properties", {}).get("id")) for item in features if item.get("properties", {}).get("id")]
-            report_metadata = {"template_key": snapshot.template_key, "template_version": snapshot.template_version, "summary": (snapshot.snapshot_json or {}).get("summary", {})}
-            if not features: raise ValueError("report_snapshot_has_no_features")
+            report_metadata = {"template_key": snapshot.template_key, "template_version": snapshot.template_version, "summary": snapshot_json.get("summary", {})}
+            if not features:
+                raise ValueError("report_snapshot_has_no_features")
         else:
             risks=list((await db.scalars(select(AgricultureCropRisk).where(AgricultureCropRisk.run_id == run.id, AgricultureCropRisk.review_state == "confirmed"))).all()); observations=list((await db.scalars(select(AgricultureObservation).where(AgricultureObservation.run_id == run.id, AgricultureObservation.review_state == "confirmed"))).all()); source_ids=[row.id for row in risks]+[row.id for row in observations]; features=[{"type":"Feature", "geometry": row.geometry_geojson, "properties": {"id": row.id, "issue_type": getattr(row, "issue_type", getattr(row, "observation_type", "observation")), "severity": row.severity, "confidence": row.confidence, "status": "confirmed", "source_ids": [row.id]}} for row in [*risks,*observations]]
             if not features: raise ValueError("confirmed_observation_required")

@@ -265,6 +265,1448 @@ These are quick because they use existing contracts or correct localized defects
 |---|---|---|
 | P0 — restore a safe working vertical slice | Executable endpoints, one deployable model contract, deterministic analysis orchestration, safe labels/training, terminal jobs, correct spatial results | `AGR-001`, `ML-001`, `AGR-002`, `VID-001`, `AGR-003`, `ML-002`, `ML-003`, `AGR-004` |
 | P1 — make the workflow usable and operable | Map-first UX, unified result flow, scalable evidence, robust workers/releases, provenance, storage/security, measured performance | `UX-001`, `UX-002`, `EVD-001`, `VID-002`, `ML-004`, `ML-005`, `ML-006`, `VID-003`, `PERF-001`, `STOR-001`, `SEC-001` |
-| P2 — optimize and consolidate proven paths | Gated pipeline optimization, lazy bundles, clear module boundaries, API/test consistency, removal of obsolete paths | `PERF-002`, `FE-001`, `FE-002`, `ARCH-001`, `API-001`, `TEST-001`, `CLEAN-001` |
+| P2 — optimize and consolidate proven paths | Gated pipeline optimization, immutable model loading, lazy bundles, clear module boundaries, API/test consistency, removal of obsolete paths | `PERF-002`, `VID-004`, `FE-001`, `FE-002`, `ARCH-001`, `API-001`, `TEST-001`, `CLEAN-001` |
 | P3 — deepen agronomic value | Prioritized scouting/action workflow and repeat-flight/season comparison | `PROD-001`, `PROD-002` |
 | P4 — evidence-gated expansion | Advanced sensors, machine prescriptions, or broader detector modes only after prerequisites | `EXP-001`, `EXP-002` |
+
+## P0 — restore a safe working vertical slice
+
+### AGR-001 — Repair confirmed Agriculture runtime faults and executable coverage
+
+Tags: `P0` `backend` `agriculture` `correctness` `tests`
+
+Problem: Multiple core Agriculture paths can raise before doing useful work. Static imports alone do not exercise the affected module-level names and SQL expression construction.
+
+Evidence:
+
+- `backend/modules/agriculture/api.py` references `settings` throughout media, advisory, telemetry, upload/restore, manifest, analysis, and export routes without importing it.
+- `backend/modules/agriculture/field_context.py` calls `new_id()` in zone creation without importing it.
+- `backend/modules/agriculture/service.py` calls `AgricultureModelVersion.status.in_("validated", "deployed")`; direct evaluation raises `TypeError: ColumnOperators.in_() takes 2 positional arguments but 3 were given`.
+- Focused Ruff reports these undefined names, while current focused tests do not execute all affected branches.
+
+Implementation:
+
+1. Import `settings` from the project’s canonical configuration module and `new_id` from the established ID helper.
+2. Change `in_` to receive one iterable and search the touched paths for the same SQLAlchemy misuse.
+3. Add application-level tests that execute one representative route from each affected cluster with dependency overrides: media inventory/upload, telemetry/advisory, frame manifest, analysis creation, export, and field-zone creation.
+4. Add a service test that reaches model-version lookup and proves the query is constructed and executed.
+5. Add focused Ruff `F821` and import checks for Agriculture to CI; do not combine this with the repository-wide formatting backlog.
+
+Files likely affected: `backend/modules/agriculture/api.py`; `backend/modules/agriculture/field_context.py`; `backend/modules/agriculture/service.py`; `backend/tests/modules/agriculture/*`; focused lint configuration or CI workflow.
+
+Acceptance criteria:
+
+- All confirmed undefined-name defects in Agriculture are removed.
+- Representative affected endpoints execute beyond configuration/name resolution under tests.
+- Model lookup accepts validated/deployed statuses without raising.
+- No public response shape or persisted schema changes.
+
+Tests: New route/service regressions; focused Agriculture test suite; Ruff `F821,F401`; mypy on touched files; full backend suite if CI capacity permits.
+
+Performance target: No additional database queries in the repaired paths; model lookup remains one bounded query.
+
+Dependencies: None. This is the first implementation task.
+
+Risk: Low. The main risk is importing a configuration singleton that differs from current dependency-injection conventions; use the same source as adjacent modules.
+
+Size: S.
+
+### ML-001 — Establish one model artifact and capability release contract
+
+Tags: `P0` `architecture` `vision` `agriculture` `model-governance`
+
+Problem: Vision Training deploys `ModelVersion`, while Agriculture gates analysis on a separate `AgricultureModelVersion`. Artifact identity, deployment state, metrics, and task names can drift, and a successfully trained production model does not make Agriculture analysis available.
+
+Evidence:
+
+- Vision registry/deployment flows persist `backend/modules/vision/models.py::ModelVersion`.
+- Agriculture analysis gate and aggregation query `backend/modules/agriculture/models.py::AgricultureModelVersion`.
+- No audited code links the two records or promotes a Vision production version into the Agriculture registry.
+- The Agriculture record carries model/task lifecycle concerns that overlap Vision’s canonical artifact lifecycle.
+
+Implementation:
+
+1. Write an ADR and schema contract declaring Vision `ModelVersion` the sole owner of artifact URI, integrity hash, training/evaluation provenance, version identity, and candidate/production lifecycle.
+2. Replace the duplicate Agriculture artifact record with an agronomic capability release/policy record that references a Vision model-version ID and stores only Agriculture-owned data: canonical capability ID, crop/sensor applicability, thresholds, approval/review status, and effective dates.
+3. If existing `AgricultureModelVersion` rows may be persisted, migrate them deterministically: link when artifact/version identity is unambiguous, quarantine ambiguous rows for operator review, and never silently discard production references.
+4. Expose a typed read contract returning “available capability + deployed Vision version + evaluated inference profile” without leaking cross-module ORM models.
+5. Make production uniqueness database-enforced by tenant/project/capability as appropriate.
+
+Files likely affected: `backend/modules/vision/models.py`; `backend/modules/vision/repository.py`; `backend/modules/vision/services/*`; `backend/modules/agriculture/models.py`; `backend/modules/agriculture/service.py`; new Alembic migration; API schemas; architecture docs; tests.
+
+Acceptance criteria:
+
+- One durable record owns each model artifact and lifecycle fact.
+- Deploying an eligible Vision model can make its canonical Agriculture capability available without copying artifact fields.
+- Agriculture can resolve the exact model hash/version and inference profile used for every finding.
+- Migration preserves or explicitly quarantines all existing rows and supports rollback before destructive cleanup.
+- Concurrent deployment cannot create two effective production releases for the same scope.
+
+Tests: Migration upgrade/downgrade on empty and fixture databases; contract tests across both modules; concurrent deployment test; tenant-isolation test; artifact provenance round trip.
+
+Performance target: Capability resolution uses at most one indexed join/query and does not load training artifacts or annotation data.
+
+Dependencies: `AGR-001`. Blocks `AGR-002`, `AGR-003`, and `ML-005`.
+
+Risk: High. This touches persisted governance data and cross-module ownership. Inventory dynamic/API/operational consumers before removing old columns or records.
+
+Size: L.
+
+### AGR-002 — Make analysis requests capability-aware and canonical
+
+Tags: `P0` `agriculture` `api` `frontend` `product-contract`
+
+Problem: The frontend requests a hardcoded broad analysis set, the backend rejects unavailable models, and aliases differ across layers. Users cannot understand what can run or why it cannot.
+
+Evidence:
+
+- Agriculture analysis creation currently sends `quality`, `canopy`, `rows`, `stand_count`, `weed`, `standing_water`, and `crop_health` by default.
+- Backend gating treats quality/coverage/RGB quality differently and requires deployed models for the remaining names.
+- Service/release code uses variants such as `canopy_cover` and `row_detection`.
+- The UI does not derive choices from media type, sensor metadata, crop context, or deployed capability releases.
+
+Implementation:
+
+1. Define a versioned canonical capability enum/catalog with stable IDs, display names, required media/sensor metadata, required model profile, output type, and action relevance.
+2. Add a field/mission analysis-readiness endpoint returning capture quality prerequisites, available capabilities, unavailable reasons, selected release IDs, and advanced configuration defaults.
+3. Make the UI select only available capabilities, defaulting to the smallest useful set; quality analysis may run independently where valid.
+4. Reject unknown aliases at the API boundary after a bounded migration period; normalize persisted legacy names in a migration rather than maintaining permanent alias branches.
+5. Persist the resolved capability/release snapshot on the analysis run so later deployment changes do not alter provenance.
+
+Files likely affected: `frontend/src/modules/agriculture/api.ts`; `hooks.ts`; `types.ts`; post-flight components; `backend/modules/agriculture/api.py`; `schemas.py`; `service.py`; capability/release models; migration; contract docs and tests.
+
+Acceptance criteria:
+
+- A user can see which analyses are ready, unavailable, or blocked and a plain-language reason for each.
+- The UI never submits an unavailable capability by default.
+- Every accepted capability resolves to one canonical ID and immutable release snapshot.
+- A quality-only run works without an unrelated ML deployment.
+- Legacy persisted aliases are migrated or explicitly reported; no silent remapping remains indefinitely.
+
+Tests: Capability-catalog unit tests; API readiness matrix by media/sensor/model state; frontend selection tests; legacy-name migration test; tenant and authorization tests.
+
+Performance target: Readiness response p95 under 300 ms on a representative tenant fixture, with a bounded query count recorded in tests.
+
+Dependencies: `ML-001`; `AGR-001`.
+
+Risk: Medium. A canonical rename can break persisted/API consumers; use an inventory and migration, not an unbounded compatibility layer.
+
+Size: M.
+
+### VID-001 — Guarantee truthful terminal states and recover stale video jobs
+
+Tags: `P0` `video` `workers` `reliability` `correctness`
+
+Problem: A failed inference job can leave its video asset marked `analyzing`, all frames can fail while the job becomes `completed`, and there is no clear heartbeat/stale-job recovery path.
+
+Evidence:
+
+- The pipeline failure handler updates the job but does not consistently restore the linked video status.
+- Per-frame standard-inference exceptions are continued; a run with no successfully processed frames can reach normal completion with zero detections.
+- Jobs expose state but no audited lease/heartbeat reconciliation protects worker loss.
+
+Implementation:
+
+1. Define one transactional terminal-state matrix for job and video: completed, failed, cancelled, and retryable/stale.
+2. Track attempted, decoded, inferred, failed, and persisted frame counts separately. Treat zero successful inference frames as failure unless the user explicitly ran a validated no-op mode.
+3. Record bounded structured failure reasons and stage; do not expose raw local paths or arbitrary exception payloads.
+4. Add heartbeat/lease timestamps and a reconciler that marks expired jobs retryable/failed according to retry policy while restoring the video state.
+5. Make terminal transitions idempotent and safe under duplicate worker delivery.
+
+Files likely affected: `backend/modules/video_analysis/pipeline.py`; application/service and repository files; VideoJob/VideoAsset models and migration; Celery tasks; schemas; frontend status/error components; tests.
+
+Acceptance criteria:
+
+- Every terminal job has a compatible terminal video state.
+- A run where every selected frame fails cannot report success.
+- Worker loss becomes visible and recoverable within the configured lease window.
+- Replaying a completion/failure transition does not duplicate detections or corrupt counters.
+- The UI displays an actionable stage/retry message.
+
+Tests: Pipeline failure injection by stage; all-frame-failure test; duplicate-delivery test; stale-heartbeat reconciliation test; cancellation race test; frontend terminal-state tests.
+
+Performance target: Heartbeat writes no more frequently than the configured bounded interval (initially 15-30 seconds); reconciliation uses an indexed status/lease query.
+
+Dependencies: `AGR-001` only for integration sequencing. Blocks `AGR-003`.
+
+Risk: Medium. Recovery logic can race with slow workers; use compare-and-set/versioned transitions and server time.
+
+Size: M.
+
+### AGR-003 — Orchestrate capture-to-inference-to-findings as one idempotent analysis
+
+Tags: `P0` `agriculture` `video` `workflow` `backend` `vertical-slice`
+
+Problem: Agriculture creates an analysis run but does not create or await the video inference needed for ML findings. It later reads whatever mission detections happen to exist, so results can be empty, stale, or produced by the wrong model/configuration.
+
+Evidence:
+
+- Agriculture service directly reads `VideoAsset` and `VideoDetection` by mission.
+- No audited Agriculture path creates a `VideoAnalysisJob` linked to the analysis run.
+- Existing detections are not proven to match the capability release snapshot selected by Agriculture.
+- Evidence association repeatedly searches loaded detections with `next(...)`, producing O(D x E) behavior.
+
+Implementation:
+
+1. Add persisted analysis stages and links: quality gate, one or more video inference jobs, aggregation, review-ready, and terminal failure/cancellation.
+2. At analysis creation, resolve eligible mission media and immutable capability/model/inference snapshots; create missing idempotency-keyed video jobs through a Video Analysis application port.
+3. Reuse a completed job only when source checksum, model hash, inference profile, telemetry version, and capability contract all match.
+4. Trigger aggregation only after required jobs are terminal-success. Make aggregation idempotent with a unique analysis-stage execution key.
+5. Consume a typed detection/evidence DTO rather than cross-module ORM rows. Build an indexed detection map for evidence association and offload file/storage I/O from the async request loop.
+6. Persist stage progress and expose one status contract to both Agriculture and Video Analysis UI surfaces.
+
+Files likely affected: Agriculture analysis models/migration, `backend/modules/agriculture/service.py`, API/schemas/repository; Video Analysis application contracts/repository; Celery tasks/events; frontend Agriculture status components/hooks; integration tests.
+
+Acceptance criteria:
+
+- Starting one Agriculture analysis from eligible captured media deterministically starts or reuses the correct inference job and produces findings from that exact job.
+- Repeated requests with the same idempotency key do not duplicate jobs, detections, observations, or evidence.
+- A failed/cancelled prerequisite produces a truthful analysis terminal state and retry path.
+- Finding provenance includes source media checksum, inference job, model hash/version, profile, telemetry match version, and aggregation version.
+- Aggregation evidence lookup is O(D+E), not O(D x E).
+
+Tests: Full integration slice from synthetic video through mocked detector to finding; idempotency and duplicate-event tests; stale-detection non-reuse test; multi-video partial failure policy test; provenance assertion; tenant isolation.
+
+Performance target: Orchestration requests return within 500 ms before background work; aggregation query count is bounded and 10k detection/evidence association completes without quadratic growth.
+
+Dependencies: `AGR-002`, `VID-001`; contract from `ML-001`.
+
+Risk: High. This changes workflow semantics across modules and requires careful retries/transactions. Implement as one narrow capability vertical slice before broadening the catalog.
+
+Size: XL.
+
+### ML-002 — Add annotation concurrency control and durable unsaved-state protection
+
+Tags: `P0` `vision` `labeling` `data-safety` `frontend` `backend`
+
+Problem: Annotation saves replace the full annotation list without a revision precondition. Two tabs or users can silently overwrite each other, and failed saves are not protected by the current unload warning.
+
+Evidence:
+
+- Label persistence submits whole-image annotation state and has no audited version/ETag conflict check.
+- `useLabelingPersistence` warns during `saving`, but a failed save with dirty local edits can be closed without the same protection.
+- Image-switch synchronization sets state during render, increasing the chance of confusing transient state.
+
+Implementation:
+
+1. Add an annotation-set revision/version to the image annotation response and require `If-Match` or an explicit expected revision on replacement.
+2. Return HTTP 409/412 with server revision and summary when stale; never silently apply stale replacement.
+3. Keep dirty state through save failure and navigation, display a conflict-resolution flow (reload server, keep a local copy, or intentionally overwrite with refreshed authorization).
+4. Move image-switch state synchronization into effects/reducer transitions; serialize save/switch commands to avoid cross-image writes.
+5. Add a bounded local draft keyed by project/dataset/image/revision if browser recovery is required; clear it only after confirmed save.
+
+Files likely affected: Vision annotation models/repository/API schemas; labeling hooks/store/components; query keys; migration if revision is persisted; tests.
+
+Acceptance criteria:
+
+- Concurrent editors cannot silently lose a saved annotation set.
+- Failed saves remain visibly dirty and trigger navigation/unload protection.
+- Switching images cannot send image A’s annotations to image B.
+- Conflict UI explains the two versions and requires an explicit resolution.
+- Successful saves do not add a full dataset refetch per box edit.
+
+Tests: API stale-revision test; two-client integration test; frontend failed-save/navigation and image-switch races; local-draft recovery test if implemented; accessibility test for conflict dialog.
+
+Performance target: One annotation mutation per explicit save/autosave batch; no dataset-wide invalidation for a single image edit; conflict metadata under 10 KB.
+
+Dependencies: None.
+
+Risk: High because annotation loss is irreversible. Preserve server data by default on conflict.
+
+Size: L.
+
+### ML-003 — Remove dataset/training dead ends and expose recovery controls
+
+Tags: `P0` `vision` `training` `ux` `recovery`
+
+Problem: Starting training locks a dataset snapshot. A failed or cancelled first run cannot be retried against that snapshot under current mutability checks, and the frontend hides version creation once a dataset exists. Backend cancellation/version APIs are not fully available in the UI.
+
+Evidence:
+
+- Dataset workspace shows its create action only when no dataset exists, although backend supports multiple versions.
+- Training start invokes dataset mutability checks; training locks the dataset.
+- Failure/cancellation does not unlock the snapshot, leaving no normal retry route.
+- A cancel mutation exists but the training workspace does not expose a clear cancel action.
+
+Implementation:
+
+1. Clarify lifecycle: a locked dataset is an immutable, reusable training input, not an unusable dataset. Starting another run should not mutate it.
+2. Separate “dataset content mutable” checks from “dataset eligible as training input” checks.
+3. Add UI actions for retry with the same immutable snapshot, cancel an eligible run, and create/clone a new dataset version for content changes.
+4. Preserve run attempt history and links; never rewrite a failed run into a new attempt.
+5. Explain lock reason, source version, and next available actions in plain language.
+
+Files likely affected: Vision dataset/training application operations; training API; dataset and training workspaces; hooks/types; tests; lifecycle documentation.
+
+Acceptance criteria:
+
+- A failed/cancelled run can be retried against the same unchanged dataset snapshot.
+- Users can create or clone vNext after any existing version.
+- Eligible active runs can be cancelled from the UI and show honest cancellation progress.
+- Dataset content remains immutable once referenced by a run.
+- Run history retains every attempt and exact configuration/artifact link.
+
+Tests: Lifecycle state matrix; retry/cancel/clone API tests; frontend action visibility tests; immutable-data checksum assertion; failed-first-run end-to-end test.
+
+Performance target: Clone uses metadata/copy-on-write semantics where storage permits and does not duplicate immutable media bytes by default.
+
+Dependencies: Coordinate cancellation semantics with `ML-004`; the basic recovery UI can start independently.
+
+Risk: Medium. Existing code may conflate lock and eligibility; enumerate state transitions before changing guards.
+
+Size: M.
+
+### AGR-004 — Execute spatial filtering correctly in the database
+
+Tags: `P0` `agriculture` `database` `postgis` `correctness` `performance`
+
+Problem: Spatial observation listing orders and limits a global sample before applying bbox filtering in Python. Valid in-viewport observations can be omitted and returned totals are misleading.
+
+Evidence:
+
+- `list_spatial_observations` fetches up to 10,000 severity-ordered rows, then applies bbox checks in Python and uses the fetched count as total.
+- Geometry/PostGIS support exists but is not used for this filter.
+- [PostGIS `ST_Intersects`](https://postgis.net/docs/en/ST_Intersects.html) can use available spatial indexes and preserves database predicate ordering semantics.
+
+Implementation:
+
+1. Move tenant, field/mission, time, status, capability, and bbox/intersection predicates into SQL before order/limit.
+2. Use the canonical geometry column and SRID; add or verify GiST/SP-GiST and composite indexes based on query plans.
+3. Return explicit pagination metadata and either exact total or a clearly labeled estimate; never call a sampled row count total.
+4. Define antimeridian, invalid bbox, boundary-touch, and null-geometry behavior.
+5. Remove Python spatial filtering once parity tests and migration rollout prove no supported fallback consumer needs it.
+
+Files likely affected: Agriculture spatial repository/API/schemas; ORM indexes and Alembic migration; frontend spatial hooks; tests; operations/query-plan docs.
+
+Acceptance criteria:
+
+- Every matching observation can be reached through pagination regardless of global severity rank.
+- Boundary-touch and SRID behavior are deterministic and tested.
+- Totals are semantically accurate or explicitly estimated.
+- Query plans use a spatial index on representative production-scale fixtures.
+- Tenant predicates are applied in the same SQL query.
+
+Tests: PostGIS integration tests for viewport edge cases and pagination; property comparison against a trusted geometry oracle; tenant isolation; `EXPLAIN` plan assertion/recording.
+
+Performance target: Representative 1M-observation viewport query p95 under 500 ms on the agreed staging profile, or a documented revised target based on `PERF-001` baseline; rows fetched should be within a small factor of rows returned.
+
+Dependencies: None after `AGR-001`; can run in parallel with model-contract work.
+
+Risk: Medium. SRID/data-quality inconsistencies can surface during migration; audit existing geometries before enforcing stricter constraints.
+
+Size: M.
+
+## P1 — make the workflow usable and operable
+
+### UX-001 — Build guided, map-first field setup and mission planning
+
+Tags: `P1` `frontend` `agriculture` `ux` `maps` `accessibility`
+
+Problem: The primary setup/planning path asks non-specialists for raw GeoJSON, raw longitude/latitude, exclusion-zone JSON, and waypoint limits.
+
+Evidence:
+
+- Field creation exposes boundary serialization rather than draw/import/confirm interactions.
+- Mission planning exposes takeoff/landing coordinates and exclusion JSON as primary controls.
+- Product guidance calls for map-first, evidence-first, responsive operation; competitor workflows center fields/parcels and repeatable mission templates.
+
+Implementation:
+
+1. Add a guided field wizard: locate/search, draw or import boundary, validate/fix geometry, name/crop/season context, then review.
+2. Add map interactions for takeoff/landing and exclusion zones, with clear legend, undo, keyboard-accessible alternatives, and coordinate fields under Advanced.
+3. Offer goal-based templates (capture quality, stand count, canopy/health, scouting) that derive safe defaults from available capabilities and drone constraints.
+4. Show coverage, estimated duration, media/storage estimate, obstacle/exclusion conflicts, and validation errors before preflight.
+5. Preserve existing public GeoJSON contracts behind the UI and add migration only if persisted plan representation changes.
+
+Files likely affected: Agriculture field/planner components; map utilities; forms/validation; API/types only if validation metadata is added; accessibility and component tests.
+
+Acceptance criteria:
+
+- A first-time user can create a valid field and plan without typing JSON or coordinates.
+- Advanced users can inspect/edit exact geometry without losing round-trip precision.
+- Invalid/self-intersecting/out-of-bounds geometry is explained and cannot silently save.
+- All actions are keyboard operable with visible focus and WCAG AA labels/contrast.
+- Mobile/tablet review is usable even if final flight control retains an explicit device requirement.
+
+Tests: Geometry/form unit tests; map interaction component tests; keyboard/screen-reader assertions; Playwright happy path and invalid geometry recovery; responsive snapshots.
+
+Performance target: Map interactions remain above 50 fps for representative boundaries up to the agreed vertex limit; geometry validation feedback under 150 ms for normal fields.
+
+Dependencies: `AGR-002` for capability-aware templates; can deliver field drawing before templates.
+
+Risk: Medium. Map libraries and coordinate systems are easy sources of precision/accessibility regressions.
+
+Size: L.
+
+### UX-002 — Unify flight progress, analysis results, review, and action handoff
+
+Tags: `P1` `frontend` `agriculture` `information-architecture` `ux`
+
+Problem: The flight page is a giant operational panel and the analysis page repeats reports, timelines, review, model, crop insight, action, and governance controls. Users must understand internal stages and choose between overlapping surfaces.
+
+Evidence:
+
+- `AgricultureLiveStatusPanel` mixes runtime commands, map, media/upload, post-flight, review, insights, actions, exports, and governance.
+- Analysis routes render overlapping report/timeline/review/fusion/calibration/model/action/governance content.
+- Prompt dialogs collect reviewer IDs/reasons/media IDs; UI copy exposes internal phase terminology.
+
+Implementation:
+
+1. Make the flight route the capture/progress shell and the analysis route the canonical result/review/action workspace.
+2. Display one stage stepper: Capture -> Quality -> Analyze -> Review -> Act, backed by `AGR-003` state rather than inferred client status.
+3. Default results to a field map plus a short prioritized finding queue. Move model provenance, calibration, raw evidence, and governance into traceable detail drawers/tabs.
+4. Replace prompt dialogs with validated forms, identity from the session, selectable evidence, reason templates plus free text, and clear irreversible-action confirmation.
+5. Keep deep links from old routes/components, but remove duplicate internal rendering after consumer inventory and parity tests.
+
+Files likely affected: Agriculture flight and analysis pages; `AgricultureLiveStatusPanel`; result/review/action components; router/deep-link handling; hooks/types; tests.
+
+Acceptance criteria:
+
+- At every stage there is one primary next action and one authoritative status.
+- Capture controls disappear or become read-only after flight completion; result controls live in one canonical workspace.
+- Findings are understandable without opening model/detection internals.
+- Reviewer identity comes from authorization context, not a prompt.
+- Existing bookmarked field/flight/analysis URLs resolve to the correct canonical context.
+
+Tests: Route/deep-link tests; stage-state matrix; review/action form tests; accessibility and responsive E2E; analytics event assertions for completion/drop-off.
+
+Performance target: Opening a completed analysis should not fetch duplicate report/review/governance datasets; initial useful result under 2.5 seconds at staging p75 after `FE-001` instrumentation.
+
+Dependencies: `AGR-003`, `EVD-001`; coordinate with `FE-002` and `CLEAN-001`.
+
+Risk: High UX change. Preserve URLs and validate with representative farmer, agronomist, and drone-operator scenarios.
+
+Size: XL.
+
+### EVD-001 — Define canonical evidence identity, navigation, and provenance
+
+Tags: `P1` `architecture` `agriculture` `video` `frontend` `evidence`
+
+Problem: Evidence selection crosses modules through global browser events and identifiers whose entity type is unclear. Detection crops expose local-path concepts, and Agriculture may copy evidence into another storage path.
+
+Evidence:
+
+- Video and Agriculture components listen for custom `agriculture:evidence-select` events.
+- Observation evidence references can represent detections, frames, or copied crops without one typed locator contract.
+- Video detection `evidence_path` is a local filesystem path rather than a stable authorized resource identifier.
+
+Implementation:
+
+1. Define `EvidenceRef` with tenant-scoped type, source entity ID, capture timestamp/frame, storage object ID, checksum, provenance, availability/retention state, and optional spatial context.
+2. Expose authorized evidence metadata and media URLs through one backend resolver; never return host-local paths.
+3. Replace global events with route state or a typed feature-level evidence selection store and stable deep links.
+4. Reuse source evidence by reference rather than copying by default; make derivatives explicit with parent checksum and transform metadata.
+5. Add missing/expired evidence states and retention-safe export behavior.
+
+Files likely affected: Agriculture and Video schemas/models/services; storage abstraction; evidence/media endpoints; frontend timeline/map/result components; router/store; migration; tests.
+
+Acceptance criteria:
+
+- Clicking a finding opens the exact frame/detection evidence and location through a stable deep link.
+- Every evidence object has verifiable source/model/telemetry lineage.
+- APIs expose no server-local filesystem path.
+- Missing/expired evidence is explicit and does not break the result page.
+- Duplicate crop bytes are not created solely to cross module ownership.
+
+Tests: Cross-module contract tests; authorization/tenant tests; deep-link browser test; checksum/provenance test; expired-object and missing-storage tests.
+
+Performance target: Evidence metadata response under 100 KB and p95 under 300 ms; media bytes are streamed/signed independently and support range requests where applicable.
+
+Dependencies: `AGR-003`; align with `STOR-001` and `SEC-001`.
+
+Risk: High because evidence is an external/audit contract. Migrate persisted references before deleting old path fields.
+
+Size: L.
+
+### VID-002 — Replace full detection polling with scalable result contracts
+
+Tags: `P1` `video` `api` `frontend` `performance` `accessibility`
+
+Problem: Active jobs poll up to 2,000 full detections every 1.5 seconds; completed jobs are silently truncated, and the timeline/map render one tiny item per detection. Video time updates scan all detections.
+
+Evidence:
+
+- Detection API and hooks use a hard 2,000 row ceiling without a cursor or truncation warning.
+- Polling repeats the full payload while active.
+- Timeline button dimensions are below recommended touch targets and produce severe overlap.
+- Overlay filtering and active lookup are linear in detection count on frequent media events.
+
+Implementation:
+
+1. Add cursor/time-window/viewport detection endpoints with explicit `has_more`, stable ordering, and snapshot/job version.
+2. Add compact progress deltas and aggregate endpoints for time buckets, tracks, classes, and map clusters; fetch detection detail on demand.
+3. Use query invalidation or conditional polling only while the relevant visible job is active; prefer server events if already supported, otherwise delta cursors.
+4. Render accessible bucket/track controls and virtualized detail rows; cluster map results and query by viewport.
+5. Build a sorted temporal index/binary search for current-frame overlays rather than scanning all rows on each `timeupdate`.
+
+Files likely affected: Video API/repository/schemas; database indexes; frontend API/hooks/result map/timeline/table/player; tests.
+
+Acceptance criteria:
+
+- All detections are reachable without silent truncation.
+- An active result view transfers only new/changed progress after its initial snapshot.
+- A 100k-detection fixture remains navigable through aggregates and on-demand details.
+- Timeline controls meet 44x44 CSS pixel touch target where individually actionable, or use an accessible aggregate control.
+- Hidden/inactive tabs do not poll live detections.
+
+Tests: Cursor stability and concurrent-insert tests; payload-size assertions; 100k frontend benchmark; virtualized keyboard navigation; hidden-tab polling test; temporal-index unit test.
+
+Performance target: Under 100 KB average progress update, no more than one request per configured active interval, initial 10k-result interactive view under 2.5 seconds on staging p75, and overlay lookup O(log N + K).
+
+Dependencies: `VID-001`; evidence detail aligns with `EVD-001`.
+
+Risk: Medium. Pagination consistency needs a snapshot/version boundary while jobs append detections.
+
+Size: L.
+
+### ML-004 — Make training execution leased, idempotent, and cooperatively cancellable
+
+Tags: `P1` `vision` `celery` `reliability` `database`
+
+Problem: Duplicate task delivery or concurrent starts can execute the same training work more than once. Current cancellation uses Celery revoke without terminating the active task, so the UI can imply cancellation while GPU work continues.
+
+Evidence:
+
+- Active-run checks are application queries and can race.
+- Celery `revoke(..., terminate=False)` does not stop a task already executing; [Celery’s worker guide](https://docs.celeryq.dev/en/stable/userguide/workers.html) describes termination as an administrative last resort, not a safe programmatic cancellation mechanism.
+- No audited cooperative cancellation checkpoints/lease owner protect long training runs.
+
+Implementation:
+
+1. Add a database-enforced uniqueness/invariant for active training in the intended project/dataset scope.
+2. Assign an execution lease/token and heartbeat; task startup uses compare-and-set to claim a queued/retryable run.
+3. Add cooperative cancellation state checked between epochs, validation, artifact publication, and other bounded stages. Save only policy-approved checkpoints on cancellation.
+4. Make artifact finalization idempotent and conditional on the current lease; duplicate deliveries exit without side effects.
+5. Reconcile expired leases and distinguish retryable worker loss from deterministic training failure.
+
+Files likely affected: Vision run models/migration; training application service/task/runner callbacks; repository; API schemas; UI status; tests.
+
+Acceptance criteria:
+
+- Concurrent starts produce at most one active run in the defined scope.
+- A cancellation request is acknowledged quickly and active work stops at the next documented checkpoint without process termination.
+- Duplicate delivery cannot publish a second model version or overwrite artifacts.
+- Expired workers become retryable/failed with a durable reason.
+- UI distinguishes “cancellation requested” from “cancelled.”
+
+Tests: Database concurrency test; duplicate Celery delivery; cancellation at each checkpoint; stale lease; artifact idempotency; worker restart integration.
+
+Performance target: Cancellation acknowledged under 2 seconds and acted on within one bounded training step/epoch; heartbeat overhead below 1% of run time.
+
+Dependencies: Coordinate lifecycle with `ML-003`; schema direction from `ML-001`.
+
+Risk: High. Incorrect leases can orphan or double-run expensive jobs; use server timestamps and transactional compare-and-set.
+
+Size: L.
+
+### ML-005 — Enforce release quality and race-safe deployment in the backend
+
+Tags: `P1` `vision` `model-governance` `safety` `database`
+
+Problem: Release thresholds are largely a UI concern. Direct API calls can deploy an ineligible candidate, concurrent deployments can race, and a production version can be archived without an explicit replacement policy.
+
+Evidence:
+
+- Deployment UI presents metrics/confirmation, but audited backend deployment does not enforce a complete capability-specific release policy.
+- Production uniqueness relies on lifecycle operations that can conflict under concurrent requests.
+- Archive operations do not clearly prohibit archiving the only effective production release.
+- [PostgreSQL partial unique indexes](https://www.postgresql.org/docs/16/indexes-partial.html) support database enforcement of one row satisfying a production predicate.
+
+Implementation:
+
+1. Define versioned release policies by capability/model profile: required evaluation dataset, minimum metrics, maximum regression, artifact integrity, supported detector profile, reviewer/approval requirements, and override authorization.
+2. Evaluate policy server-side in the same transaction as deployment; persist the policy version, evaluation, actor, rationale, and previous production link.
+3. Enforce one effective production version with a partial unique constraint or equivalent transaction/locking strategy.
+4. Require atomic promote-and-retire or an explicit downtime override; block archival of an effective release unless a valid replacement/rollback state exists.
+5. Add one-click rollback that is itself audited and rechecks artifact availability/compatibility.
+
+Files likely affected: Vision deployment service/repository/models; Agriculture capability release contract; schemas/UI; migration; audit log; tests.
+
+Acceptance criteria:
+
+- API and UI apply the same server-owned release policy.
+- Concurrent promotion leaves exactly one effective production release.
+- Every deployment/override/rollback has immutable actor, reason, policy, metrics, and artifact identity.
+- Ineligible candidates cannot deploy without an authorized, explicit override.
+- The only active production release cannot be accidentally archived.
+
+Tests: Policy matrix; direct API bypass attempt; concurrent promote; rollback; archive guard; tenant/role authorization; migration constraint test.
+
+Performance target: Deployment transaction completes under 1 second excluding artifact verification; policy evaluation performs bounded indexed reads.
+
+Dependencies: `ML-001`; execution provenance benefits from `ML-004`.
+
+Risk: High because deployment controls production model behavior. Roll out policy in report-only mode on existing candidates before enforcement if data is incomplete.
+
+Size: L.
+
+### ML-006 — Strengthen dataset curation, deduplication, and leakage controls
+
+Tags: `P1` `vision` `datasets` `ml-quality` `performance`
+
+Problem: Exact hash deduplication is upload-oriented, perceptual hashes are not used as a general duplicate policy, video curation compares selected frames quadratically, and single-video contiguous split boundaries can leak near-identical frames.
+
+Evidence:
+
+- Perceptual hashes are stored but no audited indexed/clustered duplicate review spans source images and extracted frames.
+- Video curation performs pair comparisons up to the selected-frame limit, giving O(N²) behavior.
+- Group-safe splits help with multiple videos; one video uses contiguous regions where adjacent frames at boundaries remain highly correlated.
+- Telemetry association for curated video is based on upload/create time rather than a verified capture epoch.
+
+Implementation:
+
+1. Define exact duplicate, near-duplicate, and intentional-repeat semantics. Keep originals auditable; mark clusters and selection decisions rather than silently deleting.
+2. Replace all-pairs pHash comparison with indexed bucketing/nearest-neighbor or temporal-window comparison appropriate to expected dataset size.
+3. Add source-group and temporal exclusion buffers to split generation; produce a leakage report with nearest cross-split similarities.
+4. Capture and validate media capture epoch/timezone before telemetry matching; record quality/tolerance.
+5. Add curation summaries for blur, exposure, class balance, empty frames, duplicate clusters, source diversity, and split leakage before training eligibility.
+
+Files likely affected: Vision ingestion/curation/split services; image/video metadata models and migration; dataset APIs/UI; telemetry contract; tests and benchmark fixtures.
+
+Acceptance criteria:
+
+- Duplicate clusters are explainable and reversible.
+- Split generation prevents source-group leakage and reports residual near-duplicate risk.
+- Curation scales subquadratically on the agreed 100k-image fixture.
+- Telemetry-linked frames expose capture-time source and match quality.
+- Training eligibility can require a versioned data-quality policy.
+
+Tests: Exact/pHash cluster fixtures; deterministic split/property tests; cross-split leakage fixture; timezone/capture-time tests; 100k curation benchmark.
+
+Performance target: 100k-image metadata curation completes within the staging budget established by `PERF-001`, with empirical growth substantially below O(N²); no image bytes are loaded when hashes/metadata suffice.
+
+Dependencies: `ML-003` lifecycle; `VID-003` for shared capture-time semantics.
+
+Risk: Medium. Perceptual similarity thresholds vary by crop/source; expose clusters for review and validate thresholds instead of hard deletion.
+
+Size: L.
+
+### VID-003 — Make capture time and telemetry provenance explicit
+
+Tags: `P1` `video` `telemetry` `agriculture` `data-quality`
+
+Problem: Video-to-telemetry matching can use `video.created_at`, which is often upload time rather than capture time. Match quality is buried in raw metadata, so spatial findings can look precise when temporal alignment is weak.
+
+Evidence:
+
+- Video pipeline and Vision curation derive a base time from the VideoAsset creation timestamp when matching frame offsets.
+- Upload may occur long after flight capture.
+- Telemetry fields and quality are duplicated/hidden in per-detection raw JSON rather than presented as a first-class provenance contract.
+
+Implementation:
+
+1. Add captured-at, source (container metadata, mission link, operator, inferred), timezone, uncertainty, and synchronization offset to media metadata.
+2. Resolve capture time from trusted mission/device metadata first; require confirmation when sources conflict beyond policy tolerance.
+3. Version telemetry matching and store source sample IDs, delta milliseconds, interpolation method, and quality category in normalized form.
+4. Propagate spatial uncertainty to Agriculture findings; block or label geospatial actions when quality is below policy.
+5. Add a calibration preview using known flight events or visual timestamps where available.
+
+Files likely affected: VideoAsset/media models and migration; telemetry matcher/DTO; Video/Vision ingestion; Agriculture evidence/finding schemas; UI metadata/calibration; tests.
+
+Acceptance criteria:
+
+- Upload time is never silently treated as capture time without an explicit low-confidence source label.
+- Every geolocated detection/finding reports match delta, method, source, and quality.
+- Low-quality telemetry cannot silently generate high-confidence spatial actions.
+- Operators can correct capture time/offset with an audited change and deterministic reprocessing decision.
+
+Tests: Container/mission/operator precedence; timezone/DST cases; interpolation/tolerance; low-quality action gate; correction/reprocessing integration.
+
+Performance target: Telemetry matching remains O(F log T) or better for frames F and telemetry samples T, with metadata lookup indexed by mission/time.
+
+Dependencies: Contract alignment with `EVD-001`; can start independently of `AGR-003`.
+
+Risk: High for data correctness. Historical media may lack trustworthy timestamps; represent uncertainty rather than inventing precision.
+
+Size: L.
+
+### PERF-001 — Add production-grade stage telemetry and representative benchmarks
+
+Tags: `P1` `observability` `performance` `video` `vision` `frontend`
+
+Problem: Optimization decisions currently lack representative GPU, SAHI, codec, storage, dataset-size, and browser measurements. Synthetic local numbers cannot establish production priorities.
+
+Evidence:
+
+- Available synthetic decode was fast and nearly independent of sample interval; CPU inference batching yielded only 8-9% in the tested setup.
+- CUDA was unavailable and SAHI absent in the audit environment.
+- Existing jobs expose progress but do not provide a complete stage breakdown and cardinality/byte metrics.
+- Frontend build output shows large shared map/3D chunks, but route transfer and user timing are not recorded.
+
+Implementation:
+
+1. Instrument queue wait, download/read, decode, preprocessing, inference, SAHI slice/merge, tracking, telemetry, crop/evidence, database persistence, summary, and total wall time with job/model/media dimensions.
+2. Add frontend route transfer, Web Vitals, request count/bytes, render commits, and result cardinality dimensions with privacy-safe sampling.
+3. Create representative, versioned benchmark manifests covering production codecs/resolutions, short/long flights, sparse/dense scenes, standard/SAHI profiles, CPU/GPU hardware, and 1k/10k/100k result views.
+4. Record correctness gates alongside speed: evaluation metrics, selected frames/timestamps, track quality, telemetry parity, and persisted counts.
+5. Publish baseline p50/p95 throughput, cost, resource saturation, and bottleneck allocation before approving `PERF-002` experiments.
+
+Files likely affected: Video/Vision worker instrumentation; metrics/logging config; frontend telemetry; benchmark scripts/fixtures/docs; dashboards/alerts; tests.
+
+Acceptance criteria:
+
+- Every production analysis can attribute at least 95% of wall time to named stages or queue wait.
+- Dashboards separate model/version/profile, media properties, hardware/worker, tenant-safe cohort, and success/failure.
+- Benchmark runs are reproducible from a versioned manifest and report correctness deltas.
+- A baseline report identifies the top two measured bottlenecks for each representative workload.
+- Telemetry excludes image content, secrets, local paths, and high-cardinality user data.
+
+Tests: Metric schema/label tests; benchmark smoke run; trace completeness assertion; privacy review; frontend telemetry unit/E2E test.
+
+Performance target: Instrumentation overhead below 2% worker wall time and below 20 KB telemetry per job; frontend monitoring below 1% sampled-session transfer.
+
+Dependencies: None; begin early. Blocks optimization claims in `PERF-002`.
+
+Risk: Medium. Unbounded metric labels can harm observability systems; use controlled dimensions and trace IDs.
+
+Size: M.
+
+### STOR-001 — Make media/evidence/artifact writes transactional and lifecycle-managed
+
+Tags: `P1` `storage` `video` `vision` `reliability` `cost`
+
+Problem: Files can be written before database commit, one crop may be stored for every detection, image-write success is not always checked, raw JSON duplicates fields, and no complete orphan/retention policy is evident.
+
+Evidence:
+
+- Vision media/artifact and manifest operations can precede transaction commit.
+- Video pipeline writes per-detection crops with `cv2.imwrite`; persistence can continue without a verified durable-object contract.
+- Evidence APIs contain host-local paths.
+- Uploads are local and bounded by size but lack a canonical checksum/deduplication/storage-object lifecycle.
+
+Implementation:
+
+1. Introduce or complete a storage-object abstraction with object ID, checksum, size, MIME, owner/type, state, retention policy, and backend locator kept server-side.
+2. Stage bytes, verify integrity, commit metadata, then finalize/promote through an idempotent outbox/saga; add orphan reconciliation for every failure boundary.
+3. Store crops on demand or according to a reviewed evidence policy (for example representative/key detections), with transform provenance and parent checksum.
+4. Normalize frequently queried telemetry/inference fields; keep raw JSON only for bounded extension data with a schema/version and size cap.
+5. Implement retention, legal/audit hold, soft-delete, repair, and backup/restore behavior across source media, datasets, runs, artifacts, and evidence.
+
+Files likely affected: shared/local storage modules; Video/Vision/Agriculture models and migrations; pipeline/ingestion/artifact services; cleanup tasks; media endpoints; operations docs/tests.
+
+Acceptance criteria:
+
+- No committed DB record points to an unverified object after normal success.
+- Every staged/orphaned object is reconciled or surfaced within the configured window.
+- Failed writes fail the owning stage truthfully.
+- APIs expose object IDs/authorized URLs, never backend filesystem paths.
+- Retention/deletion produces an auditable impact preview and preserves referenced/held evidence.
+
+Tests: Failure injection at write/verify/commit/finalize; idempotent retry; orphan reconciliation; retention/reference graph; backup/restore; checksum corruption.
+
+Performance target: Storage metadata operations add under 100 ms p95 excluding byte transfer; default crop policy reduces inode/object growth materially against the baseline without reducing required audit evidence.
+
+Dependencies: Coordinate IDs with `EVD-001`; security policy with `SEC-001`.
+
+Risk: High. Storage migration can lose audit evidence; use dual-read only as a bounded migration phase with counts/checksums and a deletion gate.
+
+Size: XL.
+
+### SEC-001 — Remove bearer tokens and local implementation details from media URLs
+
+Tags: `P1` `security` `media` `frontend` `backend`
+
+Problem: Media URL builders append a session marker as a `token` query parameter, and backend streaming supports bearer query tokens. Query credentials are leak-prone through logs/history/referrers, even though the current marker is not a JWT and cookie auth currently succeeds.
+
+Evidence:
+
+- Frontend `getToken()` aliases a session marker and produces URLs such as `?token=1`.
+- Backend media auth accepts query bearer tokens as a fallback.
+- [RFC 6750 section 2.3](https://datatracker.ietf.org/doc/html/rfc6750.html#section-2.3) says bearer tokens in URI query parameters should not be used unless other methods are impossible and highlights URL logging risk.
+- Evidence responses may expose local storage paths.
+
+Implementation:
+
+1. Verify same-origin cookie-authenticated range streaming for current browser flows and remove the unnecessary `token=1` URL parameter.
+2. For cross-origin/object storage, use short-lived audience/object-scoped signed URLs or an authenticated exchange; never put the primary session bearer in a URL.
+3. Remove query bearer fallback after logs/clients/operations inventory proves no supported consumer depends on it; add explicit deprecation telemetry if needed for a bounded period.
+4. Redact query strings and storage locators from access/error logs; set appropriate cache, content-disposition, CSP/referrer, and range headers.
+5. Replace path fields through `EVD-001`/`STOR-001` and test tenant/object authorization at exchange and delivery.
+
+Files likely affected: frontend auth/media URL helpers; Video/Vision/Agriculture media endpoints and auth dependencies; storage URL signer; logging config; tests/docs.
+
+Acceptance criteria:
+
+- No application-generated media URL contains a bearer credential or session marker.
+- Cookie or signed-URL playback supports seeking/ranges and expiration behavior.
+- A URL for one tenant/object cannot authorize another.
+- Query bearer auth is removed after consumer proof, and logs contain no sensitive URLs/paths.
+- Existing supported media playback/download flows pass browser tests.
+
+Tests: Browser streaming/seek; signed URL expiry/scope; tenant attack cases; log-redaction assertion; old query auth rejection after removal.
+
+Performance target: Authorization/exchange p95 under 200 ms; signed delivery does not proxy bytes through the API unless policy requires it.
+
+Dependencies: Can remove `token=1` immediately after tests; full path/URL work aligns with `EVD-001` and `STOR-001`.
+
+Risk: Medium. External clients may depend on query auth; inventory before removal and use a time-bounded migration, not a permanent fallback.
+
+Size: M.
+
+## P2 — optimize and consolidate proven paths
+
+### PERF-002 — Optimize decode/inference/SAHI/tracking only behind benchmark gates
+
+Tags: `P2` `performance` `video` `inference` `sahi` `tracking`
+
+Problem: The pipeline has plausible optimization opportunities—decode stride, batching, warm models, hardware decode, slice profiles, and aggregate persistence—but local synthetic results do not prove which change improves representative end-to-end workloads.
+
+Evidence:
+
+- Current pipeline decodes every frame and invokes standard prediction per selected frame.
+- Synthetic CPU results showed only modest batching gain; no production GPU/SAHI/storage baseline exists yet.
+- [Ultralytics prediction documentation](https://docs.ultralytics.com/modes/predict/) supports streaming, batches, and video stride, but library capability alone is not proof for this pipeline’s correctness or speed.
+
+Implementation:
+
+1. Use `PERF-001` to select the top measured bottleneck and create one isolated experiment at a time.
+2. Candidate A: decoder-level stride/seek or bounded prefetch; assert selected timestamp/frame equivalence within the declared tolerance.
+3. Candidate B: bounded inference batching and persistent worker model instances; cap GPU memory and queue latency.
+4. Candidate C: evaluated SAHI profiles by capability/model, enabled only when accuracy gain exceeds the release policy’s latency/cost budget.
+5. Candidate D: track-level aggregation and deferred detail/crop persistence when review evidence remains complete.
+6. Roll out behind a profile/version flag, compare canary traces and evaluation metrics, then remove the losing implementation rather than retaining permanent parallel paths.
+
+Files likely affected: Video frame extractor, detector adapters/cache, pipeline/tracker/persistence; worker settings; model release profiles; benchmark harness; tests.
+
+Acceptance criteria:
+
+- Each promoted change has a benchmark report showing statistically meaningful end-to-end gain on at least one production workload with no release-policy regression.
+- Selected frame/timestamp, detection, tracking, telemetry, and evidence parity stay within explicit tolerances.
+- Memory and queue-latency budgets are met under concurrent workers.
+- Unsuccessful experiment paths are removed after rollout decision.
+- A feature/profile rollback restores the prior validated path without data corruption.
+
+Tests: Golden video parity; benchmark confidence intervals; CPU/GPU memory stress; worker concurrency; SAHI evaluation gate; canary rollback.
+
+Performance target: Set per experiment from `PERF-001`; require at least 15% end-to-end turnaround or cost improvement unless a smaller gain resolves a documented SLO breach. Never trade away required evaluation quality.
+
+Dependencies: `PERF-001`; terminal integrity from `VID-001`; release profile from `ML-005`.
+
+Risk: High for accuracy and GPU stability. Avoid combining several optimizations in one benchmark or rollout.
+
+Size: L per selected experiment; do not schedule all candidates automatically.
+
+### VID-004 — Make detector loading immutable and provenance-verifiable
+
+Tags: `P2` `video` `models` `cache` `provenance` `reliability`
+
+Problem: Registered model artifacts use immutable unique paths, but built-in detector caching is keyed primarily by path. Replacing bytes at the same built-in path can keep stale weights in a worker while provenance metadata reflects the changed file.
+
+Evidence:
+
+- Detector construction uses process caching around model paths.
+- Registered custom weights are stored under unique versioned paths, while built-in configuration can point to a mutable conventional path.
+- Provenance can include file size/mtime, but those values do not guarantee the cached in-memory model matches the current bytes.
+
+Implementation:
+
+1. Give every loadable model an immutable artifact ID and verified SHA-256 (or equivalent) resolved before inference.
+2. Key process caches by artifact ID/hash plus device and relevant load options, never path alone.
+3. Reject an artifact whose bytes do not match the registered checksum; expose a safe operational error and metric.
+4. Warm/pin only explicitly deployed artifacts and evict with a bounded memory policy. Never replace bytes in place; deploy a new artifact/version.
+5. Persist the verified loaded hash and detector/library profile on the job and resulting evidence.
+
+Files likely affected: Video detector factory/adapters; model registry resolver; worker cache/lifecycle; job/provenance schemas; operations tooling; tests.
+
+Acceptance criteria:
+
+- A job’s recorded model hash is the exact hash loaded in memory.
+- Changing a model requires a new artifact/version; in-place byte changes fail verification.
+- Cache entries separate device/load profiles and evict within a configured memory bound.
+- Worker restart/warmup and rollback select the intended immutable artifact.
+
+Tests: Mutated-file checksum rejection; cache-key/device tests; two-version hot-swap; eviction/memory test; provenance round trip; rollback.
+
+Performance target: Warm cache lookup under 10 ms; checksum verification occurs once per artifact load, not per frame; cache memory stays under the configured worker budget.
+
+Dependencies: `ML-001` artifact ownership and `ML-005` deployment policy; measurement with `PERF-001`.
+
+Risk: Medium. Hashing large weights at load adds startup time but is required for integrity; cache the verified result only for immutable object identity.
+
+Size: M.
+
+### FE-001 — Lazy-load route-specific map, 3D, and provider code
+
+Tags: `P2` `frontend` `performance` `bundles`
+
+Problem: Build output indicates large MUI, maps, and 3D chunks, and the entry graph globally mounts Google Maps/provider behavior and imports Cesium/static assets. Routes that do not use these capabilities may still pay parse, preload, CSS, or network cost.
+
+Evidence:
+
+- Build chunks include roughly 1.26 MB MUI, 1.21 MB maps, 0.96 MB 3D, and 0.71 MB base vendor code before compression.
+- `index.html` preloads vendor map/3D chunks, and Google Maps provider setup is global.
+- Cesium static assets account for a large portion of `dist`; route-level transfer was not measurable in the sandbox browser.
+
+Implementation:
+
+1. Add bundle visualization and route network budgets to CI; measure actual transfer/parse before moving code.
+2. Place Google Maps, Cesium, and 3D providers inside lazy route boundaries that need them; avoid top-level imports that trigger Vite preload edges.
+3. Load map SDKs only when the user reaches a map surface, with an accessible loading/error state and no duplicate SDK initialization.
+4. Split only stable feature boundaries; retain shared MUI primitives where excessive micro-chunks would hurt caching.
+5. Verify deployment base paths, CSP, service worker/cache, and source-map behavior.
+
+Files likely affected: frontend app entry/router/providers; Vite chunk configuration; map/3D route modules; Cesium CSS/static setup; bundle CI script/tests.
+
+Acceptance criteria:
+
+- A non-map route does not request/preload Google Maps, Cesium, or 3D JS/CSS/assets.
+- Agriculture map routes load each required SDK once and retain current functionality.
+- Route boundaries have accessible suspense/error states and no hydration/runtime warnings.
+- CI records compressed initial and route chunk sizes with justified budgets.
+
+Tests: Production-build bundle inspection; route network assertions in Playwright; map/3D smoke tests; CSP/base-path deployment test.
+
+Performance target: Reduce non-map initial transferred JS/CSS by at least 30% from the measured baseline and avoid any regression over 10% on map-route interactive time.
+
+Dependencies: Instrumentation in `PERF-001` is preferred; can begin with build graph analysis.
+
+Risk: Medium. Provider relocation can break context consumers and preload semantics; inventory imports and routes first.
+
+Size: M.
+
+### FE-002 — Split Agriculture frontend ownership by workflow and narrow cache updates
+
+Tags: `P2` `frontend` `architecture` `react-query` `maintainability`
+
+Problem: Agriculture `hooks.ts`, `api.ts`, and `types.ts` are very large, and giant workflow components combine unrelated state. Annotation/result mutations often invalidate broad queries instead of updating precise cache entries.
+
+Evidence:
+
+- Agriculture hooks exceed 1,000 lines; API/types are roughly 875/702 lines.
+- Architecture guard fails these modules and multiple large Agriculture/Video components.
+- Broad invalidation after fine-grained edits causes avoidable requests and rerenders.
+- [TanStack Query’s guidance](https://tanstack.com/query/latest/docs/framework/react/guides/disabling-queries) supports explicit query enablement; background polling should reflect visibility and workflow state.
+
+Implementation:
+
+1. Organize feature folders around demonstrated workflows: fields/planning, flights/capture, analysis/findings, review/actions, evidence, and governance.
+2. Give each workflow typed API functions, query keys, hooks, components, and tests; keep one shared transport/error layer.
+3. Replace barrel cycles/global events with explicit imports and typed route/context boundaries.
+4. Update or invalidate the smallest cache entity after mutations; gate polling on active state, visibility, and required context.
+5. Enforce size/dependency guards on new modules after the functional split, not by mechanically slicing files.
+
+Files likely affected: `frontend/src/modules/agriculture/api.ts`; `hooks.ts`; `types.ts`; Agriculture components/pages; Video hooks where shared; architecture guard/tests.
+
+Acceptance criteria:
+
+- No new workflow module violates the agreed size/dependency guard without documented exception.
+- Public UI/API behavior and deep links remain stable through the refactor.
+- Fine-grained mutations do not refetch unrelated field/flight/analysis datasets.
+- Polling stops when the associated job is terminal, the feature is hidden, or required context is absent.
+- Circular dependencies are absent in the affected feature graph.
+
+Tests: Existing frontend suite; query-key/cache behavior tests; architecture/cycle guard; route integration tests; request-count assertions.
+
+Performance target: Reduce requests during a 20-box labeling/edit scenario and a result review session by at least 70% from baseline; avoid increased route bundle size.
+
+Dependencies: Prefer `UX-002` destination boundaries and `VID-002` contracts before finalizing the split.
+
+Risk: Medium. A broad mechanical rewrite would create churn; migrate one complete workflow at a time and delete the old owner after parity.
+
+Size: L.
+
+### ARCH-001 — Replace cross-module ORM coupling with typed application ports
+
+Tags: `P2` `backend` `architecture` `modular-monolith` `contracts`
+
+Problem: Agriculture directly imports/queries Video ORM entities, while Video/Vision reach into Agriculture telemetry/geolocation repositories. Durable facts and transaction ownership are therefore implicit.
+
+Evidence:
+
+- `backend/modules/agriculture/service.py` imports Video asset/detection models.
+- Video and Vision ingestion/telemetry paths import Agriculture repository/geospatial behavior.
+- Giant Agriculture API/service files combine transport, orchestration, storage, aggregation, and governance.
+
+Implementation:
+
+1. Record module ownership and allowed dependency direction in an ADR and executable dependency guard.
+2. Define small application ports/DTOs for media selection, inference job creation/status, detection/evidence reads, and telemetry matching. Ports expose stable IDs/data, not ORM sessions/models.
+3. Move cross-cutting capture-time/geolocation matching to a clearly owned shared capability only if both modules genuinely use the same policy; otherwise Agriculture implements the port.
+4. Move orchestration from route handlers into application commands; keep repositories within the owning module.
+5. Migrate one vertical slice, add contract tests, then remove direct imports. Do not introduce a generic event bus or service framework without a concrete second consumer.
+
+Files likely affected: Agriculture/Video/Vision application and repository modules; shared contract package if justified; dependency guard; tests; ADR/docs.
+
+Acceptance criteria:
+
+- Agriculture does not import Video/Vision ORM models or repositories directly, and the reverse is true.
+- Each durable entity has one module owner and transaction boundary.
+- Cross-module operations are covered by typed contract tests and tenant/authorization context is explicit.
+- Route modules delegate orchestration and remain transport-focused.
+- Dependency guard prevents regression.
+
+Tests: Contract/provider tests; module dependency test; `AGR-003` integration slice; tenant/transaction failure tests; focused type check.
+
+Performance target: Application ports do not add network hops; orchestration query count stays at or below the pre-refactor measured baseline.
+
+Dependencies: Ownership from `ML-001`; workflow contract from `AGR-003`; evidence contract from `EVD-001`.
+
+Risk: Medium. Avoid an abstract repository layer that merely mirrors every ORM method; ports should map to demonstrated cross-module use cases.
+
+Size: L.
+
+### API-001 — Normalize API errors, pagination metadata, and artifact media types
+
+Tags: `P2` `api` `backend` `frontend` `correctness`
+
+Problem: Feature APIs use inconsistent error/detail forms, some collections silently truncate, and evaluation artifacts are served as `image/png` even when artifact metadata indicates JPEG.
+
+Evidence:
+
+- Vision evaluation artifact endpoint hardcodes PNG response media type while generated validation-batch artifacts can be JPEG.
+- Video detection result ceiling lacks a complete continuation contract.
+- Similar validation/not-found/conflict conditions are represented differently across the audited feature APIs.
+
+Implementation:
+
+1. Define a small versioned error envelope with stable code, human-safe message, field errors, retryability, and trace ID; map domain errors consistently at route boundaries.
+2. Define cursor collection metadata shared in shape—not a generic repository—for large append-only result sets.
+3. Persist/validate artifact MIME and extension at creation and serve exact recorded/detected type with safe disposition/sniffing headers.
+4. Update typed frontend error handling to show actionable messages and preserve trace IDs for support.
+5. Migrate endpoint groups incrementally and document contract changes; preserve public behavior where changing it is not required.
+
+Files likely affected: shared API error utilities/schemas; audited Agriculture/Video/Vision routes; artifact storage endpoint; frontend HTTP client/types/errors; API contract docs/tests.
+
+Acceptance criteria:
+
+- JPEG/PNG artifacts return correct `Content-Type`, extension/disposition, and bytes.
+- Migrated endpoints return stable machine-readable codes for validation, conflict, not-found, authorization, and retryable failures.
+- Large collections disclose pagination/completeness.
+- UI messages do not expose stack traces, SQL, storage paths, or internal exceptions.
+
+Tests: MIME byte/header tests; error contract snapshots; frontend mapping tests; pagination contract tests; security header assertions.
+
+Performance target: Error mapping adds negligible overhead; pagination metadata adds under 1 KB per response.
+
+Dependencies: Coordinate cursor shape with `VID-002`; otherwise independent.
+
+Risk: Medium for external consumers. Inventory OpenAPI/client usage and version or stage changes when response shapes are public.
+
+Size: M.
+
+### TEST-001 — Close realistic integration, browser, and restore-drill gaps
+
+Tags: `P2` `testing` `ci` `operations` `accessibility`
+
+Problem: Focused unit/component coverage passes broadly but misses the broken vertical contracts; restore cleanup fails, browser validation could not run locally, and warnings can hide real test setup drift.
+
+Evidence:
+
+- Focused backend: 108 passed, 1 skipped, 1 failed due to restore-drill cleanup leaving directories.
+- Focused frontend: 33 passed with unhandled-request and React `act` warnings.
+- Confirmed runtime errors were not caught by existing tests.
+- Playwright/browser execution was unavailable in the sandbox environment.
+
+Implementation:
+
+1. Fix restore-drill cleanup with explicit temporary-root ownership, success/failure cleanup assertions, and no deletion of unvalidated paths.
+2. Add a hermetic backend vertical-slice suite for field/mission/media -> video job -> findings with mocked deterministic model inference and real database transactions/PostGIS where needed.
+3. Add browser journeys for field setup/plan, upload/analyze/review/action, label conflict/recovery, training cancel/retry/deploy, and 10k-result navigation.
+4. Fail focused tests on unhandled MSW requests and unexpected console/React warnings; resolve existing warnings in affected tests.
+5. Add focused Ruff undefined-name, mypy touched-module, migration single-head, dependency guard, bundle budgets, accessibility, and `git diff --check` gates.
+
+Files likely affected: backend restore tests/helpers; feature integration fixtures; frontend MSW setup/tests; Playwright config/specs; CI workflows; static-check configuration.
+
+Acceptance criteria:
+
+- Restore drill leaves no owned temporary artifacts on success or failure and never targets a broad/unresolved path.
+- The primary Agriculture vertical slice fails CI if any module contract is disconnected.
+- Browser journeys run in CI with pinned browser/container versions and retained traces/screenshots on failure.
+- No unhandled-request or unexpected React warning remains in the focused suite.
+- Static gates cover changed files without requiring an unrelated all-repository cleanup.
+
+Tests: This task defines the suites; validate by deliberately injecting one failure per gate and confirming CI detects it.
+
+Performance target: Focused PR suite under 15 minutes with parallel jobs; nightly representative performance/E2E suite may run longer with published duration budgets.
+
+Dependencies: Add regressions alongside each P0/P1 task; full vertical journey depends on `AGR-003` contracts.
+
+Risk: Low to medium. Flaky browser/performance tests erode trust; use deterministic fixtures, explicit waits on state, and percentile bands.
+
+Size: L.
+
+### CLEAN-001 — Consolidate duplicate paths and remove proven obsolete surface
+
+Tags: `P2` `cleanup` `frontend` `backend` `dependencies` `migration`
+
+Problem: Duplicate result workspaces, model selectors, global evidence events, unsupported segmentation remnants, legacy aliases, and possibly unused frontend dependencies increase cognitive load. Deleting them without consumer/data proof would be unsafe.
+
+Evidence:
+
+- Flight and analysis pages render overlapping result/review/governance concerns.
+- Vision schema allows `instance_segmentation` and annotations have segmentation storage, but audited API/UI/training flows implement bbox detection only.
+- Agriculture aliases and duplicate model registries have no single owner.
+- Source search found no direct feature imports for several large dependency families, but transitive/build/plugin use has not yet been exhaustively disproved.
+
+Implementation:
+
+1. Execute the `REMOVAL / CONSOLIDATION PLAN` in this document after its per-item proof gates.
+2. For every deletion, search static/dynamic imports, OpenAPI clients, background tasks, persisted rows, configuration, scripts, tests, and operational runbooks.
+3. Add data migrations/export/quarantine for persisted unsupported segmentation or legacy identifiers before schema removal.
+4. Merge duplicate UI/API owners into the canonical implementations listed later; retain route redirects/shells only when a supported public contract requires them.
+5. Remove dependencies one at a time, regenerate lock metadata with the project package manager, and run build/test/bundle comparisons.
+
+Files likely affected: Agriculture flight/analysis components; model/evidence selectors; Vision schemas/models/migration; package manifest/lockfile; compatibility code proven obsolete; tests/docs.
+
+Acceptance criteria:
+
+- Each deleted symbol/schema/dependency has recorded consumer and persisted-data evidence.
+- No permanent dual path remains after bounded migration completion.
+- Supported routes/contracts/data continue to work or have an explicit versioned migration.
+- Architecture/bundle/static metrics improve or remain neutral.
+- Removal ledger records date, proof, migration, rollback window, and owner.
+
+Tests: Full affected feature suites; migration fixtures with legacy data; production build; dependency/import scan; route/deep-link tests; restore rollback rehearsal.
+
+Performance target: Remove at least one proven global/large dependency path or duplicate query/render owner; do not claim byte savings until compressed route transfer is measured.
+
+Dependencies: `UX-002`, `ML-001`, `EVD-001`, `FE-002`, and consumer inventory.
+
+Risk: High if done early. “Apparently unused” is not evidence of safety; use the classifications and gates below.
+
+Size: L, executed as small independently reversible removals.
+
+## P3 — deepen agronomic value after the core is reliable
+
+### PROD-001 — Deliver prioritized findings, scouting routes, and approval-based actions
+
+Tags: `P3` `product` `agriculture` `geospatial` `workflow`
+
+Problem: The system can display detections, observations, reports, and actions, but the default experience does not consistently turn evidence into a short, spatially prioritized work queue.
+
+Evidence:
+
+- Current result surfaces emphasize timelines, detection/report detail, model controls, and governance.
+- Product principles require human approval and actionable field workflows.
+- Competitors converge on field map -> issue/zone -> report or operational handoff rather than detection-box-first review.
+
+Implementation:
+
+1. Define a finding-ranking policy using severity, confidence/calibration, affected area/count, telemetry quality, novelty/change, crop context, and review state. Version and expose why an item ranks.
+2. Group detections into agronomically meaningful findings/hotspots without hiding supporting evidence.
+3. Let users confirm/dismiss/merge/split findings, assign scout tasks, and build an optimized-but-editable scout route.
+4. Generate recommendations only from approved rules/policies; require human approval before external action/export.
+5. Capture outcome feedback linked to finding/model/release for later evaluation, not automatic retraining.
+
+Files likely affected: Agriculture finding/action domain; geospatial service; analysis UI map/queue/forms; export/report; audit log; tests.
+
+Acceptance criteria:
+
+- A completed analysis opens with a bounded prioritized finding list and map hotspots.
+- Every rank/recommendation is explainable and links to evidence/provenance.
+- Users can record review, assignment, field outcome, and explicit action approval.
+- Low-confidence/low-telemetry findings are labeled or withheld by policy.
+- No treatment action is automatically executed.
+
+Tests: Ranking policy fixtures; grouping spatial properties; scout-route edit/authorization; action approval audit; outcome feedback; accessibility/browser journey.
+
+Performance target: Rank/group 100k detections through aggregate inputs in under 5 seconds background time on staging; initial UI loads summaries, not all raw detections.
+
+Dependencies: `AGR-003`, `AGR-004`, `UX-002`, `EVD-001`, `VID-003`.
+
+Risk: High product/safety risk. Validate policies with agronomy stakeholders and field outcomes; avoid presenting model confidence as agronomic certainty.
+
+Size: XL.
+
+### PROD-002 — Add repeat-flight and season comparison with shareable decision reports
+
+Tags: `P3` `product` `agriculture` `temporal` `reporting`
+
+Problem: Temporal components exist, but the workflow does not yet provide a simple, trustworthy baseline-to-current comparison that controls for capture/model differences and ends in a shareable decision record.
+
+Evidence:
+
+- Agriculture has history/temporal/fusion/calibration surfaces, but they are fragmented across field/analysis pages.
+- Competitor workflows consistently emphasize repeat missions, trend comparison, field reports, and sharing/export.
+- Model, flight geometry, sensor, lighting, telemetry, and calibration changes can make naive comparisons misleading.
+
+Implementation:
+
+1. Define comparison eligibility and comparability score using field geometry, season/crop, sensor, capture quality, model release, calibration, and telemetry.
+2. Align spatial findings to stable field coordinates/zones and display baseline/current/delta with uncertainty and changed-input warnings.
+3. Add repeat-mission initiation from a prior validated plan with an explicit revalidation/preflight step.
+4. Generate a concise shareable report: field/context, comparable inputs, prioritized changes, reviewed evidence, approved actions, and provenance appendix.
+5. Add export/API integration only for demonstrated consumer formats; preserve human approval and audit.
+
+Files likely affected: Agriculture temporal service/models; mission cloning/validation; comparison UI; report/export; API schemas; tests.
+
+Acceptance criteria:
+
+- Users can choose comparable flights and understand when/why comparison confidence is low.
+- Deltas never silently combine incompatible model/sensor/calibration inputs.
+- Repeat mission starts from a copy that must pass current validation.
+- Reports are accessible, printable/shareable, tenant-authorized, and include evidence/provenance.
+- Exported values match displayed reviewed values.
+
+Tests: Comparability matrix; geometry alignment; model-change warning; repeat-plan validation; report snapshot/accessibility/auth; export parity.
+
+Performance target: Comparison summary for a field season returns under 2 seconds p95 from precomputed aggregates; detailed spatial layers load progressively.
+
+Dependencies: `PROD-001`; reliable provenance from `ML-001`, `VID-003`, and `EVD-001`.
+
+Risk: High. Temporal differences can be confounded; communicate uncertainty and require comparable acquisition policy.
+
+Size: L.
+
+## P4 — evidence-gated expansion
+
+### EXP-001 — Evaluate multispectral and prescription/machine integration readiness
+
+Tags: `P4` `research` `sensors` `integrations` `safety`
+
+Problem: Competitors advertise multispectral indices, treatment maps, and machine exports, but this repository’s audited primary path is RGB/video and does not yet prove calibration, prescription validation, or downstream machine contracts.
+
+Evidence:
+
+- Current capability names include crop-health concepts, but capture/readiness contracts do not establish multispectral sensor/calibration provenance.
+- Product principles require evidence and human approval.
+- Competitor features are useful direction, not proof this product can safely recommend treatment.
+
+Implementation:
+
+1. Conduct customer/sensor/integration discovery and define exact target sensors, calibration panels/irradiance data, index formulas, coordinate systems, application equipment formats, and regulatory/agronomy review.
+2. Build an offline research fixture and evaluation protocol before any production UI.
+3. Require end-to-end provenance, calibration validity, uncertainty, prescription constraints, human approval, and exported-file validation against a real downstream consumer.
+4. Produce a go/no-go ADR with measured value, support burden, safety controls, and ownership.
+
+Files likely affected: Research docs/fixtures initially; production files only after a separately approved design and task set.
+
+Acceptance criteria:
+
+- Named customer problem and supported hardware/integration are documented.
+- Evaluation demonstrates repeatability and agronomic validation on representative data.
+- Safety/approval/export validation and support ownership are agreed.
+- No production capability label implies multispectral/prescription support before all gates pass.
+
+Tests: Research calibration/repeatability suite; downstream file conformance; threat/safety review; field validation protocol.
+
+Performance target: Defined by the approved sensor/workflow after discovery; no speculative SLO.
+
+Dependencies: `PROD-001`, `PROD-002`, mature capture/provenance/storage contracts.
+
+Risk: Very high safety/integration scope. Outcome may correctly be “not now.”
+
+Size: Research M; production scope intentionally unestimated until go/no-go.
+
+### EXP-002 — Evaluate advanced detector/tracker profiles against agronomic outcomes
+
+Tags: `P4` `research` `ml` `sahi` `tracking` `evaluation`
+
+Problem: More detector modes, SAHI configurations, or trackers can increase complexity and cost without improving the decisions users make.
+
+Evidence:
+
+- Standard YOLO, SAHI, and tracking machinery already exist.
+- No audited representative GPU/SAHI benchmark or task-specific agronomic outcome study proves which profiles should be exposed.
+- Current UI already presents more technical choice than most farmers need.
+
+Implementation:
+
+1. Choose one demonstrated failure mode, such as small weed/stand detection or count stability, and define an outcome metric plus latency/cost budget.
+2. Compare standard inference, evaluated SAHI profiles, and tracking options using fixed datasets and model versions.
+3. Measure calibration, small-object recall, count error, track fragmentation/ID switches, evidence usability, latency, memory, and cost.
+4. Promote only a versioned backend release profile; keep detector mechanics out of default farmer UX.
+5. Remove losing experiment adapters/configurations if they have no supported production consumer.
+
+Files likely affected: Evaluation/benchmark assets and docs first; model release profiles and detector adapters only after promotion.
+
+Acceptance criteria:
+
+- Experiment answers a named product failure with representative data.
+- Promoted profile meets outcome, quality, latency, memory, and cost gates.
+- Default user workflow remains goal/capability-based, not detector-brand-based.
+- Non-promoted paths are not carried as indefinite configuration debt.
+
+Tests: Reproducible evaluation run; golden video parity; hardware stress; calibration/count/track metrics; rollback profile test.
+
+Performance target: Set before experiment from `PERF-001`; promotion requires the specified agronomic gain and budget compliance, not generic higher benchmark FPS.
+
+Dependencies: `PERF-001`, `PERF-002`, `ML-005`, outcome feedback from `PROD-001`.
+
+Risk: Medium technical, high opportunity cost. Stop when the measured outcome does not justify complexity.
+
+Size: Research M per failure mode.
+
+## Dependency graph and implementation sequence
+
+```text
+AGR-001
+  |
+  +------------------------------+
+  |                              |
+  v                              v
+ML-001 -----------------------> AGR-002
+  |                              |
+  |                              v
+  |            VID-001 ------> AGR-003 <------ AGR-004
+  |                              |
+  |              +---------------+---------------+
+  |              |               |               |
+  v              v               v               v
+ML-005         EVD-001         UX-002          PROD-001
+  ^              |               ^               |
+  |              +----> STOR-001 |               v
+ML-004 <--- ML-003        |       +-- UX-001    PROD-002
+  ^                       v
+  |                    SEC-001
+ML-002 (independent data-safety lane)
+
+VID-001 ---> VID-002 ---> UX-002
+VID-003 ---> AGR-003 / ML-006 / PROD-001
+
+PERF-001 ---> PERF-002 ---> EXP-002
+    |            |
+    +-> FE-001   +-> VID-004
+    +-> VID-002
+
+AGR-003 + UX-002 + EVD-001 ---> ARCH-001 / FE-002 / CLEAN-001
+VID-002 ----------------------> API-001
+all changed slices ------------> TEST-001
+
+PROD-001 + PROD-002 + mature provenance ---> EXP-001
+```
+
+### Recommended delivery slices
+
+1. Executable baseline: `AGR-001`, plus the localized portions of `VID-001`, `API-001`, and `TEST-001` needed to make failures truthful and tests clean.
+2. One useful capability end to end: `ML-001` -> `AGR-002` -> `AGR-003`, initially for one validated RGB capability and quality gate, not the entire catalog.
+3. Data safety in parallel: `ML-002` and `ML-003`, then `ML-004`/`ML-005`.
+4. Evidence and spatial integrity: `AGR-004`, `VID-003`, `EVD-001`, `STOR-001`, `SEC-001`.
+5. User journey: `UX-001`, `VID-002`, and `UX-002`, validated through the browser journeys in `TEST-001`.
+6. Measure and optimize: `PERF-001`, then only the winning `PERF-002`/`FE-001`/`VID-004` experiments.
+7. Consolidate after proof: `ARCH-001`, `FE-002`, and `CLEAN-001`.
+8. Product depth and experiments: `PROD-001`, `PROD-002`, then evidence-gated P4 research.
+
+## Canonical implementations after the roadmap
+
+| Concern | Canonical owner/implementation | Treatment of alternatives |
+|---|---|---|
+| Trained artifact, hash, metrics, version, candidate/production lifecycle | Vision `ModelVersion` and its artifact service | Agriculture stores a reference and agronomic policy only; no copied artifact truth. |
+| Agronomic capability availability | Agriculture capability release linked to one Vision model version and evaluated inference profile | Remove hardcoded aliases/defaults and duplicate artifact lifecycle fields after migration. |
+| Agriculture analysis orchestration | Agriculture application command and persisted stage/run aggregate | Route handlers remain transport-only; Video worker does not create Agriculture decisions directly. |
+| Video media identity | Video `VideoAsset` plus immutable storage object/checksum | Agriculture media manifests may reference it after consumer/data investigation; do not copy bytes. |
+| Inference execution | Video Analysis application/job and pipeline (`decode -> detector -> tracking -> telemetry -> persistence`) | Agriculture invokes through a typed port and consumes completed DTOs, never Video ORM rows. |
+| Custom training input | Immutable Vision dataset version/snapshot | A new/clone version is used for content changes; failed runs do not mutate/unlock the snapshot. |
+| Annotation state | Revisioned annotation set per dataset image | Whole-set replacement is acceptable only with optimistic concurrency and durable dirty-state UX. |
+| Evidence identity | Tenant-scoped `EvidenceRef` plus authorized resolver | Remove local paths, duplicate copied crops, and global custom-event identifiers after migration. |
+| Capture-time/telemetry alignment | Versioned matcher contract with explicit capture-time source, offset, tolerance, and quality | Keep the proven nearest/interpolation algorithm behind the contract; remove upload-time assumptions. |
+| Spatial observation query | Database/PostGIS predicate, index, ordering, and cursor | Remove Python bbox filtering after parity and data-quality validation. |
+| Farmer result workspace | Agriculture analysis route: map + prioritized findings + review/action | Flight route owns capture/progress; old duplicated result components become shells/deep links, then are removed. |
+| Frontend transport/query identity | Existing shared HTTP client plus workflow-owned typed API/query-key modules | Do not introduce a second fetch client or a generic repository abstraction. |
+| Detector model cache | Immutable artifact hash + device/load profile | Remove mutable path-only cache keys and in-place weight replacement. |
+
+## REMOVAL / CONSOLIDATION PLAN
+
+Classification is the intended end state. A `DELETE` item is not authorization to erase persisted data blindly; its proof/migration gate must pass first.
+
+### DELETE
+
+| Target | Evidence and proof gate | Removal/migration | Risk |
+|---|---|---|---|
+| Missing-name/runtime-defect code paths (`settings`, `new_id`, malformed `in_`) | Confirmed by Ruff/source and direct expression execution | Correct in `AGR-001`; retain regression tests | Low; immediate. |
+| Hardcoded seven-capability post-flight default and permanent capability alias branches | UI/backend source proves incompatible names and unavailable deployments | Replace with readiness catalog in `AGR-002`; migrate stored aliases, log unknown values, then remove branches | Medium; public/persisted names require inventory. |
+| Query-string bearer/session-marker media auth | Current browser uses cookie auth; query method is security debt | Remove `token=1`, inventory external clients/log use, add signed URL exchange if needed, then reject query tokens in `SEC-001` | Medium; external integrations may exist. |
+| Local filesystem paths in API evidence/artifact responses | Paths are implementation details and unusable cross-host | Migrate to storage/evidence object IDs and authorized URLs via `EVD-001`/`STOR-001`; remove columns only after reference parity | High; audit/export consumers may persist paths. |
+| Python post-limit bbox filtering | Produces incomplete views and misleading totals | Replace with indexed PostGIS query in `AGR-004`; remove fallback after parity/property tests | Medium; dirty geometry/SRID data may need repair. |
+| Unversioned global `agriculture:evidence-select` event | Typed route/store can cover the demonstrated in-app consumer | Migrate listeners/senders to `EvidenceRef` deep links in `EVD-001`, add route tests, then delete event | Low to medium; search plugins/dynamic listeners. |
+| Unsupported `instance_segmentation` option and segmentation persistence fields if unconsumed | Audited UI/API/trainer implement bounding boxes only; schema remnants imply unsupported capability | Query production rows/OpenAPI/scripts first; export/quarantine non-null data, migrate constraints/columns, then delete under `CLEAN-001` | High if any persisted annotations exist. |
+| Duplicate per-detection raw JSON keys and unconditional crop files | Normalized fields already exist or are planned; one crop per detection has unbounded storage cost | Version/migrate required metadata and representative evidence policy in `STOR-001`; delete only fields/objects outside retention/reference graph | High; evidence/audit retention. |
+| Path-only built-in model cache key/in-place weight replacement | Can serve stale bytes under changed provenance | Require immutable artifact IDs/hashes in `VID-004`; delete path-only key after worker rollout | Medium; operations deployment scripts must change. |
+| Proven unused frontend packages | Source search alone is insufficient | For each candidate, verify static/dynamic/Vite/config imports and `npm ls`, remove one at a time, rebuild/test/bundle in `CLEAN-001` | Medium; build plugins/transitive peers may depend on them. |
+
+### MERGE
+
+| Targets | Canonical destination | Evidence/migration | Risk |
+|---|---|---|---|
+| `AgricultureModelVersion` artifact lifecycle + Vision `ModelVersion` | Vision owns artifact/version; Agriculture owns linked capability release | `ML-001` inventory and data migration; do not merely synchronize two registries | High persisted/governance risk. |
+| Flight-page post-flight result/review/governance panels + analysis-page equivalents | Canonical Agriculture analysis workspace | `UX-002` route/deep-link parity and user-flow tests before deleting duplicate rendering | High UX/navigation risk. |
+| Video/Agriculture evidence crops and metadata | `EvidenceRef` + storage object | Check checksums/references/holds, migrate by reference, avoid byte recopy in `EVD-001`/`STOR-001` | High audit risk. |
+| Repeated model/release selectors and provenance cards | Shared capability-release selector/detail component inside the owning workflow | Inventory behavior variants, merge only common policy, retain domain-specific presentation where necessary | Medium. |
+| Full-result polling, timeline buttons, map points, and result tables as separate data owners | One cursor/snapshot result store with aggregate/detail selectors | `VID-002` contract tests and UI performance fixture | Medium append/pagination consistency. |
+| Duplicate task/status vocabulary across Agriculture and Video | Agriculture stage contract referencing Video job terminal state | `AGR-003` state matrix; preserve low-level Video details in diagnostics | Medium failure semantics. |
+| Scattered media URL builders | One authorized media/evidence URL helper | `SEC-001` range/cookie/signed URL browser coverage | Medium auth/caching. |
+
+### KEEP
+
+| Implementation | Why it remains canonical | Guardrails/investment |
+|---|---|---|
+| Vision immutable dataset versions and run history | Correct reproducibility foundation | Fix eligibility/retry UX in `ML-003`; never unlock/mutate referenced content. |
+| Vision `ModelVersion` immutable artifacts | Best existing home for training/evaluation provenance | Add backend release policy and checksums in `ML-001`/`ML-005`/`VID-004`. |
+| Video frame extractor/detector/tracker adapter boundaries | Concrete isolation and test value | Instrument in `PERF-001`; optimize only behind parity gates. |
+| SAHI as an evaluated inference adapter | Useful for demonstrated small-object cases | Do not make it a default farmer control; release profile decides after `EXP-002`. |
+| Video `VideoAsset` and job catalog | Reusable media-inference ownership | Add capture-time, checksum, terminal-state, and storage integrity. |
+| Agriculture observations/findings/reviews/actions | Correct owner for agronomic interpretation and human decision | Stop importing Video ORM rows; link exact evidence/provenance. |
+| Existing shared frontend HTTP client/session handling | Avoids a duplicate transport stack | Remove query-token URL misuse and keep workflow APIs typed. |
+| PostGIS geometry capability | Correct engine for spatial predicates | Use proper SRIDs/indexes/query plans in `AGR-004`. |
+| Dedicated Video/Vision Celery queues/workers | Provides useful GPU workload isolation without services | Add leases, stage metrics, capacity alerts, and idempotency. |
+
+### INVESTIGATE
+
+| Target/question | Required evidence before decision | Likely decision/risk |
+|---|---|---|
+| Agriculture recording/media manifests versus Video `VideoAsset` | Persisted row counts, API/external clients, flight-runtime semantics, checksum/object overlap, backup/restore behavior | Likely link/merge catalog identity while retaining Agriculture capture metadata; high migration risk. |
+| Legacy anomaly-zone models/ingestion | Production rows, exports, API consumers, scheduled jobs, and whether findings supersede them | Delete or migrate if findings fully cover semantics; high persisted-contract risk. |
+| Segmentation schema values | Database scan, migrations, annotation exports, dynamic clients, training artifacts | Delete only if truly empty/unsupported; otherwise design a real supported capability or preserve/export data. |
+| `@fullcalendar/*`, `@nivo/*`, `formik`, `react-pro-sidebar`, `resium`, MUI lab, Google Maps loader, font packages | Static/dynamic imports, Vite plugins, CSS, peer dependencies, `npm ls`, build/runtime route coverage | Remove proven direct dependencies individually; medium build risk. |
+| Global Cesium script/CSS and vendor-3D preload | Browser network waterfall on map and non-map routes, plugin output, deployment/CSP behavior | Likely lazy route-load in `FE-001`; medium route/plugin risk. |
+| External media query-token clients | Access-log-safe aggregate, SDK/docs, customer integrations, support history | Remove fallback after bounded deprecation if any; security priority. |
+| Agriculture API/service compatibility branches | Static/dynamic consumers, OpenAPI generated clients, persisted payloads, operations scripts | Remove branches once migration ends; avoid permanent fallback maze. |
+| Crop evidence hit rate and retention | Which detections users/reports/exports actually open, legal/audit policy, storage cost | Likely representative/on-demand crops; high evidence-policy risk. |
+| Built-in model path deployment scripts | Deployment manifests, volume update behavior, rollback/runbooks | Move to immutable content-addressed artifacts in `VID-004`. |
+
+## NOT RECOMMENDED / NOT NOW
+
+- Do not add more Agriculture analysis types until one capability completes the capture-to-reviewed-finding slice with exact provenance.
+- Do not synchronize two full model registries with hooks, cron jobs, or copied artifact metadata. Establish one artifact owner and link Agriculture policy.
+- Do not split the modules into microservices now. Typed in-process contracts and isolated worker queues solve the demonstrated boundary/scaling problems with less operational risk.
+- Do not introduce a generic event bus, repository framework, or plugin architecture solely to decouple three known calls. Use narrow application ports and persisted idempotent stages.
+- Do not optimize decoding, batch size, SAHI overlap, precision, or tracking from intuition. Baseline representative GPU/media workloads and correctness first.
+- Do not expose detector brand, SAHI slices, thresholds, model IDs, or telemetry tolerance as the default farmer workflow. Keep them in validated release profiles and advanced diagnostics.
+- Do not automatically generate or execute chemical/fertilizer prescriptions from RGB detections. Require agronomic validation, supported sensor calibration, explicit approval, and downstream conformance.
+- Do not claim accuracy, yield improvement, cost savings, or offline behavior based on competitor marketing or synthetic benchmarks.
+- Do not store one crop forever for every detection by default. Decide from evidence-review needs, retention policy, and measured hit rate.
+- Do not make WebSockets/SSE a prerequisite merely to replace inefficient polling. Cursor/delta and visibility-gated queries are sufficient first; adopt push only if measured latency/load and existing infrastructure justify it.
+- Do not build a native mobile app or force full phone-based precision labeling now. Make field review and core operations responsive; validate whether annotation creation genuinely needs another platform.
+- Do not perform a repository-wide formatting/type rewrite while delivering the vertical slice. Enforce focused correctness gates on touched modules and burn down baseline debt in bounded tasks.
+- Do not delete apparently unused dependencies, schemas, legacy zones, media manifests, or routes based only on source search. Complete the proof gates in the removal plan.
+- Do not retain old and new implementations indefinitely “for safety.” Use metrics, parity tests, a rollback window, and a dated removal gate.
+
+## Implementation quality gates
+
+Every task above is complete only when all applicable conditions hold:
+
+1. Public contracts and persisted data are preserved or migrated explicitly.
+2. Tenant/role authorization and audit behavior are tested at the owning boundary.
+3. Retry, duplicate delivery, cancellation, timeout, and partial failure behavior are defined for asynchronous work.
+4. Tests cover the changed behavior at the lowest useful level plus the relevant vertical contract.
+5. Focused lint/type checks, frontend build, migration single-head check, and `git diff --check` pass.
+6. Browser-facing changes pass keyboard, focus, label, contrast, responsive, loading, empty, error, and reduced-motion checks where applicable.
+7. Performance claims include workload, hardware, dataset/media cardinality, before/after distribution, and correctness comparison.
+8. Obsolete paths are removed after migration proof; no unbounded compatibility path is added.
+9. Operations receive metrics, bounded logs, recovery/runbook updates, and storage/backup implications.
+10. The repository remains in a valid, testable state after each vertical slice.
+
+## Audit evidence index
+
+Primary implementation areas inspected:
+
+- Agriculture frontend routes, pages, components, hooks, API/types, temporal/review/governance/evidence flows.
+- Agriculture backend API, schemas, service, field context, storage, models, repository, migrations, API contract, and operations documentation.
+- Video Analysis frontend source/inference/results panels, hooks, player/overlay, map, timeline, model selector, and media URL handling.
+- Video Analysis backend API/application/repository, pipeline, frame extraction, YOLO/SAHI detector adapters, tracking, telemetry matching, Celery task, models, schemas, and tests.
+- Vision frontend project/dataset/labeling/training/evaluation/registry/deployment workspaces, API/hooks/types, and persistence behavior.
+- Vision backend APIs, application operations, ingestion/curation/splitting, annotation persistence, training worker/service, evaluation artifacts, model deployment, storage, models, migrations, and tests.
+- Shared frontend entry/router/providers/Vite output; backend settings, auth, worker queues, database/Alembic, and local storage/restore tests.
+
+Authoritative technical guidance used for roadmap decisions:
+
+- [Ultralytics Predict mode](https://docs.ultralytics.com/modes/predict/) for supported stream/batch/stride behavior.
+- [Celery worker control](https://docs.celeryq.dev/en/stable/userguide/workers.html) for revoke/terminate semantics.
+- [PostGIS ST_Intersects](https://postgis.net/docs/en/ST_Intersects.html) for indexed spatial filtering.
+- [PostgreSQL partial indexes](https://www.postgresql.org/docs/16/indexes-partial.html) for conditional uniqueness.
+- [OAuth 2.0 Bearer Token Usage, RFC 6750](https://datatracker.ietf.org/doc/html/rfc6750.html) for query-token risk.
+- [TanStack Query disabling/pausing queries](https://tanstack.com/query/latest/docs/framework/react/guides/disabling-queries) for state/visibility-aware fetching.
+
+## Highest-impact next task IDs
+
+Start with `AGR-001`. Then execute `ML-001`, `AGR-002`, `VID-001`, and `AGR-003` as the critical product path. Run `ML-002` in parallel because it protects user-created labels from silent loss. These six tasks provide the best balance of release safety, user value, and architectural leverage.

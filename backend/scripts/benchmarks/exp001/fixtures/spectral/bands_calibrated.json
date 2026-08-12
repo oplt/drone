@@ -1,0 +1,25 @@
+{
+  "bands": [
+    {
+      "band_name": "red",
+      "calibration_id": "cal-red-1",
+      "alignment_status": "pass",
+      "quality_status": "pass",
+      "reflectance_panel": {"panel_id": "p1", "mean_reflectance": 0.6}
+    },
+    {
+      "band_name": "nir",
+      "calibration_id": "cal-nir-1",
+      "alignment_status": "pass",
+      "quality_status": "pass",
+      "reflectance_panel": {"panel_id": "p1", "mean_reflectance": 0.6}
+    },
+    {
+      "band_name": "green",
+      "calibration_id": "cal-green-1",
+      "alignment_status": "pass",
+      "quality_status": "pass",
+      "reflectance_panel": {"panel_id": "p1", "mean_reflectance": 0.6}
+    }
+  ]
+}

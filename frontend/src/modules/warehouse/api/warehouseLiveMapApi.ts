@@ -239,13 +239,9 @@ function resolveWarehouseWebSocketBase(): string {
 
 export function resolveWarehouseLiveMapWebSocketUrl(
   flightId: string,
-  token?: string | null,
+  _token?: string | null,
 ): string {
-  const base = `${resolveWarehouseWebSocketBase()}/warehouse/live-map/${encodeURIComponent(flightId)}/stream`;
-  const trimmed = token?.trim();
-  if (!trimmed) return base;
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}token=${encodeURIComponent(trimmed)}`;
+  return `${resolveWarehouseWebSocketBase()}/warehouse/live-map/${encodeURIComponent(flightId)}/stream`;
 }
 
 export function connectWarehouseLiveMap(

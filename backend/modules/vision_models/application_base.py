@@ -37,6 +37,13 @@ class VisionConflict(RuntimeError):
     pass
 
 
+class VisionAnnotationConflict(VisionConflict):
+    def __init__(self, *, expected_revision: int, current_revision: int) -> None:
+        super().__init__("Annotations changed in another session")
+        self.expected_revision = expected_revision
+        self.current_revision = current_revision
+
+
 class VisionValidationError(ValueError):
     pass
 
@@ -94,6 +101,7 @@ class VisionApplicationBase:
             selected=image.selected,
             split=image.split,
             annotation_status=image.annotation_status,
+            annotation_revision=image.annotation_revision,
             annotations=[self._annotation_payload(item) for item in image.annotations],
             lat=image.lat,
             lon=image.lon,
@@ -126,6 +134,9 @@ class VisionApplicationBase:
             current_epoch=run.current_epoch,
             metrics=run.metrics,
             error=run.error,
+            attempt=getattr(run, "attempt", 0) or 0,
+            terminal_reason_code=getattr(run, "terminal_reason_code", None),
+            terminal_stage=getattr(run, "terminal_stage", None),
             model_version_id=run.model_version.id if run.model_version else None,
             started_at=run.started_at,
             finished_at=run.finished_at,
@@ -143,6 +154,7 @@ class VisionApplicationBase:
             name=version.model.name,
             crop=version.model.crop,
             task_type=version.model.task_type,
+            capability_id=version.model.project.capability_id,
             version=version.version,
             architecture=version.architecture,
             status=version.status,
@@ -208,6 +220,7 @@ class VisionApplicationBase:
                     description=project.description,
                     crop=project.crop,
                     task_type=project.task_type,
+                    capability_id=project.capability_id,
                     status=project.status,
                     classes=project.classes,
                     dataset_count=len(project_datasets),

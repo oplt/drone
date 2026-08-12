@@ -1,0 +1,14 @@
+{
+  "risks": [
+    {
+      "id": "risk-1",
+      "issue_type": "weed_detection",
+      "confidence": 0.82,
+      "severity": 0.7,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[4.0, 50.0], [4.001, 50.0], [4.001, 50.001], [4.0, 50.001], [4.0, 50.0]]]
+      }
+    }
+  ]
+}

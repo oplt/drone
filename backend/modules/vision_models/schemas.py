@@ -38,7 +38,25 @@ class VisionProjectCreate(BaseModel):
     crop: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=4000)
     task_type: Literal["detection"] = "detection"
+    capability_id: Literal[
+        "object_detection",
+        "stand_count",
+        "weed_detection",
+        "crop_health",
+        "canopy_cover",
+        "row_detection",
+        "standing_water",
+    ] = "object_detection"
     classes: list[VisionClassIn] = Field(min_length=1, max_length=100)
+
+    @field_validator("task_type", mode="before")
+    @classmethod
+    def detection_only(cls, value: object) -> object:
+        if value == "instance_segmentation":
+            raise ValueError(
+                "instance_segmentation is not supported; create a detection project"
+            )
+        return value
 
     @field_validator("name", "crop")
     @classmethod
@@ -80,6 +98,7 @@ class VisionProjectOut(BaseModel):
     description: str | None
     crop: str
     task_type: str
+    capability_id: str
     status: str
     classes: list[VisionClassOut]
     dataset_count: int = 0
@@ -104,10 +123,15 @@ class DatasetOut(BaseModel):
     val_count: int
     test_count: int
     manifest_checksum: str | None
+    curation_summary: dict[str, Any] = Field(default_factory=dict)
     locked_at: datetime | None
     created_at: datetime
     updated_at: datetime
     model_config = {"from_attributes": True}
+
+
+class DatasetCreate(BaseModel):
+    clone_from_dataset_id: str | None = None
 
 
 class AnnotationIn(BaseModel):
@@ -145,6 +169,7 @@ class AnnotationOut(BaseModel):
 class AnnotationReplace(BaseModel):
     annotations: list[AnnotationIn] = Field(max_length=2000)
     reviewed: bool = True
+    expected_revision: int = Field(ge=0)
 
 
 class DatasetImageOut(BaseModel):
@@ -164,6 +189,7 @@ class DatasetImageOut(BaseModel):
     selected: bool
     split: str | None
     annotation_status: str
+    annotation_revision: int
     annotations: list[AnnotationOut]
     lat: float | None
     lon: float | None
@@ -203,6 +229,8 @@ class ExtractFramesOut(BaseModel):
     rejected_duplicates: int
     selected_frames: int
     effective_interval_seconds: float
+    duplicate_cluster_count: int = 0
+    comparison_count: int = 0
     dataset: DatasetOut
 
 
@@ -234,6 +262,9 @@ class TrainingRunOut(BaseModel):
     current_epoch: int
     metrics: dict[str, Any]
     error: str | None
+    attempt: int = 0
+    terminal_reason_code: str | None = None
+    terminal_stage: str | None = None
     model_version_id: str | None
     started_at: datetime | None
     finished_at: datetime | None
@@ -249,12 +280,24 @@ class ModelVersionOut(BaseModel):
     name: str
     crop: str
     task_type: str
+    capability_id: str
     version: int
     architecture: str
     status: str
     classes: list[str]
     metrics: dict[str, Any]
     created_at: datetime
+
+
+class ReleaseActionRequest(BaseModel):
+    override: bool = False
+    reason: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def require_override_reason(self) -> ReleaseActionRequest:
+        if self.override and not (self.reason and self.reason.strip()):
+            raise ValueError("An override reason is required")
+        return self
 
 
 class ModelEvaluationOut(BaseModel):

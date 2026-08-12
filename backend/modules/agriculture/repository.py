@@ -12,7 +12,6 @@ from backend.modules.agriculture.models import (
     AgricultureObservation,
     AgricultureFieldProfile,
     AgricultureFlight,
-    AgricultureFrameLineage,
     AgricultureTelemetrySample,
 )
 from backend.modules.agriculture.temporal_models import AgricultureFlightAlignment, AgricultureObservationChange, AgricultureObservationAnnotation, AgricultureObservationFeedback, AgricultureReviewAudit
@@ -110,28 +109,42 @@ class AgricultureRepository:
         stmt = stmt.order_by(AgricultureObservation.severity.desc(), AgricultureObservation.id.asc()).offset(max(0, offset)).limit(max(1, min(limit, 500)))
         return list((await db.scalars(stmt)).all()), total
 
-    async def list_spatial_observations(self, db: AsyncSession, *, run_id: str, user, bbox: tuple[float, float, float, float] | None, observation_type: str | None, min_severity: float, min_confidence: float, limit: int = 10000) -> tuple[list[AgricultureObservation], int]:
-        """Fetch a bounded spatial sample for server-side map aggregation.
-
-        The map never receives an unbounded 100k-row payload. PostGIS deployments use
-        the geometry index for the coarse filter; JSON geometry fallback keeps local and
-        SQLite test environments deterministic.
-        """
-        if await self.get_run(db, run_id=run_id, user=user) is None:
-            return [], 0
-        stmt = select(AgricultureObservation).where(
+    async def list_spatial_observations(self, db: AsyncSession, *, run_id: str, user, bbox: tuple[float, float, float, float] | None, observation_type: str | None, min_severity: float, min_confidence: float, limit: int = 10000, offset: int = 0) -> tuple[list[AgricultureObservation], int]:
+        """Filter and count in PostGIS before applying the response bound."""
+        stmt = select(AgricultureObservation).join(
+            AgricultureFlight,
+            AgricultureFlight.id == AgricultureObservation.flight_id,
+        ).where(
             AgricultureObservation.run_id == run_id,
             AgricultureObservation.severity >= min_severity,
             AgricultureObservation.confidence >= min_confidence,
         )
+        if user.org_id is not None:
+            stmt = stmt.where(AgricultureFlight.org_id == user.org_id)
+        else:
+            stmt = stmt.where(AgricultureFlight.org_id.is_(None))
         if observation_type:
             stmt = stmt.where(AgricultureObservation.observation_type == observation_type)
-        result = await db.scalars(stmt.order_by(AgricultureObservation.severity.desc(), AgricultureObservation.id.asc()).limit(max(1, min(limit, 10000))))
-        rows = list(result.all())
         if bbox:
-            west, south, east, north = bbox
-            rows = [row for row in rows if any(west <= lon <= east and south <= lat <= north for lon, lat in _geometry_points(row.geometry_geojson))]
-        return rows, len(rows)
+            stmt = stmt.where(
+                func.ST_Intersects(
+                    AgricultureObservation.geometry,
+                    func.ST_MakeEnvelope(*bbox, 4326),
+                )
+            )
+        total = int(
+            await db.scalar(
+                select(func.count()).select_from(stmt.order_by(None).subquery())
+            )
+            or 0
+        )
+        result = await db.scalars(
+            stmt.order_by(
+                AgricultureObservation.severity.desc(),
+                AgricultureObservation.id.asc(),
+            ).offset(max(0, offset)).limit(max(1, min(limit, 10000)))
+        )
+        return list(result.all()), total
 
     async def get_layer(self, db: AsyncSession, *, run_id: str, layer_name: str, user) -> AgricultureAnalysisLayer | None:
         run = await self.get_run(db, run_id=run_id, user=user)
@@ -169,18 +182,3 @@ class AgricultureRepository:
 
 
 agriculture_repository = AgricultureRepository()
-
-
-def _geometry_points(geometry: object) -> list[tuple[float, float]]:
-    if not isinstance(geometry, dict):
-        return []
-    def walk(value: object) -> list[tuple[float, float]]:
-        if isinstance(value, list) and len(value) >= 2 and all(isinstance(item, (int, float)) for item in value[:2]):
-            return [(float(value[0]), float(value[1]))]
-        if isinstance(value, list):
-            points: list[tuple[float, float]] = []
-            for item in value:
-                points.extend(walk(item))
-            return points
-        return []
-    return walk(geometry.get("coordinates"))

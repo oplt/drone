@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import event, inspect
 from geoalchemy2 import Geometry
@@ -319,6 +319,98 @@ class AgricultureAnalysisRun(Base):
     )
 
 
+class AgricultureCapabilityRelease(Base):
+    """Agriculture-owned policy linking a capability to a canonical Vision artifact."""
+
+    __tablename__ = "agriculture_capability_releases"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
+    scope_key: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    capability_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    vision_model_version_id: Mapped[str] = mapped_column(
+        ForeignKey("vision_model_versions.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="active", index=True)
+    sensor_type: Mapped[str] = mapped_column(String(32), nullable=False, default="rgb")
+    crop_types: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    inference_profile: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    thresholds: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    approved_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    effective_from: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('active', 'retired')",
+            name="ck_agri_capability_release_status",
+        ),
+        Index(
+            "uq_agri_active_capability_release",
+            "scope_key",
+            "capability_id",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+        ),
+    )
+
+
+class AgricultureAnalysisVideoJob(Base):
+    """Immutable link from one Agriculture capability input to Video inference."""
+
+    __tablename__ = "agriculture_analysis_video_jobs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
+    run_id: Mapped[str] = mapped_column(
+        ForeignKey("agriculture_analysis_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    capability_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    capability_release_id: Mapped[str] = mapped_column(
+        ForeignKey("agriculture_capability_releases.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    video_id: Mapped[str] = mapped_column(
+        ForeignKey("video_assets.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    video_job_id: Mapped[str] = mapped_column(
+        ForeignKey("video_analysis_jobs.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    inference_snapshot: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "run_id",
+            "capability_id",
+            "video_id",
+            name="uq_agri_analysis_video_capability",
+        ),
+    )
+
+
 class AgricultureAnalysisStage(Base):
     __tablename__ = "agriculture_analysis_stages"
 
@@ -330,6 +422,7 @@ class AgricultureAnalysisStage(Base):
     progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     input_checksum: Mapped[str | None] = mapped_column(String(128))
     output_checksum: Mapped[str | None] = mapped_column(String(128))
+    execution_key: Mapped[str | None] = mapped_column(String(200))
     metrics: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
     task_id: Mapped[str | None] = mapped_column(String(128), index=True)
@@ -342,7 +435,15 @@ class AgricultureAnalysisStage(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    __table_args__ = (UniqueConstraint("run_id", "stage_name", name="uq_agri_stage_run_name"),)
+    __table_args__ = (
+        UniqueConstraint("run_id", "stage_name", name="uq_agri_stage_run_name"),
+        Index(
+            "uq_agri_stage_execution_key",
+            "execution_key",
+            unique=True,
+            postgresql_where=text("execution_key IS NOT NULL"),
+        ),
+    )
 
 
 class AgricultureFrameQuality(Base):
@@ -388,6 +489,7 @@ class AgricultureObservation(Base):
     severity: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, index=True)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, index=True)
     uncertainty: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    provenance: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     first_detected: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_detected: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     trend: Mapped[str] = mapped_column(String(24), nullable=False, default="unknown")
@@ -400,10 +502,29 @@ class AgricultureObservation(Base):
     assigned_to_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
     review_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    merged_into_id: Mapped[str | None] = mapped_column(
+        ForeignKey("agriculture_observations.id", ondelete="SET NULL"),
+        index=True,
+    )
+    split_from_id: Mapped[str | None] = mapped_column(
+        ForeignKey("agriculture_observations.id", ondelete="SET NULL"),
+        index=True,
+    )
+    member_observation_ids: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (
         Index("idx_agri_observation_run_type", "run_id", "observation_type"),
+        Index(
+            "idx_agri_observation_run_severity_id", "run_id", "severity", "id"
+        ),
+        Index(
+            "idx_agri_observation_run_type_severity_id",
+            "run_id",
+            "observation_type",
+            "severity",
+            "id",
+        ),
         CheckConstraint("zone_kind IN ('observation', 'management_zone', 'prescription_zone')", name="ck_agri_observation_zone_kind"),
         CheckConstraint("geometry IS NULL OR ST_SRID(geometry) = 4326", name="ck_agri_observation_geometry_srid"),
         CheckConstraint("geometry IS NULL OR GeometryType(geometry) IN ('POLYGON', 'MULTIPOLYGON')", name="ck_agri_observation_geometry_type"),

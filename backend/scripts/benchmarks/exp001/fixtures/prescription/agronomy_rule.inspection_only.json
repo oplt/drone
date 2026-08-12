@@ -1,0 +1,11 @@
+{
+  "rule_key": "scout_weed_hotspots",
+  "version": "1.0",
+  "jurisdiction": "research-only",
+  "crop_type": "maize",
+  "issue_type": "weed_detection",
+  "action_kind": "inspection_only",
+  "status": "approved",
+  "regulatory_reference": null,
+  "parameters": {"max_zones": 50}
+}

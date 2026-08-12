@@ -157,6 +157,8 @@ class PipelineRepository:
 
     async def mark_job_running(self, _job):
         self.job.status = "running"
+        self.job.attempt = getattr(self.job, "attempt", 0) + 1
+        return self.job.attempt
 
     async def set_source_checksum(self, _job, checksum):
         self.job.source_checksum = checksum
@@ -169,20 +171,39 @@ class PipelineRepository:
 
     async def flush_batch(self, detections, **_kwargs):
         self.saved.extend(detections)
+        return True
+
+    async def is_job_cancelled(self, _job_id):
+        return self.job.status == "cancelled"
+
+    async def cleanup_cancelled_job(self, _job_id):
+        self.saved = []
 
     async def update_processing_metrics(self, _job, **values):
+        values.pop("expected_attempt", None)
         for key, value in values.items():
             setattr(self.job, key, value)
+        return True
+
+    async def heartbeat(self, _job, **_kwargs):
+        return True
 
     async def set_video_status(self, _video, status):
         self.video.status = status
 
-    async def mark_job_completed(self, _job):
+    async def mark_job_completed(self, _job, **_kwargs):
         self.job.status = "completed"
+        return True
 
-    async def mark_job_failed(self, _job, error):
+    async def mark_job_failed(self, _job, error, **values):
         self.job.status = "failed"
         self.failure = error
+        self.job.terminal_reason_code = values.get("reason_code")
+        self.job.terminal_stage = values.get("stage")
+        video = values.get("video")
+        if video is not None:
+            video.status = "analysis_failed"
+        return True
 
 
 def pipeline_context(tmp_path, *, tracking: bool, small_objects: bool):
@@ -201,6 +222,7 @@ def pipeline_context(tmp_path, *, tracking: bool, small_objects: bool):
         frame_stride_seconds=0.1,
         confidence_threshold=0.35,
         status="queued",
+        attempt=0,
     )
     video = SimpleNamespace(
         id="video-1",
@@ -269,8 +291,8 @@ async def test_sahi_pipeline_composes_with_job_local_tracker(tmp_path, monkeypat
         ),
     )
     monkeypatch.setattr(
-        pipeline_module.agriculture_repository,
-        "list_telemetry",
+        pipeline_module,
+        "list_mission_telemetry_for_georef",
         _async_value,
     )
 
@@ -317,8 +339,8 @@ async def test_sahi_failure_marks_analysis_job_failed(tmp_path, monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        pipeline_module.agriculture_repository,
-        "list_telemetry",
+        pipeline_module,
+        "list_mission_telemetry_for_georef",
         _async_value,
     )
 
@@ -327,6 +349,60 @@ async def test_sahi_failure_marks_analysis_job_failed(tmp_path, monkeypatch):
 
     assert repository.job.status == "failed"
     assert repository.failure == "Small-object analysis failed. Check worker logs for details."
+
+
+@pytest.mark.asyncio
+async def test_standard_pipeline_fails_when_every_frame_inference_fails(
+    tmp_path, monkeypatch
+):
+    pipeline, repository = pipeline_context(
+        tmp_path, tracking=False, small_objects=False
+    )
+
+    class BrokenDetector:
+        model_version = "broken"
+
+        def predict(self, _image):
+            raise RuntimeError("standard inference failure")
+
+    async def frames(*_args, **_kwargs):
+        for index in range(2):
+            yield SimpleNamespace(
+                frame_index=index,
+                timestamp_seconds=index / 10,
+                image_bgr=np.zeros((240, 320, 3), dtype=np.uint8),
+            )
+
+    monkeypatch.setattr(pipeline_module, "run_blocking", inline)
+    monkeypatch.setattr(
+        pipeline_module, "create_frame_detector", lambda **_kwargs: BrokenDetector()
+    )
+    monkeypatch.setattr(pipeline_module, "async_iter_frames", frames)
+    monkeypatch.setattr(
+        pipeline_module,
+        "read_video_metadata_async",
+        lambda _path: _async_value(
+            SimpleNamespace(fps=30.0, width=320, height=240, duration_seconds=0.2)
+        ),
+    )
+    monkeypatch.setattr(
+        pipeline_module,
+        "list_mission_telemetry_for_georef",
+        _async_value,
+    )
+
+    with pytest.raises(RuntimeError, match="No video frames were successfully analyzed"):
+        await pipeline.run("job-1")
+
+    assert repository.job.status == "failed"
+    assert repository.video.status == "analysis_failed"
+    assert repository.job.frames_attempted == 2
+    assert repository.job.frames_decoded == 2
+    assert repository.job.frames_processed == 0
+    assert repository.job.frames_persisted == 0
+    assert repository.job.frames_failed == 2
+    assert repository.failure == "No video frames were successfully analyzed."
+    assert repository.job.terminal_reason_code == "NO_SUCCESSFUL_FRAMES"
 
 
 @pytest.mark.asyncio

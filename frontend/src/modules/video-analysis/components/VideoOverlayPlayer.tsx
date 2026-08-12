@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Card, CardContent, Typography } from "@mui/material";
 import type { VideoDetection } from "../types";
+import {
+  buildDetectionTemporalIndex,
+  detectionsNearTime,
+} from "../temporalIndex";
 
 type Props = {
   file?: File | null;
@@ -26,7 +30,11 @@ export function VideoOverlayPlayer({ file, playbackUrl, detections, selected, on
   }, [selected]);
 
   const displayedTime = selected?.timestamp_seconds ?? timeSeconds;
-  const active = detections.filter((detection) => Math.abs(detection.timestamp_seconds - displayedTime) < 0.15);
+  const temporalIndex = useMemo(
+    () => buildDetectionTemporalIndex(detections),
+    [detections],
+  );
+  const active = detectionsNearTime(temporalIndex, displayedTime);
 
   return (
     <Card variant="outlined" sx={{ height: '100%' }}>

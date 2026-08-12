@@ -12,6 +12,19 @@ describe("check_file_sizes", () => {
     expect(limitFor("frontend/src/modules/warehouse/api/warehouseMissionsApi.ts")).toBe(220);
   });
 
+  it("guards agriculture workflow modules at 400 lines", () => {
+    expect(
+      limitFor(
+        "frontend/src/modules/agriculture/workflows/analysis/types.ts",
+      ),
+    ).toBe(400);
+    expect(
+      limitFor(
+        "frontend/src/modules/agriculture/workflows/review/hooks.ts",
+      ),
+    ).toBe(400);
+  });
+
   it("matches recorded baseline violation count", async () => {
     const { readFileSync } = await import("node:fs");
     const { dirname, join } = await import("node:path");

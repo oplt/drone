@@ -23,6 +23,13 @@ export function effectiveLines(text) {
 }
 
 export function limitFor(relativePath) {
+  if (
+    relativePath.includes(
+      "/modules/agriculture/workflows/",
+    )
+  ) {
+    return 400;
+  }
   if (relativePath.includes("/pages/") || relativePath.includes("/views/")) {
     return 180;
   }

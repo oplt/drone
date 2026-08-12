@@ -1,5 +1,7 @@
 import { Alert, Button, Chip, CircularProgress, LinearProgress, Stack, Typography } from "@mui/material";
+import { useState } from "react";
 import { useAgricultureMediaInventory, useReconcileAgricultureMedia, useRevokeAgricultureMedia, useRestoreAgricultureMedia, useBackupAgricultureMedia } from "../hooks";
+import { ReasonConfirmDialog } from "./ReasonConfirmDialog";
 
 export function AgricultureMediaInventoryPanel({ flightId }: { flightId: string | null }) {
   const inventory = useAgricultureMediaInventory(flightId);
@@ -7,6 +9,7 @@ export function AgricultureMediaInventoryPanel({ flightId }: { flightId: string 
   const revoke = useRevokeAgricultureMedia();
   const restore = useRestoreAgricultureMedia();
   const backup = useBackupAgricultureMedia();
+  const [lifecycleAction, setLifecycleAction] = useState<{ kind: "backup" | "revoke" | "restore"; mediaId: string } | null>(null);
   if (inventory.isLoading) return <Stack direction="row" spacing={1} role="status"><CircularProgress size={16} /><Typography variant="caption">Checking capture inventory…</Typography></Stack>;
   if (inventory.isError) return <Alert severity="warning">Capture inventory unavailable. Retry before launching analysis.</Alert>;
   const data = inventory.data;
@@ -62,14 +65,28 @@ export function AgricultureMediaInventoryPanel({ flightId }: { flightId: string 
                   {item.retention_expires_at ? ` · expires ${new Date(item.retention_expires_at).toLocaleDateString()}` : ""}
                 </Typography>
                 <Stack direction="row" spacing={0.5}>
-                  <Button size="small" onClick={() => { const reason = window.prompt("Reason for creating a verified backup"); if (reason) backup.mutate({ mediaId: item.id, reason }); }} disabled={backup.isPending || !item.storage_present}>Backup</Button>
-                  {retained ? <Button size="small" color="warning" onClick={() => { const reason = window.prompt("Reason for revoking access"); if (reason) revoke.mutate({ mediaId: item.id, reason }); }} disabled={revoke.isPending}>Revoke</Button> : <Button size="small" color="success" onClick={() => { const reason = window.prompt("Reason for restoring access"); if (reason) restore.mutate({ mediaId: item.id, reason }); }} disabled={restore.isPending}>Restore</Button>}
+                  <Button size="small" onClick={() => setLifecycleAction({ kind: "backup", mediaId: item.id })} disabled={backup.isPending || !item.storage_present}>Backup</Button>
+                  {retained ? <Button size="small" color="warning" onClick={() => setLifecycleAction({ kind: "revoke", mediaId: item.id })} disabled={revoke.isPending}>Revoke</Button> : <Button size="small" color="success" onClick={() => setLifecycleAction({ kind: "restore", mediaId: item.id })} disabled={restore.isPending}>Restore</Button>}
                 </Stack>
               </Stack>
             );
           })}
         </Stack>
       ) : null}
+      <ReasonConfirmDialog
+        open={Boolean(lifecycleAction)}
+        title={`${lifecycleAction?.kind === "backup" ? "Create verified backup" : lifecycleAction?.kind === "revoke" ? "Revoke media access" : "Restore media access"}`}
+        confirmLabel={lifecycleAction?.kind === "backup" ? "Create backup" : lifecycleAction?.kind === "revoke" ? "Revoke access" : "Restore access"}
+        description={lifecycleAction?.kind === "revoke" ? "This removes access to the retained artifact until it is explicitly restored." : "This lifecycle change is recorded in the audit history."}
+        irreversible={lifecycleAction?.kind === "revoke"}
+        pending={backup.isPending || revoke.isPending || restore.isPending}
+        onClose={() => setLifecycleAction(null)}
+        onConfirm={(reason) => {
+          if (!lifecycleAction) return;
+          const mutation = lifecycleAction.kind === "backup" ? backup : lifecycleAction.kind === "revoke" ? revoke : restore;
+          mutation.mutate({ mediaId: lifecycleAction.mediaId, reason }, { onSuccess: () => setLifecycleAction(null) });
+        }}
+      />
       {revoke.isError || restore.isError || backup.isError ? <Alert severity="error">Artifact lifecycle action failed. Check storage availability, permissions, and retention state.</Alert> : null}
     </Stack>
   );

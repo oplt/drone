@@ -3,6 +3,30 @@
     "effective_lines": 501,
     "limit": 180
   },
+  "frontend/src/modules/agriculture/components/AgricultureCropInsightsPanel.tsx": {
+    "effective_lines": 268,
+    "limit": 220
+  },
+  "frontend/src/modules/agriculture/components/AgricultureGeoJsonPreview.tsx": {
+    "effective_lines": 250,
+    "limit": 220
+  },
+  "frontend/src/modules/agriculture/components/AgricultureLiveStatusPanel.tsx": {
+    "effective_lines": 263,
+    "limit": 220
+  },
+  "frontend/src/modules/agriculture/components/AgricultureProfileSection.tsx": {
+    "effective_lines": 298,
+    "limit": 220
+  },
+  "frontend/src/modules/agriculture/components/AgricultureReviewWorkspace.tsx": {
+    "effective_lines": 357,
+    "limit": 220
+  },
+  "frontend/src/modules/agriculture/components/AgricultureTemporalWorkspace.tsx": {
+    "effective_lines": 462,
+    "limit": 220
+  },
   "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx": {
     "effective_lines": 1128,
     "limit": 180
@@ -266,6 +290,10 @@
   "frontend/src/modules/warehouse/views/Warehouse.tsx": {
     "effective_lines": 1340,
     "limit": 180
+  },
+  "frontend/src/shared/api/httpClient.test.ts": {
+    "effective_lines": 241,
+    "limit": 220
   },
   "frontend/src/shared/api/httpClient.ts": {
     "effective_lines": 230,

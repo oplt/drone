@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.core.database.base import Base

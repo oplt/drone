@@ -45,7 +45,9 @@ def aggregate_features(rows: list[Any], *, zoom: int, max_features: int) -> tupl
             {"type": "Feature", "geometry": row.geometry_geojson, "properties": {
                 "observation_id": row.id, "observation_type": row.observation_type,
                 "severity": row.severity, "confidence": row.confidence,
-                "model_version": row.model_version, "cluster": False,
+                "model_version": row.model_version,
+                "provenance": getattr(row, "provenance", {}) or {},
+                "cluster": False,
             }} for row in rows
         ]
         return {"type": "FeatureCollection", "features": features}, False

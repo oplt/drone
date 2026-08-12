@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { videoAnalysisKeys } from "../../app/config/queryKeys";
 import {
   getAnalysisJob,
+  cancelVideoAnalysis,
   getAnalysisSummary,
   listDetections,
   listLiveSavedDetections,
@@ -9,10 +10,16 @@ import {
   startVideoAnalysis,
   uploadVideo,
 } from "./api";
-import type { AnalyzeVideoPayload, VideoAnalysisJob } from "./types";
+import type {
+  AnalyzeVideoPayload,
+  VideoAnalysisJob,
+  VideoDetectionPage,
+} from "./types";
 
 const isActive = (status?: string): boolean =>
   status === "queued" || status === "running";
+const isDocumentVisible = (): boolean =>
+  typeof document === "undefined" || document.visibilityState === "visible";
 
 type UploadVideoInput = {
   file: File;
@@ -34,7 +41,8 @@ export function useMissionVideos(
         fieldId: fieldId ?? undefined,
       }),
     enabled,
-    refetchInterval: options?.flightActive ? 5000 : false,
+    refetchInterval:
+      options?.flightActive && isDocumentVisible() ? 5000 : false,
   });
 }
 
@@ -75,21 +83,45 @@ export function useAnalysisJob(jobId: string | null) {
     queryFn: () => getAnalysisJob(jobId as string),
     enabled: Boolean(jobId),
     refetchInterval: (query) =>
-      isActive(query.state.data?.status) ? 1200 : false,
+      isActive(query.state.data?.status) && isDocumentVisible() ? 1200 : false,
+  });
+}
+
+export function useCancelAnalysis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cancelVideoAnalysis,
+    onSuccess: (job) => queryClient.setQueryData(videoAnalysisKeys.job(job.id), job),
   });
 }
 
 export function useDetections(jobId: string | null, status?: string) {
+  const queryClient = useQueryClient();
+  const queryKey = videoAnalysisKeys.detections(jobId);
   const enabled =
     Boolean(jobId) &&
     Boolean(status) &&
     status !== "queued" &&
     status !== "failed";
   return useQuery({
-    queryKey: videoAnalysisKeys.detections(jobId),
-    queryFn: () => listDetections(jobId as string),
+    queryKey,
+    queryFn: async () => {
+      const previous = queryClient.getQueryData<VideoDetectionPage>(queryKey);
+      const last = previous?.items.at(-1);
+      const page = await listDetections(jobId as string, {
+        sinceId: last?.id,
+      });
+      if (!previous || !last) return page;
+      const byId = new Map(previous.items.map((item) => [item.id, item]));
+      page.items.forEach((item) => byId.set(item.id, item));
+      return { ...page, items: [...byId.values()] };
+    },
     enabled,
-    refetchInterval: isActive(status) ? 1500 : false,
+    refetchInterval: (query) =>
+      isDocumentVisible() &&
+      (isActive(status) || query.state.data?.has_more)
+        ? 1500
+        : false,
   });
 }
 
@@ -105,6 +137,6 @@ export function useLiveSavedDetections() {
   return useQuery({
     queryKey: videoAnalysisKeys.liveDetections(),
     queryFn: listLiveSavedDetections,
-    refetchInterval: 2000,
+    refetchInterval: isDocumentVisible() ? 2000 : false,
   });
 }

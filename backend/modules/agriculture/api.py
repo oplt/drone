@@ -14,21 +14,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from geoalchemy2.shape import to_shape
 from shapely.geometry import mapping
 
+from backend.core.config.runtime import settings
 from backend.core.database.session import get_db
 from pydantic import BaseModel, Field
 from typing import Literal
-from backend.modules.agriculture.models import AgricultureAnalysisLayer, AgricultureAnalysisRun, AgricultureAnalysisStage, AgricultureFieldProfile, AgricultureFlight, AgricultureFrameLineage, AgricultureMediaManifest, AgricultureMediaQualityException, AgricultureObservation, AgricultureObservationEvidence, AgricultureTelemetrySample, AgricultureTimelineBookmark, AgricultureUploadSession, new_id
+from backend.modules.agriculture.models import AgricultureAnalysisLayer, AgricultureAnalysisRun, AgricultureAnalysisStage, AgricultureAnalysisVideoJob, AgricultureFieldProfile, AgricultureFlight, AgricultureFrameLineage, AgricultureMediaManifest, AgricultureMediaQualityException, AgricultureObservation, AgricultureObservationEvidence, AgricultureTelemetrySample, AgricultureTimelineBookmark, AgricultureUploadSession, new_id
+from backend.modules.video_analysis.contracts import video_analysis_port
 from backend.modules.agriculture.spatial import aggregate_features, web_mercator_tile_bounds
 from backend.modules.agriculture.sensor_models import AgricultureFusionResult, AgricultureSensorCalibration, AgricultureSensorReading, AgricultureSpectralBand
 from backend.modules.agriculture.p4_models import AgricultureCropRisk, AgricultureGrowthMetric, AgricultureGrowthStageEstimate, AgricultureHarvestLabel, AgricultureYieldForecast
-from backend.modules.agriculture.p5_models import AgricultureAgronomyRule, AgricultureExportAccessAudit, AgricultureExportJob, AgricultureInspectionAction, AgriculturePrescriptionDraft, AgricultureReportSnapshot
+from backend.modules.agriculture.p5_models import AgricultureAgronomyRule, AgricultureExportAccessAudit, AgricultureExportJob, AgricultureFieldOutcome, AgricultureInspectionAction, AgriculturePrescriptionDraft, AgricultureReportSnapshot
 from backend.modules.agriculture.governance_models import AgricultureAssistantRun
-from backend.modules.agriculture.temporal_models import AgricultureDatasetExport, AgricultureDatasetItem, AgricultureFlightAlignment, AgricultureModelQualityReport, AgricultureModelVersion, AgricultureObservationAnnotation, AgricultureObservationChange, AgricultureObservationFeedback, AgricultureReviewAudit
+from backend.modules.agriculture.temporal_models import AgricultureDatasetExport, AgricultureDatasetItem, AgricultureFlightAlignment, AgricultureObservationAnnotation, AgricultureObservationFeedback, AgricultureReviewAudit
 from backend.modules.alerts.models import OperationalAlert
 from backend.modules.agriculture.repository import agriculture_repository
+from backend.modules.agriculture.analysis_orchestration import (
+    AgricultureAnalysisReadinessError,
+    agriculture_analysis_orchestration,
+)
+from backend.modules.agriculture.finding_ops import merge_observations, record_field_outcome, split_observation
+from backend.modules.agriculture.finding_ranking import DEFAULT_FINDING_LIMIT, RANKING_POLICY_VERSION, rank_findings
 from backend.modules.agriculture.queue import AgricultureAnalysisQueueError, agriculture_analysis_queue
 from backend.modules.agriculture.schemas import (
     AnalysisProcessIn,
+    AgricultureAnalysisReadinessOut,
     AgricultureChangeOut,
     AgricultureComparisonOut,
     AnnotationIn,
@@ -50,15 +59,23 @@ from backend.modules.agriculture.schemas import (
     AgricultureTelemetryOut,
     AnalysisRunIn,
     CalibrationIn,
+    ComparableFlightOut,
+    FieldOutcomeIn,
+    FieldOutcomeOut,
     FieldProfilePatch,
     FieldComparisonIn,
+    FindingMergeIn,
+    FindingSplitIn,
     FlightManifestIn,
     FrameManifestIn,
+    InspectionRouteUpdateIn,
     MediaManifestIn,
     MediaLifecycleIn,
     ResumableUploadIn,
     PlanPreviewOut,
     PlanPreviewRequest,
+    RankedFindingOut,
+    RankedFindingPage,
     ReviewIn,
     ReviewAuditOut,
     TemporalCompareIn,
@@ -111,7 +128,7 @@ from backend.modules.agriculture.service import agriculture_service, utc
 from backend.modules.agriculture.fusion_service import agriculture_fusion_service
 from backend.modules.agriculture.crop_insight_service import agriculture_crop_insight_service
 from backend.modules.agriculture.p5_service import agriculture_safety_service
-from backend.modules.agriculture.report_service import REPORT_TEMPLATE_VERSION, build_report_snapshot
+from backend.modules.agriculture.report_service import DECISION_REPORT_TEMPLATE_VERSION, REPORT_TEMPLATE_VERSION, build_decision_report_snapshot, build_report_snapshot
 from backend.modules.agriculture.governance import agriculture_governance_service
 from backend.modules.agriculture.temporal import agriculture_temporal_service
 from backend.modules.agriculture.storage import agriculture_storage
@@ -125,11 +142,10 @@ from backend.core.rate_limit import enforce_rate_limit
 from backend.core.pagination import decode_offset_cursor, encode_offset_cursor
 from backend.modules.missions.schemas.mission_create import MissionCreateIn, MissionCreateOut
 from backend.modules.missions.service.mission_start import start_mission_for_user
-from backend.modules.agriculture.workflow import create_plan, evaluate_preflight, snapshot_is_usable, update_plan_grid
+from backend.modules.agriculture.workflow import create_plan, snapshot_is_usable, update_plan_grid
 from backend.modules.agriculture.preflight_service import evaluate_server_preflight
 from backend.modules.agriculture.runtime_service import append_event, replay_events
 from backend.modules.agriculture.workflow_models import AgricultureMissionPlan, AgricultureMissionPlanRevision, AgriculturePreflightSnapshot
-from backend.modules.missions.application import mission_application
 from backend.modules.missions.api.routes import _apply_mission_command, _get_runtime_for_user
 from backend.modules.vehicle_runtime.factory import get_orchestrator
 
@@ -311,6 +327,25 @@ async def create_agriculture_plan(payload: AgriculturePlanIn, db: AsyncSession =
     return _plan_out(plan)
 
 
+@router.get("/fields/{field_id}/plans", response_model=list[AgriculturePlanOut])
+async def list_field_plans(field_id: int, limit: int = Query(25, ge=1, le=100), db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
+    await _owned_field(field_id, org_user, db)
+    rows = list(
+        (
+            await db.scalars(
+                select(AgricultureMissionPlan)
+                .where(
+                    AgricultureMissionPlan.field_id == field_id,
+                    AgricultureMissionPlan.status.in_(["draft", "validated", "committed", "invalid"]),
+                )
+                .order_by(AgricultureMissionPlan.created_at.desc())
+                .limit(limit)
+            )
+        ).all()
+    )
+    return [_plan_out(row) for row in rows]
+
+
 @router.get("/flights/plans/{plan_id}", response_model=AgriculturePlanOut)
 async def get_agriculture_plan(plan_id: str, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
     plan = await db.scalar(select(AgricultureMissionPlan).where(AgricultureMissionPlan.id == plan_id))
@@ -367,6 +402,8 @@ async def duplicate_agriculture_plan(plan_id: str, db: AsyncSession = Depends(ge
         raise HTTPException(status_code=404, detail="Agriculture mission plan not found")
     payload = AgriculturePlanIn.model_validate(source.payload_json)
     plan = await create_plan(db, payload=payload, org_id=source.org_id, user_id=getattr(org_user.user, "id", None), source_plan_id=source.id)
+    # Repeat missions always start as a fresh draft that must pass current validation/preflight.
+    plan.status = "draft"
     await db.commit()
     await db.refresh(plan)
     return _plan_out(plan)
@@ -1095,21 +1132,43 @@ async def create_analysis_run(flight_id: str, payload: AnalysisRunIn, db: AsyncS
     inventory = await _media_inventory(flight, db)
     if not inventory["ready_for_processing"]:
         raise HTTPException(status_code=409, detail={"code": "MEDIA_INVENTORY_NOT_READY", "message": "Resolve missing, active, quarantined or storage-missing media before starting analysis.", "inventory": inventory})
-    active_stmt = select(func.count()).select_from(AgricultureAnalysisRun).join(AgricultureFlight, AgricultureFlight.id == AgricultureAnalysisRun.flight_id).where(AgricultureAnalysisRun.status.in_(["queued", "running"]))
-    active_stmt = active_stmt.where(AgricultureFlight.org_id == flight.org_id) if flight.org_id is not None else active_stmt.where(AgricultureFlight.org_id.is_(None))
-    if int(await db.scalar(active_stmt) or 0) >= settings.agriculture_max_active_analysis_runs_per_org:
-        raise HTTPException(status_code=429, detail={"code": "AGRICULTURE_ANALYSIS_QUOTA_EXCEEDED", "message": "Organization active analysis quota exceeded"})
+    existing_idempotent_run = await agriculture_repository.get_run_by_key(
+        db, flight_id=flight.id, key=payload.idempotency_key
+    )
+    if existing_idempotent_run is None:
+        active_stmt = select(func.count()).select_from(AgricultureAnalysisRun).join(AgricultureFlight, AgricultureFlight.id == AgricultureAnalysisRun.flight_id).where(AgricultureAnalysisRun.status.in_(["queued", "orchestrating", "waiting_inference", "running"]))
+        active_stmt = active_stmt.where(AgricultureFlight.org_id == flight.org_id) if flight.org_id is not None else active_stmt.where(AgricultureFlight.org_id.is_(None))
+        if int(await db.scalar(active_stmt) or 0) >= settings.agriculture_max_active_analysis_runs_per_org:
+            raise HTTPException(status_code=429, detail={"code": "AGRICULTURE_ANALYSIS_QUOTA_EXCEEDED", "message": "Organization active analysis quota exceeded"})
+    if flight.status not in {"captured", "processing", "review", "failed"}:
+        raise HTTPException(status_code=409, detail=f"Flight must be captured before analysis (status={flight.status})")
+    try:
+        requested_capabilities, model_releases, readiness = (
+            await agriculture_analysis_orchestration.resolve_request(
+                db,
+                flight=flight,
+                user=org_user.user,
+                requested=payload.requested_analyses,
+            )
+        )
+    except AgricultureAnalysisReadinessError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "AGRICULTURE_ANALYSIS_NOT_READY",
+                "message": str(exc),
+                "unavailable_capabilities": exc.unavailable,
+                "readiness": exc.readiness,
+            },
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "INVALID_ANALYSIS_CAPABILITY", "message": str(exc)},
+        ) from exc
     if flight.status == "captured":
         await agriculture_service.transition_flight(db, flight=flight, target="processing")
         await db.commit()
-    elif flight.status not in {"processing", "review", "failed"}:
-        raise HTTPException(status_code=409, detail=f"Flight must be captured before analysis (status={flight.status})")
-    requested_models = {str(item) for item in payload.requested_analyses if str(item) not in {"quality", "coverage", "rgb_quality"}}
-    if requested_models:
-        deployed = list((await db.scalars(select(AgricultureModelVersion).where(AgricultureModelVersion.org_id == flight.org_id, AgricultureModelVersion.status == "deployed", AgricultureModelVersion.task.in_(requested_models)))).all())
-        missing = sorted(requested_models - {row.task for row in deployed})
-        if missing:
-            raise HTTPException(status_code=409, detail={"code": "AGRICULTURE_MODEL_GATE_BLOCKED", "message": "Requested analysis has no tenant-scoped deployed model.", "missing_tasks": missing})
     sensors = set((flight.profile_snapshot or {}).get("sensor_inventory") or ["rgb"])
     calibration_ids = set((flight.profile_snapshot or {}).get("calibration_ids") or [])
     if sensors - {"rgb"}:
@@ -1122,14 +1181,52 @@ async def create_analysis_run(flight_id: str, payload: AnalysisRunIn, db: AsyncS
         run = await agriculture_service.create_analysis_run(
             db,
             flight=flight,
-            values={**payload.model_dump(), "requested_by_user_id": org_user.user.id},
+            values={
+                **payload.model_dump(),
+                "requested_analyses": requested_capabilities,
+                "model_versions": model_releases,
+                "requested_by_user_id": org_user.user.id,
+            },
         )
-    model_artifacts = list((await db.scalars(select(AgricultureModelVersion).where(AgricultureModelVersion.org_id == flight.org_id, AgricultureModelVersion.task.in_(requested_models)))).all()) if requested_models else []
     calibration_artifacts = list((await db.scalars(select(AgricultureSensorCalibration).where(AgricultureSensorCalibration.id.in_(calibration_ids), AgricultureSensorCalibration.org_id == flight.org_id))).all()) if calibration_ids else []
-    run.audit_json = {**(run.audit_json or {}), "model_artifacts": [{"task": row.task, "version": row.version, "status": row.status, "artifact_uri": row.artifact_uri, "dataset_key": row.dataset_key, "metrics": row.metrics} for row in model_artifacts], "calibration_artifacts": [{"id": row.id, "sensor_serial": row.sensor_serial, "sensor_type": row.sensor_type, "version": row.version, "checksum": row.checksum, "valid_from": row.valid_from, "valid_until": row.valid_until} for row in calibration_artifacts]}
+    run.audit_json = {**(run.audit_json or {}), "capability_releases": model_releases, "readiness": readiness, "calibration_artifacts": [{"id": row.id, "sensor_serial": row.sensor_serial, "sensor_type": row.sensor_type, "version": row.version, "checksum": row.checksum, "valid_from": row.valid_from, "valid_until": row.valid_until} for row in calibration_artifacts]}
     await db.commit(); await db.refresh(run)
+    try:
+        await agriculture_analysis_orchestration.ensure_video_jobs(
+            db,
+            run=run,
+            flight=flight,
+            user=org_user.user,
+        )
+    except Exception as exc:
+        run.status = "failed"
+        run.error = str(exc)[:4000]
+        run.finished_at = datetime.now(UTC)
+        await db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "VIDEO_INFERENCE_SUBMISSION_FAILED",
+                "message": "Required video inference could not be submitted.",
+            },
+        ) from exc
     emit_audit_event(event_name="agriculture_analysis_requested", action="enqueue", resource_type="agriculture_analysis_run", result="success", actor_type="user", actor_id=str(org_user.user.id), resource_id=run.id, extra={"flight_id": flight.id, "input_checksum": run.input_checksum})
     return run
+
+
+@router.get(
+    "/flights/{flight_id}/analysis-readiness",
+    response_model=AgricultureAnalysisReadinessOut,
+)
+async def get_analysis_readiness(
+    flight_id: str,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+):
+    flight = await _owned_flight(flight_id, org_user, db)
+    return await agriculture_analysis_orchestration.readiness(
+        db, flight=flight, user=org_user.user
+    )
 
 
 @router.get("/flights/{flight_id}/analysis-runs", response_model=list[AnalysisRunOut])
@@ -1164,6 +1261,26 @@ async def process_analysis_run(run_id: str, payload: AnalysisProcessIn, db: Asyn
             stage.dead_letter_at = None
             stage.retryable = True
         await db.commit()
+    flight = await _owned_flight(run.flight_id, org_user, db)
+    try:
+        await agriculture_analysis_orchestration.ensure_video_jobs(
+            db,
+            run=run,
+            flight=flight,
+            user=org_user.user,
+            force=payload.force,
+        )
+    except Exception as exc:
+        run.status = "failed"
+        run.error = str(exc)[:4000]
+        await db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "VIDEO_INFERENCE_SUBMISSION_FAILED",
+                "message": "Required video inference could not be submitted.",
+            },
+        ) from exc
     try:
         agriculture_analysis_queue.enqueue(run_id=run.id, force=payload.force, cluster_radius_m=payload.cluster_radius_m)
     except AgricultureAnalysisQueueError as exc:
@@ -1181,6 +1298,18 @@ async def cancel_analysis_run(run_id: str, db: AsyncSession = Depends(get_db), o
         raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
     if run.status in {"completed", "review", "published", "failed", "cancelled"}:
         return run
+    linked_job_ids = list(
+        (
+            await db.scalars(
+                select(AgricultureAnalysisVideoJob.video_job_id).where(
+                    AgricultureAnalysisVideoJob.run_id == run.id
+                )
+            )
+        ).all()
+    )
+    await video_analysis_port.cancel_jobs(
+        db, job_ids=linked_job_ids, user=org_user.user
+    )
     run.status = "cancelled"
     run.error = "Cancelled by user"
     await db.commit()
@@ -1198,11 +1327,32 @@ async def replay_analysis_run(run_id: str, db: AsyncSession = Depends(get_db), o
     run.status = "queued"
     run.progress = 0.0
     run.error = None
+    run.retry_count += 1
     run.audit_json = {
         **(run.audit_json or {}),
         "replay": {"requested_at": datetime.now(UTC).isoformat(), "requested_by": org_user.user.id},
     }
     await db.commit()
+    flight = await _owned_flight(run.flight_id, org_user, db)
+    try:
+        await agriculture_analysis_orchestration.ensure_video_jobs(
+            db,
+            run=run,
+            flight=flight,
+            user=org_user.user,
+            force=True,
+        )
+    except Exception as exc:
+        run.status = "failed"
+        run.error = str(exc)[:4000]
+        await db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "VIDEO_INFERENCE_SUBMISSION_FAILED",
+                "message": "Required video inference could not be resubmitted.",
+            },
+        ) from exc
     try:
         agriculture_analysis_queue.replay(run_id=run.id)
     except AgricultureAnalysisQueueError as exc:
@@ -1364,6 +1514,205 @@ async def list_inspection_actions(run_id: str, db: AsyncSession = Depends(get_db
     run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
     if run is None: raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
     return list((await db.scalars(select(AgricultureInspectionAction).where(AgricultureInspectionAction.run_id == run.id).order_by(AgricultureInspectionAction.priority_rank))).all())
+
+
+@router.put("/analysis-runs/{run_id}/inspection-actions/route", response_model=list[InspectionActionOut])
+async def update_inspection_route(run_id: str, payload: InspectionRouteUpdateIn, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
+    run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
+    try:
+        return await agriculture_safety_service.update_inspection_route(
+            db,
+            run=run,
+            ordered_action_ids=payload.ordered_action_ids,
+            removed_action_ids=payload.removed_action_ids,
+            reason=payload.reason,
+            user_id=getattr(org_user.user, "id", None),
+            org_id=getattr(org_user.user, "org_id", None),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/analysis-runs/{run_id}/findings", response_model=RankedFindingPage)
+async def list_ranked_findings(
+    run_id: str,
+    limit: int = Query(DEFAULT_FINDING_LIMIT, ge=1, le=100),
+    include_withheld: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+):
+    run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
+    flight = await _owned_flight(run.flight_id, org_user, db)
+    observations = list(
+        (
+            await db.scalars(
+                select(AgricultureObservation)
+                .where(AgricultureObservation.run_id == run.id)
+                .order_by(AgricultureObservation.id.asc())
+            )
+        ).all()
+    )
+    if not include_withheld:
+        observations = [row for row in observations if not row.merged_into_id]
+    changes = await agriculture_repository.list_changes(db, current_flight_id=flight.id, user=org_user.user)
+    change_by_observation_id = {
+        str(row.current_observation_id): row.state
+        for row in changes
+        if row.current_observation_id
+    }
+    profile = await db.scalar(select(AgricultureFieldProfile).where(AgricultureFieldProfile.field_id == flight.field_id))
+    metadata = (profile.metadata_json if profile else None) or {}
+    crop_context = {
+        "crop_type": profile.crop_type if profile else None,
+        "growth_stage": profile.growth_stage if profile else None,
+        "priority_issue_types": metadata.get("priority_issue_types") or [],
+    }
+    ranked = rank_findings(
+        observations,
+        change_by_observation_id=change_by_observation_id,
+        crop_context=crop_context,
+        limit=limit,
+        include_withheld=include_withheld,
+    )
+    hotspot_features = []
+    for item in ranked:
+        if item["display_status"] not in {"shown", "labeled_low_confidence"}:
+            continue
+        geometry = item.get("geometry_geojson") or {}
+        if geometry.get("type") == "Feature":
+            geometry = geometry.get("geometry") or {}
+        hotspot_features.append(
+            {
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": {
+                    "finding_id": item["finding_id"],
+                    "observation_id": item["observation_id"],
+                    "rank": item["rank"],
+                    "score": item["score"],
+                    "display_status": item["display_status"],
+                    "observation_type": item.get("observation_type"),
+                    "severity": item.get("severity"),
+                    "confidence": item.get("confidence"),
+                },
+            }
+        )
+    return RankedFindingPage(
+        policy_version=RANKING_POLICY_VERSION,
+        run_id=run.id,
+        limit=limit,
+        total_candidates=len(observations),
+        items=[RankedFindingOut(**item) for item in ranked],
+        hotspots={"type": "FeatureCollection", "features": hotspot_features},
+    )
+
+
+@router.post("/analysis-runs/{run_id}/findings/merge", response_model=AgricultureObservationOut)
+async def merge_findings(run_id: str, payload: FindingMergeIn, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
+    run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
+    primary = await agriculture_repository.get_observation(db, observation_id=payload.primary_observation_id, user=org_user.user)
+    if primary is None or primary.run_id != run.id:
+        raise HTTPException(status_code=404, detail="Primary observation not found")
+    members = []
+    for observation_id in payload.member_observation_ids:
+        row = await agriculture_repository.get_observation(db, observation_id=observation_id, user=org_user.user)
+        if row is None or row.run_id != run.id:
+            raise HTTPException(status_code=404, detail=f"Member observation not found: {observation_id}")
+        members.append(row)
+    merge_observations(primary, members)
+    db.add(
+        AgricultureReviewAudit(
+            observation_id=primary.id,
+            actor_user_id=getattr(org_user.user, "id", None),
+            org_id=getattr(org_user.user, "org_id", None),
+            action="findings_merged",
+            reason=payload.reason,
+            payload={"member_observation_ids": [row.id for row in members]},
+        )
+    )
+    await db.commit()
+    await db.refresh(primary)
+    return primary
+
+
+@router.post("/observations/{observation_id}/split", response_model=list[AgricultureObservationOut])
+async def split_finding(observation_id: str, payload: FindingSplitIn, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
+    source = await agriculture_repository.get_observation(db, observation_id=observation_id, user=org_user.user)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Agriculture observation not found")
+    created = split_observation(source, [part.model_dump() for part in payload.parts], new_id_factory=new_id)
+    for row in created:
+        db.add(row)
+    db.add(
+        AgricultureReviewAudit(
+            observation_id=source.id,
+            actor_user_id=getattr(org_user.user, "id", None),
+            org_id=getattr(org_user.user, "org_id", None),
+            action="finding_split",
+            reason=payload.reason,
+            payload={"created_ids": [row.id for row in created]},
+        )
+    )
+    await db.commit()
+    for row in created:
+        await db.refresh(row)
+    return created
+
+
+@router.post("/analysis-runs/{run_id}/field-outcomes", response_model=FieldOutcomeOut, status_code=201)
+async def create_field_outcome(run_id: str, payload: FieldOutcomeIn, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
+    run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
+    flight = await _owned_flight(run.flight_id, org_user, db)
+    observation = await agriculture_repository.get_observation(db, observation_id=payload.observation_id, user=org_user.user)
+    if observation is None or observation.run_id != run.id:
+        raise HTTPException(status_code=404, detail="Agriculture observation not found")
+    model_version = payload.model_version or observation.model_version
+    if not model_version and isinstance(run.model_versions, dict) and run.model_versions:
+        model_version = next(iter(run.model_versions.values()), None)
+        if isinstance(model_version, dict):
+            model_version = str(model_version.get("version") or model_version.get("id") or "")
+        else:
+            model_version = str(model_version) if model_version is not None else None
+    outcome = await record_field_outcome(
+        db,
+        org_id=getattr(org_user.user, "org_id", None),
+        field_id=flight.field_id,
+        flight_id=flight.id,
+        run_id=run.id,
+        observation_id=observation.id,
+        outcome_status=payload.outcome_status,
+        notes=payload.notes,
+        model_version=model_version,
+        capability_release_id=payload.capability_release_id,
+        user_id=getattr(org_user.user, "id", None),
+    )
+    await db.commit()
+    await db.refresh(outcome)
+    return outcome
+
+
+@router.get("/analysis-runs/{run_id}/field-outcomes", response_model=list[FieldOutcomeOut])
+async def list_field_outcomes(run_id: str, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
+    run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
+    return list(
+        (
+            await db.scalars(
+                select(AgricultureFieldOutcome)
+                .where(AgricultureFieldOutcome.run_id == run.id)
+                .order_by(AgricultureFieldOutcome.created_at.desc())
+            )
+        ).all()
+    )
 
 
 @router.post("/inspection-actions/{action_id}/approval", response_model=InspectionActionOut)
@@ -1570,10 +1919,90 @@ async def create_report_snapshot(run_id: str, payload: ReportSnapshotIn, db: Asy
     if run is None:
         raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
     flight = await _owned_flight(run.flight_id, org_user, db)
-    observations = list((await db.scalars(select(AgricultureObservation).where(AgricultureObservation.run_id == run.id).order_by(AgricultureObservation.id.asc()))).all())
-    layers = list((await db.scalars(select(AgricultureAnalysisLayer).where(AgricultureAnalysisLayer.run_id == run.id).order_by(AgricultureAnalysisLayer.layer_name.asc()))).all())
-    snapshot_json, checksum = build_report_snapshot(run=run, observations=observations, layers=layers, template_key=payload.template_key)
-    snapshot = AgricultureReportSnapshot(org_id=flight.org_id, field_id=flight.field_id, flight_id=flight.id, run_id=run.id, template_key=payload.template_key, template_version=REPORT_TEMPLATE_VERSION, snapshot_json=snapshot_json, checksum=checksum, created_by_user_id=org_user.user.id)
+    if payload.template_key == "decision":
+        if not payload.comparison_id:
+            raise HTTPException(status_code=422, detail={"code": "COMPARISON_ID_REQUIRED", "message": "Decision reports require comparison_id"})
+        alignment = await db.get(AgricultureFlightAlignment, payload.comparison_id)
+        if alignment is None or alignment.current_flight_id != flight.id:
+            raise HTTPException(status_code=404, detail="Agriculture comparison not found")
+        await _owned_flight(alignment.current_flight_id, org_user, db)
+        reference = await _owned_flight(alignment.reference_flight_id, org_user, db)
+        reference_run = await db.scalar(
+            select(AgricultureAnalysisRun)
+            .where(AgricultureAnalysisRun.flight_id == reference.id)
+            .order_by(AgricultureAnalysisRun.created_at.desc())
+            .limit(1)
+        )
+        field = await _owned_field(flight.field_id, org_user, db)
+        changes = await agriculture_repository.list_changes(db, current_flight_id=flight.id, user=org_user.user)
+        pair_changes = [row for row in changes if row.reference_flight_id == alignment.reference_flight_id]
+        observations = list(
+            (
+                await db.scalars(
+                    select(AgricultureObservation)
+                    .where(AgricultureObservation.run_id == run.id)
+                    .order_by(AgricultureObservation.id.asc())
+                )
+            ).all()
+        )
+        reviewed = [row for row in observations if row.review_state in {"confirmed", "rejected", "relabelled"}]
+        approved_actions = list(
+            (
+                await db.scalars(
+                    select(AgricultureInspectionAction).where(
+                        AgricultureInspectionAction.run_id == run.id,
+                        AgricultureInspectionAction.status == "approved",
+                    )
+                )
+            ).all()
+        )
+        change_by_observation_id = {
+            str(row.current_observation_id): row.state
+            for row in pair_changes
+            if row.current_observation_id
+        }
+        profile = await db.scalar(select(AgricultureFieldProfile).where(AgricultureFieldProfile.field_id == flight.field_id))
+        metadata = (profile.metadata_json if profile else None) or {}
+        crop_context = {
+            "crop_type": profile.crop_type if profile else None,
+            "growth_stage": profile.growth_stage if profile else None,
+            "priority_issue_types": metadata.get("priority_issue_types") or [],
+        }
+        findings = rank_findings(
+            observations,
+            change_by_observation_id=change_by_observation_id,
+            crop_context=crop_context,
+            limit=DEFAULT_FINDING_LIMIT,
+        )
+        snapshot_json, checksum = build_decision_report_snapshot(
+            field=field,
+            current_flight=flight,
+            reference_flight=reference,
+            current_run=run,
+            reference_run=reference_run,
+            comparability=alignment.comparability or {},
+            changes=pair_changes,
+            reviewed_observations=reviewed,
+            approved_actions=approved_actions,
+            findings=findings,
+        )
+        template_version = DECISION_REPORT_TEMPLATE_VERSION
+    else:
+        observations = list((await db.scalars(select(AgricultureObservation).where(AgricultureObservation.run_id == run.id).order_by(AgricultureObservation.id.asc()))).all())
+        layers = list((await db.scalars(select(AgricultureAnalysisLayer).where(AgricultureAnalysisLayer.run_id == run.id).order_by(AgricultureAnalysisLayer.layer_name.asc()))).all())
+        snapshot_json, checksum = build_report_snapshot(run=run, observations=observations, layers=layers, template_key=payload.template_key)
+        template_version = REPORT_TEMPLATE_VERSION
+    snapshot = AgricultureReportSnapshot(
+        org_id=flight.org_id,
+        field_id=flight.field_id,
+        flight_id=flight.id,
+        run_id=run.id,
+        template_key=payload.template_key,
+        template_version=template_version,
+        snapshot_json=snapshot_json,
+        checksum=checksum,
+        created_by_user_id=org_user.user.id,
+    )
     db.add(snapshot)
     await db.commit()
     await db.refresh(snapshot)
@@ -1641,12 +2070,13 @@ async def list_spatial_layers(run_id: str, db: AsyncSession = Depends(get_db), o
 
 
 @router.get("/analysis-runs/{run_id}/spatial/viewport")
-async def get_spatial_viewport(run_id: str, layer: str = "all", bbox: str | None = Query(default=None), zoom: int = Query(12, ge=0, le=24), min_severity: float = Query(0, ge=0, le=1), min_confidence: float = Query(0, ge=0, le=1), max_features: int = Query(2000, ge=50, le=5000), db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
+async def get_spatial_viewport(run_id: str, layer: str = "all", bbox: str | None = Query(default=None), zoom: int = Query(12, ge=0, le=24), min_severity: float = Query(0, ge=0, le=1), min_confidence: float = Query(0, ge=0, le=1), max_features: int = Query(2000, ge=50, le=5000), offset: int = Query(0, ge=0), page_size: int = Query(10000, ge=1, le=10000), db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
     parsed_bbox = _parse_spatial_bbox(bbox)
     observation_type = None if layer in {"all", "quality", "coverage", "health"} else layer
-    rows, total = await agriculture_repository.list_spatial_observations(db, run_id=run_id, user=org_user.user, bbox=parsed_bbox, observation_type=observation_type, min_severity=min_severity, min_confidence=min_confidence)
+    rows, total = await agriculture_repository.list_spatial_observations(db, run_id=run_id, user=org_user.user, bbox=parsed_bbox, observation_type=observation_type, min_severity=min_severity, min_confidence=min_confidence, offset=offset, limit=page_size)
     geojson, unresolved = aggregate_features(rows, zoom=zoom, max_features=max_features)
-    return {"schema_version": AGRICULTURE_SCHEMA_VERSION, "run_id": run_id, "layer": layer, "zoom": zoom, "bbox": parsed_bbox, "total": total, "returned": len(rows), "partial": len(rows) >= 10000 or unresolved, "aggregation": "grid-cluster" if len(geojson.get("features", [])) < len(rows) else "raw", "geojson": geojson, "quality": {"status": "partial" if unresolved else "complete", "source": "canonical_observations"}}
+    partial = total > len(rows) or unresolved
+    return {"schema_version": AGRICULTURE_SCHEMA_VERSION, "run_id": run_id, "layer": layer, "zoom": zoom, "bbox": parsed_bbox, "total": total, "returned": len(rows), "offset": offset, "page_size": page_size, "next_offset": offset + len(rows) if offset + len(rows) < total else None, "total_kind": "exact", "partial": partial, "aggregation": "grid-cluster" if len(geojson.get("features", [])) < len(rows) else "raw", "geojson": geojson, "quality": {"status": "partial" if partial else "complete", "source": "canonical_observations"}}
 
 
 @router.get("/analysis-runs/{run_id}/spatial/tiles/{z}/{x}/{y}")
@@ -1661,7 +2091,7 @@ async def get_spatial_tile(run_id: str, z: int, x: int, y: int, response: Respon
     response.headers["ETag"] = f'"{checksum}"'
     response.headers["Cache-Control"] = "private, max-age=60, stale-while-revalidate=300"
     response.headers["Vary"] = "Authorization"
-    return {"schema_version": AGRICULTURE_SCHEMA_VERSION, "run_id": run_id, "layer": layer, "tile": {"z": z, "x": x, "y": y}, "total": total, "partial": len(rows) >= 10000 or unresolved, "geojson": geojson, "checksum": checksum}
+    return {"schema_version": AGRICULTURE_SCHEMA_VERSION, "run_id": run_id, "layer": layer, "tile": {"z": z, "x": x, "y": y}, "total": total, "partial": total > len(rows) or unresolved, "geojson": geojson, "checksum": checksum}
 
 
 @router.get("/analysis-runs/{run_id}/layers/{layer}/download")
@@ -1868,7 +2298,7 @@ async def compare_flight(flight_id: str, payload: TemporalCompareIn, db: AsyncSe
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     changes = await agriculture_repository.list_changes(db, current_flight_id=flight.id, user=org_user.user)
     alignment = await db.scalar(select(AgricultureFlightAlignment).where(AgricultureFlightAlignment.current_flight_id == flight.id, AgricultureFlightAlignment.reference_flight_id == result.get("reference_flight_id")))
-    return AgricultureComparisonOut(id=alignment.id if alignment else None, status=result["status"], current_flight_id=flight.id, reference_flight_id=result.get("reference_flight_id"), alignment=result.get("alignment", {}), summary=result.get("summary", {}), changes=changes)
+    return AgricultureComparisonOut(id=alignment.id if alignment else None, status=result["status"], current_flight_id=flight.id, reference_flight_id=result.get("reference_flight_id"), alignment=result.get("alignment", {}), summary=result.get("summary", {}), changes=changes, comparability=result.get("comparability", {}))
 
 
 @router.post("/fields/{field_id}/comparisons", response_model=AgricultureComparisonOut, status_code=202)
@@ -1888,7 +2318,7 @@ async def create_field_comparison(field_id: int, payload: FieldComparisonIn, db:
     reference_id = result.get("reference_flight_id")
     alignment = await db.scalar(select(AgricultureFlightAlignment).where(AgricultureFlightAlignment.current_flight_id == current.id, AgricultureFlightAlignment.reference_flight_id == reference_id))
     changes = await agriculture_repository.list_changes(db, current_flight_id=current.id, user=org_user.user)
-    return AgricultureComparisonOut(id=alignment.id if alignment else None, status=result["status"], current_flight_id=current.id, reference_flight_id=reference_id, alignment=result.get("alignment", {}), summary=result.get("summary", {}), changes=changes)
+    return AgricultureComparisonOut(id=alignment.id if alignment else None, status=result["status"], current_flight_id=current.id, reference_flight_id=reference_id, alignment=result.get("alignment", {}), summary=result.get("summary", {}), changes=changes, comparability=result.get("comparability", {}))
 
 
 @router.get("/comparisons/{comparison_id}", response_model=AgricultureComparisonOut)
@@ -1900,7 +2330,7 @@ async def get_comparison(comparison_id: str, db: AsyncSession = Depends(get_db),
     changes = await agriculture_repository.list_changes(db, current_flight_id=alignment.current_flight_id, user=org_user.user)
     pair_changes = [row for row in changes if row.reference_flight_id == alignment.reference_flight_id]
     summary = {state: sum(row.state == state for row in pair_changes) for state in ("new", "expanding", "stable", "improving", "resolved")}
-    return AgricultureComparisonOut(id=alignment.id, status=alignment.status, current_flight_id=alignment.current_flight_id, reference_flight_id=alignment.reference_flight_id, alignment={"status": alignment.status, "method": alignment.method, "alignment_score": alignment.alignment_score, "overlap_pct": alignment.overlap_pct, "transform": alignment.transform, "failure_reasons": alignment.failure_reasons, "metrics": alignment.metrics}, summary=summary, changes=pair_changes)
+    return AgricultureComparisonOut(id=alignment.id, status=alignment.status, current_flight_id=alignment.current_flight_id, reference_flight_id=alignment.reference_flight_id, alignment={"status": alignment.status, "method": alignment.method, "alignment_score": alignment.alignment_score, "overlap_pct": alignment.overlap_pct, "transform": alignment.transform, "failure_reasons": alignment.failure_reasons, "metrics": alignment.metrics}, summary=summary, changes=pair_changes, comparability=alignment.comparability or {})
 
 
 @router.get("/comparisons/{comparison_id}/layers/{layer}")
@@ -1935,6 +2365,24 @@ async def get_comparison_trends(comparison_id: str, db: AsyncSession = Depends(g
 async def list_flight_comparisons(flight_id: str, limit: int = Query(2000, ge=1, le=5000), db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
     await _owned_flight(flight_id, org_user, db)
     return await agriculture_repository.list_changes(db, current_flight_id=flight_id, user=org_user.user, limit=limit)
+
+
+@router.get("/flights/{flight_id}/comparable-flights", response_model=list[ComparableFlightOut])
+async def list_comparable_flights(
+    flight_id: str,
+    min_quality_score: float = Query(0.6, ge=0, le=1),
+    limit: int = Query(25, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+):
+    flight = await _owned_flight(flight_id, org_user, db)
+    rows = await agriculture_temporal_service.list_comparable_flights(
+        db,
+        current=flight,
+        min_quality_score=min_quality_score,
+        limit=limit,
+    )
+    return [ComparableFlightOut(**row) for row in rows]
 
 
 @router.get("/fields/{field_id}/temporal-timeline", response_model=list[AgricultureFlightOut])
@@ -1990,29 +2438,24 @@ async def import_dataset(payload: DatasetImportIn, db: AsyncSession = Depends(ge
 
 @router.post("/models", response_model=dict[str, Any], status_code=201)
 async def register_model(payload: ModelVersionIn, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_write)):
-    if payload.status != "candidate":
-        raise HTTPException(status_code=409, detail="Models must be registered as candidate and pass the evidence-backed shadow gate before validation or publish")
-    existing = await db.scalar(select(AgricultureModelVersion).where(AgricultureModelVersion.version == payload.version))
-    if existing is not None: raise HTTPException(status_code=409, detail="Model version already registered")
-    model = AgricultureModelVersion(**payload.model_dump(), org_id=getattr(org_user.user, "org_id", None))
-    db.add(model); await db.commit(); await db.refresh(model)
-    emit_audit_event(event_name="agriculture_model_registered", action="register", resource_type="agriculture_model", result="success", actor_type="user", actor_id=str(org_user.user.id), resource_id=model.id, extra={"task": model.task, "version": model.version})
-    return {"id": model.id, "task": model.task, "version": model.version, "status": model.status, "metrics": model.metrics}
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "code": "LEGACY_MODEL_REGISTRY_READ_ONLY",
+            "message": "Create, train, evaluate, and deploy model artifacts through the Vision Models workspace.",
+        },
+    )
 
 
 @router.post("/models/{model_version_id}/quality-reports", response_model=dict[str, Any], status_code=201)
 async def create_model_quality_report(model_version_id: str, payload: ModelQualityReportIn, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_write)):
-    model = await db.get(AgricultureModelVersion, model_version_id)
-    if model is None or model.org_id != getattr(org_user.user, "org_id", None): raise HTTPException(status_code=404, detail="Agriculture model version not found")
-    report_blob = {"scope": payload.scope, "metrics": payload.metrics, "slices": payload.slices, "drift": payload.drift}
-    report = AgricultureModelQualityReport(model_version_id=model.id, evaluation_checksum=hashlib.sha256(json.dumps(report_blob, sort_keys=True).encode()).hexdigest(), **report_blob)
-    db.add(report); await db.commit(); await db.refresh(report)
-    from backend.observability import prometheus_metrics
-    for slice_name, value in (payload.drift or {}).items():
-        if isinstance(value, (int, float)):
-            prometheus_metrics.agriculture_model_drift_score.labels(model=model.version, slice=str(slice_name)).set(float(value))
-    emit_audit_event(event_name="agriculture_model_evaluated", action="evaluate", resource_type="agriculture_model_quality_report", result="success", actor_type="user", actor_id=str(org_user.user.id), resource_id=report.id, extra={"model_version_id": model.id, "evaluation_checksum": report.evaluation_checksum})
-    return {"id": report.id, "model_version_id": report.model_version_id, "scope": report.scope, "metrics": report.metrics, "slices": report.slices, "drift": report.drift, "evaluation_checksum": report.evaluation_checksum}
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "code": "LEGACY_MODEL_REGISTRY_READ_ONLY",
+            "message": "Evaluation provenance is owned by Vision model versions.",
+        },
+    )
 
 
 @router.get("/assets")

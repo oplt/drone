@@ -42,30 +42,39 @@ export class ApiError extends Error {
         error?: {
           code?: unknown;
           message?: unknown;
+          fields?: unknown;
           details?: unknown;
+          trace_id?: unknown;
           request_id?: unknown;
         };
       };
       const errorDetails =
-        parsed.error?.details && typeof parsed.error.details === "object"
-          ? (parsed.error.details as Record<string, unknown>)
-          : {};
+        parsed.error?.fields && typeof parsed.error.fields === "object"
+          ? (parsed.error.fields as Record<string, unknown>)
+          : parsed.error?.details && typeof parsed.error.details === "object"
+            ? (parsed.error.details as Record<string, unknown>)
+            : {};
       const code =
         typeof parsed.error?.code === "string" ? parsed.error.code : null;
       const detail =
-        typeof parsed.detail === "string"
-          ? parsed.detail
-          : typeof parsed.message === "string"
-            ? parsed.message
-            : typeof parsed.error?.message === "string"
-              ? parsed.error.message
+        typeof parsed.error?.message === "string"
+          ? parsed.error.message
+          : typeof parsed.detail === "string"
+            ? parsed.detail
+            : typeof parsed.message === "string"
+              ? parsed.message
               : null;
       return new ApiError(
         response.status,
         detail ?? text,
         detail,
         parsed,
-        requestId || (typeof parsed.error?.request_id === "string" ? parsed.error.request_id : null),
+        requestId ||
+          (typeof parsed.error?.trace_id === "string"
+            ? parsed.error.trace_id
+            : typeof parsed.error?.request_id === "string"
+              ? parsed.error.request_id
+              : null),
         code,
         errorDetails,
         response.headers.get("X-Agriculture-Schema-Version"),

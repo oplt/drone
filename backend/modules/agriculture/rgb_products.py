@@ -11,29 +11,24 @@ from typing import Any, Iterable
 
 RGB_PRODUCT_SPECS: dict[str, dict[str, Any]] = {
     "row_detection": {"label": "Crop-row structure", "claim": "visible row geometry"},
-    "plant_detection": {"label": "Plant detections", "claim": "candidate plant locations"},
+    "object_detection": {"label": "Object detections", "claim": "candidate configured-object locations"},
     "stand_count": {"label": "Stand count", "claim": "estimated visible plant count"},
     "canopy_cover": {"label": "Canopy cover", "claim": "visible green-pixel proportion"},
-    "missing_plant": {"label": "Missing-plant candidates", "claim": "candidate gaps in detected rows"},
-    "visible_water": {"label": "Visible water", "claim": "visible water-like RGB signature"},
+    "weed_detection": {"label": "Weed detections", "claim": "candidate weed locations"},
+    "crop_health": {"label": "Crop-health findings", "claim": "candidate visual crop-health signatures"},
+    "standing_water": {"label": "Standing water", "claim": "visible standing-water-like RGB signature"},
     "lodging": {"label": "Lodging candidates", "claim": "candidate flattened crop structure"},
     "obstacle": {"label": "Obstacles", "claim": "candidate non-crop object"},
 }
 
-_ALIASES = {
-    "rows": "row_detection",
+_CAPABILITY_PRODUCTS = {
     "row_detection": "row_detection",
-    "plants": "plant_detection",
-    "plant_detection": "plant_detection",
+    "object_detection": "object_detection",
     "stand_count": "stand_count",
-    "gaps": "missing_plant",
-    "missing_plant": "missing_plant",
-    "canopy": "canopy_cover",
+    "weed_detection": "weed_detection",
+    "crop_health": "crop_health",
     "canopy_cover": "canopy_cover",
-    "water": "visible_water",
-    "visible_water": "visible_water",
-    "lodging": "lodging",
-    "obstacle": "obstacle",
+    "standing_water": "standing_water",
 }
 
 _LIMITATIONS = (
@@ -70,13 +65,14 @@ def evaluate_rgb_products(*, segmentation: dict[str, Any], row: dict[str, Any], 
     Requested names are advisory; unsupported/unknown names are omitted so a
     client cannot accidentally render an unimplemented capability as measured.
     """
-    requested_names = {_ALIASES.get(str(value).lower().replace("-", "_")) for value in requested}
+    requested_names = {_CAPABILITY_PRODUCTS.get(str(value).lower().replace("-", "_")) for value in requested}
     requested_names.discard(None)
-    names = requested_names if requested_names else set(RGB_PRODUCT_SPECS)
+    names = requested_names
     quality_blocked = str(quality.get("status", "pass")) == "blocked"
     all_detections = list(detections)
     plants = _labels(all_detections, {"plant", "crop", "seedling", "stand"})
-    gaps = _labels(all_detections, {"gap", "skip", "missing_plant", "emergence_issue"})
+    weeds = _labels(all_detections, {"weed", "weeds", "vegetation"})
+    health = _labels(all_detections, {"stress", "disease", "damage", "anomaly"})
     lodging = _labels(all_detections, {"lodging", "flattened_crop"})
     obstacles = _labels(all_detections, {"obstacle", "vehicle", "person", "animal", "intrusion"})
     output: dict[str, dict[str, Any]] = {}
@@ -86,16 +82,18 @@ def evaluate_rgb_products(*, segmentation: dict[str, Any], row: dict[str, Any], 
         elif name == "row_detection":
             confidence = float(row.get("confidence", 0.0) or 0.0)
             output[name] = _product(name=name, status="candidate" if confidence > 0 else "not_measured", confidence=confidence, value={"direction_deg": row.get("row_direction_deg"), "line_count": row.get("line_count")}, reason=None if confidence > 0 else "row_structure_not_resolved")
-        elif name == "plant_detection":
+        elif name == "object_detection":
             output[name] = _product(name=name, status="candidate" if plants else "not_measured", confidence=min(0.8, len(plants) / 100), value={"count": len(plants)}, reason=None if plants else "no_plant_detections", evidence_count=len(plants))
         elif name == "stand_count":
             output[name] = _product(name=name, status="candidate" if plants else "not_measured", confidence=min(0.75, len(plants) / 100), value={"estimated_count": len(plants)}, reason=None if plants else "plant_positions_missing", evidence_count=len(plants))
         elif name == "canopy_cover":
             value = segmentation.get("canopy_pct")
             output[name] = _product(name=name, status="candidate" if value is not None else "not_measured", confidence=0.55 if value is not None else 0.0, value={"visible_canopy_pct": value}, reason=None if value is not None else "segmentation_unavailable")
-        elif name == "missing_plant":
-            output[name] = _product(name=name, status="candidate" if gaps else "not_measured", confidence=min(0.7, len(gaps) / 50), value={"candidate_gap_count": len(gaps)}, reason=None if gaps else "no_gap_detections", evidence_count=len(gaps))
-        elif name == "visible_water":
+        elif name == "weed_detection":
+            output[name] = _product(name=name, status="candidate" if weeds else "not_measured", confidence=min(0.8, len(weeds) / 50), value={"candidate_count": len(weeds)}, reason=None if weeds else "no_weed_detections", evidence_count=len(weeds))
+        elif name == "crop_health":
+            output[name] = _product(name=name, status="candidate" if health else "not_measured", confidence=min(0.8, len(health) / 20), value={"candidate_count": len(health)}, reason=None if health else "no_crop_health_detections", evidence_count=len(health))
+        elif name == "standing_water":
             value = segmentation.get("visible_water_pct")
             output[name] = _product(name=name, status="candidate" if value is not None else "not_measured", confidence=min(0.8, float(value or 0) / 10), value={"visible_water_pct": value}, reason=None if value is not None else "segmentation_unavailable")
         elif name == "lodging":

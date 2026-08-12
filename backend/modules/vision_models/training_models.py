@@ -31,9 +31,18 @@ class TrainingRun(Base):
     __tablename__ = "vision_training_runs"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('queued', 'running', 'completed', 'failed', 'cancelled')",
+            "status IN ('queued', 'running', 'cancelling', 'completed', 'failed', 'cancelled')",
             name="ck_vision_training_status",
         ),
+        CheckConstraint("attempt >= 0", name="ck_vision_training_attempt_nonnegative"),
+        Index(
+            "uq_vision_one_active_training_per_project",
+            "project_id",
+            unique=True,
+            postgresql_where=text("status IN ('queued', 'running', 'cancelling')"),
+            sqlite_where=text("status IN ('queued', 'running', 'cancelling')"),
+        ),
+        Index("ix_vision_training_lease_expires_at", "lease_expires_at"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -57,6 +66,14 @@ class TrainingRun(Base):
     config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     queue_task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    lease_owner: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    terminal_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    terminal_stage: Mapped[str | None] = mapped_column(String(64), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by_user_id: Mapped[int | None] = mapped_column(

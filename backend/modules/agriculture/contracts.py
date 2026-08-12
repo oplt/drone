@@ -1,6 +1,23 @@
 """Shared observation contract adapters for agriculture and irrigation outputs."""
 
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
+
+
+@dataclass(frozen=True, slots=True)
+class MissionTelemetrySample:
+    """Persistence-neutral telemetry used by georeferencing consumers."""
+
+    timestamp_utc: datetime
+    lat: float
+    lon: float
+    relative_altitude_m: float | None = None
+    absolute_altitude_m: float | None = None
+    roll_deg: float | None = None
+    pitch_deg: float | None = None
+    yaw_deg: float | None = None
+    gps_quality: float | None = None
 
 
 def irrigation_observation_type(zone_type: str) -> str:

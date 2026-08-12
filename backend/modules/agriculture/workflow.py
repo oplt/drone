@@ -8,7 +8,6 @@ from typing import Any
 from shapely.geometry import LineString, Polygon, shape
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.modules.agriculture.models import AgricultureFlight
 from backend.modules.agriculture.policy import agriculture_validator
 from backend.modules.agriculture.schemas import AgricultureGridUpdateIn, AgriculturePlanIn, AgriculturePreflightIn
 from backend.modules.agriculture.workflow_models import AgricultureMissionPlan, AgricultureMissionPlanRevision, AgriculturePreflightSnapshot

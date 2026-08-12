@@ -1,5 +1,6 @@
-import { Add, Dataset, EditNote } from "@mui/icons-material";
+import { Add, ContentCopy, Dataset, EditNote } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -44,7 +45,7 @@ export function VisionDatasetWorkspace({
               variant="contained"
               startIcon={<Add />}
               disabled={createDataset.isPending}
-              onClick={() => createDataset.mutate(projectId)}
+              onClick={() => createDataset.mutate({ projectId })}
             >
               Create dataset
             </Button>
@@ -65,6 +66,38 @@ export function VisionDatasetWorkspace({
   ];
   return (
     <Stack spacing={3}>
+      <Card variant="outlined">
+        <CardContent>
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
+            <Box>
+              <Typography variant="h6">Dataset v{dataset.version} · {dataset.status}</Typography>
+              <Typography color="text.secondary">
+                {dataset.status === "locked"
+                  ? "This snapshot is immutable because training references it. Reuse it for retries or create vNext to change content."
+                  : "This draft can still accept images and annotation changes."}
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                startIcon={<Add />}
+                disabled={createDataset.isPending}
+                onClick={() => createDataset.mutate({ projectId })}
+              >
+                Create blank vNext
+              </Button>
+              <Button
+                startIcon={<ContentCopy />}
+                variant="outlined"
+                disabled={createDataset.isPending}
+                onClick={() => createDataset.mutate({ projectId, cloneFromDatasetId: dataset.id })}
+              >
+                Clone to vNext
+              </Button>
+            </Stack>
+          </Stack>
+          {createDataset.error ? <Alert severity="error" sx={{ mt: 2 }}>{createDataset.error.message}</Alert> : null}
+        </CardContent>
+      </Card>
       <Grid container spacing={2}>
         {stats.map((stat) => (
           <Grid key={stat.label} size={{ xs: 6, md: "grow" }}>
@@ -79,14 +112,18 @@ export function VisionDatasetWorkspace({
           </Grid>
         ))}
       </Grid>
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <VisionImageUploadCard datasetId={dataset.id} />
+      {dataset.status === "draft" ? (
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, lg: 6 }}>
+            <VisionImageUploadCard datasetId={dataset.id} />
+          </Grid>
+          <Grid size={{ xs: 12, lg: 6 }}>
+            <VisionVideoCurationCard datasetId={dataset.id} />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <VisionVideoCurationCard datasetId={dataset.id} />
-        </Grid>
-      </Grid>
+      ) : (
+        <Alert severity="info">Content controls are disabled for this immutable snapshot.</Alert>
+      )}
       <Card variant="outlined">
         <CardContent>
           <Stack
@@ -105,7 +142,7 @@ export function VisionDatasetWorkspace({
             <Button
               variant="contained"
               startIcon={<EditNote />}
-              disabled={!dataset.image_count}
+              disabled={!dataset.image_count || dataset.status === "locked"}
               onClick={() =>
                 navigate(
                   `/dashboard/agriculture/vision-models/datasets/${dataset.id}/label`,

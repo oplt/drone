@@ -8,24 +8,44 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.modules.agriculture.crop_insights import build_crop_risks, estimate_growth_stage, forecast_yield, model_applicability, summarize_growth
+from backend.modules.agriculture.crop_insights import build_crop_risks, estimate_growth_stage, forecast_yield, summarize_growth
 from backend.modules.agriculture.models import AgricultureAnalysisRun, AgricultureFlight
 from backend.modules.agriculture.p4_models import AgricultureCropRisk, AgricultureGrowthMetric, AgricultureGrowthStageEstimate, AgricultureHarvestLabel, AgricultureYieldForecast
 from backend.modules.agriculture.sensor_models import AgricultureFusionResult
-from backend.modules.agriculture.temporal_models import AgricultureModelQualityReport, AgricultureModelVersion
 
 
 class AgricultureCropInsightService:
-    async def _model_gate(self, db: AsyncSession, *, model_version_id: str | None, crop_type: str | None, growth_stage: str | None) -> tuple[Any | None, dict[str, Any]]:
-        model = await db.get(AgricultureModelVersion, model_version_id) if model_version_id else await db.scalar(select(AgricultureModelVersion).where(AgricultureModelVersion.task == "crop_risk", AgricultureModelVersion.status == "deployed").order_by(AgricultureModelVersion.deployed_at.desc(), AgricultureModelVersion.created_at.desc()))
-        reports = []
-        if model is not None:
-            reports = list((await db.scalars(select(AgricultureModelQualityReport).where(AgricultureModelQualityReport.model_version_id == model.id).order_by(AgricultureModelQualityReport.created_at))).all())
-        return model, model_applicability(model, reports, task="crop_risk", crop_type=crop_type, growth_stage=growth_stage)
+    @staticmethod
+    def _model_gate(*, run: AgricultureAnalysisRun, model_version_id: str | None, crop_type: str | None, growth_stage: str | None) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+        snapshot = dict((run.model_versions or {}).get("crop_health") or {})
+        reasons: list[str] = []
+        if not snapshot:
+            reasons.append("no_crop_health_release_on_analysis_run")
+        elif model_version_id and model_version_id != snapshot.get("vision_model_version_id"):
+            reasons.append("requested_model_does_not_match_analysis_provenance")
+        supported_crops = {str(item).lower() for item in snapshot.get("crop_types", [])}
+        if snapshot and crop_type and supported_crops and crop_type.lower() not in supported_crops:
+            reasons.append("crop_outside_release_scope")
+        return (
+            snapshot or None,
+            {
+                "eligible": not reasons,
+                "status": "pass" if not reasons else "not_applicable",
+                "reasons": reasons,
+                "task": "crop_health",
+                "crop_type": crop_type,
+                "growth_stage": growth_stage,
+                "model_version": snapshot.get("model_version"),
+                "model_version_id": snapshot.get("vision_model_version_id"),
+                "release_id": snapshot.get("release_id"),
+                "metrics": snapshot.get("evaluation_metrics", {}),
+                "thresholds": snapshot.get("thresholds", {}),
+            },
+        )
 
     async def process_crop_risk(self, db: AsyncSession, *, run: AgricultureAnalysisRun, flight: AgricultureFlight, request: dict[str, Any]) -> list[AgricultureCropRisk]:
         profile = flight.profile_snapshot or {}
-        model, applicability = await self._model_gate(db, model_version_id=request.get("model_version_id"), crop_type=profile.get("crop_type"), growth_stage=profile.get("growth_stage"))
+        model, applicability = self._model_gate(run=run, model_version_id=request.get("model_version_id"), crop_type=profile.get("crop_type"), growth_stage=profile.get("growth_stage"))
         fusion_rows = list((await db.scalars(select(AgricultureFusionResult).where(AgricultureFusionResult.run_id == run.id))).all())
         fusion_risk = next((row.summary for row in fusion_rows if row.layer_name == "fusion_risk"), {})
         thermal = next((row.summary for row in fusion_rows if row.layer_name == "thermal"), {})
@@ -33,7 +53,7 @@ class AgricultureCropInsightService:
         fusion_inputs = {**request.get("fusion_inputs", {}), **fusion_risk}
         if index.get("mean") is not None: fusion_inputs["ndvi_mean"] = index["mean"]
         evidence = list(dict.fromkeys([*request.get("evidence_ids", []), *(fusion_risk.get("source_ids", []) if isinstance(fusion_risk, dict) else [])]))
-        payloads = build_crop_risks(visual=request.get("visual_inputs", {}), fusion=fusion_inputs, thermal={**thermal, **request.get("thermal_inputs", {})}, sensors=request.get("sensor_inputs", {}), crop_type=profile.get("crop_type"), growth_stage=profile.get("growth_stage"), history=request.get("history", {}), geometry=request.get("geometry_geojson", {}), evidence_ids=evidence, applicability=applicability, model_config=dict(getattr(model, "config", {}) or {}) if model else None, model_version=getattr(model, "version", None))
+        payloads = build_crop_risks(visual=request.get("visual_inputs", {}), fusion=fusion_inputs, thermal={**thermal, **request.get("thermal_inputs", {})}, sensors=request.get("sensor_inputs", {}), crop_type=profile.get("crop_type"), growth_stage=profile.get("growth_stage"), history=request.get("history", {}), geometry=request.get("geometry_geojson", {}), evidence_ids=evidence, applicability=applicability, model_config={**(model.get("thresholds", {}) if model else {}), "crop_types": model.get("crop_types", []) if model else []}, model_version=str(model.get("model_version")) if model else None)
         output = []
         for payload in payloads:
             record = await db.scalar(select(AgricultureCropRisk).where(AgricultureCropRisk.run_id == run.id, AgricultureCropRisk.issue_type == payload["issue_type"]))

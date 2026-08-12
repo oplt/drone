@@ -21,6 +21,7 @@ from backend.modules.agriculture.models import (
     AgricultureAnalysisRun,
     AgricultureAnalysisLayer,
     AgricultureAnalysisStage,
+    AgricultureAnalysisVideoJob,
     AgricultureCameraCalibration,
     AgricultureFieldProfile,
     AgricultureFlight,
@@ -41,8 +42,10 @@ from backend.modules.agriculture.heuristics import infer_row_structure, segment_
 from backend.modules.agriculture.heuristics import anomaly_signature
 from backend.modules.agriculture.stand import summarize_stands
 from backend.modules.agriculture.rgb_products import evaluate_rgb_products, product_gate_summary
-from backend.modules.agriculture.temporal_models import AgricultureModelQualityReport, AgricultureModelVersion
 from backend.modules.agriculture.contracts import irrigation_zone_to_observation
+from backend.modules.agriculture.analysis_orchestration import (
+    agriculture_analysis_orchestration,
+)
 from backend.modules.agriculture.schemas import (
     AgricultureMissionProfile,
     CalibrationIn,
@@ -53,7 +56,10 @@ from backend.modules.agriculture.schemas import (
 )
 from backend.modules.agriculture.storage import agriculture_storage
 from backend.modules.fields.models import Field
-from backend.modules.video_analysis.models import VideoAsset, VideoDetection
+from backend.modules.video_analysis.contracts import (
+    VideoSourceRef,
+    video_analysis_port,
+)
 from backend.modules.irrigation.models import AnomalyZone
 from backend.infrastructure.runtime.blocking import run_blocking
 
@@ -100,17 +106,33 @@ def polygon_area_m2(coords: list[list[float]]) -> float:
 
 
 class AgricultureService:
-    async def _rgb_model_evidence(self, db: AsyncSession, requested: list[Any]) -> dict[str, Any]:
-        aliases = {"rows": "row_detection", "plants": "plant_detection", "canopy": "canopy_cover", "gaps": "missing_plant", "water": "visible_water"}
-        names = {aliases.get(str(value).lower().replace("-", "_"), str(value).lower().replace("-", "_")) for value in requested}
-        if not names:
-            return {}
-        rows = list((await db.scalars(select(AgricultureModelVersion).where(AgricultureModelVersion.task.in_(names), AgricultureModelVersion.status.in_("validated", "deployed")))).all())
+    @staticmethod
+    def _rgb_model_evidence(model_snapshots: dict[str, Any]) -> dict[str, Any]:
+        """Build product evidence only from releases frozen onto this run."""
+        product_names = {
+            "object_detection": ("object_detection",),
+            "stand_count": ("stand_count",),
+            "weed_detection": ("weed_detection",),
+            "crop_health": ("crop_health",),
+            "canopy_cover": ("canopy_cover",),
+            "row_detection": ("row_detection",),
+            "standing_water": ("standing_water",),
+        }
         evidence: dict[str, Any] = {}
-        for model in rows:
-            report = await db.scalar(select(AgricultureModelQualityReport).where(AgricultureModelQualityReport.model_version_id == model.id).order_by(AgricultureModelQualityReport.created_at.desc()).limit(1))
-            drift = dict(getattr(report, "drift", {}) or {}) if report else {}
-            evidence[model.task] = {"model_id": model.id, "version": model.version, "status": model.status, "artifact_uri": model.artifact_uri, "artifact_digest": (model.config or {}).get("artifact_digest"), "dataset_key": model.dataset_key, "validated": model.status in {"validated", "deployed"} and bool(report) and drift.get("publishable") is True, "report_id": getattr(report, "id", None), "metrics": dict(getattr(report, "metrics", {}) or {}) if report else {}}
+        for capability_id, snapshot_value in model_snapshots.items():
+            snapshot = dict(snapshot_value or {})
+            item = {
+                "capability_id": capability_id,
+                "release_id": snapshot.get("release_id"),
+                "model_id": snapshot.get("model_id"),
+                "model_version_id": snapshot.get("vision_model_version_id"),
+                "version": snapshot.get("model_version"),
+                "artifact_digest": snapshot.get("model_checksum"),
+                "validated": snapshot.get("status") == "active",
+                "inference_profile": snapshot.get("inference_profile") or {},
+            }
+            for product_name in product_names.get(capability_id, (capability_id,)):
+                evidence[product_name] = item
         return evidence
     def validate_profile(self, *, profile: AgricultureMissionProfile, cruise_alt_m: float, field_polygon_lonlat: list[list[float]], route_lonlat: list[list[float]] | None = None) -> None:
         result = agriculture_validator.validate(
@@ -408,6 +430,13 @@ class AgricultureService:
     async def process_analysis_run(self, db: AsyncSession, *, run: AgricultureAnalysisRun, flight: AgricultureFlight, force: bool = False, cluster_radius_m: float = 8.0) -> AgricultureAnalysisRun:
         if run.status in {"cancelled", "review", "published", "completed"} and not force:
             return run
+        prerequisite, linked_job_ids = (
+            await agriculture_analysis_orchestration.prerequisite_state(
+                db, run=run, flight=flight
+            )
+        )
+        if prerequisite != "completed":
+            return run
         if flight.status == "captured":
             await self.transition_flight(db, flight=flight, target="processing")
         stage = await db.scalar(select(AgricultureAnalysisStage).where(AgricultureAnalysisStage.run_id == run.id, AgricultureAnalysisStage.stage_name == "quality"))
@@ -418,7 +447,12 @@ class AgricultureService:
         run.status = "running"; run.progress = 5.0
         await db.commit()
         try:
-            videos = list((await db.scalars(select(VideoAsset).where(VideoAsset.mission_id == flight.mission_id))).all())
+            videos = await video_analysis_port.list_mission_sources(
+                db,
+                mission_id=flight.mission_id,
+                org_id=flight.org_id,
+                user_id=run.requested_by_user_id,
+            )
             telemetry_rows = await agriculture_repository.list_telemetry(db, flight_id=flight.id)
             quality_rows, quality_summary, vision_summary = await run_blocking(self._sample_video_quality, videos, run.id, flight.id, boundary="media", operation="agriculture_quality", timeout_s=300.0)
             telemetry_summary = telemetry_quality_summary(telemetry_rows)
@@ -467,8 +501,23 @@ class AgricultureService:
                 inference_stage = AgricultureAnalysisStage(run_id=run.id, stage_name="observation_aggregation")
                 db.add(inference_stage)
             inference_stage.status = "running"; inference_stage.attempt += 1; inference_stage.started_at = datetime.now(UTC)
+            stage = inference_stage
             inference_started = perf_counter()
-            detections = list((await db.scalars(select(VideoDetection).where(VideoDetection.mission_id == flight.mission_id).order_by(VideoDetection.timestamp_seconds.asc(), VideoDetection.id.asc()))).all())
+            detections = await video_analysis_port.list_detections(
+                db, job_ids=linked_job_ids, org_id=flight.org_id
+            )
+            inference_links = list(
+                (
+                    await db.scalars(
+                        select(AgricultureAnalysisVideoJob).where(
+                            AgricultureAnalysisVideoJob.run_id == run.id
+                        )
+                    )
+                ).all()
+            )
+            inference_by_job = {
+                link.video_job_id: link for link in inference_links
+            }
             requested_rgb = list(run.requested_analyses or [])
             rgb_products = evaluate_rgb_products(
                 segmentation=vision_summary,
@@ -479,7 +528,7 @@ class AgricultureService:
             )
             rgb_gates = product_gate_summary(
                 rgb_products,
-                evaluated_models=await self._rgb_model_evidence(db, requested_rgb),
+                evaluated_models=self._rgb_model_evidence(run.model_versions or {}),
             )
             run.quality_gate = {**(run.quality_gate or {}), "rgb_products": rgb_gates, "claim_policy": "RGB products remain candidate-only until model evaluation and human review pass."}
             observation_payloads = aggregate_detections(detections, cluster_radius_m=cluster_radius_m)
@@ -505,10 +554,57 @@ class AgricultureService:
             await db.execute(delete(AgricultureObservation).where(AgricultureObservation.run_id == run.id))
             await db.execute(delete(AgricultureAnalysisLayer).where(AgricultureAnalysisLayer.run_id == run.id))
             observations: list[AgricultureObservation] = []
+            detections_by_id = {str(row.id): row for row in detections}
             for index, payload in enumerate(observation_payloads):
                 legacy_zone_id = payload.pop("legacy_anomaly_zone_id", None)
                 evidence_key = ",".join(sorted(str(item) for item in payload.get("evidence_ids", [])))
                 record_id = stable_record_id(run.id, payload["observation_type"], evidence_key, index)
+                evidence_detections = [
+                    detections_by_id[evidence_id]
+                    for evidence_id in (
+                        str(item) for item in payload.get("evidence_ids", [])
+                    )
+                    if evidence_id in detections_by_id
+                ]
+                finding_job_ids = sorted(
+                    {row.job_id for row in evidence_detections}
+                )
+                inference_provenance = []
+                for finding_job_id in finding_job_ids:
+                    link = inference_by_job.get(finding_job_id)
+                    if link is None:
+                        continue
+                    snapshot = dict(link.inference_snapshot or {})
+                    inference_provenance.append(
+                        {
+                            "inference_job_id": finding_job_id,
+                            "capability_id": link.capability_id,
+                            "capability_release_id": link.capability_release_id,
+                            "source_video_id": link.video_id,
+                            "source_checksum": snapshot.get("source_checksum"),
+                            "vision_model_version_id": snapshot.get(
+                                "vision_model_version_id"
+                            ),
+                            "model_hash": snapshot.get("model_checksum"),
+                            "resolved_model_version": snapshot.get(
+                                "resolved_model_version"
+                            ),
+                            "inference_profile": snapshot.get(
+                                "inference_profile", {}
+                            ),
+                            "telemetry_match_version": snapshot.get(
+                                "telemetry_match_version"
+                            ),
+                            "capability_contract_version": snapshot.get(
+                                "capability_contract_version"
+                            ),
+                        }
+                    )
+                payload["provenance"] = {
+                    "aggregation_version": "agriculture-aggregation.v1",
+                    "analysis_run_id": run.id,
+                    "inference_jobs": inference_provenance,
+                }
                 observations.append(AgricultureObservation(
                     id=record_id,
                     run_id=run.id,
@@ -522,35 +618,10 @@ class AgricultureService:
                     if legacy_zone is not None:
                         legacy_zone.canonical_observation_id = record_id
                 for evidence_id in payload.get("evidence_ids", []):
-                    detection = next((row for row in detections if str(row.id) == str(evidence_id)), None)
+                    detection = detections_by_id.get(str(evidence_id))
                     if detection is not None:
                         lineage = lineage_by_frame.get(detection.frame_index)
                         evidence_media_id = lineage.media_id if lineage else None
-                        if evidence_media_id is None and detection.evidence_path:
-                            source = Path(detection.evidence_path).resolve()
-                            evidence_root = Path("backend/storage/video_analysis").resolve()
-                            if (
-                                source.is_file()
-                                and evidence_root in source.parents
-                                and source.stat().st_size <= settings.agriculture_max_media_bytes
-                            ):
-                                data = source.read_bytes()
-                                checksum = hashlib.sha256(data).hexdigest()
-                                evidence_media = await db.scalar(select(AgricultureMediaManifest).where(
-                                    AgricultureMediaManifest.flight_id == flight.id,
-                                    AgricultureMediaManifest.checksum == checksum,
-                                    AgricultureMediaManifest.source_kind == "rgb_stills",
-                                ))
-                                if evidence_media is None:
-                                    tenant = str(flight.org_id) if flight.org_id is not None else "public"
-                                    key = f"org/{tenant}/flights/{flight.id}/evidence/{checksum}.jpg"
-                                    agriculture_storage.validate_tenant_key(key, org_id=flight.org_id, resource=f"flights/{flight.id}")
-                                    agriculture_storage.write_object(key, data, expected_checksum=checksum)
-                                    agriculture_storage.validate_file_content(key, declared_content_type="image/jpeg")
-                                    evidence_media = AgricultureMediaManifest(flight_id=flight.id, source_kind="rgb_stills", storage_key=key, checksum=checksum, content_type="image/jpeg", byte_size=len(data), retention_status="active")
-                                    db.add(evidence_media)
-                                    await db.flush()
-                                evidence_media_id = evidence_media.id
                         db.add(AgricultureObservationEvidence(id=stable_record_id("observation-evidence", record_id, detection.id), observation_id=record_id, detection_id=detection.id, frame_lineage_id=lineage.id if lineage else None, media_id=evidence_media_id, source_video_id=detection.video_id, evidence_path=None, frame_index=detection.frame_index, timestamp_seconds=detection.timestamp_seconds))
             db.add_all(observations)
             await db.flush()
@@ -575,7 +646,7 @@ class AgricultureService:
                 quality_geojson = {"type": "FeatureCollection", "features": quality_features}
                 quality_checksum = hashlib.sha256(json.dumps(quality_geojson, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
                 db.add(AgricultureAnalysisLayer(run_id=run.id, layer_name="quality", geojson=quality_geojson, summary={"count": len(quality_features), "reflight_count": sum(feature["properties"]["state"] == "blocked" for feature in quality_features)}, checksum=quality_checksum))
-            fallback_layers = {"canopy": "canopy_pct", "soil": "soil_pct", "standing_water": "visible_water_pct", "rows": "row_direction_confidence"}
+            fallback_layers = {"canopy_cover": "canopy_pct", "soil": "soil_pct", "standing_water": "visible_water_pct", "row_detection": "row_direction_confidence"}
             for layer_name, metric_name in fallback_layers.items():
                 metric_value = vision_summary.get(metric_name)
                 if metric_value is None:
@@ -602,6 +673,25 @@ class AgricultureService:
             prometheus_metrics.agriculture_dedup_ratio.labels(stage="observation_aggregation").set(run.counters["dedup_ratio"])
             prometheus_metrics.agriculture_output_size_bytes.labels(stage="observation_aggregation").observe(output_size_bytes)
             run.progress = 100.0; run.status = "review" if observations else "completed"; run.error = None
+            review_stage = await db.scalar(
+                select(AgricultureAnalysisStage).where(
+                    AgricultureAnalysisStage.run_id == run.id,
+                    AgricultureAnalysisStage.stage_name == "review_ready",
+                )
+            )
+            if review_stage is None:
+                review_stage = AgricultureAnalysisStage(
+                    run_id=run.id, stage_name="review_ready"
+                )
+                db.add(review_stage)
+            review_stage.status = "completed"
+            review_stage.progress = 100.0
+            review_stage.started_at = review_stage.started_at or datetime.now(UTC)
+            review_stage.finished_at = datetime.now(UTC)
+            review_stage.metrics = {
+                "observation_count": len(observations),
+                "requires_review": bool(observations),
+            }
             flight.quality_summary = quality_summary
             flight.coverage_summary = {**(flight.coverage_summary or {}), "observation_count": len(observations), "resolved_observation_count": sum(row.georef_status == "resolved" for row in observations)}
             if flight.status == "processing":
@@ -621,7 +711,35 @@ class AgricultureService:
             raise
 
     @staticmethod
-    def _sample_video_quality(videos: list[VideoAsset], run_id: str, flight_id: str) -> tuple[list[AgricultureFrameQuality], dict[str, Any], dict[str, Any]]:
+    def _read_evidence_file(path: str, maximum_bytes: int) -> bytes | None:
+        source = Path(path).resolve()
+        evidence_root = Path("backend/storage/video_analysis").resolve()
+        if (
+            not source.is_file()
+            or evidence_root not in source.parents
+            or source.stat().st_size > maximum_bytes
+        ):
+            return None
+        return source.read_bytes()
+
+    @staticmethod
+    def _write_evidence_file(
+        key: str,
+        data: bytes,
+        checksum: str,
+        org_id: int | None,
+        flight_id: str,
+    ) -> None:
+        agriculture_storage.validate_tenant_key(
+            key, org_id=org_id, resource=f"flights/{flight_id}"
+        )
+        agriculture_storage.write_object(key, data, expected_checksum=checksum)
+        agriculture_storage.validate_file_content(
+            key, declared_content_type="image/jpeg"
+        )
+
+    @staticmethod
+    def _sample_video_quality(videos: list[VideoSourceRef], run_id: str, flight_id: str) -> tuple[list[AgricultureFrameQuality], dict[str, Any], dict[str, Any]]:
         import cv2
         results: list[AgricultureFrameQuality] = []
         quality_results = []

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Box, CircularProgress, Divider, Paper, Stack, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Divider, Paper, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AnnotationCanvas,
@@ -48,6 +48,11 @@ export function LabelingWorkspacePage() {
       : project?.classes[0]?.id ?? null;
   const activeImage = images.data?.items[activeIndex] ?? null;
   const labeling = useLabelingPersistence({ activeImage, datasetId, pageOffset });
+  const reloadServerAnnotations = useCallback(async () => {
+    const result = await images.refetch();
+    const serverImage = result.data?.items.find((item) => item.id === activeImage?.id);
+    if (serverImage) labeling.loadServerVersion(serverImage);
+  }, [activeImage?.id, images, labeling]);
 
   useEffect(() => {
     if (!images.data) return;
@@ -114,8 +119,33 @@ export function LabelingWorkspacePage() {
           showHelp={setHelpAnchor}
           close={() => void labeling.awaitSaves().then((saved) => saved && navigate("/dashboard/agriculture/vision-models"))}
         />
-        {labeling.saveError ? (
-          <Alert severity="error" onClose={() => labeling.setSaveError(null)}>{labeling.saveError}</Alert>
+        {labeling.conflict ? (
+          <Alert severity="warning">
+            <Stack spacing={1}>
+              <Typography variant="body2">{labeling.saveError}</Typography>
+              <Typography variant="caption">
+                Your draft used revision {labeling.conflict.expectedRevision}; the server is now revision {labeling.conflict.currentRevision}.
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Button size="small" onClick={() => void reloadServerAnnotations()}>
+                  Reload server version
+                </Button>
+                <Button size="small" onClick={labeling.downloadLocalCopy}>
+                  Download local copy
+                </Button>
+                <Button size="small" color="warning" variant="contained" onClick={() => void labeling.overwriteConflict()}>
+                  Overwrite with my draft
+                </Button>
+              </Stack>
+            </Stack>
+          </Alert>
+        ) : labeling.saveError ? (
+          <Alert
+            severity="error"
+            action={<Button size="small" onClick={() => void labeling.retry()}>Retry save</Button>}
+          >
+            {labeling.saveError} Your edits remain local and navigation is blocked.
+          </Alert>
         ) : null}
         <Divider />
         <Stack direction="row" flex={1} minHeight={0}>

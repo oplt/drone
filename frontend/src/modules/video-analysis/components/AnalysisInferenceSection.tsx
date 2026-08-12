@@ -21,6 +21,10 @@ export function AnalysisInferenceSection(props: AnalysisControlsProps) {
   return (
     <Stack spacing={2}>
       <Typography variant="h6">Detection profile</Typography>
+      <Alert severity="info">
+        Advanced diagnostics for operators. Farmer agriculture workflows stay
+        capability-based; SAHI/tracker promotion requires EXP-002 gates (ADR-004).
+      </Alert>
       <TextField
         select
         size="small"

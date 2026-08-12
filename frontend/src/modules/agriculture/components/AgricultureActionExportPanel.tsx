@@ -20,9 +20,11 @@ import {
   useCreateAgricultureInspectionPlan,
   useCreateAgriculturePrescription,
   useGetAgricultureExportDownload,
+  useUpdateAgricultureInspectionRoute,
 } from "../hooks";
 import { ExportApprovalDialog } from "./ExportApprovalDialog";
 import { InspectionActionPanel } from "./InspectionActionPanel";
+import { AssignReviewerDialog } from "./AssignReviewerDialog";
 
 export function AgricultureActionExportPanel({ runId }: { runId: string }) {
   const actions = useAgricultureInspectionActions(runId);
@@ -31,12 +33,14 @@ export function AgricultureActionExportPanel({ runId }: { runId: string }) {
   const plan = useCreateAgricultureInspectionPlan();
   const approveAction = useApproveAgricultureInspectionAction();
   const assignAction = useAssignAgricultureInspectionAction();
+  const updateRoute = useUpdateAgricultureInspectionRoute();
   const createPrescription = useCreateAgriculturePrescription();
   const approvePrescription = useApproveAgriculturePrescription();
   const createExport = useCreateAgricultureExport();
   const download = useGetAgricultureExportDownload();
   const [ruleId, setRuleId] = useState("");
   const [link, setLink] = useState<string | null>(null);
+  const [assigningActionId, setAssigningActionId] = useState<string | null>(null);
   return (
     <Paper variant="outlined" sx={{ p: 1.5 }}>
       <Stack spacing={1.25}>
@@ -45,10 +49,20 @@ export function AgricultureActionExportPanel({ runId }: { runId: string }) {
         </Typography>
         <InspectionActionPanel
           actions={actions.data ?? []}
-          loading={plan.isPending}
+          loading={plan.isPending || updateRoute.isPending}
           onGenerate={() => plan.mutate({ runId, payload: {} })}
           onReview={(id, status) => approveAction.mutate({ id, runId, status })}
-          onAssign={(id) => { const value = window.prompt("Reviewer user id"); if (value) assignAction.mutate({ id, runId, payload: { assigned_to_user_id: Number(value), reason: "Inspection action assignment" } }); }}
+          onAssign={(id) => setAssigningActionId(id)}
+          onRouteChange={(payload) => updateRoute.mutate({ runId, payload })}
+        />
+        <AssignReviewerDialog
+          open={Boolean(assigningActionId)}
+          pending={assignAction.isPending}
+          onClose={() => setAssigningActionId(null)}
+          onAssign={(userId) => {
+            if (!assigningActionId) return;
+            assignAction.mutate({ id: assigningActionId, runId, payload: { assigned_to_user_id: userId, reason: "Signed-in reviewer assignment" } }, { onSuccess: () => setAssigningActionId(null) });
+          }}
         />
         {plan.error ? (
           <Alert severity="warning">

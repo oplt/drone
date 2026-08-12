@@ -8,6 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { selectDetectionEvidence } from "../../video-analysis/evidenceSelection";
 import { useEffect, useMemo, useState } from "react";
 import {
   useAgricultureAnalysisQuality,
@@ -78,11 +79,7 @@ export function AgricultureReviewWorkspace({
 
   useEffect(() => {
     if (selected?.evidence_ids.length)
-      window.dispatchEvent(
-        new CustomEvent("agriculture:evidence-select", {
-          detail: { evidenceIds: selected.evidence_ids },
-        }),
-      );
+      selectDetectionEvidence(selected.evidence_ids[0]);
   }, [selected]);
 
   if (!runId)

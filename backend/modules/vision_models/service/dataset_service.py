@@ -6,6 +6,7 @@ import shutil
 import zipfile
 from collections import defaultdict
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -15,7 +16,12 @@ import numpy as np
 import yaml
 
 from backend.modules.vision_models.models import DatasetImage, DatasetVersion, VisionClass
-from backend.modules.vision_models.service.frame_curation import assess_quality, average_hash
+from backend.modules.vision_models.service.frame_curation import (
+    MAX_HASH_DISTANCE,
+    assess_quality,
+    average_hash,
+    hash_distance,
+)
 from backend.modules.vision_models.service.storage import VisionStorage
 
 
@@ -117,14 +123,16 @@ def _split_counts(total: int) -> tuple[int, int, int]:
     return train, val, test
 
 
-def assign_deterministic_splits(images: list[DatasetImage]) -> None:
+def assign_deterministic_splits(
+    images: list[DatasetImage], *, temporal_exclusion_buffer: int = 1
+) -> dict[str, Any]:
     """Assign source-safe splits; a single source uses contiguous capture blocks."""
     for image in images:
         if not image.selected:
             image.split = None
     selected = [image for image in images if image.selected]
     if not selected:
-        return
+        return {"held_boundary_frames": 0, "nearest_cross_split_similarity_count": 0}
     groups: dict[str, list[DatasetImage]] = defaultdict(list)
     for image in selected:
         groups[image.source_group].append(image)
@@ -147,7 +155,35 @@ def assign_deterministic_splits(images: list[DatasetImage]) -> None:
                 if index < train_count + val_count
                 else "test"
             )
-        return
+        held = 0
+        buffer = max(0, temporal_exclusion_buffer)
+        for boundary in (train_count, train_count + val_count):
+            for offset in range(buffer):
+                for index in (boundary - 1 - offset, boundary + offset):
+                    if not (0 <= index < len(ordered)):
+                        continue
+                    split = ordered[index].split
+                    if split is None:
+                        continue
+                    if sum(item.split == split for item in ordered) <= 1:
+                        continue
+                    ordered[index].split = None
+                    held += 1
+        leakage_count = 0
+        assigned = [item for item in ordered if item.split is not None]
+        for left, right in pairwise(assigned):
+            if (
+                left.split != right.split
+                and getattr(left, "perceptual_hash", None)
+                and getattr(right, "perceptual_hash", None)
+                and hash_distance(left.perceptual_hash, right.perceptual_hash)
+                <= MAX_HASH_DISTANCE
+            ):
+                leakage_count += 1
+        return {
+            "held_boundary_frames": held,
+            "nearest_cross_split_similarity_count": leakage_count,
+        }
 
     ordered_groups = sorted(
         groups.items(), key=lambda item: hashlib.sha256(item[0].encode()).hexdigest()
@@ -163,6 +199,7 @@ def assign_deterministic_splits(images: list[DatasetImage]) -> None:
         )
         for image in group_images:
             image.split = split
+    return {"held_boundary_frames": 0, "nearest_cross_split_similarity_count": 0}
 
 
 def dataset_manifest(dataset: DatasetVersion, images: list[DatasetImage]) -> dict[str, Any]:

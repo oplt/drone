@@ -9,6 +9,7 @@ type SaveVariables = {
   imageId: string;
   annotations: AnnotationInput[];
   reviewed: boolean;
+  expectedRevision: number;
 };
 
 function replaceCachedImage(
@@ -23,8 +24,8 @@ function replaceCachedImage(
 export function useSaveVisionAnnotations() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ imageId, annotations, reviewed }: SaveVariables) =>
-      saveVisionAnnotations(imageId, annotations, reviewed),
+    mutationFn: ({ imageId, annotations, reviewed, expectedRevision }: SaveVariables) =>
+      saveVisionAnnotations(imageId, annotations, reviewed, expectedRevision),
     onMutate: async (variables) => {
       const key = visionKeys.imagePage(variables.datasetId, variables.pageOffset);
       await client.cancelQueries({ queryKey: key });

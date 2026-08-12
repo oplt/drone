@@ -14,7 +14,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { AgricultureAccessibilityBoundary } from "../components/AgricultureAccessibilityBoundary";
 import { AgricultureGeoJsonPreview } from "../components/AgricultureGeoJsonPreview";
 import { AgricultureAlertCenter } from "../components/AgricultureAlertCenter";
-import { AgricultureFieldCreateCard } from "../components/AgricultureFieldCreateCard";
+import { AgricultureFieldSetupWizard } from "../components/AgricultureFieldSetupWizard";
 import { useAgricultureFields } from "../hooks";
 
 export default function AgricultureFieldListPage() {
@@ -52,7 +52,7 @@ export default function AgricultureFieldListPage() {
             </Button>
           </Stack>
           <AgricultureAlertCenter />
-          <AgricultureFieldCreateCard />
+          <AgricultureFieldSetupWizard />
           {fields.isLoading ? (
             <Stack
               role="status"

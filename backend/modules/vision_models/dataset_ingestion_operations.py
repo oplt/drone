@@ -11,7 +11,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.infrastructure.runtime.blocking import run_blocking
-from backend.modules.agriculture.repository import agriculture_repository
+from backend.modules.agriculture.ports.telemetry import (
+    list_mission_telemetry_for_georef,
+)
 from backend.modules.identity.models import User
 from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
@@ -40,8 +42,11 @@ class DatasetIngestionOperations:
         repo = VisionRepository(db)
         await db.flush()
         images = await repo.all_dataset_images(dataset.id)
+        split_summary = (getattr(dataset, "curation_summary", None) or {}).get(
+            "split_leakage", {}
+        )
         if dataset.status != "locked":
-            assign_deterministic_splits(images)
+            split_summary = assign_deterministic_splits(images)
         selected = [image for image in images if image.selected]
         dataset.image_count = len(images)
         dataset.source_count = len({image.source_group for image in images})
@@ -54,6 +59,49 @@ class DatasetIngestionOperations:
         dataset.train_count = sum(image.split == "train" for image in selected)
         dataset.val_count = sum(image.split == "val" for image in selected)
         dataset.test_count = sum(image.split == "test" for image in selected)
+        quality_rows = [
+            image.metadata_json.get("quality", {})
+            for image in images
+            if isinstance(image.metadata_json, dict)
+        ]
+        blur = [
+            float(row["blur_variance"])
+            for row in quality_rows
+            if isinstance(row.get("blur_variance"), (int, float))
+        ]
+        exposure = [
+            float(row["mean_exposure"])
+            for row in quality_rows
+            if isinstance(row.get("mean_exposure"), (int, float))
+        ]
+        duplicate_clusters = {
+            image.metadata_json.get("duplicate_cluster_id")
+            for image in images
+            if isinstance(image.metadata_json, dict)
+            and image.metadata_json.get("duplicate_cluster_id")
+        }
+        dataset.curation_summary = {
+            "policy_version": "vision-data-quality.v1",
+            "duplicate_cluster_count": len(duplicate_clusters),
+            "split_leakage": split_summary,
+            "split_leakage_risk": bool(
+                split_summary.get("nearest_cross_split_similarity_count", 0)
+            ),
+            "blur": {
+                "minimum": min(blur) if blur else None,
+                "mean": sum(blur) / len(blur) if blur else None,
+            },
+            "exposure": {
+                "minimum": min(exposure) if exposure else None,
+                "maximum": max(exposure) if exposure else None,
+                "mean": sum(exposure) / len(exposure) if exposure else None,
+            },
+            "quality_flags": {
+                "split_leakage_risk": bool(
+                    split_summary.get("nearest_cross_split_similarity_count", 0)
+                )
+            },
+        }
         dataset.manifest_checksum = await run_blocking(
             write_manifest,
             dataset,
@@ -229,14 +277,18 @@ class DatasetIngestionOperations:
             timeout_s=900,
         )
         telemetry_samples = (
-            await agriculture_repository.list_telemetry(db, flight_id=video.mission_id)
+            await list_mission_telemetry_for_georef(
+                db, mission_id=video.mission_id
+            )
             if video.mission_id
             else []
         )
         telemetry = NearestTelemetryMatcher(
-            video.mission_id, telemetry_samples, video.created_at
+            video.mission_id,
+            telemetry_samples,
+            getattr(video, "captured_at", None) or video.created_at,
         )
-        for frame in result.selected:
+        for frame in result.frames:
             path = Path(frame.path)
             thumbnail = self.storage.project_path(
                 dataset.project_id,
@@ -273,6 +325,7 @@ class DatasetIngestionOperations:
                     sha256=hashlib.sha256(content).hexdigest(),
                     perceptual_hash=frame.perceptual_hash,
                     quality_score=frame.quality.score,
+                    selected=frame.selected,
                     lat=geo.lat,
                     lon=geo.lon,
                     altitude_m=geo.altitude_m,
@@ -284,6 +337,12 @@ class DatasetIngestionOperations:
                         },
                         "telemetry_match_quality": geo.quality,
                         "telemetry_error_ms": geo.error_ms,
+                        "capture_time_source": (
+                            getattr(video, "capture_time_source", None)
+                            if getattr(video, "captured_at", None)
+                            else "upload_time_fallback"
+                        ),
+                        "duplicate_cluster_id": frame.duplicate_cluster_id,
                     },
                 )
             )
@@ -313,5 +372,7 @@ class DatasetIngestionOperations:
             "rejected_duplicates": result.rejected_duplicates,
             "selected_frames": len(result.selected),
             "effective_interval_seconds": result.effective_interval_seconds,
+            "duplicate_cluster_count": result.duplicate_cluster_count,
+            "comparison_count": result.comparison_count,
             "dataset": self.dataset_output(dataset),
         }

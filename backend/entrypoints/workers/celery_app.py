@@ -76,7 +76,14 @@ celery_app.conf.update(
         "warehouse_mapping.process_job": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "warehouse_mapping.extract_structure": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "video_analysis.process_job": {"queue": CELERY_VIDEO_ANALYSIS_QUEUE},
+        "video_analysis.reconcile_stale_jobs": {"queue": CELERY_VIDEO_ANALYSIS_QUEUE},
+        "video_analysis.reconcile_staged_storage_objects": {
+            "queue": CELERY_VIDEO_ANALYSIS_QUEUE
+        },
         "vision_models.train": {"queue": CELERY_VISION_TRAINING_QUEUE},
+        "vision_models.reconcile_stale_training_runs": {
+            "queue": CELERY_VISION_TRAINING_QUEUE
+        },
         "agriculture.process_run": {"queue": CELERY_AGRICULTURE_INFERENCE_QUEUE},
         "agriculture.stage.ingest": {"queue": CELERY_AGRICULTURE_QUEUES["ingest"]},
         "agriculture.stage.quality": {"queue": CELERY_AGRICULTURE_QUEUES["quality"]},
@@ -134,6 +141,18 @@ celery_app.conf.beat_schedule = {
     "cleanup-agriculture-retention": {
         "task": "agriculture.retention_cleanup",
         "schedule": 3600.0,
+    },
+    "reconcile-stale-video-analysis-jobs": {
+        "task": "video_analysis.reconcile_stale_jobs",
+        "schedule": 60.0,
+    },
+    "reconcile-staged-video-storage-objects": {
+        "task": "video_analysis.reconcile_staged_storage_objects",
+        "schedule": 300.0,
+    },
+    "reconcile-stale-vision-training-runs": {
+        "task": "vision_models.reconcile_stale_training_runs",
+        "schedule": 60.0,
     },
 }
 celery_app.conf.timezone = "UTC"

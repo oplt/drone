@@ -1,0 +1,18 @@
+{
+  "bands": [
+    {
+      "band_name": "red",
+      "calibration_id": null,
+      "alignment_status": "pass",
+      "quality_status": "pass",
+      "reflectance_panel": {}
+    },
+    {
+      "band_name": "nir",
+      "calibration_id": "cal-1",
+      "alignment_status": "pass",
+      "quality_status": "pass",
+      "reflectance_panel": {"panel_id": "p1"}
+    }
+  ]
+}

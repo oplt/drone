@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAgricultureObservationAudits, useAgricultureObservationFeedback, useAssignAgricultureObservation, useCreateAgricultureObservationAlert, useDecideAgricultureObservationFeedback, useReviewAgricultureObservation, useSubmitAgricultureObservationFeedback } from "../hooks";
 import type { AgricultureObservation } from "../types";
 import { EvidenceFrameCarousel } from "./EvidenceFrameCarousel";
+import { AssignReviewerDialog } from "./AssignReviewerDialog";
 
 export function ObservationReviewDrawer({
   observation,
@@ -12,8 +13,7 @@ export function ObservationReviewDrawer({
   const [note, setNote] = useState("");
   const [correctionLabel, setCorrectionLabel] = useState("");
   const [correctionSeverity, setCorrectionSeverity] = useState("");
-  const [assignee, setAssignee] = useState("");
-  const [dueAt, setDueAt] = useState("");
+  const [assignOpen, setAssignOpen] = useState(false);
   const review = useReviewAgricultureObservation();
   const assign = useAssignAgricultureObservation();
   const feedback = useAgricultureObservationFeedback(observation?.id ?? null);
@@ -113,11 +113,13 @@ export function ObservationReviewDrawer({
           Relabel
         </Button>
       </Stack>
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-        <TextField size="small" label="Reviewer user id" value={assignee} onChange={(event) => setAssignee(event.target.value)} inputProps={{ inputMode: "numeric" }} />
-        <TextField size="small" type="datetime-local" label="Review due" value={dueAt} onChange={(event) => setDueAt(event.target.value)} InputLabelProps={{ shrink: true }} />
-        <Button size="small" variant="outlined" disabled={assign.isPending} onClick={() => assign.mutate({ id: observation.id, payload: { assigned_to_user_id: assignee ? Number(assignee) : null, review_due_at: dueAt ? new Date(dueAt).toISOString() : null, reason: "Reviewer assignment" } })}>Assign</Button>
-      </Stack>
+      <Button size="small" variant="outlined" disabled={assign.isPending} onClick={() => setAssignOpen(true)}>Assign reviewer</Button>
+      <AssignReviewerDialog
+        open={assignOpen}
+        pending={assign.isPending}
+        onClose={() => setAssignOpen(false)}
+        onAssign={(userId, dueAt) => assign.mutate({ id: observation.id, payload: { assigned_to_user_id: userId, review_due_at: dueAt, reason: "Signed-in reviewer assignment" } }, { onSuccess: () => setAssignOpen(false) })}
+      />
       <Stack spacing={0.75} sx={{ p: 1, border: 1, borderColor: "divider", borderRadius: 1 }}>
         <Typography variant="caption" fontWeight={700}>Reviewer correction or disagreement</Typography>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>

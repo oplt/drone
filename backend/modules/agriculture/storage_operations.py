@@ -11,6 +11,20 @@ from backend.core.config.runtime import settings
 from backend.modules.agriculture.storage import agriculture_storage
 
 
+def _cleanup_restore_drill_key(key: str) -> None:
+    """Delete only a validated drill object and its adapter-owned empty parents."""
+    agriculture_storage.validate_tenant_key(
+        key,
+        org_id=0,
+        resource=(
+            "backups/agriculture/drill"
+            if "/backups/agriculture/drill/" in key
+            else "operations/drill"
+        ),
+    )
+    agriculture_storage.delete(key)
+
+
 def storage_readiness() -> dict[str, Any]:
     """Return actionable storage checks without exposing credentials or object keys."""
     checks: list[dict[str, Any]] = []
@@ -90,4 +104,4 @@ def local_restore_drill() -> dict[str, Any]:
     finally:
         for candidate in (key, backup_key):
             with suppress(Exception):
-                agriculture_storage.delete(candidate)
+                _cleanup_restore_drill_key(candidate)

@@ -5,12 +5,14 @@ import hashlib
 import json
 import logging
 import shutil
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import selectinload
 
 from backend.core.database.session import Session
+from backend.modules.vision_models.config import vision_settings
 from backend.modules.vision_models.models import (
     DatasetImage,
     DatasetVersion,
@@ -30,22 +32,125 @@ from backend.modules.vision_models.service.trainers import (
 logger = logging.getLogger(__name__)
 
 
-async def update_training_progress(
+class TrainingCancelled(RuntimeError):
+    pass
+
+
+class TrainingLeaseLost(RuntimeError):
+    pass
+
+
+async def claim_training_run(run_id: str, lease_owner: str) -> int | None:
+    now = datetime.now(UTC)
+    async with Session() as db:
+        result = await db.execute(
+            update(TrainingRun)
+            .where(TrainingRun.id == run_id, TrainingRun.status == "queued")
+            .values(
+                status="running",
+                attempt=TrainingRun.attempt + 1,
+                lease_owner=lease_owner,
+                heartbeat_at=now,
+                lease_expires_at=now
+                + timedelta(seconds=vision_settings.vision_training_lease_seconds),
+                started_at=now,
+                finished_at=None,
+                error=None,
+                progress=1.0,
+                terminal_reason_code=None,
+                terminal_stage=None,
+            )
+            .returning(TrainingRun.attempt)
+            .execution_options(synchronize_session=False)
+        )
+        attempt = result.scalar_one_or_none()
+        await db.commit()
+        return int(attempt) if attempt is not None else None
+
+
+async def training_checkpoint(
     run_id: str,
     *,
+    lease_owner: str,
+    attempt: int,
     epoch: int,
     total_epochs: int,
     metrics: dict[str, float],
 ) -> None:
     async with Session() as db:
-        run = await db.get(TrainingRun, run_id)
-        if run is None or run.status != "running":
-            return
-        run.current_epoch = epoch
+        run = await db.scalar(
+            select(TrainingRun)
+            .where(
+                TrainingRun.id == run_id,
+                TrainingRun.lease_owner == lease_owner,
+                TrainingRun.attempt == attempt,
+            )
+            .with_for_update()
+        )
+        if run is None:
+            raise TrainingLeaseLost("Training lease ownership changed")
+        if run.status == "cancelling":
+            run.status = "cancelled"
+            run.finished_at = datetime.now(UTC)
+            run.heartbeat_at = None
+            run.lease_expires_at = None
+            run.lease_owner = None
+            run.terminal_reason_code = "USER_CANCELLED"
+            run.terminal_stage = "training"
+            await db.commit()
+            raise TrainingCancelled("Training was cancelled")
+        if run.status != "running":
+            raise TrainingLeaseLost("Training run is no longer active")
+        now = datetime.now(UTC)
+        run.current_epoch = max(run.current_epoch, epoch)
         run.progress = round(min(95.0, epoch / max(1, total_epochs) * 90.0), 2)
+        run.heartbeat_at = now
+        run.lease_expires_at = now + timedelta(
+            seconds=vision_settings.vision_training_lease_seconds
+        )
         if metrics:
             run.metrics = {**run.metrics, "training": metrics}
         await db.commit()
+
+
+async def heartbeat_training_run(
+    run_id: str, *, lease_owner: str, attempt: int
+) -> None:
+    now = datetime.now(UTC)
+    async with Session() as db:
+        result = await db.execute(
+            update(TrainingRun)
+            .where(
+                TrainingRun.id == run_id,
+                TrainingRun.status.in_(("running", "cancelling")),
+                TrainingRun.lease_owner == lease_owner,
+                TrainingRun.attempt == attempt,
+            )
+            .values(
+                heartbeat_at=now,
+                lease_expires_at=now
+                + timedelta(seconds=vision_settings.vision_training_lease_seconds),
+            )
+        )
+        await db.commit()
+        if int(getattr(result, "rowcount", 0) or 0) != 1:
+            raise TrainingLeaseLost("Training lease ownership changed")
+
+
+async def _heartbeat_loop(
+    run_id: str, *, lease_owner: str, attempt: int, stopped: asyncio.Event
+) -> None:
+    while True:
+        try:
+            await asyncio.wait_for(
+                stopped.wait(),
+                timeout=vision_settings.vision_training_heartbeat_interval_seconds,
+            )
+            return
+        except TimeoutError:
+            await heartbeat_training_run(
+                run_id, lease_owner=lease_owner, attempt=attempt
+            )
 
 
 class VisionTrainingService:
@@ -58,20 +163,53 @@ class VisionTrainingService:
         self.trainer = trainer or UltralyticsTrainer()
         self.storage = storage
 
-    async def run(self, run_id: str) -> dict[str, str]:
+    async def run(
+        self, run_id: str, *, lease_owner: str | None = None
+    ) -> dict[str, str]:
+        owner = lease_owner or str(uuid4())
+        attempt = await claim_training_run(run_id, owner)
+        if attempt is None:
+            async with Session() as db:
+                existing = await db.get(TrainingRun, run_id)
+                if existing is None:
+                    raise ValueError("Training run not found")
+                if existing.status == "completed" and existing.model_version is not None:
+                    return {
+                        "run_id": existing.id,
+                        "model_version_id": existing.model_version.id,
+                    }
+                return {"run_id": existing.id, "status": existing.status}
         try:
-            return await self._run(run_id)
+            return await self._run(run_id, lease_owner=owner, attempt=attempt)
+        except TrainingCancelled:
+            return {"run_id": run_id, "status": "cancelled"}
         except Exception as exc:
             async with Session() as db:
-                failed = await db.get(TrainingRun, run_id)
-                if failed is not None and failed.status not in {"cancelled", "completed"}:
-                    failed.status = "failed"
-                    failed.error = str(exc)[:4000]
-                    failed.finished_at = datetime.now(UTC)
-                    await db.commit()
+                await db.execute(
+                    update(TrainingRun)
+                    .where(
+                        TrainingRun.id == run_id,
+                        TrainingRun.status == "running",
+                        TrainingRun.lease_owner == owner,
+                        TrainingRun.attempt == attempt,
+                    )
+                    .values(
+                        status="failed",
+                        error=str(exc)[:4000],
+                        finished_at=datetime.now(UTC),
+                        lease_owner=None,
+                        heartbeat_at=None,
+                        lease_expires_at=None,
+                        terminal_reason_code="TRAINING_FAILED",
+                        terminal_stage="training",
+                    )
+                )
+                await db.commit()
             raise
 
-    async def _run(self, run_id: str) -> dict[str, str]:
+    async def _run(
+        self, run_id: str, *, lease_owner: str, attempt: int
+    ) -> dict[str, str]:
         async with Session() as db:
             query = (
                 select(TrainingRun)
@@ -87,17 +225,12 @@ class VisionTrainingService:
             run = (await db.execute(query)).scalar_one_or_none()
             if run is None:
                 raise ValueError("Training run not found")
-            if run.status == "completed" and run.model_version is not None:
-                return {"run_id": run.id, "model_version_id": run.model_version.id}
-            if run.status == "cancelled":
-                return {"run_id": run.id, "status": "cancelled"}
-
-            run.status = "running"
-            run.started_at = datetime.now(UTC)
-            run.finished_at = None
-            run.error = None
-            run.progress = 1.0
-            await db.commit()
+            if (
+                run.status != "running"
+                or run.lease_owner != lease_owner
+                or run.attempt != attempt
+            ):
+                return {"run_id": run.id, "status": run.status}
 
             project = run.project
             dataset = run.dataset
@@ -127,8 +260,10 @@ class VisionTrainingService:
 
             def progress_callback(epoch: int, total: int, metrics: dict[str, float]) -> None:
                 future = asyncio.run_coroutine_threadsafe(
-                    update_training_progress(
+                    training_checkpoint(
                         run.id,
+                        lease_owner=lease_owner,
+                        attempt=attempt,
                         epoch=epoch,
                         total_epochs=total,
                         metrics=metrics,
@@ -136,22 +271,40 @@ class VisionTrainingService:
                     loop,
                 )
 
-                def report_progress_failure(completed) -> None:
-                    error = completed.exception()
-                    if error is not None:
-                        logger.warning(
-                            "Training progress update failed run_id=%s error=%s",
-                            run.id,
-                            error,
-                        )
-
-                future.add_done_callback(report_progress_failure)
+                future.result(timeout=15)
 
             try:
-                result = await asyncio.to_thread(self.trainer.train, request, progress_callback)
+                heartbeat_stopped = asyncio.Event()
+                heartbeat_task = asyncio.create_task(
+                    _heartbeat_loop(
+                        run.id,
+                        lease_owner=lease_owner,
+                        attempt=attempt,
+                        stopped=heartbeat_stopped,
+                    )
+                )
+                try:
+                    result = await asyncio.to_thread(
+                        self.trainer.train, request, progress_callback
+                    )
+                finally:
+                    heartbeat_stopped.set()
+                    await heartbeat_task
+                await training_checkpoint(
+                    run.id,
+                    lease_owner=lease_owner,
+                    attempt=attempt,
+                    epoch=run.epochs,
+                    total_epochs=run.epochs,
+                    metrics={},
+                )
                 await db.refresh(run)
-                if run.status == "cancelled":
-                    return {"run_id": run.id, "status": "cancelled"}
+                if (
+                    run.status != "running"
+                    or run.lease_owner != lease_owner
+                    or run.attempt != attempt
+                ):
+                    raise TrainingLeaseLost("Training lease was lost before artifact publish")
                 model = await db.scalar(
                     select(VisionModel).where(VisionModel.project_id == project.id)
                 )
@@ -215,15 +368,48 @@ class VisionTrainingService:
                 run.metrics = result.metrics
                 run.device = result.device
                 run.finished_at = datetime.now(UTC)
+                run.lease_owner = None
+                run.heartbeat_at = None
+                run.lease_expires_at = None
+                run.terminal_reason_code = "COMPLETED"
+                run.terminal_stage = "completed"
                 await db.commit()
                 return {"run_id": run.id, "model_version_id": version.id}
-            except Exception as exc:
+            except Exception:
                 await db.rollback()
-                failed = await db.get(TrainingRun, run_id)
-                if failed is not None and failed.status != "cancelled":
-                    failed.status = "failed"
-                    failed.error = str(exc)[:4000]
-                    failed.finished_at = datetime.now(UTC)
-                    await db.commit()
                 logger.exception("Vision training failed run_id=%s", run_id)
                 raise
+
+
+async def reconcile_stale_training_runs(*, limit: int = 100) -> int:
+    now = datetime.now(UTC)
+    async with Session() as db:
+        runs = list(
+            (
+                await db.scalars(
+                    select(TrainingRun)
+                    .where(
+                        TrainingRun.status.in_(("running", "cancelling")),
+                        TrainingRun.lease_expires_at.is_not(None),
+                        TrainingRun.lease_expires_at <= now,
+                    )
+                    .order_by(TrainingRun.lease_expires_at)
+                    .with_for_update(skip_locked=True)
+                    .limit(max(1, min(limit, 500)))
+                )
+            ).all()
+        )
+        for run in runs:
+            run.status = "failed"
+            run.error = "Training worker heartbeat expired. Start a new training run."
+            run.finished_at = now
+            run.lease_owner = None
+            run.heartbeat_at = None
+            run.lease_expires_at = None
+            run.terminal_reason_code = "WORKER_LEASE_EXPIRED"
+            run.terminal_stage = "worker_lease"
+        if runs:
+            await db.commit()
+        else:
+            await db.rollback()
+        return len(runs)

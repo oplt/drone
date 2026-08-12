@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import base64
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 from uuid import uuid4
 
 import aiofiles
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
@@ -14,7 +18,11 @@ from backend.modules.identity.models import User
 from backend.modules.missions.repository import mission_runtime_repo
 from backend.modules.video_analysis.model_storage import resolve_model_path
 from backend.modules.video_analysis.repository import VideoAnalysisRepository
-from backend.modules.video_analysis.schemas import CUSTOM_MODEL_PREFIX, AnalyzeVideoRequest
+from backend.modules.video_analysis.schemas import (
+    CUSTOM_MODEL_PREFIX,
+    AnalyzeVideoRequest,
+    VideoDetectionOut,
+)
 from backend.modules.video_analysis.service.queue import VideoAnalysisQueue, VideoAnalysisQueueError
 from backend.modules.vision_models.application import VisionApplication, VisionNotFound
 
@@ -127,12 +135,26 @@ class VideoAnalysisApplication:
             raise
 
     async def start_analysis(
-        self, db: AsyncSession, *, video_id: str, request: AnalyzeVideoRequest, user: User
+        self,
+        db: AsyncSession,
+        *,
+        video_id: str,
+        request: AnalyzeVideoRequest,
+        user: User,
+        orchestration_key: str | None = None,
     ):
         repo = VideoAnalysisRepository(db)
         video = await repo.get_video_for_user(video_id, user)
         if video is None:
             raise VideoAnalysisNotFound("Video not found")
+        if orchestration_key:
+            existing = await repo.get_job_by_orchestration_key(orchestration_key)
+            if existing is not None:
+                if existing.video_id != video.id or existing.org_id != video.org_id:
+                    raise VideoAnalysisConflict(
+                        "Analysis idempotency key belongs to different input media."
+                    )
+                return existing
         model_name = request.model_name
         if request.model_version_id:
             try:
@@ -154,20 +176,38 @@ class VideoAnalysisApplication:
                 "Custom model is not installed. Add the selected .pt file under "
                 "backend/storage/ml_models/ or select a built-in YOLO26 model."
             )
-        job = await repo.create_job(
-            video=video,
-            model_name=model_name,
-            model_version_id=request.model_version_id,
-            small_object_mode=request.small_object_mode,
-            tracking_enabled=request.tracking_enabled,
-            tracker_type=request.tracker_type,
-            frame_stride_seconds=request.frame_stride_seconds,
-            confidence_threshold=request.confidence_threshold,
-        )
+        try:
+            job = await repo.create_job(
+                video=video,
+                model_name=model_name,
+                model_version_id=request.model_version_id,
+                small_object_mode=request.small_object_mode,
+                tracking_enabled=request.tracking_enabled,
+                tracker_type=request.tracker_type,
+                frame_stride_seconds=request.frame_stride_seconds,
+                confidence_threshold=request.confidence_threshold,
+                orchestration_key=orchestration_key,
+            )
+        except IntegrityError:
+            await db.rollback()
+            existing = (
+                await repo.get_job_by_orchestration_key(orchestration_key)
+                if orchestration_key
+                else None
+            )
+            if existing is None or existing.video_id != video.id:
+                raise
+            return existing
         try:
             self.queue.enqueue(job_id=job.id)
         except VideoAnalysisQueueError as exc:
-            await repo.mark_job_failed(job, "Analysis worker unavailable.")
+            await repo.mark_job_failed(
+                job,
+                "Analysis worker unavailable.",
+                video=video,
+                reason_code="QUEUE_UNAVAILABLE",
+                stage="queue",
+            )
             raise VideoAnalysisConflict("Analysis worker unavailable. Retry shortly.") from exc
         return job
 
@@ -177,11 +217,117 @@ class VideoAnalysisApplication:
             raise VideoAnalysisNotFound("Analysis job not found")
         return job
 
+    async def cancel_job(self, db: AsyncSession, *, job_id: str, user: User):
+        job = await VideoAnalysisRepository(db).cancel_job(job_id, user=user)
+        if job is None:
+            raise VideoAnalysisNotFound("Analysis job not found")
+        return job
+
     async def list_detections(self, db: AsyncSession, *, job_id: str, user: User, limit: int):
         repo = VideoAnalysisRepository(db)
         if await repo.get_job_for_user(job_id, user) is None:
             raise VideoAnalysisNotFound("Analysis job not found")
         return await repo.list_detections_for_user(job_id, user, limit=limit)
+
+    @staticmethod
+    def _decode_cursor(cursor: str | None) -> tuple[float, str] | None:
+        if not cursor:
+            return None
+        try:
+            value = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
+            return float(value[0]), str(value[1])
+        except (ValueError, TypeError, json.JSONDecodeError) as exc:
+            raise VideoAnalysisConflict("Invalid detection cursor") from exc
+
+    @staticmethod
+    def _encode_cursor(timestamp: float, detection_id: str) -> str:
+        payload = json.dumps([timestamp, detection_id], separators=(",", ":")).encode()
+        return base64.urlsafe_b64encode(payload).decode()
+
+    async def page_detections(
+        self,
+        db: AsyncSession,
+        *,
+        job_id: str,
+        user: User,
+        limit: int,
+        cursor: str | None,
+        since_id: str | None,
+    ) -> dict:
+        repo = VideoAnalysisRepository(db)
+        job = await repo.get_job_for_user(job_id, user)
+        if job is None:
+            raise VideoAnalysisNotFound("Analysis job not found")
+        rows, has_more, total = await repo.page_detections_for_user(
+            job_id,
+            user,
+            limit=limit,
+            after=self._decode_cursor(cursor),
+            since_id=since_id,
+        )
+        last = rows[-1] if rows else None
+        return {
+            "items": rows,
+            "next_cursor": (
+                self._encode_cursor(last.timestamp_seconds, last.id)
+                if has_more and last is not None
+                else None
+            ),
+            "has_more": has_more,
+            "job_version": job.attempt,
+            "status": job.status,
+            "total_estimate": total,
+        }
+
+    async def detection_aggregates(
+        self,
+        db: AsyncSession,
+        *,
+        job_id: str,
+        user: User,
+        bucket_seconds: float,
+    ) -> dict:
+        repo = VideoAnalysisRepository(db)
+        if await repo.get_job_for_user(job_id, user) is None:
+            raise VideoAnalysisNotFound("Analysis job not found")
+        return {
+            "job_id": job_id,
+            "bucket_seconds": bucket_seconds,
+            "buckets": await repo.aggregate_detections(
+                job_id, user, bucket_seconds=bucket_seconds
+            ),
+        }
+
+    async def resolve_evidence(
+        self, db: AsyncSession, *, detection_id: str, user: User
+    ) -> dict:
+        detection = await VideoAnalysisRepository(db).get_detection_for_user(
+            detection_id, user
+        )
+        if detection is None:
+            raise VideoAnalysisNotFound("Detection not found")
+        output = VideoDetectionOut.model_validate(detection)
+        return {
+            "detection_id": detection.id,
+            "evidence": output.evidence,
+            "evidence_url": output.evidence_url,
+            "evidence_path": None,
+            "resolved_at": datetime.now(UTC),
+        }
+
+    async def resolve_evidence_content_path(
+        self, db: AsyncSession, *, detection_id: str, user: User
+    ) -> tuple[Path, str]:
+        detection = await VideoAnalysisRepository(db).get_detection_for_user(
+            detection_id, user
+        )
+        storage = detection.storage_object if detection is not None else None
+        if storage is None or storage.state != "final":
+            raise VideoAnalysisNotFound("Evidence is unavailable")
+        path = Path(storage.backend_key)
+        if not path.is_file():
+            raise VideoAnalysisNotFound("Evidence is unavailable")
+        return path, storage.mime
 
     async def get_summary(self, db: AsyncSession, *, job_id: str, user: User):
         repo = VideoAnalysisRepository(db)

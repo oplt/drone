@@ -7,13 +7,47 @@ export function InspectionActionPanel({
   onGenerate,
   onReview,
   onAssign,
+  onRouteChange,
 }: {
   actions: AgricultureInspectionAction[];
   loading: boolean;
   onGenerate: () => void;
   onReview: (id: string, status: "approved" | "rejected") => void;
   onAssign: (id: string) => void;
+  onRouteChange?: (payload: {
+    ordered_action_ids: string[];
+    removed_action_ids?: string[];
+    reason?: string;
+  }) => void;
 }) {
+  const active = actions
+    .filter((action) => action.status !== "rejected")
+    .slice()
+    .sort((a, b) => a.priority_rank - b.priority_rank);
+
+  const move = (actionId: string, direction: -1 | 1) => {
+    if (!onRouteChange) return;
+    const index = active.findIndex((action) => action.id === actionId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= active.length) return;
+    const next = active.slice();
+    const [item] = next.splice(index, 1);
+    next.splice(target, 0, item);
+    onRouteChange({
+      ordered_action_ids: next.map((action) => action.id),
+      reason: direction < 0 ? "Moved up in inspection route" : "Moved down in inspection route",
+    });
+  };
+
+  const removeFromRoute = (actionId: string) => {
+    if (!onRouteChange) return;
+    onRouteChange({
+      ordered_action_ids: active.filter((action) => action.id !== actionId).map((action) => action.id),
+      removed_action_ids: [actionId],
+      reason: "Removed from inspection route",
+    });
+  };
+
   return (
     <Stack
       component="section"
@@ -42,8 +76,8 @@ export function InspectionActionPanel({
           {loading ? "Planning…" : "Generate inspection list"}
         </Button>
       </Stack>
-      {actions.length ? (
-        actions.map((action) => (
+      {active.length ? (
+        active.map((action, index) => (
           <Stack
             key={action.id}
             direction={{ xs: "column", sm: "row" }}
@@ -69,6 +103,23 @@ export function InspectionActionPanel({
               Confidence {Math.round(action.confidence * 100)}% · severity{" "}
               {Math.round(action.severity * 100)}%
             </Typography>
+            {onRouteChange ? (
+              <Stack direction="row">
+                <Button size="small" disabled={index === 0} onClick={() => move(action.id, -1)}>
+                  Move up
+                </Button>
+                <Button
+                  size="small"
+                  disabled={index === active.length - 1}
+                  onClick={() => move(action.id, 1)}
+                >
+                  Move down
+                </Button>
+                <Button size="small" color="warning" onClick={() => removeFromRoute(action.id)}>
+                  Remove from route
+                </Button>
+              </Stack>
+            ) : null}
             {action.status === "draft" ? (
               <Stack direction="row">
                 <Button

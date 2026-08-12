@@ -22,6 +22,7 @@ function renderControls(overrides: Partial<AnalysisControlsProps> = {}) {
       name: "Tomato ripeness",
       crop: "tomato",
       task_type: "detection",
+      capability_id: "object_detection",
       version: 3,
       architecture: "yolo26s.pt",
       status: "production",

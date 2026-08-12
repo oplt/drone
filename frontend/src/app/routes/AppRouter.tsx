@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react";
+import type { ReactElement } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import type { HomeProps } from "../../modules/session/views/LandingPage";
 import { GuestRoute } from "./GuestRoute";
@@ -75,6 +77,21 @@ const VideoAnalysisPage = lazyWithStaleChunkReload(
 const ObservabilityPage = lazyWithStaleChunkReload(
   () => import("../../modules/observability"),
 );
+const MapProviders = lazy(() => import("../providers/MapProviders"));
+
+function renderMapRoute(element: ReactElement) {
+  return (
+    <Suspense
+      fallback={
+        <div role="status" aria-live="polite" aria-busy="true">
+          Loading map services…
+        </div>
+      }
+    >
+      <MapProviders>{renderLazyRoute(element)}</MapProviders>
+    </Suspense>
+  );
+}
 
 export function AppRouter() {
   return (
@@ -121,41 +138,41 @@ export function AppRouter() {
           />
           <Route
             path="controlled"
-            element={renderLazyRoute(<ControlledFlightPage />)}
+            element={renderMapRoute(<ControlledFlightPage />)}
           />
           <Route path="account" element={renderLazyRoute(<AccountPage />)} />
           <Route
             path="photogrammetry"
-            element={renderLazyRoute(<PhotoGrammetryPage />)}
+            element={renderMapRoute(<PhotoGrammetryPage />)}
           />
           <Route
             path="animalfarm"
-            element={renderLazyRoute(<AnimalFarmPage />)}
+            element={renderMapRoute(<AnimalFarmPage />)}
           />
           <Route
             path="privatepatrol"
-            element={renderLazyRoute(<PrivatePatrolPage />)}
+            element={renderMapRoute(<PrivatePatrolPage />)}
           />
           <Route
             path="property-patrol"
-            element={renderLazyRoute(<PropertyPatrolPage />)}
+            element={renderMapRoute(<PropertyPatrolPage />)}
           />
-          <Route path="field" element={renderLazyRoute(<FieldPage />)} />
+          <Route path="field" element={renderMapRoute(<FieldPage />)} />
           <Route
             path="agriculture/fields"
-            element={renderLazyRoute(<AgricultureFieldListPage />)}
+            element={renderMapRoute(<AgricultureFieldListPage />)}
           />
           <Route
             path="agriculture/fields/:fieldId"
-            element={renderLazyRoute(<AgricultureFieldDetailPage />)}
+            element={renderMapRoute(<AgricultureFieldDetailPage />)}
           />
           <Route
             path="agriculture/flights/:flightId"
-            element={renderLazyRoute(<AgricultureFlightPage />)}
+            element={renderMapRoute(<AgricultureFlightPage />)}
           />
           <Route
             path="agriculture/analysis/:runId"
-            element={renderLazyRoute(<AgricultureAnalysisPage />)}
+            element={renderMapRoute(<AgricultureAnalysisPage />)}
           />
           <Route
             path="agriculture/vision-models"
@@ -167,7 +184,7 @@ export function AppRouter() {
           />
           <Route
             path="warehouse"
-            element={renderLazyRoute(<WarehousePage />)}
+            element={renderMapRoute(<WarehousePage />)}
           />
           <Route path="admin" element={renderLazyRoute(<AdminPage />)} />
           <Route

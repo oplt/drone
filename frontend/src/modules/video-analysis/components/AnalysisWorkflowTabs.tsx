@@ -50,7 +50,12 @@ export function AnalysisWorkflowTabs(props: AnalysisWorkflowTabsProps) {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
               Track job progress and review when detections are ready.
             </Typography>
-            <AnalysisResultsSection job={props.job} detectionCount={props.detectionCount} />
+            <AnalysisResultsSection
+              job={props.job}
+              detectionCount={props.detectionCount}
+              cancelling={props.cancelling}
+              onCancel={props.onCancel}
+            />
           </Box>
         ) : null}
       </CardContent>

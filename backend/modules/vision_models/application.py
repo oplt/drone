@@ -1,6 +1,7 @@
 from backend.modules.vision_models.annotation_operations import AnnotationOperations
 from backend.modules.vision_models.application_base import (
     VisionApplicationBase,
+    VisionAnnotationConflict,
     VisionConflict,
     VisionNotFound,
     VisionValidationError,
@@ -25,6 +26,7 @@ class VisionApplication(
 
 __all__ = [
     "VisionApplication",
+    "VisionAnnotationConflict",
     "VisionConflict",
     "VisionNotFound",
     "VisionValidationError",

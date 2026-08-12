@@ -18,7 +18,7 @@ const readiness = [
   },
   {
     title: 'Sensor data quality',
-    description: 'Consistent NDVI/RGB calibration with automated anomaly detection and alerts.',
+    description: 'RGB capture quality checks with optional research calibration paths for advanced sensors.',
     icon: <SensorsRoundedIcon />,
   },
   {

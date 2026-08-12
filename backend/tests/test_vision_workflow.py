@@ -8,16 +8,28 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from backend.modules.vision_models import annotation_operations, dataset_ingestion_operations
-from backend.modules.vision_models.application import VisionApplication, VisionNotFound
+from backend.modules.vision_models import (
+    annotation_operations,
+    dataset_ingestion_operations,
+    project_operations,
+    training_operations,
+)
+from backend.modules.vision_models.application import (
+    VisionAnnotationConflict,
+    VisionApplication,
+    VisionNotFound,
+)
 from backend.modules.vision_models.models import (
+    Annotation,
     DatasetImage,
     DatasetVersion,
     VisionClass,
     VisionProject,
 )
 from backend.modules.vision_models.schemas import AnnotationReplace
+from backend.modules.vision_models.service import frame_curation
 from backend.modules.vision_models.service.dataset_service import assign_deterministic_splits
+from backend.modules.vision_models.service.frame_curation import FrameQuality
 from backend.modules.vision_models.service.storage import VisionStorage
 from backend.modules.vision_models.service.trainers.ultralytics import _result_metrics
 
@@ -50,6 +62,7 @@ def vision_context(tmp_path, monkeypatch):
         selected=True,
         metadata_json={},
         annotation_status="unlabeled",
+        annotation_revision=0,
         created_at=datetime.now(UTC),
     )
     image.annotations = []
@@ -65,6 +78,12 @@ def vision_context(tmp_path, monkeypatch):
 
         async def all_dataset_images(self, dataset_id):
             return [image] if dataset_id == dataset.id else []
+
+        async def claim_annotation_revision(self, image_id, *, expected_revision):
+            if image_id != image.id or image.annotation_revision != expected_revision:
+                return None
+            image.annotation_revision += 1
+            return image.annotation_revision
 
     class FakeDatabase:
         async def scalars(self, _statement):
@@ -83,6 +102,9 @@ def vision_context(tmp_path, monkeypatch):
 
         async def commit(self):
             await self.flush()
+
+        async def rollback(self):
+            return None
 
     async def run_inline(function, *args, **kwargs):
         runtime_keys = {"boundary", "operation", "timeout_s"}
@@ -108,6 +130,7 @@ async def test_annotation_create_update_class_change_delete_and_review_empty(vis
         db,
         "image-1",
         AnnotationReplace(
+            expected_revision=0,
             reviewed=False,
             annotations=[
                 {
@@ -128,6 +151,7 @@ async def test_annotation_create_update_class_change_delete_and_review_empty(vis
         db,
         "image-1",
         AnnotationReplace(
+            expected_revision=1,
             reviewed=True,
             annotations=[
                 {
@@ -148,7 +172,7 @@ async def test_annotation_create_update_class_change_delete_and_review_empty(vis
     empty = await application.replace_annotations(
         db,
         "image-1",
-        AnnotationReplace(reviewed=True, annotations=[]),
+        AnnotationReplace(expected_revision=2, reviewed=True, annotations=[]),
         user,
     )
     assert empty.annotations == []
@@ -189,7 +213,7 @@ async def test_annotation_access_is_tenant_scoped(vision_context):
         await application.replace_annotations(
             db,
             "image-1",
-            AnnotationReplace(reviewed=True, annotations=[]),
+            AnnotationReplace(expected_revision=0, reviewed=True, annotations=[]),
             SimpleNamespace(id=2, org_id=8),
         )
 
@@ -201,7 +225,7 @@ async def test_annotation_rejects_original_image_out_of_bounds_coordinates(visio
         await application.replace_annotations(
             db,
             "missing-image",
-            AnnotationReplace(reviewed=False, annotations=[]),
+            AnnotationReplace(expected_revision=0, reviewed=False, annotations=[]),
             user,
         )
     with pytest.raises(ValueError, match="original image bounds"):
@@ -209,6 +233,7 @@ async def test_annotation_rejects_original_image_out_of_bounds_coordinates(visio
             db,
             "image-1",
             AnnotationReplace(
+                expected_revision=0,
                 annotations=[
                     {
                         "class_id": "class-ripe",
@@ -221,6 +246,39 @@ async def test_annotation_rejects_original_image_out_of_bounds_coordinates(visio
             ),
             user,
         )
+
+
+@pytest.mark.asyncio
+async def test_stale_annotation_revision_never_overwrites_server_state(vision_context):
+    db, application, user = vision_context
+    saved = await application.replace_annotations(
+        db,
+        "image-1",
+        AnnotationReplace(
+            expected_revision=0,
+            reviewed=True,
+            annotations=[
+                {
+                    "class_id": "class-ripe",
+                    "x1": 10,
+                    "y1": 10,
+                    "x2": 100,
+                    "y2": 100,
+                }
+            ],
+        ),
+        user,
+    )
+    with pytest.raises(VisionAnnotationConflict) as conflict:
+        await application.replace_annotations(
+            db,
+            "image-1",
+            AnnotationReplace(expected_revision=0, reviewed=True, annotations=[]),
+            user,
+        )
+    assert conflict.value.current_revision == 1
+    assert saved.annotation_revision == 1
+    assert len(saved.annotations) == 1
 
 
 def test_ultralytics_evaluation_metrics_are_normalized_without_stdout_parsing():
@@ -293,6 +351,123 @@ def test_dataset_splits_keep_source_groups_together_and_are_deterministic():
     assert {image.split for image in images} == {"train", "val", "test"}
 
 
+def test_single_video_split_holds_temporal_boundary_frames():
+    images = [
+        SimpleNamespace(
+            id=f"image-{index}",
+            selected=True,
+            source_group="video:one",
+            timestamp_seconds=float(index),
+            frame_index=index,
+            sha256=f"{index:064d}",
+            perceptual_hash=f"{(index * 0x9E3779B97F4A7C15) & ((1 << 64) - 1):016x}",
+            split=None,
+        )
+        for index in range(15)
+    ]
+
+    summary = assign_deterministic_splits(images, temporal_exclusion_buffer=1)
+
+    assert summary["held_boundary_frames"] >= 2
+    assert any(image.split is None for image in images)
+    assert {image.split for image in images if image.split} == {"train", "val", "test"}
+    assert "nearest_cross_split_similarity_count" in summary
+
+
+def test_frame_curation_comparisons_are_window_bounded(tmp_path, monkeypatch):
+    frame_count = 300
+    hashes = iter(
+        f"{(index * 0x9E3779B97F4A7C15) & ((1 << 64) - 1):016x}"
+        for index in range(frame_count)
+    )
+    frames = [
+        SimpleNamespace(
+            frame_index=index,
+            timestamp_seconds=float(index),
+            image_bgr=np.full((240, 320, 3), index % 255, dtype=np.uint8),
+        )
+        for index in range(frame_count)
+    ]
+    monkeypatch.setattr(
+        frame_curation,
+        "read_video_metadata",
+        lambda _path: SimpleNamespace(duration_seconds=float(frame_count)),
+    )
+    monkeypatch.setattr(
+        frame_curation,
+        "iter_frames",
+        lambda _path, every_seconds: iter(frames),
+    )
+    monkeypatch.setattr(frame_curation, "average_hash", lambda _gray: next(hashes))
+    monkeypatch.setattr(
+        frame_curation,
+        "assess_quality",
+        lambda _image: FrameQuality(100.0, 127.0, 1.0, []),
+    )
+
+    result = frame_curation.curate_video_frames(
+        "video.mp4", tmp_path, interval_seconds=1.0, max_frames=frame_count
+    )
+
+    assert result.comparison_count <= frame_count * (
+        frame_curation.TEMPORAL_HASH_WINDOW + frame_curation.HASH_BUCKET_LIMIT
+    )
+    assert result.comparison_count < frame_count * frame_count // 2
+
+
+@pytest.mark.asyncio
+async def test_deploy_is_blocked_by_low_map50(monkeypatch):
+    version = SimpleNamespace(
+        id="version-1",
+        model_id="model-1",
+        status="candidate",
+        metrics={"summary": {"map50": 0.1}},
+        weights_uri="vision://weights.pt",
+        checksum="a" * 64,
+        model=SimpleNamespace(
+            project=SimpleNamespace(capability_id="object_detection")
+        ),
+    )
+
+    class FakeRepository:
+        def __init__(self, _db):
+            pass
+
+        async def get_model_version(self, version_id, _user, **_kwargs):
+            return version if version_id == version.id else None
+
+    monkeypatch.setattr(training_operations, "VisionRepository", FakeRepository)
+
+    with pytest.raises(ValueError, match="map50"):
+        await VisionApplication().deploy_model(
+            SimpleNamespace(), version.id, SimpleNamespace(id=1, org_id=7)
+        )
+
+
+@pytest.mark.asyncio
+async def test_archive_blocks_the_sole_production_version(monkeypatch):
+    version = SimpleNamespace(
+        id="version-1",
+        status="production",
+        metrics={},
+        checksum="a" * 64,
+    )
+
+    class FakeRepository:
+        def __init__(self, _db):
+            pass
+
+        async def get_model_version(self, version_id, _user, **_kwargs):
+            return version if version_id == version.id else None
+
+    monkeypatch.setattr(training_operations, "VisionRepository", FakeRepository)
+
+    with pytest.raises(RuntimeError, match="sole production"):
+        await VisionApplication().archive_model(
+            SimpleNamespace(), version.id, SimpleNamespace(id=1, org_id=7)
+        )
+
+
 def test_openapi_publishes_vision_and_video_tracking_contracts():
     from backend.entrypoints.api.app import app
 
@@ -302,6 +477,7 @@ def test_openapi_publishes_vision_and_video_tracking_contracts():
         "/vision/projects",
         "/vision/images/{image_id}/annotations",
         "/vision/model-versions/{version_id}/evaluation",
+        "/vision/model-versions/{version_id}/rollback",
         "/video-analysis/jobs/{job_id}/summary",
     } <= paths.keys()
     components = schema["components"]["schemas"]
@@ -320,3 +496,100 @@ def test_openapi_publishes_vision_and_video_tracking_contracts():
     } <= analyze.keys()
     summary = components["VideoAnalysisSummaryOut"]["properties"]
     assert "unique_tracked_objects_by_class" in summary
+
+
+@pytest.mark.asyncio
+async def test_dataset_clone_reuses_immutable_media_and_copies_editable_metadata(
+    monkeypatch,
+):
+    project = SimpleNamespace(id="project-1")
+    source_dataset = SimpleNamespace(id="dataset-1", project_id=project.id)
+    source_image = DatasetImage(
+        id="image-1",
+        dataset_id=source_dataset.id,
+        storage_uri="vision://projects/project-1/images/content.jpg",
+        thumbnail_uri="vision://projects/project-1/images/thumb.jpg",
+        source_type="upload",
+        source_group="batch-1",
+        width=640,
+        height=480,
+        sha256="a" * 64,
+        selected=True,
+        split="train",
+        annotation_status="reviewed",
+        annotation_revision=4,
+        metadata_json={"camera": "rgb"},
+    )
+    source_image.annotations = [
+        Annotation(
+            id="annotation-1",
+            class_id="class-ripe",
+            annotation_type="bbox",
+            x1=10,
+            y1=20,
+            x2=100,
+            y2=120,
+            source="manual",
+        )
+    ]
+
+    class FakeRepository:
+        def __init__(self, _db):
+            pass
+
+        async def get_project(self, project_id, _user):
+            return project if project_id == project.id else None
+
+        async def get_dataset(self, dataset_id, _user):
+            return source_dataset if dataset_id == source_dataset.id else None
+
+        async def all_dataset_images(self, dataset_id):
+            return [source_image] if dataset_id == source_dataset.id else []
+
+    class FakeDatabase:
+        def __init__(self):
+            self.added = []
+
+        async def scalar(self, _statement):
+            return 1
+
+        def add(self, value):
+            self.added.append(value)
+
+        async def flush(self):
+            for value in self.added:
+                if isinstance(value, DatasetVersion) and not value.id:
+                    value.id = "dataset-2"
+
+        async def commit(self):
+            return None
+
+        async def refresh(self, _value):
+            return None
+
+    async def no_refresh(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(project_operations, "VisionRepository", FakeRepository)
+    application = VisionApplication()
+    application._refresh_dataset = no_refresh
+    application.dataset_output = lambda dataset: dataset
+    db = FakeDatabase()
+
+    created = await application.create_dataset(
+        db,
+        project.id,
+        SimpleNamespace(id=3, org_id=7),
+        clone_from_dataset_id=source_dataset.id,
+    )
+
+    clone = next(value for value in db.added if isinstance(value, DatasetImage))
+    assert created.id == "dataset-2"
+    assert clone.storage_uri == source_image.storage_uri
+    assert clone.thumbnail_uri == source_image.thumbnail_uri
+    assert clone.sha256 == source_image.sha256
+    assert clone.split is None
+    assert clone.annotation_revision == 0
+    assert clone.metadata_json["cloned_from_image_id"] == source_image.id
+    assert clone.annotations[0] is not source_image.annotations[0]
+    assert clone.annotations[0].class_id == source_image.annotations[0].class_id

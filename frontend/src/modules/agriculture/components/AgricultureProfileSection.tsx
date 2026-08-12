@@ -15,21 +15,21 @@ const PRESET_VALUES: Record<
     speed_mps: 3,
     front_overlap_pct: 80,
     side_overlap_pct: 70,
-    requested_analyses: ["quality", "stand_count", "gaps", "double_plants"],
+    requested_analyses: ["quality", "stand_count"],
   },
   rgb_weed_water: {
     target_gsd_cm: 2,
     speed_mps: 5,
     front_overlap_pct: 70,
     side_overlap_pct: 60,
-    requested_analyses: ["quality", "weed", "water", "coverage"],
+    requested_analyses: ["quality", "weed_detection", "standing_water", "coverage"],
   },
   repeat_monitoring: {
     target_gsd_cm: 2,
     speed_mps: 4,
     front_overlap_pct: 75,
     side_overlap_pct: 65,
-    requested_analyses: ["quality", "coverage", "temporal_change"],
+    requested_analyses: ["quality", "coverage", "crop_health"],
     repeat_interval_days: 7,
   },
   multispectral_thermal: {
@@ -37,8 +37,8 @@ const PRESET_VALUES: Record<
     speed_mps: 3,
     front_overlap_pct: 80,
     side_overlap_pct: 70,
-    sensor_inventory: ["multispectral", "thermal"],
-    requested_analyses: ["quality", "coverage", "stress", "thermal_water"],
+    sensor_inventory: ["rgb", "multispectral", "thermal"],
+    requested_analyses: ["quality", "coverage"],
   },
 };
 
@@ -66,7 +66,7 @@ export function AgricultureProfileSection({ profile, onChange }: Props) {
             <MenuItem value="rgb_weed_water">RGB weed + water</MenuItem>
             <MenuItem value="repeat_monitoring">Repeat monitoring</MenuItem>
             <MenuItem value="multispectral_thermal">
-              Multispectral + thermal
+              Multispectral + thermal capture (research sensors)
             </MenuItem>
           </TextField>
           <TextField
@@ -293,7 +293,8 @@ export function AgricultureProfileSection({ profile, onChange }: Props) {
         </Stack>
         <Typography variant="caption" color="text.secondary">
           P0 records crop context + capture requirements. Diagnosis and
-          prescriptions remain later stages.
+          prescriptions remain later stages. Multispectral index products stay
+          research-blocked until ADR-003 is GO.
         </Typography>
       </Stack>
     </Paper>

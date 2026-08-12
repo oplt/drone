@@ -40,9 +40,9 @@ def test_rgb_products_are_explicit_candidate_only_and_quality_aware():
         segmentation={"canopy_pct": 42.0, "visible_water_pct": 2.0},
         row={"confidence": 0.72},
         quality={"status": "pass"},
-        requested=["canopy", "water", "rows"],
+        requested=["canopy_cover", "standing_water", "row_detection"],
     )
-    assert set(products) == {"canopy_cover", "row_detection", "visible_water"}
+    assert set(products) == {"canopy_cover", "row_detection", "standing_water"}
     gated = product_gate_summary(products)
     assert all(item["claim_status"] == "candidate" for item in gated.values())
     assert all(item["publishable"] is False for item in gated.values())
@@ -54,6 +54,6 @@ def test_rgb_products_block_when_quality_gate_fails():
         segmentation={"canopy_pct": 42.0},
         row={"confidence": 0.72},
         quality={"status": "blocked"},
-        requested=["canopy", "rows"],
+        requested=["canopy_cover", "row_detection"],
     )
     assert {item["status"] for item in products.values()} == {"blocked_quality"}

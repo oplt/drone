@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/check_bundle_budgets.mjs",
     "lint": "eslint .",
     "lint:ci": "node scripts/check_eslint_baseline.mjs",
     "check:arch": "node scripts/check_file_sizes.mjs",
+    "check:bundle-budgets": "node scripts/check_bundle_budgets.mjs",
     "check:quality": "npm run lint:ci && npm run check:arch",
     "bundle:size": "node scripts/report_bundle_size.mjs",
     "test": "vitest run",

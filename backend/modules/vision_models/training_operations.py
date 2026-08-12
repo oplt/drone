@@ -6,9 +6,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.infrastructure.runtime.blocking import run_blocking
+from backend.modules.agriculture.capabilities import (
+    agriculture_capability_release_service,
+)
+from backend.modules.identity.dependencies import ORG_WRITE_ROLES
 from backend.modules.identity.models import User
 from backend.modules.vision_models.application_base import (
     PRESETS,
@@ -24,6 +29,8 @@ from backend.modules.vision_models.models import (
     TrainingRun,
     VisionProject,
 )
+from backend.modules.vision_models.release_policy import evaluate_release
+from backend.modules.vision_models.release_read_port import model_release_from_orm
 from backend.modules.vision_models.repository import VisionRepository
 from backend.modules.vision_models.schemas import (
     ModelEvaluationOut,
@@ -53,14 +60,24 @@ class TrainingOperations:
         dataset = await repo.get_dataset(payload.dataset_id, user)
         if project is None or dataset is None or dataset.project_id != project.id:
             raise VisionNotFound("Project or dataset not found")
-        self._assert_mutable(dataset)
         images = await repo.all_dataset_images(dataset.id)
         selected = [image for image in images if image.selected]
         if len(selected) < 3:
             raise VisionValidationError("At least three selected images are required")
         if any(image.annotation_status != "reviewed" for image in selected):
             raise VisionValidationError("Review every selected image before training")
-        assign_deterministic_splits(images)
+        quality_flags = getattr(dataset, "curation_summary", {}).get(
+            "quality_flags", {}
+        )
+        if (
+            vision_settings.vision_require_curation_quality
+            and any(bool(value) for value in quality_flags.values())
+        ):
+            raise VisionValidationError(
+                "Dataset curation quality flags must be resolved before training"
+            )
+        if dataset.status != "locked":
+            assign_deterministic_splits(images)
         split_counts = {
             split: sum(image.split == split for image in selected)
             for split in ("train", "val", "test")
@@ -73,14 +90,15 @@ class TrainingOperations:
             .join(VisionProject)
             .where(
                 VisionRepository.project_visible_to(user),
-                TrainingRun.status.in_(("queued", "running")),
+                TrainingRun.status.in_(("queued", "running", "cancelling")),
             )
         )
         if int(active or 0) >= vision_settings.vision_max_active_training_runs_per_org:
             raise VisionConflict("The organization already has an active training run")
         preset = PRESETS[payload.preset]
-        dataset.status = "locked"
-        dataset.locked_at = datetime.now(UTC)
+        if dataset.status != "locked":
+            dataset.status = "locked"
+            dataset.locked_at = datetime.now(UTC)
         await self._refresh_dataset(db, dataset)
         run = TrainingRun(
             project_id=project.id,
@@ -107,7 +125,13 @@ class TrainingOperations:
             created_by_user_id=user.id,
         )
         db.add(run)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise VisionConflict(
+                "This project already has a queued, running, or cancelling training run"
+            ) from exc
         try:
             run.queue_task_id = self.queue.enqueue(run.id)
             await db.commit()
@@ -115,8 +139,6 @@ class TrainingOperations:
             run.status = "failed"
             run.error = str(exc)
             run.finished_at = datetime.now(UTC)
-            dataset.status = "draft"
-            dataset.locked_at = None
             await db.commit()
             raise VisionWorkerUnavailable(str(exc)) from exc
         await db.refresh(run, attribute_names=["model_version"])
@@ -153,9 +175,13 @@ class TrainingOperations:
             raise VisionNotFound("Training run not found")
         if run.status not in {"queued", "running"}:
             raise VisionConflict("Only queued or running training can be cancelled")
-        run.status = "cancelled"
-        run.finished_at = datetime.now(UTC)
-        if run.queue_task_id:
+        was_queued = run.status == "queued"
+        run.status = "cancelled" if was_queued else "cancelling"
+        if run.status == "cancelled":
+            run.finished_at = datetime.now(UTC)
+            run.terminal_reason_code = "USER_CANCELLED"
+            run.terminal_stage = "queued"
+        if was_queued and run.queue_task_id:
             self.queue.revoke(run.queue_task_id)
         await db.commit()
         return self.training_output(run)
@@ -175,7 +201,14 @@ class TrainingOperations:
         return [self.model_output(version) for version in versions]
 
     async def deploy_model(
-        self, db: AsyncSession, version_id: str, user: User
+        self,
+        db: AsyncSession,
+        version_id: str,
+        user: User,
+        *,
+        override: bool = False,
+        reason: str | None = None,
+        action: str = "deploy",
     ) -> ModelVersionOut:
         repo = VisionRepository(db)
         version = await repo.get_model_version(version_id, user, for_update=True)
@@ -183,6 +216,29 @@ class TrainingOperations:
             raise VisionNotFound("Model version not found")
         if version.status == "archived":
             raise VisionConflict("Archived model versions cannot be deployed")
+        policy = evaluate_release(
+            status=version.status,
+            metrics=version.metrics,
+            weights_uri=version.weights_uri,
+            checksum=version.checksum,
+            capability_id=version.model.project.capability_id,
+            minimum_map50=vision_settings.vision_release_min_map50,
+        )
+        if override and (
+            getattr(user, "role", None) not in ORG_WRITE_ROLES or not reason
+        ):
+            raise VisionConflict("Release overrides require an authorized role and reason")
+        if not policy.eligible and not override:
+            raise VisionValidationError("; ".join(policy.reasons))
+        previous = await db.scalar(
+            select(ModelVersion)
+            .where(
+                ModelVersion.model_id == version.model_id,
+                ModelVersion.status == "production",
+                ModelVersion.id != version.id,
+            )
+            .with_for_update()
+        )
         await db.execute(
             update(ModelVersion)
             .where(
@@ -192,8 +248,42 @@ class TrainingOperations:
             )
             .values(status="candidate")
         )
+        audit = {
+            "action": action,
+            "policy_version": policy.policy_version,
+            "actor": user.id,
+            "metrics_snapshot": policy.metrics_snapshot,
+            "previous_production_id": previous.id if previous else None,
+            "rationale": reason,
+            "override": override,
+            "policy_reasons": list(policy.reasons),
+            "artifact_checksum": version.checksum,
+            "at": datetime.now(UTC).isoformat(),
+        }
+        version.metrics = {
+            **version.metrics,
+            "deployment_audit": [
+                *version.metrics.get("deployment_audit", []),
+                audit,
+            ],
+        }
         version.status = "production"
-        await db.commit()
+        try:
+            await agriculture_capability_release_service.activate_for_model_version(
+                db,
+                version=model_release_from_orm(version),
+                org_id=user.org_id,
+                user_id=user.id,
+            )
+        except ValueError as exc:
+            raise VisionValidationError(str(exc)) from exc
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise VisionConflict(
+                "Another model was deployed for this capability. Refresh and retry."
+            ) from exc
         refreshed = await repo.get_model_version(version.id, user)
         if refreshed is None:
             raise VisionNotFound("Model version not found")
@@ -207,18 +297,98 @@ class TrainingOperations:
         return self.model_output(refreshed)
 
     async def archive_model(
-        self, db: AsyncSession, version_id: str, user: User
+        self,
+        db: AsyncSession,
+        version_id: str,
+        user: User,
+        *,
+        override: bool = False,
+        reason: str | None = None,
     ) -> ModelVersionOut:
         repo = VisionRepository(db)
         version = await repo.get_model_version(version_id, user, for_update=True)
         if version is None:
             raise VisionNotFound("Model version not found")
+        if version.status == "production":
+            if not override:
+                raise VisionConflict(
+                    "The sole production model cannot be archived without a replacement"
+                )
+            if getattr(user, "role", None) not in ORG_WRITE_ROLES or not reason:
+                raise VisionConflict(
+                    "Production archive overrides require an authorized role and reason"
+                )
+            version.metrics = {
+                **version.metrics,
+                "deployment_audit": [
+                    *version.metrics.get("deployment_audit", []),
+                    {
+                        "action": "archive_override",
+                        "policy_version": "vision-release-policy.v1",
+                        "actor": user.id,
+                        "metrics_snapshot": version.metrics.get("summary", {}),
+                        "previous_production_id": version.id,
+                        "rationale": reason,
+                        "override": True,
+                        "artifact_checksum": version.checksum,
+                        "at": datetime.now(UTC).isoformat(),
+                    },
+                ],
+            }
+        await agriculture_capability_release_service.retire_for_model_version(
+            db, vision_model_version_id=version.id
+        )
         version.status = "archived"
         await db.commit()
         refreshed = await repo.get_model_version(version.id, user)
         if refreshed is None:
             raise VisionNotFound("Model version not found")
         return self.model_output(refreshed)
+
+    async def rollback_model(
+        self, db: AsyncSession, version_id: str, user: User, *, reason: str | None = None
+    ) -> ModelVersionOut:
+        current = await VisionRepository(db).get_model_version(
+            version_id, user, for_update=True
+        )
+        if current is None:
+            raise VisionNotFound("Model version not found")
+        audits = current.metrics.get("deployment_audit", [])
+        previous_id = next(
+            (
+                item.get("previous_production_id")
+                for item in reversed(audits)
+                if isinstance(item, dict) and item.get("previous_production_id")
+            ),
+            None,
+        )
+        if previous_id is None:
+            raise VisionConflict("No previous production model is available for rollback")
+        target = await VisionRepository(db).get_model_version(previous_id, user)
+        if target is None or target.model_id != current.model_id:
+            raise VisionConflict("The previous production model is no longer available")
+        try:
+            path = self.storage.resolve_uri(target.weights_uri)
+        except VisionStorageError as exc:
+            raise VisionConflict("The rollback artifact is unavailable") from exc
+        if not path.is_file():
+            raise VisionConflict("The rollback artifact is unavailable")
+        checksum = await run_blocking(
+            lambda value: hashlib.sha256(value.read_bytes()).hexdigest(),
+            path,
+            boundary="filesystem",
+            operation="verify_rollback_model_checksum",
+            timeout_s=120,
+        )
+        if checksum != target.checksum:
+            raise VisionConflict("The rollback artifact checksum does not match")
+        return await self.deploy_model(
+            db,
+            previous_id,
+            user,
+            reason=reason or f"Rollback from {current.id}",
+            action="rollback",
+        )
 
     async def get_evaluation(
         self, db: AsyncSession, version_id: str, user: User

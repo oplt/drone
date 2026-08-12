@@ -160,3 +160,26 @@ class AgricultureExportAccessAudit(Base):
     action: Mapped[str] = mapped_column(String(32), nullable=False)
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class AgricultureFieldOutcome(Base):
+    """Field/scout outcome feedback linked to a finding for later evaluation."""
+
+    __tablename__ = "agriculture_field_outcomes"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=p5_id)
+    org_id: Mapped[int | None] = mapped_column(ForeignKey("organizations.id", ondelete="SET NULL"), index=True)
+    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), index=True)
+    flight_id: Mapped[str] = mapped_column(ForeignKey("agriculture_flights.id", ondelete="CASCADE"), index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("agriculture_analysis_runs.id", ondelete="CASCADE"), index=True)
+    observation_id: Mapped[str] = mapped_column(ForeignKey("agriculture_observations.id", ondelete="CASCADE"), index=True)
+    outcome_status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    notes: Mapped[str | None] = mapped_column(Text)
+    model_version: Mapped[str | None] = mapped_column(String(160))
+    capability_release_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        Index("idx_agri_field_outcome_run_obs", "run_id", "observation_id", "created_at"),
+    )

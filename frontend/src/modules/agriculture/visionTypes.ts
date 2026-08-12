@@ -9,6 +9,7 @@ export type VisionProject = {
   name: string;
   description: string | null;
   crop: string;
+  capability_id: string;
   task_type: "detection";
   status: string;
   classes: VisionClass[];
@@ -79,6 +80,7 @@ export type VisionImage = {
   selected: boolean;
   split: "train" | "val" | "test" | null;
   annotation_status: "unlabeled" | "labeled" | "reviewed";
+  annotation_revision: number;
   annotations: VisionAnnotation[];
   lat: number | null;
   lon: number | null;
@@ -187,6 +189,7 @@ export type VisionModelVersion = {
   name: string;
   crop: string;
   task_type: string;
+  capability_id: string;
   version: number;
   architecture: string;
   status: "candidate" | "production" | "archived";

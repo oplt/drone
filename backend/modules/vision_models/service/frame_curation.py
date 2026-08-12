@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -17,6 +18,9 @@ MIN_BLUR_VARIANCE = 20.0
 MIN_EXPOSURE = 8.0
 MAX_EXPOSURE = 247.0
 MAX_HASH_DISTANCE = 6
+TEMPORAL_HASH_WINDOW = 16
+HASH_BUCKET_LIMIT = 64
+HASH_PREFIX_LENGTH = 3
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,8 @@ class CuratedFrame:
     height: int
     perceptual_hash: str
     quality: FrameQuality
+    selected: bool = True
+    duplicate_cluster_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -43,9 +49,15 @@ class CurationResult:
     candidate_frames: int
     rejected_quality: int
     rejected_duplicates: int
-    selected: list[CuratedFrame]
+    frames: list[CuratedFrame]
     rejected: list[dict]
     effective_interval_seconds: float
+    comparison_count: int = 0
+    duplicate_cluster_count: int = 0
+
+    @property
+    def selected(self) -> list[CuratedFrame]:
+        return [frame for frame in self.frames if frame.selected]
 
     def manifest(self) -> dict:
         return {
@@ -53,9 +65,11 @@ class CurationResult:
             "rejected_quality": self.rejected_quality,
             "rejected_duplicates": self.rejected_duplicates,
             "selected_frames": len(self.selected),
+            "duplicate_cluster_count": self.duplicate_cluster_count,
+            "comparison_count": self.comparison_count,
             "effective_interval_seconds": self.effective_interval_seconds,
-            "selected": [
-                {**asdict(frame), "quality": asdict(frame.quality)} for frame in self.selected
+            "frames": [
+                {**asdict(frame), "quality": asdict(frame.quality)} for frame in self.frames
             ],
             "rejected": self.rejected,
         }
@@ -104,10 +118,15 @@ def curate_video_frames(
     effective_interval = max(interval_seconds, uniform_interval)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    selected: list[CuratedFrame] = []
+    frames: list[CuratedFrame] = []
     rejected: list[dict] = []
-    accepted_hashes: list[str] = []
+    recent: deque[tuple[int, str]] = deque(maxlen=TEMPORAL_HASH_WINDOW)
+    buckets: dict[str, deque[tuple[int, str]]] = defaultdict(
+        lambda: deque(maxlen=HASH_BUCKET_LIMIT)
+    )
     candidates = quality_rejected = duplicate_rejected = 0
+    comparison_count = 0
+    duplicate_clusters: set[str] = set()
 
     for frame in iter_frames(video_path, every_seconds=effective_interval):
         if candidates >= max_frames:
@@ -126,13 +145,29 @@ def curate_video_frames(
             quality_rejected += 1
             rejected.append({**base, "reason": "quality"})
             continue
-        if any(
-            hash_distance(perceptual_hash, previous) <= MAX_HASH_DISTANCE
-            for previous in accepted_hashes
-        ):
+        comparison_candidates = {
+            item[0]: item[1]
+            for item in (*recent, *buckets[perceptual_hash[:HASH_PREFIX_LENGTH]])
+        }
+        duplicate_of: int | None = None
+        for previous_index, previous_hash in comparison_candidates.items():
+            comparison_count += 1
+            if hash_distance(perceptual_hash, previous_hash) <= MAX_HASH_DISTANCE:
+                duplicate_of = previous_index
+                break
+        duplicate_cluster_id = (
+            f"near-duplicate:{duplicate_of}" if duplicate_of is not None else None
+        )
+        if duplicate_cluster_id is not None:
             duplicate_rejected += 1
-            rejected.append({**base, "reason": "near_duplicate"})
-            continue
+            duplicate_clusters.add(duplicate_cluster_id)
+            rejected.append(
+                {
+                    **base,
+                    "reason": "near_duplicate",
+                    "duplicate_cluster_id": duplicate_cluster_id,
+                }
+            )
 
         target = output / f"frame-{frame.frame_index:08d}.jpg"
         ok, encoded = cv2.imencode(".jpg", frame.image_bgr, [cv2.IMWRITE_JPEG_QUALITY, 92])
@@ -141,9 +176,8 @@ def curate_video_frames(
             rejected.append({**base, "reason": "encode_failed"})
             continue
         target.write_bytes(encoded.tobytes())
-        accepted_hashes.append(perceptual_hash)
         height, width = frame.image_bgr.shape[:2]
-        selected.append(
+        frames.append(
             CuratedFrame(
                 frame_index=frame.frame_index,
                 timestamp_seconds=frame.timestamp_seconds,
@@ -152,14 +186,22 @@ def curate_video_frames(
                 height=height,
                 perceptual_hash=perceptual_hash,
                 quality=quality,
+                selected=duplicate_cluster_id is None,
+                duplicate_cluster_id=duplicate_cluster_id,
             )
         )
+        if duplicate_cluster_id is None:
+            accepted = (frame.frame_index, perceptual_hash)
+            recent.append(accepted)
+            buckets[perceptual_hash[:HASH_PREFIX_LENGTH]].append(accepted)
 
     return CurationResult(
         candidate_frames=candidates,
         rejected_quality=quality_rejected,
         rejected_duplicates=duplicate_rejected,
-        selected=selected,
+        frames=frames,
         rejected=rejected,
         effective_interval_seconds=effective_interval,
+        comparison_count=comparison_count,
+        duplicate_cluster_count=len(duplicate_clusters),
     )

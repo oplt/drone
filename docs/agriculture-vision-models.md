@@ -8,7 +8,8 @@ is assigned.
 
 ## Workflow
 
-1. Create a project with a crop and ordered detection classes.
+1. Create a project with a canonical Agriculture capability, crop, and ordered
+   detection classes.
 2. Create a dataset and upload images, or curate frames from an authorized
    mission recording. Curation rejects corrupt, tiny, blurry, badly exposed,
    and perceptually duplicated frames while preserving a manifest.
@@ -25,7 +26,9 @@ is assigned.
    evaluator objects, not parsed from console output.
 6. Inspect or compare versions in the evaluation dashboard, then explicitly
    deploy a candidate. The previous production version returns to candidate
-   status; historical weights and metrics remain available.
+   status; historical weights and metrics remain available. Deployment also
+   activates the tenant's Agriculture capability release without copying the
+   artifact. See [ADR-001](adr-001-vision-artifact-agriculture-capability-release.md).
 
 ## Labeling persistence
 
@@ -66,8 +69,8 @@ inference.
 - `worker-vision` consumes only the `vision-training` queue at concurrency one.
 - CPU training works but is expected to be slow; production deployments should
   configure an accelerator and suitable worker limits.
-- Training run status is `queued`, `running`, `completed`, `failed`, or
-  `cancelled`. A model version exists only after evaluation completes, so its
+- Training run status is `queued`, `running`, `cancelling`, `completed`,
+  `failed`, or `cancelled`. A model version exists only after evaluation completes, so its
   evaluation resource is always `completed`; failed evaluation remains on the
   training run with its persisted error.
 - Missing media, weights, and evaluation artifacts return 404. Missing SAHI or

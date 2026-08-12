@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from datetime import UTC, datetime, timedelta
 from time import monotonic, time
 
@@ -85,24 +86,112 @@ class AgricultureStageTask(Task):
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
-async def _process(run_id: str, *, force: bool = False, cluster_radius_m: float = 8.0, queue_age_seconds: float = 0.0) -> dict[str, str]:
+async def _process(
+    run_id: str,
+    *,
+    force: bool = False,
+    cluster_radius_m: float = 8.0,
+    queue_age_seconds: float = 0.0,
+    execution_key: str | None = None,
+) -> dict[str, str]:
     async with Session() as db:
         run = await db.scalar(select(AgricultureAnalysisRun).where(AgricultureAnalysisRun.id == run_id).with_for_update())
         if run is None:
             raise ValueError(f"Agriculture analysis run not found: {run_id}")
-        run.counters = {**(run.counters or {}), "queue_age_seconds": max(0.0, queue_age_seconds), "worker_started_at": datetime.now(UTC).isoformat()}
-        await db.flush()
+        if run.status in {"cancelled", "review", "published", "completed"} and not force:
+            return {"run_id": run_id, "status": run.status}
+        owner_key = (
+            f"agri-pipeline:{run.id}:a{run.retry_count}:"
+            f"{execution_key or 'inline'}"
+        )
+        pipeline_stage = await db.scalar(
+            select(AgricultureAnalysisStage)
+            .where(
+                AgricultureAnalysisStage.run_id == run.id,
+                AgricultureAnalysisStage.stage_name == "pipeline_execution",
+            )
+            .with_for_update()
+        )
+        if pipeline_stage is None:
+            pipeline_stage = AgricultureAnalysisStage(
+                run_id=run.id,
+                stage_name="pipeline_execution",
+            )
+            db.add(pipeline_stage)
+        elif (
+            pipeline_stage.status == "running"
+            and pipeline_stage.execution_key != owner_key
+            and run.status in {"orchestrating", "running"}
+            and not force
+        ):
+            return {"run_id": run_id, "status": run.status}
+        pipeline_stage.status = "running"
+        pipeline_stage.execution_key = owner_key
+        pipeline_stage.input_checksum = hashlib.sha256(
+            f"{run.input_checksum}:{run.retry_count}:{cluster_radius_m}".encode()
+        ).hexdigest()
+        pipeline_stage.attempt += 1
+        pipeline_stage.progress = 0.0
+        pipeline_stage.error = None
+        pipeline_stage.started_at = datetime.now(UTC)
+        pipeline_stage.finished_at = None
+        run.status = "orchestrating"
+        run.counters = {
+            **(run.counters or {}),
+            "queue_age_seconds": max(0.0, queue_age_seconds),
+            "worker_started_at": datetime.now(UTC).isoformat(),
+            "pipeline_execution_key": owner_key,
+        }
+        await db.commit()
         flight = await agriculture_repository.get_flight(db, flight_id=run.flight_id)
         if flight is None:
             raise ValueError(f"Agriculture flight not found for run: {run_id}")
-        with observed_span(
-            "agriculture.analysis_pipeline",
-            run_id=run.id,
-            flight_id=flight.id,
-            field_id=flight.field_id,
-            mission_id=flight.mission_id,
-        ):
-            await agriculture_service.process_analysis_run(db, run=run, flight=flight, force=force, cluster_radius_m=cluster_radius_m)
+        try:
+            with observed_span(
+                "agriculture.analysis_pipeline",
+                run_id=run.id,
+                flight_id=flight.id,
+                field_id=flight.field_id,
+                mission_id=flight.mission_id,
+            ):
+                await agriculture_service.process_analysis_run(db, run=run, flight=flight, force=force, cluster_radius_m=cluster_radius_m)
+        except Exception as exc:
+            pipeline_stage = await db.scalar(
+                select(AgricultureAnalysisStage)
+                .where(
+                    AgricultureAnalysisStage.run_id == run.id,
+                    AgricultureAnalysisStage.stage_name == "pipeline_execution",
+                    AgricultureAnalysisStage.execution_key == owner_key,
+                )
+                .with_for_update()
+            )
+            if pipeline_stage is not None:
+                pipeline_stage.status = "failed"
+                pipeline_stage.error = str(exc)[:4000]
+                pipeline_stage.finished_at = datetime.now(UTC)
+                await db.commit()
+            raise
+        pipeline_stage = await db.scalar(
+            select(AgricultureAnalysisStage)
+            .where(
+                AgricultureAnalysisStage.run_id == run.id,
+                AgricultureAnalysisStage.stage_name == "pipeline_execution",
+                AgricultureAnalysisStage.execution_key == owner_key,
+            )
+            .with_for_update()
+        )
+        if pipeline_stage is not None:
+            if run.status == "waiting_inference":
+                pipeline_stage.status = "queued"
+                pipeline_stage.execution_key = None
+                pipeline_stage.progress = run.progress
+            else:
+                pipeline_stage.status = (
+                    "failed" if run.status == "failed" else "completed"
+                )
+                pipeline_stage.progress = 100.0
+                pipeline_stage.finished_at = datetime.now(UTC)
+            await db.commit()
         return {"run_id": run_id, "status": run.status}
 
 
@@ -238,7 +327,26 @@ def process_agriculture_run(self, run_id: str, force: bool = False, cluster_radi
     prometheus_metrics.agriculture_runs_started_total.labels(queue=queue_name).inc()
     try:
         with observed_span("agriculture.process_run", run_id=run_id, queue=queue_name, force=force):
-            result = asyncio.run(_process(run_id, force=force, cluster_radius_m=cluster_radius_m, queue_age_seconds=queue_age_seconds))
+            result = asyncio.run(
+                _process(
+                    run_id,
+                    force=force,
+                    cluster_radius_m=cluster_radius_m,
+                    queue_age_seconds=queue_age_seconds,
+                    execution_key=str(self.request.id or "inline"),
+                )
+            )
+        if result["status"] == "waiting_inference":
+            self.apply_async(
+                kwargs={
+                    "run_id": run_id,
+                    "force": False,
+                    "cluster_radius_m": cluster_radius_m,
+                    "agriculture_queued_at": time(),
+                },
+                countdown=settings.agriculture_inference_poll_seconds,
+                queue=queue_name,
+            )
         prometheus_metrics.agriculture_runs_completed_total.labels(queue=queue_name, status=result["status"]).inc()
         prometheus_metrics.agriculture_run_duration_seconds.labels(queue=queue_name).observe(monotonic() - started)
         return result

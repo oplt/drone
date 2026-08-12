@@ -30,6 +30,7 @@ class AgricultureFlightAlignment(Base):
     transform: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     failure_reasons: Mapped[list[Any]] = mapped_column(JSON, default=list, nullable=False)
     metrics: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    comparability: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (UniqueConstraint("current_flight_id", "reference_flight_id", name="uq_agri_alignment_pair"),)
@@ -157,6 +158,8 @@ class AgricultureDatasetItem(Base):
 
 
 class AgricultureModelVersion(Base):
+    """Legacy registry retained only to quarantine and migrate pre-Vision artifacts."""
+
     __tablename__ = "agriculture_model_versions"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=temporal_id)
@@ -168,6 +171,14 @@ class AgricultureModelVersion(Base):
     dataset_key: Mapped[str | None] = mapped_column(String(128))
     config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     metrics: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    migration_state: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="quarantined", index=True
+    )
+    linked_capability_release_id: Mapped[str | None] = mapped_column(
+        ForeignKey("agriculture_capability_releases.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     deployed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

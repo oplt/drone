@@ -6,10 +6,22 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  MenuItem,
   Stack,
   TextField,
 } from "@mui/material";
 import { useCreateVisionProject } from "../hooks/useVisionModels";
+import type { CreateVisionProjectInput } from "../visionApi";
+
+const CAPABILITIES: Array<{ id: CreateVisionProjectInput["capability_id"]; label: string }> = [
+  { id: "object_detection", label: "Custom object detection" },
+  { id: "stand_count", label: "Stand count" },
+  { id: "weed_detection", label: "Weed detection" },
+  { id: "crop_health", label: "Crop-health findings" },
+  { id: "canopy_cover", label: "Canopy cover" },
+  { id: "row_detection", label: "Crop rows" },
+  { id: "standing_water", label: "Standing water" },
+];
 
 export function VisionProjectCreateDialog({
   open,
@@ -22,6 +34,7 @@ export function VisionProjectCreateDialog({
   const [name, setName] = useState("");
   const [crop, setCrop] = useState("");
   const [description, setDescription] = useState("");
+  const [capabilityId, setCapabilityId] = useState<CreateVisionProjectInput["capability_id"]>("object_detection");
   const [classes, setClasses] = useState(
     "ripe tomato, unripe tomato, damaged tomato",
   );
@@ -34,6 +47,7 @@ export function VisionProjectCreateDialog({
       name,
       crop,
       description: description || undefined,
+      capability_id: capabilityId,
       classes: classList.map((className) => ({ name: className })),
     });
     onClose();
@@ -56,6 +70,17 @@ export function VisionProjectCreateDialog({
             value={crop}
             onChange={(event) => setCrop(event.target.value)}
           />
+          <TextField
+            select
+            label="Agriculture capability"
+            value={capabilityId}
+            onChange={(event) => setCapabilityId(event.target.value as typeof capabilityId)}
+            helperText="Deploying this project's model makes this analysis available."
+          >
+            {CAPABILITIES.map((capability) => (
+              <MenuItem key={capability.id} value={capability.id}>{capability.label}</MenuItem>
+            ))}
+          </TextField>
           <TextField
             label="Description"
             value={description}

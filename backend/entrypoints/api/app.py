@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.core.api_errors import register_domain_api_error_handler
 from backend.core.config.production import validate_production_security
 from backend.core.config.runtime import bootstrap, settings, setup_logging
 from backend.core.database.session import close_db, engine, init_db
@@ -129,6 +130,7 @@ async def agriculture_contract_version_header(request: Request, call_next):
 
 
 register_error_handlers(app)
+register_domain_api_error_handler(app)
 app.add_middleware(
     UploadBodyLimitMiddleware,
     limits={

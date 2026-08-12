@@ -67,6 +67,38 @@ describe("httpClient", () => {
     });
   });
 
+  it("prefers the versioned error envelope over legacy detail", async () => {
+    server.use(
+      http.get("*/vision/models/missing", () =>
+        HttpResponse.json(
+          {
+            detail: "Legacy message",
+            error: {
+              code: "VISION_NOT_FOUND",
+              message: "Model version not found",
+              fields: { version_id: "missing" },
+              retryable: false,
+              trace_id: "trace-1",
+            },
+          },
+          { status: 404 },
+        ),
+      ),
+    );
+
+    await expect(
+      httpRequest("/vision/models/missing", {
+        skipUnauthorizedRedirect: true,
+      }),
+    ).rejects.toMatchObject({
+      message: "Model version not found",
+      detail: "Model version not found",
+      code: "VISION_NOT_FOUND",
+      details: { version_id: "missing" },
+      requestId: "trace-1",
+    });
+  });
+
   it("preserves agriculture error codes and details from the stable envelope", async () => {
     server.use(
       http.post("*/agriculture/flights/start", () =>

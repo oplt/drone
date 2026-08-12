@@ -30,6 +30,20 @@ class ExtractedFrame:
     image_bgr: np.ndarray
 
 
+def sampled_frame_indices(
+    *, frame_count: int, fps: float, every_seconds: float
+) -> range:
+    """Return the canonical frame indices used by both decode strategies."""
+    if every_seconds <= 0:
+        raise ValueError("every_seconds must be > 0")
+    stride_frames = max(1, round(fps * every_seconds))
+    return range(0, max(0, frame_count), stride_frames)
+
+
+def frame_timestamp_seconds(frame_index: int, fps: float) -> float:
+    return frame_index / fps
+
+
 def read_video_metadata(video_path: str | Path) -> VideoMetadata:
     capture = cv2.VideoCapture(str(video_path))
     if not capture.isOpened():
@@ -66,6 +80,7 @@ def iter_frames(
     video_path: str | Path,
     *,
     every_seconds: float = 1.0,
+    decode_stride_enabled: bool = False,
 ) -> Iterator[ExtractedFrame]:
     """Yield BGR frames at a fixed temporal stride.
 
@@ -80,9 +95,26 @@ def iter_frames(
         raise ValueError(f"Could not open video: {video_path}")
 
     fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
+    frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
     stride_frames = max(1, round(fps * every_seconds))
 
     try:
+        if decode_stride_enabled and frame_count > 0:
+            for frame_index in sampled_frame_indices(
+                frame_count=frame_count,
+                fps=fps,
+                every_seconds=every_seconds,
+            ):
+                capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+                ok, frame = capture.read()
+                if not ok:
+                    break
+                yield ExtractedFrame(
+                    frame_index,
+                    frame_timestamp_seconds(frame_index, fps),
+                    frame,
+                )
+            return
         # Decode sequentially. Repeated random seeks are expensive and often
         # inaccurate for compressed video because each seek may decode from a
         # keyframe. Sampling still bounds inference work without extra seeks.
@@ -92,7 +124,11 @@ def iter_frames(
             if not ok:
                 break
             if frame_index % stride_frames == 0:
-                yield ExtractedFrame(frame_index, frame_index / fps, frame)
+                yield ExtractedFrame(
+                    frame_index,
+                    frame_timestamp_seconds(frame_index, fps),
+                    frame,
+                )
             frame_index += 1
     finally:
         capture.release()
@@ -106,13 +142,18 @@ async def async_iter_frames(
     video_path: str | Path,
     *,
     every_seconds: float = 1.0,
+    decode_stride_enabled: bool = False,
 ) -> AsyncIterator[ExtractedFrame]:
     """Yield OpenCV frames without blocking the worker event loop.
 
     The producer has a small bounded buffer, so decode cannot outrun CPU-heavy
     inference indefinitely.
     """
-    iterator = iter_frames(video_path, every_seconds=every_seconds)
+    iterator = iter_frames(
+        video_path,
+        every_seconds=every_seconds,
+        decode_stride_enabled=decode_stride_enabled,
+    )
     queue: asyncio.Queue[object] = asyncio.Queue(maxsize=MAX_FRAME_BUFFER)
 
     async def _decode() -> None:

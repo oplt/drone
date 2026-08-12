@@ -38,6 +38,9 @@ async def test_server_preflight_ignores_client_booleans_and_exposes_provider_sou
         async def scalars(self, _query):
             return SimpleNamespace(all=lambda: [])
 
+        async def execute(self, _query):
+            return SimpleNamespace(all=lambda: [])
+
     monkeypatch.setattr("backend.modules.agriculture.preflight_service._runtime_checks", runtime)
     snapshot = await evaluate_server_preflight(Database(), plan=plan, user=SimpleNamespace(org_id=3, user=SimpleNamespace(id=9)))
     assert snapshot.status == "blocked"  # permission provider is unavailable, despite any client checkbox

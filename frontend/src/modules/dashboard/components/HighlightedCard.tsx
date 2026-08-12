@@ -18,7 +18,7 @@ export default function HighlightedCard() {
           Generate field report
         </Typography>
         <Typography sx={{ color: 'text.secondary', mb: '8px' }}>
-          Export NDVI, irrigation insights, and coverage maps in one click.
+          Export reviewed field reports, coverage summaries, and approved inspection actions.
         </Typography>
         <ActionIconButton
           variant="download"

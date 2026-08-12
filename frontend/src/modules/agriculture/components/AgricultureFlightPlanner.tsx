@@ -12,6 +12,7 @@ import {
 import type { AgricultureFieldProfile, AgricultureMissionProfile } from "../types";
 import { AgriculturePlannerForm, type AgriculturePlannerValues } from "./AgriculturePlannerForm";
 import { AgricultureGridEditor } from "./AgricultureGridEditor";
+import { AgriculturePlanPreviewCard } from "./AgriculturePlanPreviewCard";
 
 const defaultProfile: AgricultureMissionProfile = {
   flight_kind: "agriculture_survey", preset: "rgb_weed_water", crop_type: "", variety: "", season: "", growth_stage: "",
@@ -85,7 +86,8 @@ export function AgricultureFlightPlanner({
   return (
     <Stack spacing={1.5} component="section" aria-labelledby="agriculture-flight-planner-heading">
       <Typography id="agriculture-flight-planner-heading" variant="h6">Agriculture survey planner</Typography>
-      <AgriculturePlannerForm profile={profile} values={values} onProfileChange={(patch) => setProfile((current) => ({ ...current, ...patch }))} onChange={(patch) => setValues((current) => ({ ...current, ...patch }))} disabled={disabled} onBuildPlan={() => void onBuildPlan()} onEvaluate={() => void onEvaluate()} onAcknowledge={() => void onAcknowledge()} onStart={() => void onStart()} planStatus={plan?.status ?? null} preflightStatus={preflight?.status ?? null} acknowledged={Boolean(preflight?.acknowledged)} preflight={preflight} />
+      <AgriculturePlannerForm profile={profile} values={values} onProfileChange={(patch) => setProfile((current) => ({ ...current, ...patch }))} onChange={(patch) => setValues((current) => ({ ...current, ...patch }))} disabled={disabled} onBuildPlan={() => void onBuildPlan()} onEvaluate={() => void onEvaluate()} onAcknowledge={() => void onAcknowledge()} onStart={() => void onStart()} planStatus={plan?.status ?? null} preflightStatus={preflight?.status ?? null} acknowledged={Boolean(preflight?.acknowledged)} preflight={preflight} fieldBoundary={fieldPolygon as [number, number][]} />
+      <AgriculturePlanPreviewCard fieldId={fieldId} fieldBorder={fieldPolygon as [number, number][]} profile={profile} cruiseAlt={values.altitude} routeLength={plan ? Number(plan.estimates.route_length_m ?? 0) : null} />
       {plan ? <AgricultureGridEditor plan={plan} disabled={updateGrid.isPending || disabled} onSave={(route) => { updateGrid.mutate({ planId: plan.id, expectedRevision: plan.grid_revision, routeLonlat: route }, { onSuccess: setPlan, onError: (error) => setActionError(error instanceof Error ? error.message : "Could not save grid revision.") }); }} /> : null}
       {actionError || createPlan.error || evaluate.error || acknowledge.error ? <Alert severity="error">{actionError ?? (createPlan.error ?? evaluate.error ?? acknowledge.error)?.message ?? "Agriculture workflow action failed."}</Alert> : null}
       {createPlan.isPending ? <CircularProgress size={20} aria-label="Saving agriculture plan" /> : null}

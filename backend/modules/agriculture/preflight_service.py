@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import asyncio
-import shutil
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from shapely.geometry import Polygon
 
 from backend.core.config.runtime import settings
 from backend.modules.agriculture.sensor_models import AgricultureSensorCalibration
 from backend.modules.agriculture.storage import agriculture_storage
-from backend.modules.agriculture.temporal_models import AgricultureModelVersion
+from backend.modules.agriculture.capabilities import (
+    CAPABILITIES,
+    agriculture_capability_release_service,
+    validate_capability_ids,
+)
 from backend.modules.agriculture.workflow_models import AgricultureMissionPlan, AgriculturePreflightSnapshot
 from backend.modules.identity.dependencies import OrgUser
 from backend.modules.missions.schemas.mission_types import Waypoint
@@ -116,11 +119,30 @@ async def evaluate_server_preflight(db: AsyncSession, *, plan: AgricultureMissio
         storage_ok, free_bytes = False, 0
     checks.append(_check("storage_ready", "PASS" if storage_ok and (free_bytes == 0 or free_bytes >= 100 * 1024 * 1024) else "BLOCK", f"{free_bytes} bytes available." if storage_ok else "Agriculture storage is unavailable.", observed={"free_bytes": free_bytes, "backend": getattr(settings, "storage_backend", "local")}, source="agriculture_storage", remediation="Provision the configured agriculture object-storage bucket and verify credentials."))
     checks.append(_check("permissions_granted", "BLOCK", "No authoritative flight-permission provider is configured.", source="permission_provider", remediation="Configure the jurisdiction permission integration before launch."))
-    requested = [str(item) for item in payload.get("profile", {}).get("requested_analyses", [])]
-    model_rows = list((await db.scalars(select(AgricultureModelVersion).where(AgricultureModelVersion.status == "deployed", AgricultureModelVersion.task.in_(requested), or_(AgricultureModelVersion.org_id == user.org_id, AgricultureModelVersion.org_id.is_(None))))).all()) if requested else []
-    available_tasks = {row.task for row in model_rows}
-    missing_models = sorted(set(requested) - available_tasks)
-    checks.append(_check("model_ready", "PASS" if not missing_models else "BLOCK", "All requested models are deployed." if not missing_models else f"Missing deployed models: {', '.join(missing_models)}.", observed={"requested": requested, "available": sorted(available_tasks)}, source="agriculture_model_registry", remediation="Deploy validated models for every requested analysis or remove unsupported analyses."))
+    raw_requested = payload.get("profile", {}).get("requested_analyses", [])
+    invalid_capabilities: str | None = None
+    try:
+        requested = validate_capability_ids(raw_requested)
+    except ValueError as exc:
+        requested = []
+        invalid_capabilities = str(exc)
+    required_models = {
+        item for item in requested if CAPABILITIES[item].requires_model
+    }
+    releases = await agriculture_capability_release_service.active_release_snapshots(
+        db,
+        org_id=user.org_id,
+        user_id=user.user.id,
+        capability_ids=required_models,
+    )
+    missing_models = sorted(required_models - set(releases))
+    model_ready = invalid_capabilities is None and not missing_models
+    message = "All requested model capabilities are released."
+    if invalid_capabilities:
+        message = invalid_capabilities
+    elif missing_models:
+        message = f"Missing production releases: {', '.join(missing_models)}."
+    checks.append(_check("model_ready", "PASS" if model_ready else "BLOCK", message, observed={"requested": requested, "available": sorted(releases)}, source="vision_capability_releases", remediation="Deploy an eligible Vision model for every requested model-backed capability or remove it from the plan."))
     profile = payload.get("profile", {})
     sensors = set(profile.get("sensor_inventory") or ["rgb"])
     calibration_ids = set(profile.get("calibration_ids") or [])

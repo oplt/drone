@@ -1,0 +1,77 @@
+from datetime import UTC, datetime
+from types import SimpleNamespace
+
+import pytest
+
+from backend.modules.agriculture.contracts import MissionTelemetrySample
+from backend.modules.agriculture.ports import telemetry as telemetry_port
+from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
+from backend.scripts.check_module_ports import collect_violations
+
+
+@pytest.mark.asyncio
+async def test_telemetry_port_returns_ordered_persistence_neutral_dtos(monkeypatch):
+    captured = datetime(2026, 8, 12, 10, tzinfo=UTC)
+    rows = [
+        SimpleNamespace(
+            timestamp_utc=captured,
+            lat=50,
+            lon=4,
+            relative_altitude_m=12,
+            absolute_altitude_m=100,
+            roll_deg=1,
+            pitch_deg=2,
+            yaw_deg=3,
+            gps_quality=0.9,
+        )
+    ]
+
+    async def list_telemetry(_db, *, flight_id):
+        assert flight_id == "mission-1"
+        return rows
+
+    monkeypatch.setattr(
+        telemetry_port.agriculture_repository, "list_telemetry", list_telemetry
+    )
+    result = await telemetry_port.list_mission_telemetry_for_georef(
+        SimpleNamespace(), mission_id="mission-1"
+    )
+
+    assert result == [
+        MissionTelemetrySample(
+            timestamp_utc=captured,
+            lat=50.0,
+            lon=4.0,
+            relative_altitude_m=12,
+            absolute_altitude_m=100,
+            roll_deg=1,
+            pitch_deg=2,
+            yaw_deg=3,
+            gps_quality=0.9,
+        )
+    ]
+    match = NearestTelemetryMatcher("mission-1", result, captured).match(0)
+    assert (match.lat, match.lon, match.altitude_m, match.heading_deg) == (
+        50.0,
+        4.0,
+        12,
+        3,
+    )
+
+
+def test_module_port_dependency_guard_has_no_violations():
+    assert collect_violations() == []
+
+
+def test_module_port_dependency_guard_detects_reverse_repository_import(tmp_path):
+    source = tmp_path / "backend/modules/video_analysis/bad.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "from backend.modules.agriculture.repository import agriculture_repository\n",
+        encoding="utf-8",
+    )
+
+    violations = collect_violations(tmp_path / "backend/modules")
+
+    assert len(violations) == 1
+    assert violations[0].imported == "backend.modules.agriculture.repository"

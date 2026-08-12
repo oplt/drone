@@ -1,15 +1,23 @@
-import { Alert, Chip, LinearProgress, Stack, Typography } from "@mui/material";
+import { Alert, Button, Chip, LinearProgress, Stack, Typography } from "@mui/material";
 import type { VideoAnalysisJob } from "../types";
 
 export type AnalysisStatusProps = {
   job?: VideoAnalysisJob;
   detectionCount: number;
+  cancelling?: boolean;
+  onCancel?: () => void;
 };
 
-export function AnalysisResultsSection({ job, detectionCount }: AnalysisStatusProps) {
+export function AnalysisResultsSection({ job, detectionCount, cancelling, onCancel }: AnalysisStatusProps) {
   const progress = Math.min(100, Math.max(0, job?.progress ?? 0));
   const color = job?.status === "failed" ? "error" : job?.status === "completed" ? "success" : "info";
   const completedWithoutMatches = job?.status === "completed" && detectionCount === 0;
+  const failureGuidance: Record<string, string> = {
+    QUEUE_UNAVAILABLE: "The analysis worker was unavailable. Wait briefly, then run analysis again.",
+    WORKER_LEASE_EXPIRED: "The worker stopped reporting progress. Run analysis again to create a fresh attempt.",
+    NO_SUCCESSFUL_FRAMES: "No sampled frame completed inference. Check that the recording decodes, then retry or choose another model.",
+    INFERENCE_FAILED: "Inference failed. Review the model and sampling settings, then run analysis again.",
+  };
 
   return (
     <Stack spacing={1.5}>
@@ -32,6 +40,11 @@ export function AnalysisResultsSection({ job, detectionCount }: AnalysisStatusPr
           confidence.
         </Alert>
       ) : null}
+      {job && ["queued", "running"].includes(job.status) && onCancel ? (
+        <Button size="small" color="warning" disabled={cancelling} onClick={onCancel}>
+          {cancelling ? "Cancelling…" : "Cancel analysis"}
+        </Button>
+      ) : null}
       {completedWithoutMatches ? (
         <Alert severity="warning">
           Analysis completed, but no objects matched. Try a lower confidence threshold or another
@@ -39,7 +52,11 @@ export function AnalysisResultsSection({ job, detectionCount }: AnalysisStatusPr
         </Alert>
       ) : null}
       {job?.status === "failed" ? (
-        <Alert severity="error">{job.error ?? "Analysis failed."}</Alert>
+        <Alert severity="error">
+          {job.terminal_stage ? `Failed during ${job.terminal_stage.replaceAll("_", " ")}. ` : ""}
+          {job.error ?? "Analysis failed."}{" "}
+          {failureGuidance[job.terminal_reason_code ?? ""] ?? "Adjust the inference settings and run analysis again."}
+        </Alert>
       ) : null}
     </Stack>
   );

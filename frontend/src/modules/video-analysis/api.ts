@@ -5,7 +5,7 @@ import type {
   VideoAnalysisJob,
   VideoAnalysisSummary,
   VideoAsset,
-  VideoDetection,
+  VideoDetectionPage,
 } from "./types";
 
 export type ListMissionVideosParams = {
@@ -29,12 +29,9 @@ export async function listMissionVideos(
 
 export function buildMissionVideoStreamUrl(
   videoId: string,
-  token?: string | null,
+  _token?: string | null,
 ): string {
-  const base = resolveApiUrl(`/video-analysis/videos/${videoId}/stream`);
-  if (!token?.trim()) return base;
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}token=${encodeURIComponent(token.trim())}`;
+  return resolveApiUrl(`/video-analysis/videos/${videoId}/stream`);
 }
 
 export async function uploadVideo(
@@ -69,9 +66,21 @@ export async function getAnalysisJob(jobId: string): Promise<VideoAnalysisJob> {
   return httpRequest<VideoAnalysisJob>(`/video-analysis/jobs/${jobId}`);
 }
 
-export async function listDetections(jobId: string): Promise<VideoDetection[]> {
-  return httpRequest<VideoDetection[]>(
-    `/video-analysis/jobs/${jobId}/detections?limit=2000`,
+export async function cancelVideoAnalysis(jobId: string): Promise<VideoAnalysisJob> {
+  return httpRequest<VideoAnalysisJob>(`/video-analysis/jobs/${jobId}/cancel`, {
+    method: "POST",
+  });
+}
+
+export async function listDetections(
+  jobId: string,
+  params: { cursor?: string | null; sinceId?: string | null; limit?: number } = {},
+): Promise<VideoDetectionPage> {
+  const search = new URLSearchParams({ limit: String(params.limit ?? 250) });
+  if (params.cursor) search.set("cursor", params.cursor);
+  if (params.sinceId) search.set("since_id", params.sinceId);
+  return httpRequest<VideoDetectionPage>(
+    `/video-analysis/jobs/${jobId}/detections?${search}`,
   );
 }
 

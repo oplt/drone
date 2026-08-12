@@ -31,7 +31,7 @@ def test_postgresql_postgis_and_request_path_indexes() -> None:
                     )
                 )
             assert postgis
-            assert revision == "v8c4d5e6f7a8"
+            assert revision == "g0h1i2j3k4l5"
             assert index_names == {
                 "idx_mission_runtime_client_state",
                 "idx_webhook_delivery_endpoint_status_created",

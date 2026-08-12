@@ -16,6 +16,14 @@ export type CreateVisionProjectInput = {
   name: string;
   crop: string;
   description?: string;
+  capability_id:
+    | "object_detection"
+    | "stand_count"
+    | "weed_detection"
+    | "crop_health"
+    | "canopy_cover"
+    | "row_detection"
+    | "standing_water";
   classes: Array<{ name: string }>;
 };
 
@@ -34,9 +42,16 @@ export const createVisionProject = (payload: CreateVisionProjectInput) =>
     body: payload,
   });
 
-export const createVisionDataset = (projectId: string) =>
+export const createVisionDataset = ({
+  projectId,
+  cloneFromDatasetId,
+}: {
+  projectId: string;
+  cloneFromDatasetId?: string;
+}) =>
   httpRequest<VisionDataset>(`/vision/projects/${projectId}/datasets`, {
     method: "POST",
+    body: { clone_from_dataset_id: cloneFromDatasetId ?? null },
   });
 
 export const listVisionDatasets = (projectId: string) =>
@@ -78,10 +93,11 @@ export const saveVisionAnnotations = (
   imageId: string,
   annotations: AnnotationInput[],
   reviewed: boolean,
+  expectedRevision: number,
 ) =>
   httpRequest<VisionImage>(`/vision/images/${imageId}/annotations`, {
     method: "PUT",
-    body: { annotations, reviewed },
+    body: { annotations, reviewed, expected_revision: expectedRevision },
   });
 
 export const setVisionImageSelected = (imageId: string, selected: boolean) =>

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -110,6 +110,21 @@ class VisionRepository:
         )
         return result.unique().scalar_one_or_none()
 
+    async def claim_annotation_revision(
+        self, image_id: str, *, expected_revision: int
+    ) -> int | None:
+        result = await self.db.execute(
+            update(DatasetImage)
+            .where(
+                DatasetImage.id == image_id,
+                DatasetImage.annotation_revision == expected_revision,
+            )
+            .values(annotation_revision=DatasetImage.annotation_revision + 1)
+            .returning(DatasetImage.annotation_revision)
+            .execution_options(synchronize_session=False)
+        )
+        return result.scalar_one_or_none()
+
     async def all_dataset_images(self, dataset_id: str) -> list[DatasetImage]:
         result = await self.db.execute(
             select(DatasetImage)
@@ -152,7 +167,7 @@ class VisionRepository:
             .join(VisionModel)
             .join(VisionProject)
             .options(
-                selectinload(ModelVersion.model),
+                selectinload(ModelVersion.model).selectinload(VisionModel.project),
                 selectinload(ModelVersion.training_run),
             )
             .where(ModelVersion.id == version_id, self.project_visible_to(user))
@@ -173,7 +188,9 @@ class VisionRepository:
             select(ModelVersion)
             .join(VisionModel)
             .join(VisionProject)
-            .options(selectinload(ModelVersion.model))
+            .options(
+                selectinload(ModelVersion.model).selectinload(VisionModel.project)
+            )
             .where(
                 ModelVersion.id == version_id,
                 self.project_visible_to_scope(org_id, user_id),
@@ -187,7 +204,7 @@ class VisionRepository:
             .join(VisionModel)
             .join(VisionProject)
             .options(
-                selectinload(ModelVersion.model),
+                selectinload(ModelVersion.model).selectinload(VisionModel.project),
                 selectinload(ModelVersion.training_run),
             )
             .where(self.project_visible_to(user))
@@ -201,7 +218,7 @@ class VisionRepository:
             .join(VisionModel)
             .join(VisionProject)
             .options(
-                selectinload(ModelVersion.model),
+                selectinload(ModelVersion.model).selectinload(VisionModel.project),
                 selectinload(ModelVersion.training_run),
             )
             .where(VisionModel.id == model_id, self.project_visible_to(user))

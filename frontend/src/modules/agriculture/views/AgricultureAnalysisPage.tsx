@@ -3,14 +3,18 @@ import {
   Button,
   CircularProgress,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from "@mui/material";
+import { useState } from "react";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { AgricultureActionExportPanel } from "../components/AgricultureActionExportPanel";
 import { AgricultureAccessibilityBoundary } from "../components/AgricultureAccessibilityBoundary";
 import { AgricultureCropInsightsPanel } from "../components/AgricultureCropInsightsPanel";
 import { AgricultureGovernanceAssistantPanel } from "../components/AgricultureGovernanceAssistantPanel";
 import { AgricultureReviewWorkspace } from "../components/AgricultureReviewWorkspace";
+import { PrioritizedFindingsPanel } from "../components/PrioritizedFindingsPanel";
 import { AgricultureSensorFusionPanel } from "../components/AgricultureSensorFusionPanel";
 import { AnalysisRunProgress } from "../components/AnalysisRunProgress";
 import { useAgricultureAnalysisQuality, useAgricultureAnalysisRun, useReplayAgricultureAnalysisRun, useRetryAgricultureAnalysisStage } from "../hooks";
@@ -18,6 +22,7 @@ import { AgricultureReportPanel } from "../components/AgricultureReportPanel";
 import { AgricultureMediaTimelinePanel } from "../components/AgricultureMediaTimelinePanel";
 import { AgricultureSensorCalibrationWizard } from "../components/AgricultureSensorCalibrationWizard";
 import { AgricultureModelRegistryPanel } from "../components/AgricultureModelRegistryPanel";
+import { AgricultureJourneyStepper } from "../components/AgricultureJourneyStepper";
 
 export default function AgricultureAnalysisPage() {
   const runId = useParams<{ runId: string }>().runId ?? null;
@@ -25,6 +30,7 @@ export default function AgricultureAnalysisPage() {
   const quality = useAgricultureAnalysisQuality(runId);
   const replay = useReplayAgricultureAnalysisRun();
   const retryStage = useRetryAgricultureAnalysisStage();
+  const [tab, setTab] = useState(0);
   if (!runId) return <Alert severity="error">Invalid analysis run.</Alert>;
   if (run.isLoading)
     return (
@@ -54,6 +60,11 @@ export default function AgricultureAnalysisPage() {
           </Typography>
           <Typography color="text.secondary">Run {runId}</Typography>
         </div>
+        <AgricultureJourneyStepper
+          flightStatus="completed"
+          analysisStatus={run.data.status}
+          analysisRunId={runId}
+        />
         <AnalysisRunProgress
           status={run.data.status}
           progress={run.data.progress}
@@ -68,19 +79,40 @@ export default function AgricultureAnalysisPage() {
           onRetryStage={(stageName) => retryStage.mutate({ runId, stageName })}
           retryStagePending={retryStage.isPending ? retryStage.variables?.stageName : null}
         />
-        <AgricultureReportPanel runId={runId} />
-        <AgricultureMediaTimelinePanel flightId={run.data.flight_id} />
-        <AgricultureReviewWorkspace runId={runId} />
-        <AgricultureSensorFusionPanel
-          flightId={run.data.flight_id}
-          runId={runId}
-          active={false}
-        />
-        <AgricultureSensorCalibrationWizard />
-        <AgricultureModelRegistryPanel />
-        <AgricultureCropInsightsPanel runId={runId} />
-        <AgricultureActionExportPanel runId={runId} />
-        <AgricultureGovernanceAssistantPanel runId={runId} />
+        <Tabs value={tab} onChange={(_event, value: number) => setTab(value)} aria-label="Analysis workspace sections" variant="scrollable" allowScrollButtonsMobile>
+          <Tab label="Findings" id="analysis-tab-0" aria-controls="analysis-panel-0" />
+          <Tab label="Insights" id="analysis-tab-1" aria-controls="analysis-panel-1" />
+          <Tab label="Technical details" id="analysis-tab-2" aria-controls="analysis-panel-2" />
+          <Tab label="Governance" id="analysis-tab-3" aria-controls="analysis-panel-3" />
+          <Tab label="Actions" id="analysis-tab-4" aria-controls="analysis-panel-4" />
+        </Tabs>
+        <Stack role="tabpanel" id={`analysis-panel-${tab}`} aria-labelledby={`analysis-tab-${tab}`} spacing={2}>
+          {tab === 0 ? (
+            <>
+              <PrioritizedFindingsPanel runId={runId} />
+              <details>
+                <summary>
+                  <Typography component="span" variant="subtitle2">
+                    Full review workspace
+                  </Typography>
+                </summary>
+                <AgricultureReviewWorkspace runId={runId} />
+              </details>
+              <AgricultureReportPanel runId={runId} />
+            </>
+          ) : null}
+          {tab === 1 ? <AgricultureCropInsightsPanel runId={runId} /> : null}
+          {tab === 2 ? (
+            <>
+              <AgricultureMediaTimelinePanel flightId={run.data.flight_id} />
+              <AgricultureSensorFusionPanel flightId={run.data.flight_id} runId={runId} active={false} />
+              <AgricultureSensorCalibrationWizard />
+              <AgricultureModelRegistryPanel />
+            </>
+          ) : null}
+          {tab === 3 ? <AgricultureGovernanceAssistantPanel runId={runId} /> : null}
+          {tab === 4 ? <AgricultureActionExportPanel runId={runId} /> : null}
+        </Stack>
       </Stack>
     </AgricultureAccessibilityBoundary>
   );

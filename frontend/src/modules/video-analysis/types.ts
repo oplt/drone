@@ -7,6 +7,11 @@ export type VideoAsset = {
   width?: number | null;
   height?: number | null;
   duration_seconds?: number | null;
+  captured_at?: string | null;
+  capture_time_source?: "container" | "mission" | "operator" | "upload_time" | "unknown";
+  capture_timezone?: string | null;
+  capture_time_uncertainty_seconds?: number | null;
+  sync_offset_seconds?: number;
   status: string;
   created_at: string;
 };
@@ -18,9 +23,22 @@ export type VideoAnalysisJob = {
   status: "queued" | "running" | "completed" | "failed" | string;
   progress: number;
   error?: string | null;
+  terminal_reason_code?: string | null;
+  terminal_stage?: string | null;
+  attempt?: number;
+  heartbeat_at?: string | null;
+  lease_expires_at?: string | null;
+  frames_received?: number;
+  frames_decoded?: number;
+  frames_attempted?: number;
+  frames_processed?: number;
+  frames_persisted?: number;
+  frames_dropped?: number;
+  frames_failed?: number;
   model_name: string;
   model_version_id?: string | null;
   model_version?: string;
+  loaded_model_hash?: string | null;
   small_object_mode?: boolean;
   tracking_enabled?: boolean;
   tracker_type?: "bytetrack";
@@ -28,6 +46,7 @@ export type VideoAnalysisJob = {
   confidence_threshold: number;
   started_at?: string | null;
   finished_at?: string | null;
+  stage_timings?: Record<string, number>;
   created_at: string;
 };
 
@@ -49,7 +68,32 @@ export type VideoDetection = {
   lon?: number | null;
   altitude_m?: number | null;
   heading_deg?: number | null;
-  evidence_path?: string | null;
+  evidence?: {
+    type: "detection_crop";
+    source_entity_id: string;
+    frame_index: number;
+    timestamp: number;
+    storage_object_id: string;
+    checksum: string;
+    availability: "available" | "missing" | "deleted";
+    spatial?: Record<string, number> | null;
+    provenance: Record<string, unknown>;
+  } | null;
+  evidence_url?: string | null;
+  evidence_path?: null;
+  telemetry_match_quality?: string | null;
+  telemetry_match_delta_ms?: number | null;
+  telemetry_match_method?: string | null;
+  telemetry_match_version?: string | null;
+};
+
+export type VideoDetectionPage = {
+  items: VideoDetection[];
+  next_cursor: string | null;
+  has_more: boolean;
+  job_version: number;
+  status: string;
+  total_estimate?: number | null;
 };
 
 export type AnalyzeVideoPayload = {

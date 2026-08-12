@@ -9,16 +9,17 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { getToken } from "../session";
 import { AnalysisWorkflowTabs } from "./components/AnalysisWorkflowTabs";
 import { DetectionLogsTabs } from "./components/DetectionLogsTabs";
 import { DetectionMap } from "./components/DetectionMap";
 import { DetectionTimeline } from "./components/DetectionTimeline";
 import { VideoOverlayPlayer } from "./components/VideoOverlayPlayer";
 import { buildMissionVideoStreamUrl } from "./api";
+import { selectedDetectionEvidence } from "./evidenceSelection";
 import {
   useAnalysisJob,
   useAnalysisSummary,
+  useCancelAnalysis,
   useDetections,
   useLiveSavedDetections,
   useMissionVideos,
@@ -74,15 +75,18 @@ export function VideoAnalysisPanel({
   const job = useAnalysisJob(jobId);
   const detections = useDetections(jobId, job.data?.status);
   const summary = useAnalysisSummary(jobId, job.data?.status);
+  const cancel = useCancelAnalysis();
   const liveDetections = useLiveSavedDetections();
-  const videoToken = getToken();
   const playbackUrl = useMemo(
     () =>
-      video && !file ? buildMissionVideoStreamUrl(video.id, videoToken) : null,
-    [file, video, videoToken],
+      video && !file ? buildMissionVideoStreamUrl(video.id) : null,
+    [file, video],
   );
 
-  const rows = useMemo(() => detections.data ?? [], [detections.data]);
+  const rows = useMemo(
+    () => detections.data?.items ?? [],
+    [detections.data?.items],
+  );
   const topLabels = useMemo(() => {
     const counts = new Map<string, number>();
     rows.forEach((detection) =>
@@ -109,19 +113,24 @@ export function VideoAnalysisPanel({
   }, [flightActive, queryMissionId, refetchMissionVideos]);
 
   useEffect(() => {
-    const onAgricultureEvidence = (event: Event) => {
-      const detail = (event as CustomEvent<{ evidenceIds?: string[] }>).detail;
-      setRequestedEvidenceId(detail?.evidenceIds?.[0] ?? null);
-    };
-    window.addEventListener(
-      "agriculture:evidence-select",
-      onAgricultureEvidence,
-    );
-    return () =>
-      window.removeEventListener(
-        "agriculture:evidence-select",
-        onAgricultureEvidence,
+    performance.mark("video-analysis-panel-open");
+    return () => {
+      performance.mark("video-analysis-panel-close");
+      performance.measure(
+        "video-analysis-panel-visible",
+        "video-analysis-panel-open",
+        "video-analysis-panel-close",
       );
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncFromUrl = () => setRequestedEvidenceId(selectedDetectionEvidence());
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    return () => {
+      window.removeEventListener("popstate", syncFromUrl);
+    };
   }, []);
 
   useEffect(() => {
@@ -214,6 +223,8 @@ export function VideoAnalysisPanel({
             onAnalyze={handleAnalyze}
             job={job.data}
             detectionCount={rows.length}
+            cancelling={cancel.isPending}
+            onCancel={jobId ? () => cancel.mutate(jobId) : undefined}
           />
         </Grid>
         <Grid size={{ xs: 12, lg: embedded ? 12 : 6, xl: embedded ? 8 : 6 }}>
