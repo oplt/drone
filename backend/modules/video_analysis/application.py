@@ -16,6 +16,7 @@ from backend.modules.video_analysis.model_storage import resolve_model_path
 from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.schemas import CUSTOM_MODEL_PREFIX, AnalyzeVideoRequest
 from backend.modules.video_analysis.service.queue import VideoAnalysisQueue, VideoAnalysisQueueError
+from backend.modules.vision_models.application import VisionApplication, VisionNotFound
 
 UPLOAD_ROOT = Path(settings.video_analysis_upload_dir)
 MAX_UPLOAD_BYTES = settings.video_analysis_max_upload_bytes
@@ -132,9 +133,22 @@ class VideoAnalysisApplication:
         video = await repo.get_video_for_user(video_id, user)
         if video is None:
             raise VideoAnalysisNotFound("Video not found")
-        if (
-            request.model_name.startswith(CUSTOM_MODEL_PREFIX)
-            and not resolve_model_path(request.model_name).is_file()
+        model_name = request.model_name
+        if request.model_version_id:
+            try:
+                _, version = await VisionApplication().resolve_registered_weights(
+                    db,
+                    request.model_version_id,
+                    org_id=user.org_id,
+                    user_id=user.id,
+                    require_production=True,
+                )
+            except VisionNotFound as exc:
+                raise VideoAnalysisModelUnavailable(str(exc)) from exc
+            model_name = f"{version.model.name} v{version.version}"
+        if request.model_version_id is None and (
+            model_name.startswith(CUSTOM_MODEL_PREFIX)
+            and not resolve_model_path(model_name).is_file()
         ):
             raise VideoAnalysisModelUnavailable(
                 "Custom model is not installed. Add the selected .pt file under "
@@ -142,7 +156,11 @@ class VideoAnalysisApplication:
             )
         job = await repo.create_job(
             video=video,
-            model_name=request.model_name,
+            model_name=model_name,
+            model_version_id=request.model_version_id,
+            small_object_mode=request.small_object_mode,
+            tracking_enabled=request.tracking_enabled,
+            tracker_type=request.tracker_type,
             frame_stride_seconds=request.frame_stride_seconds,
             confidence_threshold=request.confidence_threshold,
         )
@@ -164,6 +182,46 @@ class VideoAnalysisApplication:
         if await repo.get_job_for_user(job_id, user) is None:
             raise VideoAnalysisNotFound("Analysis job not found")
         return await repo.list_detections_for_user(job_id, user, limit=limit)
+
+    async def get_summary(self, db: AsyncSession, *, job_id: str, user: User):
+        repo = VideoAnalysisRepository(db)
+        job = await repo.get_job_for_user(job_id, user)
+        if job is None:
+            raise VideoAnalysisNotFound("Analysis job not found")
+        summary = await repo.summarize_detections(job_id, user)
+        registered_model = None
+        if job.model_version_id:
+            try:
+                _, version = await VisionApplication().resolve_registered_weights(
+                    db,
+                    job.model_version_id,
+                    org_id=user.org_id,
+                    user_id=user.id,
+                    require_production=False,
+                )
+                registered_model = {
+                    "name": version.model.name,
+                    "version": version.version,
+                    "crop": version.model.crop,
+                    "task_type": version.model.task_type,
+                    "classes": version.classes,
+                }
+            except VisionNotFound:
+                registered_model = None
+        return {
+            "job_id": job.id,
+            "frames_analyzed": job.frames_processed,
+            **summary,
+            "model_name": job.model_name,
+            "model_version": job.model_version,
+            "model_version_id": job.model_version_id,
+            "registered_model": registered_model,
+            "tracking_enabled": job.tracking_enabled,
+            "tracker_type": job.tracker_type,
+            "small_object_mode": job.small_object_mode,
+            "frame_stride_seconds": job.frame_stride_seconds,
+            "confidence_threshold": job.confidence_threshold,
+        }
 
     async def list_videos(
         self,

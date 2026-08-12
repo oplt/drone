@@ -1,31 +1,31 @@
-import type { ReactElement, ReactNode } from 'react';
-import { useState } from 'react';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Stack from '@mui/material/Stack';
-import Collapse from '@mui/material/Collapse';
-import Tooltip from '@mui/material/Tooltip';
-import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
-import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
-import InsightsRoundedIcon from '@mui/icons-material/InsightsRounded';
-import PrecisionManufacturingRoundedIcon from '@mui/icons-material/PrecisionManufacturingRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
-import SportsEsportsRoundedIcon from '@mui/icons-material/SportsEsportsRounded';
-import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
-import PhotoCameraRoundedIcon from '@mui/icons-material/PhotoCameraRounded';
-import EmojiNatureRoundedIcon from '@mui/icons-material/EmojiNatureRounded';
-import AgricultureIcon from '@mui/icons-material/Agriculture';
-import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import WarehouseRoundedIcon from '@mui/icons-material/WarehouseRounded';
-import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
-import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
-import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
-import { Link, useLocation } from 'react-router-dom';
+import type { ReactElement, ReactNode } from "react";
+import { useState } from "react";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Stack from "@mui/material/Stack";
+import Collapse from "@mui/material/Collapse";
+import Tooltip from "@mui/material/Tooltip";
+import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
+import AssignmentRoundedIcon from "@mui/icons-material/AssignmentRounded";
+import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
+import PrecisionManufacturingRoundedIcon from "@mui/icons-material/PrecisionManufacturingRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+import SportsEsportsRoundedIcon from "@mui/icons-material/SportsEsportsRounded";
+import ManageAccountsRoundedIcon from "@mui/icons-material/ManageAccountsRounded";
+import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
+import EmojiNatureRoundedIcon from "@mui/icons-material/EmojiNatureRounded";
+import AgricultureIcon from "@mui/icons-material/Agriculture";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import WarehouseRoundedIcon from "@mui/icons-material/WarehouseRounded";
+import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
+import { Link, useLocation } from "react-router-dom";
 
 interface MenuChildItem {
   text: string;
@@ -46,62 +46,120 @@ interface MenuContentProps {
 }
 
 const mainListItems: MenuItem[] = [
-  { text: 'Operations', icon: <HomeRoundedIcon />, path: '/dashboard' },
+  { text: "Operations", icon: <HomeRoundedIcon />, path: "/dashboard" },
   {
-    text: 'Tasks',
+    text: "Tasks",
     icon: <AssignmentRoundedIcon />,
-    path: '/dashboard/controlled',
+    path: "/dashboard/controlled",
     children: [
-      { text: 'Agriculture', icon: <AgricultureIcon />, path: '/dashboard/field' },
-      { text: 'Property Patrol Mission', icon: <VisibilityRoundedIcon />, path: '/dashboard/property-patrol' },
-      { text: 'Warehouse', icon: <WarehouseRoundedIcon />, path: '/dashboard/warehouse' },
-      { text: 'PhotoGrammetry', icon: <PhotoCameraRoundedIcon />, path: '/dashboard/photogrammetry' },
-      { text: 'Animal Farm', icon: <EmojiNatureRoundedIcon />, path: '/dashboard/animalfarm' },
-      { text: 'Controlled Flight', icon: <SportsEsportsRoundedIcon/>, path: '/dashboard/controlled' },
+      {
+        text: "Agriculture",
+        icon: <AgricultureIcon />,
+        path: "/dashboard/field",
+      },
+      {
+        text: "Vision Models",
+        icon: <VisibilityRoundedIcon />,
+        path: "/dashboard/agriculture/vision-models",
+      },
+      {
+        text: "Property Patrol Mission",
+        icon: <VisibilityRoundedIcon />,
+        path: "/dashboard/property-patrol",
+      },
+      {
+        text: "Warehouse",
+        icon: <WarehouseRoundedIcon />,
+        path: "/dashboard/warehouse",
+      },
+      {
+        text: "PhotoGrammetry",
+        icon: <PhotoCameraRoundedIcon />,
+        path: "/dashboard/photogrammetry",
+      },
+      {
+        text: "Animal Farm",
+        icon: <EmojiNatureRoundedIcon />,
+        path: "/dashboard/animalfarm",
+      },
+      {
+        text: "Controlled Flight",
+        icon: <SportsEsportsRoundedIcon />,
+        path: "/dashboard/controlled",
+      },
     ],
   },
-  { text: 'Insights', icon: <InsightsRoundedIcon />, path: '/dashboard/insights' },
-  { text: 'Observability', icon: <QueryStatsRoundedIcon />, path: '/observability' },
-  { text: 'Fleet', icon: <PrecisionManufacturingRoundedIcon />, path: '/dashboard/fleet' },
-  { text: 'Templates', icon: <ContentCopyRoundedIcon />, path: '/dashboard/templates' },
+  {
+    text: "Insights",
+    icon: <InsightsRoundedIcon />,
+    path: "/dashboard/insights",
+  },
+  {
+    text: "Observability",
+    icon: <QueryStatsRoundedIcon />,
+    path: "/observability",
+  },
+  {
+    text: "Fleet",
+    icon: <PrecisionManufacturingRoundedIcon />,
+    path: "/dashboard/fleet",
+  },
+  {
+    text: "Templates",
+    icon: <ContentCopyRoundedIcon />,
+    path: "/dashboard/templates",
+  },
 ];
 
 const secondaryListItems: MenuItem[] = [
-  { text: 'Account', icon: <ManageAccountsRoundedIcon />, path: '/dashboard/account' },
-  { text: 'Settings', icon: <SettingsRoundedIcon />, path: '/dashboard/settings' },
+  {
+    text: "Account",
+    icon: <ManageAccountsRoundedIcon />,
+    path: "/dashboard/account",
+  },
+  {
+    text: "Settings",
+    icon: <SettingsRoundedIcon />,
+    path: "/dashboard/settings",
+  },
 ];
 
-const tasksChildren = mainListItems.find((item) => item.text === 'Tasks')?.children ?? [];
+const tasksChildren =
+  mainListItems.find((item) => item.text === "Tasks")?.children ?? [];
 
 const navItemSx = {
-  '& .MuiListItemText-primary': {
-    fontSize: '0.875rem',
+  "& .MuiListItemText-primary": {
+    fontSize: "0.875rem",
     fontWeight: 500,
-    letterSpacing: 'normal',
+    letterSpacing: "normal",
   },
 };
 
 const activeNavItemSx = {
-  '&.Mui-selected': {
-    backgroundColor: 'action.selected',
-    borderLeft: '2px solid',
-    borderLeftColor: 'primary.main',
+  "&.Mui-selected": {
+    backgroundColor: "action.selected",
+    borderLeft: "2px solid",
+    borderLeftColor: "primary.main",
     borderRadius: 0,
-    '& .MuiListItemText-primary': {
-      color: 'primary.main',
+    "& .MuiListItemText-primary": {
+      color: "primary.main",
       fontWeight: 500,
     },
-    '& .MuiSvgIcon-root': {
-      color: 'primary.main',
+    "& .MuiSvgIcon-root": {
+      color: "primary.main",
     },
   },
 };
 
-export default function MenuContent({ collapsed = false, userRole }: MenuContentProps) {
+export default function MenuContent({
+  collapsed = false,
+  userRole,
+}: MenuContentProps) {
   const location = useLocation();
   const isTaskRoute = (pathname: string) =>
     tasksChildren.some(
-      (child) => pathname === child.path || pathname.startsWith(`${child.path}/`),
+      (child) =>
+        pathname === child.path || pathname.startsWith(`${child.path}/`),
     );
 
   const taskRouteActive = isTaskRoute(location.pathname);
@@ -122,18 +180,24 @@ export default function MenuContent({ collapsed = false, userRole }: MenuContent
     );
 
   const listButtonSx = collapsed
-    ? { minHeight: 40, justifyContent: 'center', px: 1.5, borderRadius: 0, ...navItemSx }
+    ? {
+        minHeight: 40,
+        justifyContent: "center",
+        px: 1.5,
+        borderRadius: 0,
+        ...navItemSx,
+      }
     : { minHeight: 40, borderRadius: 0, ...navItemSx, ...activeNavItemSx };
 
   const listIconSx = collapsed
-    ? { minWidth: 0, mr: 0, justifyContent: 'center' }
+    ? { minWidth: 0, mr: 0, justifyContent: "center" }
     : { minWidth: 32 };
 
   return (
-    <Stack sx={{ flexGrow: 1, p: 1, justifyContent: 'space-between' }}>
+    <Stack sx={{ flexGrow: 1, p: 1, justifyContent: "space-between" }}>
       <List dense>
         {mainListItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
+          <ListItem key={item.text} disablePadding sx={{ display: "block" }}>
             {item.children && collapsed ? (
               withTooltip(
                 item.text,
@@ -168,9 +232,16 @@ export default function MenuContent({ collapsed = false, userRole }: MenuContent
                           location.pathname === child.path ||
                           location.pathname.startsWith(`${child.path}/`)
                         }
-                        sx={{ pl: 4, borderRadius: 0, ...navItemSx, ...activeNavItemSx }}
+                        sx={{
+                          pl: 4,
+                          borderRadius: 0,
+                          ...navItemSx,
+                          ...activeNavItemSx,
+                        }}
                       >
-                        <ListItemIcon sx={{ minWidth: 32 }}>{child.icon}</ListItemIcon>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          {child.icon}
+                        </ListItemIcon>
                         <ListItemText primary={child.text} />
                       </ListItemButton>
                     ))}
@@ -199,27 +270,31 @@ export default function MenuContent({ collapsed = false, userRole }: MenuContent
       </List>
 
       <List dense>
-        {userRole === "admin" && withTooltip(
-          "Admin",
-          <ListItemButton
-            component={Link}
-            to="/dashboard/admin"
-            selected={location.pathname.startsWith("/dashboard/admin")}
-            sx={listButtonSx}
-          >
-            <ListItemIcon sx={listIconSx}><AdminPanelSettingsRoundedIcon /></ListItemIcon>
-            {!collapsed && <ListItemText primary="Admin" />}
-          </ListItemButton>,
-        )}
+        {userRole === "admin" &&
+          withTooltip(
+            "Admin",
+            <ListItemButton
+              component={Link}
+              to="/dashboard/admin"
+              selected={location.pathname.startsWith("/dashboard/admin")}
+              sx={listButtonSx}
+            >
+              <ListItemIcon sx={listIconSx}>
+                <AdminPanelSettingsRoundedIcon />
+              </ListItemIcon>
+              {!collapsed && <ListItemText primary="Admin" />}
+            </ListItemButton>,
+          )}
         {secondaryListItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
+          <ListItem key={item.text} disablePadding sx={{ display: "block" }}>
             {withTooltip(
               item.text,
               <ListItemButton
                 component={Link}
                 to={item.path}
                 selected={
-                  location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
+                  location.pathname === item.path ||
+                  location.pathname.startsWith(`${item.path}/`)
                 }
                 sx={listButtonSx}
               >

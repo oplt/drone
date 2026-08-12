@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from fastapi.responses import FileResponse
 
 from backend.core.database.session import get_db
-from backend.modules.identity.dependencies import OrgUser, require_org_user, require_user_header_or_query
+from backend.modules.identity.dependencies import (
+    OrgUser,
+    require_org_user,
+    require_user_header_or_query,
+)
 from backend.modules.video_analysis.application import (
     VideoAnalysisApplication,
     VideoAnalysisConflict,
@@ -15,6 +19,7 @@ from backend.modules.video_analysis.application import (
 from backend.modules.video_analysis.schemas import (
     AnalyzeVideoRequest,
     VideoAnalysisJobOut,
+    VideoAnalysisSummaryOut,
     VideoAssetOut,
     VideoDetectionOut,
 )
@@ -128,5 +133,17 @@ async def list_detections(
 ) -> list[VideoDetectionOut]:
     try:
         return await application.list_detections(db, job_id=job_id, user=org_user.user, limit=limit)
+    except VideoAnalysisNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/jobs/{job_id}/summary", response_model=VideoAnalysisSummaryOut)
+async def get_analysis_summary(
+    job_id: str,
+    db=Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> VideoAnalysisSummaryOut:
+    try:
+        return await application.get_summary(db, job_id=job_id, user=org_user.user)
     except VideoAnalysisNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

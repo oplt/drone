@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any, Iterable
+from typing import Any
 
 from backend.modules.agriculture.georeferencing import interpolate_pose
 
@@ -20,7 +21,12 @@ class TelemetryMatch:
 class NearestTelemetryMatcher:
     """Repository-fed frame/pose matcher with explicit unresolved outcomes."""
 
-    def __init__(self, mission_id: str | None, samples: Iterable[Any] | None = None, base_timestamp: datetime | None = None):
+    def __init__(
+        self,
+        mission_id: str | None,
+        samples: Iterable[Any] | None = None,
+        base_timestamp: datetime | None = None,
+    ):
         self.mission_id = mission_id
         self.samples = list(samples or [])
         self.base_timestamp = base_timestamp

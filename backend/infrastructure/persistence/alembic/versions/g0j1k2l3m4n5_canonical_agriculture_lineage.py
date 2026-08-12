@@ -84,7 +84,7 @@ def upgrade() -> None:
     op.execute(
         "UPDATE agriculture_frame_lineage SET footprint = "
         "ST_SetSRID(ST_GeomFromGeoJSON(footprint_geojson::text), 4326) "
-        "WHERE footprint_geojson IS NOT NULL AND footprint_geojson <> '{}'::json "
+        "WHERE footprint_geojson IS NOT NULL AND footprint_geojson::jsonb <> '{}'::jsonb "
         "AND footprint_geojson->>'type' IN ('Polygon', 'MultiPolygon')"
     )
     op.create_check_constraint(
@@ -169,7 +169,7 @@ def upgrade() -> None:
     op.execute(
         "UPDATE agriculture_observations SET geometry = "
         "ST_SetSRID(ST_GeomFromGeoJSON(geometry_geojson::text), 4326) "
-        "WHERE geometry_geojson IS NOT NULL AND geometry_geojson <> '{}'::json "
+        "WHERE geometry_geojson IS NOT NULL AND geometry_geojson::jsonb <> '{}'::jsonb "
         "AND geometry_geojson->>'type' IN ('Polygon', 'MultiPolygon')"
     )
     op.create_index(

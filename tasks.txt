@@ -1,0 +1,270 @@
+# Drone App audit and implementation roadmap
+
+Audit date: 2026-08-12
+
+Scope: the current dirty working tree, with emphasis on the Agriculture product journey, Video Analysis, and Vision Training. This document is the deliverable requested by `prompt.txt`; no production feature code was changed during the audit.
+
+## Executive summary
+
+The repository contains most of the ingredients for a strong evidence-first agriculture product: fields and missions, live telemetry, a video catalog, a mature video detector path, a custom-model training pipeline, geospatial observations, review workflows, reports, and action records. The main issue is not a lack of features. It is that the core vertical slice is not connected reliably.
+
+The current Agriculture post-flight action requests seven analysis names by default. The Agriculture API then requires a separately registered and deployed `AgricultureModelVersion` for almost all of them, while the Vision Training module deploys a different `ModelVersion` type and the Agriculture service does not start a `VideoAnalysisJob`. It only consumes detections that already happen to exist for the mission. This means the intended FIELD -> MISSION -> CAPTURE -> ANALYZE -> FINDINGS journey can fail before useful work starts or can aggregate an empty, unrelated result. Capability aliases such as `canopy`/`canopy_cover` and `rows`/`row_detection` make the contract even less deterministic.
+
+Three confirmed runtime defects make this a release blocker independently of the product-flow gap: Agriculture routes reference `settings` without importing it, field-zone creation references `new_id()` without importing it, and observation aggregation calls SQLAlchemy `in_()` with two positional values instead of one iterable. The latter was reproduced directly and raises `TypeError` when analysis reaches model lookup.
+
+The highest-value sequence is therefore:
+
+1. Restore executable correctness and add route-level regression coverage (`AGR-001`).
+2. Define one capability and deployment contract between Vision, Video Analysis, and Agriculture (`ML-001`, `AGR-002`).
+3. Make Agriculture analysis an idempotent orchestration of video inference and finding aggregation (`VID-001`, `AGR-003`).
+4. Protect training data from concurrent overwrites and remove failed-training dead ends (`ML-002`, `ML-003`).
+5. Replace raw configuration and duplicated technical workspaces with a map-first, stage-aware farmer journey (`UX-001`, `UX-002`).
+6. Establish production telemetry before tuning inference, SAHI, decoding, or tracking (`PERF-001`, then `PERF-002`).
+
+The recommended architecture remains a modular monolith plus isolated Celery/GPU workers. Agriculture should own agronomic intent, findings, review, and actions; Video Analysis should own media inference and evidence; Vision Training should own datasets, runs, evaluations, and immutable model artifacts. Integration should happen through typed application contracts and persisted job links, not cross-module ORM queries or duplicate model registries.
+
+### Audit confidence and validation snapshot
+
+- Focused backend tests: 108 passed, 1 skipped, 1 failed. The failure is `test_local_restore_drill_verifies_and_cleans_up`, which leaves restore directories behind.
+- Focused frontend tests: 33 passed across 13 files. Existing warnings include an unhandled MSW request and a React `act(...)` warning.
+- Frontend production build: passed.
+- Alembic: one head, `c6f7g8h9i0j1`.
+- `git diff --check`: passed.
+- Architecture guard: failed on oversized Agriculture API/hooks/types and several large workflow components.
+- Ruff focused scan: 2,004 findings, including 32 undefined-name findings; most findings are existing line/statement formatting debt.
+- Mypy diagnostic scan: 376 Agriculture errors and 180 Video/Vision errors with import following reduced. The counts include annotation debt, but also expose real contract errors.
+- Deterministic UI anti-pattern scan of the two feature modules: no scanner findings. Manual source review still found substantive journey, accessibility, and performance issues that a syntax scanner cannot detect.
+- Live browser review was not possible in this sandbox: the Playwright browser was absent and the system browser crashed under the available sandbox restrictions. Browser-level acceptance criteria below belong in CI and a normal workstation environment.
+- Synthetic 15-second 1080p H.264 decode benchmark on the available CPU decoded about 803-856 frames/second regardless of sample interval. YOLO CPU throughput improved only about 8-9% with an eight-frame batch in this synthetic run. CUDA was unavailable and SAHI was not installed in the active environment. These results are a baseline warning against speculative optimization, not production capacity claims.
+
+## Current architecture and end-to-end flow
+
+```text
+React Agriculture routes
+  fields -> field detail -> flight workspace -> analysis workspace
+       |         |               |                    |
+       +---------+---------------+--------------------+
+                         agriculture/api.ts + hooks.ts
+                                      |
+                              FastAPI agriculture/api.py
+                                      |
+                 AgricultureService / repositories / ORM models
+                      |                       |
+                      |                       +-> PostGIS/JSON observations,
+                      |                           findings, actions, reviews
+                      |
+                      +-- direct ORM read --> VideoAsset / VideoDetection
+
+React Video Analysis route
+  source -> inference -> results
+               |
+       video-analysis API/hooks
+               |
+       FastAPI video_analysis/api.py
+               |
+       VideoAnalysisApplication + repository
+               |
+       Celery pipeline
+         decode -> detector (YOLO or SAHI) -> tracking
+                -> telemetry match -> crops/evidence -> detections -> summary
+
+React Vision Training routes
+  project -> dataset/labeling -> training -> evaluation -> registry/deploy
+               |
+          vision API/hooks
+               |
+       FastAPI vision APIs + VisionApplication operations
+               |
+       datasets/storage -> Celery training -> evaluation artifacts -> ModelVersion
+
+Missing contract today
+  Vision ModelVersion --X--> AgricultureModelVersion/capability
+  Agriculture analysis --X--> VideoAnalysisJob orchestration
+  Video terminal result --X--> deterministic Agriculture aggregation trigger
+```
+
+### Current farmer/agronomist journey
+
+1. Create a field using text metadata and raw boundary GeoJSON.
+2. Open a field and configure a mission with raw takeoff/landing longitude and latitude, raw exclusion-zone JSON, and waypoint limits.
+3. Run preflight and flight controls in a large live-status panel.
+4. Register or upload video/media through one of several media surfaces.
+5. Start Agriculture post-flight analysis, which hardcodes a broad capability set.
+6. Separately configure or run Video Analysis if detections are needed.
+7. Separately train and deploy a custom Vision model, which does not satisfy the Agriculture deployment gate.
+8. Review findings across the flight page and a separate analysis page, with overlapping report, review, model, evidence, and governance controls.
+9. Create actions or exports after navigating technical tables, JSON-oriented controls, and internal terminology.
+
+The journey exposes implementation boundaries instead of user intent. A farmer should primarily answer: Which field? What should the flight inspect? Is the capture usable? What changed? Where should I scout? What action should I approve? Model versions, detector types, slice overlap, telemetry tolerances, and raw GeoJSON should be progressive-disclosure controls for specialists.
+
+## Recommended architecture
+
+### Decision: modular monolith with explicit feature contracts
+
+Keep the existing deployable shape while replacing cross-module ORM access with three ownership boundaries:
+
+- Agriculture owns fields, mission intent, agronomic capabilities, observations/findings, human review, action recommendations, exports, and agronomic release policy.
+- Video Analysis owns video assets, inference jobs, frame/detection evidence, telemetry association metadata, tracking, summaries, and evidence retention requests.
+- Vision Training owns projects, source media ingestion, dataset snapshots, annotations, splits, training/evaluation runs, artifacts, and immutable `ModelVersion` records.
+- A capability release record links an Agriculture capability to a deployed Vision `ModelVersion` and its supported Video inference contract. It should not copy artifact URIs, hashes, metrics, or lifecycle state.
+- Agriculture creates a persisted analysis orchestration with explicit stage/job links. Video completion emits or records an idempotent terminal transition; Agriculture aggregation consumes the completed job through a typed query contract.
+
+Why this option: it preserves the useful modules and current deployment model, establishes one owner per durable fact, supports independent GPU workers, and avoids the operational cost of premature services.
+
+### Alternatives considered
+
+1. Merge Agriculture, Video Analysis, and Vision into one feature module. Rejected: media inference and model lifecycle are reusable platform capabilities, and merging would create a larger coupled domain without fixing ownership.
+2. Split the three modules into network services now. Deferred: there is no measured scaling, team-ownership, isolation, or deployment requirement that offsets distributed transactions, versioned RPC contracts, and operational overhead.
+3. Keep both model registries synchronized with copy jobs. Rejected: duplicated artifact truth and lifecycle drift are the current problem. Link release policy to the canonical Vision model instead.
+
+Reconsider service extraction only when at least one measured trigger exists: independent release cadence is repeatedly blocked, GPU queue scaling cannot be isolated in the current deployment, a separate team owns the contract, or security/tenancy requires a process boundary.
+
+## UX and product audit
+
+### Scorecard
+
+| Area | Score | Evidence |
+|---|---:|---|
+| Accessibility | 2/4 | Semantic controls and tests exist, but timeline targets are as small as 5x22 or 8x38 pixels, dense map markers lack clustering, canvas labels rely on hardcoded color, and labeling refuses small screens rather than adapting. |
+| Performance | 1/4 | Full 2,000-row detection payloads poll every 1.5 seconds, live detections poll even when irrelevant, time updates repeatedly scan all detections, and global entry chunks preload maps/3D code. |
+| Responsive behavior | 2/4 | Many layouts use responsive primitives, but high-value planning/labeling workflows depend on raw fields or desktop-only assumptions. |
+| Theming/visual consistency | 3/4 | MUI and shared patterns are used consistently; workflow duplication and technical status vocabulary reduce coherence. |
+| Anti-pattern avoidance | 1/4 | Giant route modules, window prompts, raw JSON inputs, internal “P4” language, duplicate result surfaces, and global custom events remain. |
+| Total | 9/20 | The visual foundation is serviceable; task flow and information architecture need the larger improvement. |
+
+### Heuristic findings
+
+- Visibility of system status: job statuses exist, but the three modules do not present one stage-aware analysis state. Users can see “completed” without knowing whether findings were aggregated or whether frames silently failed.
+- Match with the real world: field and scouting concepts exist, but primary planning still asks for GeoJSON, coordinates, analysis identifiers, and model internals.
+- User control: cancellation exists in backend APIs but is missing from the training UI; failed locked datasets have no visible recovery route.
+- Consistency: flight and analysis pages duplicate report/review/governance surfaces, while Video Analysis is a disconnected top-level tool.
+- Error prevention: the UI requests unavailable analysis capabilities, annotation saves have no revision conflict, and direct API deployment bypasses release thresholds.
+- Recognition over recall: prompt dialogs require users to remember reviewer IDs, reason text, and media identifiers.
+- Efficiency: 2,000 detection buttons/rows and repeated full invalidation penalize common review and labeling actions.
+- Recovery: video failure can leave an asset in `analyzing`; all frame failures can still yield a completed job; restore-drill cleanup currently fails.
+- Help: internal labels and raw controls lack field-level guidance and domain examples.
+
+## AGRICULTURE PRODUCT FLOW
+
+### Current flow
+
+`Field list -> field detail -> raw mission plan -> preflight -> live flight/media -> hardcoded post-flight request -> optional separate video inference -> duplicated findings/review pages -> action/export`
+
+### Problems
+
+- Analysis does not own or await the inference work it needs.
+- The deployed-model check targets a registry not populated by Vision Training.
+- Capability names are inconsistent across UI, gate, service, and model records.
+- Quality, canopy, row, stand, weed, water, and health analyses are requested regardless of media/sensor/model availability.
+- Primary field setup and planning expose raw geospatial serialization and coordinates.
+- The flight workspace combines command, upload, analysis, review, reports, governance, and actions; the analysis workspace duplicates much of it.
+- Evidence navigation crosses modules through global browser events and identifiers whose type is not explicit.
+- Outputs emphasize detections and implementation statuses instead of prioritized field findings and scout/action decisions.
+
+### Recommended flow
+
+`Fields map/list -> guided field setup -> choose inspection goal -> map-first plan -> preflight/capture -> automatic media registration -> capture-quality gate -> available-capability analysis -> prioritized map findings -> review/assign scout route -> approve/export action -> compare next flight`
+
+Specialist controls remain available behind “Advanced”: exact model release, detector mode, thresholds, SAHI settings, telemetry tolerance, raw mission geometry, and artifact provenance.
+
+### Why
+
+This flow matches the strongest competitor pattern without copying their claims: organize by field, automate the capture-to-result handoff, visualize findings on the field, and end with an operational decision. It also matches this repository’s stated evidence-first and human-approval product principles.
+
+### Tasks
+
+The flow is delivered by `AGR-002`, `AGR-003`, `UX-001`, `UX-002`, `AGR-004`, `EVD-001`, `PROD-001`, and `PROD-002`. Their dependency order is shown later.
+
+## COMPETITOR INSIGHTS
+
+The comparison uses public product/documentation pages current on the audit date. Marketing accuracy claims were treated as claims, not engineering evidence.
+
+| Product | Workflow pattern worth learning from | Data/results/action pattern | Offline/collaboration pattern | Gap or caution for this product |
+|---|---|---|---|---|
+| [PIX4Dfields](https://www.pix4d.com/product/pix4dfields/) | Field-edge processing, boundary/obstacle planning, then index/zone outputs | Turns maps into zonation, reports, and machine-oriented exports | Strong offline positioning and shareable outputs | Do not promise multispectral prescriptions until sensor calibration and action validation are real. |
+| [DroneDeploy Agriculture](https://dronedeploy.com/solutions/agriculture) | Repeatable mission templates and automated capture-to-report | Stand counts, crop insights, field reports, and repeat-flight comparison | Remote/standardized capture supports teams | Adopt goal-based templates; avoid copying broad platform scope before the core slice works. |
+| [Sentera FieldAgent](https://sentera.com/fieldagent/) | One connected field workspace with goal-based analytics | Stand/uniformity/skips/canopy trends tied to fields | Integrations and shared operational record | The current app has equivalent pieces but exposes them as separate modules. |
+| [DJI SmartFarm](https://www.dji.com/ag/smartfarm-web) | Parcel archive, map-centric route and parameter review | Flight records and equipment/operation management around parcels | Team/organization operation is prominent | Device-fleet breadth is not the current differentiator; preserve vendor-neutral media contracts. |
+| [Agremo analyses](https://www.agremo.com/documentation/agremo-analyses/) | Analysis selection is organized by agronomic goal | Plant count and crop-health outputs can feed scouting/spraying maps | Cloud workflow and export-oriented handoff | Do not copy claimed accuracy or treatment recommendations without local evaluation and human approval. |
+| [Solvi](https://solvi.ag/) | Simple collect -> process -> compare -> download sequence | Farm/field hierarchy, plot metrics, comparisons, reports/API | Sharing and export are first-class | The simplicity is the lesson; pricing tiers and add-on packaging are not a roadmap requirement. |
+
+Cross-product conclusion: the market standard is not “show every detection.” It is repeatable field capture, automatic processing, a spatially prioritized result, comparison over time, and a share/action handoff. The app should compete on auditable evidence and model provenance while making those capabilities secondary to the agronomic decision.
+
+## QUICK WINS
+
+1. `AGR-001` — import the missing symbols, correct SQLAlchemy `in_()`, and add executable route/service regression tests.
+2. `API-001` — return evaluation artifacts with their recorded MIME type and normalize obvious error responses.
+3. `TEST-001` — repair restore-drill cleanup and make focused CI checks deterministic.
+4. `SEC-001` phase 1 — stop adding the session marker as `?token=1` to media URLs and verify cookie-authenticated streaming.
+5. `ML-003` phase 1 — surface existing cancel/create-dataset-version operations and explain locked snapshots.
+6. `VID-001` phase 1 — set both job and video asset to a terminal state on pipeline failure.
+
+These are quick because they use existing contracts or correct localized defects. They should not substitute for the P0 vertical-slice work.
+
+## PERFORMANCE PLAN
+
+### Frontend
+
+- Current bottlenecks: global map/3D providers and chunks, full detection payload polling, thousands of timeline controls/markers, O(N) active-detection scans on time updates, broad query invalidation after annotation edits, and giant components that rerender unrelated regions.
+- Measure first: route-level JS/CSS/network transfer, LCP/INP on Agriculture and Video Analysis, React commit count, memory at 1k/10k/100k detections, requests/minute while jobs run and while tabs are hidden.
+- Target state: route-only loading for Google Maps/Cesium/3D; delta or cursor fetches instead of repeated full payloads; virtualized/aggregated tables and timelines; map clustering/viewport queries; indexed active-time lookup; narrow query cache updates.
+- Tasks: `VID-002`, `FE-001`, `FE-002`, `PERF-001`.
+
+### API
+
+- Current bottlenecks: 2,000-row hard truncation without continuation metadata, repeated large payloads, 10,000-row spatial prefetch, mixed response/error shapes, and synchronous filesystem work inside async Agriculture paths.
+- Measure first: p50/p95 latency and response bytes by endpoint; query count; event-loop blocked time; timeout/error rate; payload completeness.
+- Target state: explicit cursor/window contracts, compact summaries/aggregates for visualization, typed terminal-stage responses, bounded async-safe file operations, and no silent truncation.
+- Tasks: `API-001`, `VID-002`, `AGR-004`, `STOR-001`.
+
+### Database
+
+- Current bottlenecks: Agriculture sorts/limits before Python bbox filtering, reports the sampled row count as total, scans detections then performs linear evidence lookup, and relies on application checks for some active/deployed uniqueness.
+- Measure first: `EXPLAIN (ANALYZE, BUFFERS)` for viewport and mission-detection queries at realistic tenant sizes; lock/conflict tests for deploy/start; rows fetched versus rows returned.
+- Target state: tenant/mission/time predicates and `ST_Intersects`/bbox execute before limit; useful spatial/composite indexes; exact or explicitly estimated totals; O(D+E) evidence association; database-enforced active/production invariants where possible.
+- Tasks: `AGR-004`, `ML-004`, `ML-005`, `AGR-003`.
+
+### Video decoding
+
+- Current behavior: every frame is decoded even when only every Nth timestamp is selected. The synthetic CPU run was fast enough that this cannot be called the dominant production bottleneck without real recordings and storage conditions.
+- Measure first: wall time and CPU per input video minute by codec/resolution/storage; seek/keyframe behavior; queue wait; selected/decoded ratio; decode errors.
+- Candidate experiments: native decoder stride/seek, ffmpeg/PyAV paths, bounded decode-prefetch, and hardware decode. Promote only if stage telemetry shows meaningful end-to-end improvement and frame/timestamp equivalence tests pass.
+- Tasks: `PERF-001`, then `PERF-002`.
+
+### Inference
+
+- Current behavior: standard inference calls the model for one selected frame at a time. Synthetic CPU batching improved throughput only about 8-9%; no GPU conclusion is possible.
+- Measure first: queue wait, model load, preprocessing, inference, postprocessing, persistence, GPU utilization/memory, throughput, and p95 latency by model/version/input size.
+- Candidate experiments: bounded dynamic batching, warm worker/model lifecycle, half precision where validated, and input-size profiles. Gate on unchanged evaluation thresholds, bounded memory, and better total video turnaround.
+- Tasks: `PERF-001`, `PERF-002`, `VID-004`.
+
+### SAHI
+
+- Current behavior: sliced inference is an explicit mode with per-frame slice/merge cost; the active audit environment could not benchmark it.
+- Measure first: small-object recall/precision versus standard inference, slices/frame, merge time, total latency, and GPU memory on representative crop imagery.
+- Target state: use SAHI only for model/capability profiles whose evaluation proves an accuracy benefit worth the cost. Store the evaluated slice profile in the release contract; do not expose arbitrary defaults as a farmer choice.
+- Tasks: `PERF-001`, `PERF-002`, `ML-005`.
+
+### Tracking
+
+- Current behavior: tracking is sequential after detections and writes tracking metadata with every result. UI rendering does not exploit track-level aggregation enough.
+- Measure first: tracker time/frame, ID switches/fragmentation on representative flights, track count versus detection count, and payload reduction from track summaries.
+- Target state: keep tracking only when it improves evidence review or counts; emit track-level summaries and lazy detection details; avoid persisting redundant raw configuration on every detection.
+- Tasks: `VID-002`, `STOR-001`, `PERF-001`.
+
+### Storage
+
+- Current bottlenecks: one crop file per detection, unchecked image writes, local paths in API data, artifact/media writes before transaction commit, duplicated raw JSON, no complete retention/orphan policy, and 1 GB local uploads without checksum-based identity.
+- Measure first: bytes per video minute/detection/run, inode/file count, orphan rate, crop hit rate, write failures, backup/restore time, and object-store egress where applicable.
+- Target state: content-addressed source identity; storage adapter URLs/IDs rather than local paths; transactional staging/finalization; on-demand or policy-bounded crops; lifecycle/retention jobs; integrity hashes and repair tooling.
+- Tasks: `STOR-001`, `SEC-001`, `VID-004`.
+
+## Priority and phase overview
+
+| Priority / phase | Outcome | Tasks |
+|---|---|---|
+| P0 — restore a safe working vertical slice | Executable endpoints, one deployable model contract, deterministic analysis orchestration, safe labels/training, terminal jobs, correct spatial results | `AGR-001`, `ML-001`, `AGR-002`, `VID-001`, `AGR-003`, `ML-002`, `ML-003`, `AGR-004` |
+| P1 — make the workflow usable and operable | Map-first UX, unified result flow, scalable evidence, robust workers/releases, provenance, storage/security, measured performance | `UX-001`, `UX-002`, `EVD-001`, `VID-002`, `ML-004`, `ML-005`, `ML-006`, `VID-003`, `PERF-001`, `STOR-001`, `SEC-001` |
+| P2 — optimize and consolidate proven paths | Gated pipeline optimization, lazy bundles, clear module boundaries, API/test consistency, removal of obsolete paths | `PERF-002`, `FE-001`, `FE-002`, `ARCH-001`, `API-001`, `TEST-001`, `CLEAN-001` |
+| P3 — deepen agronomic value | Prioritized scouting/action workflow and repeat-flight/season comparison | `PROD-001`, `PROD-002` |
+| P4 — evidence-gated expansion | Advanced sensors, machine prescriptions, or broader detector modes only after prerequisites | `EXP-001`, `EXP-002` |

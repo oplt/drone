@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import PurePosixPath
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 BUILTIN_MODEL_NAMES = frozenset(
     {
@@ -38,6 +39,16 @@ class AnalyzeVideoRequest(BaseModel):
     )
     frame_stride_seconds: float = Field(default=1.0, ge=0.1, le=30.0)
     confidence_threshold: float = Field(default=0.35, ge=0.01, le=0.99)
+    model_version_id: str | None = None
+    small_object_mode: bool = False
+    tracking_enabled: bool = False
+    tracker_type: Literal["bytetrack"] = "bytetrack"
+
+    @model_validator(mode="after")
+    def validate_tracking_stride(self) -> AnalyzeVideoRequest:
+        if self.tracking_enabled and self.frame_stride_seconds > 2.0:
+            raise ValueError("Tracking requires a sampling interval of 2 seconds or less.")
+        return self
 
     @field_validator("model_name")
     @classmethod
@@ -59,6 +70,10 @@ class VideoAnalysisJobOut(BaseModel):
     progress: float
     error: str | None = None
     model_name: str
+    model_version_id: str | None = None
+    small_object_mode: bool = False
+    tracking_enabled: bool = False
+    tracker_type: Literal["bytetrack"] = "bytetrack"
     model_version: str
     source_checksum: str | None = None
     frame_stride_seconds: float
@@ -96,3 +111,26 @@ class VideoDetectionOut(BaseModel):
     evidence_path: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class ConfidenceDistribution(BaseModel):
+    minimum: float | None = None
+    mean: float | None = None
+    maximum: float | None = None
+
+
+class VideoAnalysisSummaryOut(BaseModel):
+    job_id: str
+    frames_analyzed: int
+    detections_by_class: dict[str, int]
+    unique_tracked_objects_by_class: dict[str, int]
+    confidence_distribution: ConfidenceDistribution
+    model_name: str
+    model_version: str
+    model_version_id: str | None = None
+    registered_model: dict[str, Any] | None = None
+    tracking_enabled: bool
+    tracker_type: Literal["bytetrack"]
+    small_object_mode: bool
+    frame_stride_seconds: float
+    confidence_threshold: float

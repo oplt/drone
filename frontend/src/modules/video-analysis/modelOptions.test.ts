@@ -6,13 +6,12 @@ describe("video analysis model options", () => {
     expect(DEFAULT_MODEL).toBe("yolo26s.pt");
   });
 
-  it("includes built-in YOLO26 modes and local agriculture model only", () => {
+  it("includes only managed built-in YOLO26 options", () => {
     expect(MODEL_OPTIONS.map((option) => option.value)).toEqual([
       "yolo26n.pt",
       "yolo26s.pt",
       "yolo26n-seg.pt",
       "yolo26s-seg.pt",
-      "backend/storage/ml_models/agriculture/best.pt",
     ]);
   });
 });

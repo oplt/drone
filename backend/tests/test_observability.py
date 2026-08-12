@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import ClassVar
@@ -216,6 +217,9 @@ async def test_mapping_save_wrapper_records_failure(monkeypatch):
 async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, tmp_path):
     from backend.modules.video_analysis.service import pipeline
 
+    video_path = tmp_path / "video.mp4"
+    video_path.write_bytes(b"video")
+
     @dataclass
     class FakeJob:
         id: str = "job-1"
@@ -223,13 +227,20 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
         model_name: str = "fake-yolo.pt"
         confidence_threshold: float = 0.5
         frame_stride_seconds: float = 1.0
+        org_id: int = 1
+        model_version_id: str | None = None
+        small_object_mode: bool = False
+        tracking_enabled: bool = False
+        tracker_type: str = "bytetrack"
 
     @dataclass
     class FakeVideo:
         id: str = "video-1"
         mission_id: str = "mission-1"
         org_id: int = 1
-        storage_path: str = "video.mp4"
+        storage_path: str = field(default_factory=lambda: str(video_path))
+        uploaded_by_user_id: int = 1
+        created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     class FakeRepo:
         async def get_job(self, job_id):
@@ -242,6 +253,15 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
             return None
 
         async def update_video_metadata(self, *args, **kwargs):
+            return None
+
+        async def set_source_checksum(self, *args, **kwargs):
+            return None
+
+        async def set_model_version(self, *args, **kwargs):
+            return None
+
+        async def update_processing_metrics(self, *args, **kwargs):
             return None
 
         async def flush_batch(self, *args, **kwargs):
@@ -257,6 +277,8 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
             return None
 
     class FakeDetector:
+        model_version = "fake-v1"
+
         def __init__(self, *args, **kwargs):
             return None
 
@@ -267,40 +289,55 @@ async def test_video_pipeline_records_latency_and_detection_count(monkeypatch, t
                     confidence=0.9,
                     x1=0.0,
                     y1=0.0,
-                    x2=1.0,
-                    y2=1.0,
-                    raw={},
+                        x2=1.0,
+                        y2=1.0,
+                        raw={},
+                        track_id=None,
                 )
             ]
 
     recorded: list[tuple[str, float]] = []
     monkeypatch.setattr(pipeline, "VideoAnalysisRepository", lambda db: FakeRepo())
-    monkeypatch.setattr(pipeline, "YoloFrameDetector", FakeDetector)
+
+    async def run_inline(function, *args, **kwargs):
+        ignored = {"boundary", "operation", "timeout_s"}
+        return function(
+            *args,
+            **{key: value for key, value in kwargs.items() if key not in ignored},
+        )
+
+    async def metadata(_path):
+        return SimpleNamespace(fps=30.0, width=640, height=480, duration_seconds=1.0)
+
+    async def frames(*_args, **_kwargs):
+        yield SimpleNamespace(
+            frame_index=1,
+            timestamp_seconds=0.0,
+            image_bgr=np.zeros((2, 2, 3), dtype=np.uint8),
+        )
+
+    async def no_telemetry(*_args, **_kwargs):
+        return []
+
+    monkeypatch.setattr(pipeline, "run_blocking", run_inline)
+    monkeypatch.setattr(pipeline, "create_frame_detector", lambda **_kwargs: FakeDetector())
     monkeypatch.setattr(
         pipeline,
-        "read_video_metadata",
-        lambda _path: SimpleNamespace(fps=30.0, width=640, height=480, duration_seconds=1.0),
+        "read_video_metadata_async",
+        metadata,
     )
-    monkeypatch.setattr(
-        pipeline,
-        "iter_frames",
-        lambda *a, **k: iter(
-            [
-                SimpleNamespace(
-                    frame_index=1,
-                    timestamp_seconds=0.0,
-                    image_bgr=np.zeros((2, 2, 3), dtype=np.uint8),
-                )
-            ]
-        ),
-    )
+    monkeypatch.setattr(pipeline, "async_iter_frames", frames)
+    monkeypatch.setattr(pipeline.agriculture_repository, "list_telemetry", no_telemetry)
     monkeypatch.setattr(
         pipeline,
         "metric_record",
         lambda name, value, attrs=None: recorded.append((name, value)),
     )
 
-    db = SimpleNamespace(rollback=lambda: None)
+    async def rollback():
+        return None
+
+    db = SimpleNamespace(rollback=rollback)
     analyzer = pipeline.OfflineVideoAnalysisPipeline(db, evidence_root=tmp_path)
     monkeypatch.setattr(analyzer, "_save_crop", lambda **kwargs: Path("crop.jpg"))
 

@@ -15,10 +15,15 @@ export type VideoAnalysisJob = {
   id: string;
   video_id: string;
   mission_id?: string | null;
-  status: 'queued' | 'running' | 'completed' | 'failed' | string;
+  status: "queued" | "running" | "completed" | "failed" | string;
   progress: number;
   error?: string | null;
   model_name: string;
+  model_version_id?: string | null;
+  model_version?: string;
+  small_object_mode?: boolean;
+  tracking_enabled?: boolean;
+  tracker_type?: "bytetrack";
   frame_stride_seconds: number;
   confidence_threshold: number;
   started_at?: string | null;
@@ -48,12 +53,38 @@ export type VideoDetection = {
 };
 
 export type AnalyzeVideoPayload = {
-  model_name:
-    | 'yolo26n.pt'
-    | 'yolo26s.pt'
-    | 'yolo26n-seg.pt'
-    | 'yolo26s-seg.pt'
-    | 'backend/storage/ml_models/agriculture/best.pt';
+  model_name: string;
+  model_version_id?: string | null;
+  small_object_mode?: boolean;
+  tracking_enabled?: boolean;
+  tracker_type?: "bytetrack";
+  frame_stride_seconds: number;
+  confidence_threshold: number;
+};
+
+export type VideoAnalysisSummary = {
+  job_id: string;
+  frames_analyzed: number;
+  detections_by_class: Record<string, number>;
+  unique_tracked_objects_by_class: Record<string, number>;
+  confidence_distribution: {
+    minimum: number | null;
+    mean: number | null;
+    maximum: number | null;
+  };
+  model_name: string;
+  model_version: string;
+  model_version_id: string | null;
+  registered_model: {
+    name: string;
+    version: number;
+    crop: string;
+    task_type: string;
+    classes: string[];
+  } | null;
+  tracking_enabled: boolean;
+  tracker_type: "bytetrack";
+  small_object_mode: boolean;
   frame_stride_seconds: number;
   confidence_threshold: number;
 };

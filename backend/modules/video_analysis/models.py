@@ -3,7 +3,18 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.core.database.base import Base
@@ -50,6 +61,9 @@ class VideoAsset(Base):
 
 class VideoAnalysisJob(Base):
     __tablename__ = "video_analysis_jobs"
+    __table_args__ = (
+        CheckConstraint("tracker_type IN ('bytetrack')", name="ck_video_analysis_tracker_type"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
     video_id: Mapped[str] = mapped_column(
@@ -65,6 +79,12 @@ class VideoAnalysisJob(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     model_name: Mapped[str] = mapped_column(String(128), nullable=False, default="yolo26s.pt")
+    model_version_id: Mapped[str | None] = mapped_column(
+        ForeignKey("vision_model_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    small_object_mode: Mapped[bool] = mapped_column(nullable=False, default=False)
+    tracking_enabled: Mapped[bool] = mapped_column(nullable=False, default=False)
+    tracker_type: Mapped[str] = mapped_column(String(32), nullable=False, default="bytetrack")
     model_version: Mapped[str] = mapped_column(String(160), nullable=False, default="unknown")
     source_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
     frame_stride_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)

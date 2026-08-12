@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Grid, Stack, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Card,
+  CardContent,
+  Divider,
+  Grid,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { getToken } from "../session";
 import { AnalysisWorkflowTabs } from "./components/AnalysisWorkflowTabs";
 import { DetectionLogsTabs } from "./components/DetectionLogsTabs";
@@ -9,6 +18,7 @@ import { VideoOverlayPlayer } from "./components/VideoOverlayPlayer";
 import { buildMissionVideoStreamUrl } from "./api";
 import {
   useAnalysisJob,
+  useAnalysisSummary,
   useDetections,
   useLiveSavedDetections,
   useMissionVideos,
@@ -22,6 +32,10 @@ const DEFAULT_PAYLOAD: AnalyzeVideoPayload = {
   model_name: DEFAULT_MODEL,
   frame_stride_seconds: 1,
   confidence_threshold: 0.35,
+  model_version_id: null,
+  tracking_enabled: false,
+  tracker_type: "bytetrack",
+  small_object_mode: false,
 };
 
 type VideoAnalysisPanelProps = {
@@ -46,19 +60,25 @@ export function VideoAnalysisPanel({
   const [selected, setSelected] = useState<VideoDetection | null>(null);
   const [durationSeconds, setDurationSeconds] = useState(1);
   const [payload, setPayload] = useState<AnalyzeVideoPayload>(DEFAULT_PAYLOAD);
-  const [requestedEvidenceId, setRequestedEvidenceId] = useState<string | null>(null);
+  const [requestedEvidenceId, setRequestedEvidenceId] = useState<string | null>(
+    null,
+  );
 
   const queryMissionId = missionId;
-  const missionVideos = useMissionVideos(queryMissionId, fieldId, { flightActive });
+  const missionVideos = useMissionVideos(queryMissionId, fieldId, {
+    flightActive,
+  });
   const refetchMissionVideos = missionVideos.refetch;
   const upload = useUploadVideo();
   const start = useStartAnalysis();
   const job = useAnalysisJob(jobId);
   const detections = useDetections(jobId, job.data?.status);
+  const summary = useAnalysisSummary(jobId, job.data?.status);
   const liveDetections = useLiveSavedDetections();
   const videoToken = getToken();
   const playbackUrl = useMemo(
-    () => (video && !file ? buildMissionVideoStreamUrl(video.id, videoToken) : null),
+    () =>
+      video && !file ? buildMissionVideoStreamUrl(video.id, videoToken) : null,
     [file, video, videoToken],
   );
 
@@ -68,12 +88,19 @@ export function VideoAnalysisPanel({
     rows.forEach((detection) =>
       counts.set(detection.label, (counts.get(detection.label) ?? 0) + 1),
     );
-    return [...counts.entries()].sort((left, right) => right[1] - left[1]).slice(0, 5);
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 5);
   }, [rows]);
   const error =
     fileError ??
-    [upload.error, start.error, job.error, detections.error, missionVideos.error].find(Boolean)
-      ?.message;
+    [
+      upload.error,
+      start.error,
+      job.error,
+      detections.error,
+      missionVideos.error,
+    ].find(Boolean)?.message;
 
   useEffect(() => {
     if (!flightActive && queryMissionId) {
@@ -86,8 +113,15 @@ export function VideoAnalysisPanel({
       const detail = (event as CustomEvent<{ evidenceIds?: string[] }>).detail;
       setRequestedEvidenceId(detail?.evidenceIds?.[0] ?? null);
     };
-    window.addEventListener("agriculture:evidence-select", onAgricultureEvidence);
-    return () => window.removeEventListener("agriculture:evidence-select", onAgricultureEvidence);
+    window.addEventListener(
+      "agriculture:evidence-select",
+      onAgricultureEvidence,
+    );
+    return () =>
+      window.removeEventListener(
+        "agriculture:evidence-select",
+        onAgricultureEvidence,
+      );
   }, []);
 
   useEffect(() => {
@@ -147,10 +181,14 @@ export function VideoAnalysisPanel({
             Offline intelligence
           </Typography>
           <Typography variant="h4" fontWeight={700}>
-            {agricultureMode ? "Agriculture evidence review" : "Drone video analysis"}
+            {agricultureMode
+              ? "Agriculture evidence review"
+              : "Drone video analysis"}
           </Typography>
           <Typography color="text.secondary">
-            {agricultureMode ? "Review field-health evidence, quality, detections, and georeferenced issue context." : "Sample recorded footage, detect targets, inspect evidence by time and location."}
+            {agricultureMode
+              ? "Review field-health evidence, quality, detections, and georeferenced issue context."
+              : "Sample recorded footage, detect targets, inspect evidence by time and location."}
           </Typography>
         </Box>
       ) : null}
@@ -166,7 +204,9 @@ export function VideoAnalysisPanel({
             uploading={upload.isPending}
             starting={start.isPending}
             missionRecordings={missionVideos.data ?? []}
-            missionRecordingsLoading={missionVideos.isLoading || missionVideos.isFetching}
+            missionRecordingsLoading={
+              missionVideos.isLoading || missionVideos.isFetching
+            }
             onSelectMissionRecording={selectMissionRecording}
             onFile={chooseFile}
             onPayload={setPayload}
@@ -195,13 +235,85 @@ export function VideoAnalysisPanel({
             {topLabels.length ? (
               <Alert severity="info">
                 Frequent detections:{" "}
-                {topLabels.map(([label, count]) => `${label}: ${count}`).join(" | ")}
+                {topLabels
+                  .map(([label, count]) => `${label}: ${count}`)
+                  .join(" | ")}
               </Alert>
+            ) : null}
+            {summary.data ? (
+              <Card variant="outlined">
+                <CardContent>
+                  <Stack spacing={1.5}>
+                    <Typography variant="h6">
+                      {summary.data.registered_model?.crop ?? "Object"} analysis
+                    </Typography>
+                    {summary.data.tracking_enabled ? (
+                      <Box>
+                        <Typography variant="subtitle2">
+                          Unique tracked objects
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Estimated from tracker continuity; camera motion and
+                          sampling affect counts.
+                        </Typography>
+                        {Object.entries(
+                          summary.data.unique_tracked_objects_by_class,
+                        ).map(([label, count]) => (
+                          <Stack
+                            key={label}
+                            direction="row"
+                            justifyContent="space-between"
+                          >
+                            <Typography>
+                              {label.replaceAll("_", " ")}
+                            </Typography>
+                            <Typography fontWeight={700}>
+                              {count.toLocaleString()}
+                            </Typography>
+                          </Stack>
+                        ))}
+                      </Box>
+                    ) : null}
+                    <Divider />
+                    <Box>
+                      <Typography variant="subtitle2">
+                        Frame detections
+                      </Typography>
+                      {Object.entries(summary.data.detections_by_class).map(
+                        ([label, count]) => (
+                          <Stack
+                            key={label}
+                            direction="row"
+                            justifyContent="space-between"
+                          >
+                            <Typography>
+                              {label.replaceAll("_", " ")}
+                            </Typography>
+                            <Typography fontWeight={700}>
+                              {count.toLocaleString()}
+                            </Typography>
+                          </Stack>
+                        ),
+                      )}
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Model: {summary.data.model_name} · Tracking{" "}
+                      {summary.data.tracking_enabled ? "enabled" : "off"} ·
+                      Small-object mode{" "}
+                      {summary.data.small_object_mode ? "enabled" : "off"}
+                    </Typography>
+                  </Stack>
+                </CardContent>
+              </Card>
             ) : null}
           </Stack>
         </Grid>
         <Grid size={{ xs: 12, lg: embedded ? 12 : 3, xl: embedded ? 12 : 3 }}>
-          <DetectionMap detections={rows} selected={selected} onSelect={setSelected} />
+          <DetectionMap
+            detections={rows}
+            selected={selected}
+            onSelect={setSelected}
+          />
         </Grid>
         <Grid size={{ xs: 12 }}>
           <DetectionLogsTabs

@@ -164,6 +164,13 @@ services:
       celery -A backend.entrypoints.workers.celery_app:celery_app worker
       --loglevel=INFO --concurrency=1 --queues=video-analysis --hostname=video@%h
 
+  worker-vision:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=1 --queues=vision-training --hostname=vision@%h
+
   worker-photogrammetry:
     extends:
       service: worker

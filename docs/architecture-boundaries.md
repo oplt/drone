@@ -23,6 +23,7 @@ Each queue has an intentional consumer and bounded concurrency:
 | `notifications` | `worker-notifications` | outbox relay | concurrency 2 |
 | `scheduling` | `worker-scheduling` | scheduled mission dispatch | concurrency 2 |
 | `video-analysis` | `worker-video` | video decode/inference | concurrency 1 |
+| `vision-training` | `worker-vision` | crop-specific YOLO training/evaluation | concurrency 1 |
 | `warehouse-mapping` | `worker-warehouse` | ROS/structure extraction | concurrency 1 |
 
 Celery task time limits and retry policies remain task-owned. Worker health

@@ -15,7 +15,11 @@ def resolve_model_path(model_name: str) -> Path:
         BUILTIN_MODEL_ROOT.mkdir(parents=True, exist_ok=True)
         return BUILTIN_MODEL_ROOT / model_name
     if model_name.startswith(CUSTOM_MODEL_PREFIX):
-        return BACKEND_ROOT / model_name
+        relative = model_name.removeprefix("backend/")
+        target = (BACKEND_ROOT / relative).resolve()
+        if MODEL_ROOT.resolve() not in target.parents:
+            raise ValueError("Custom model path escapes managed model storage")
+        return target
     raise ValueError(f"Unsupported video analysis model: {model_name}")
 
 

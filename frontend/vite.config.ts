@@ -10,6 +10,9 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
+          if (id.includes("react-konva") || id.includes("/konva/")) {
+            return "vendor-annotation";
+          }
           if (id.includes("cesium") || id.includes("resium")) return "vendor-cesium";
           if (id.includes("three") || id.includes("@react-three")) return "vendor-3d";
           if (id.includes("maplibre") || id.includes("leaflet")) return "vendor-maps";

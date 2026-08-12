@@ -16,10 +16,10 @@ from backend.infrastructure.ai.gateway import ai_gateway
 from backend.infrastructure.cache.redis import close_redis_client
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.modules.admin.api import router as admin_router
+from backend.modules.agents.api import router as agents_router
 from backend.modules.agriculture.api import router as agriculture_router
 from backend.modules.agriculture.field_context import router as agriculture_field_context_router
 from backend.modules.agriculture.governance_api import router as agriculture_governance_router
-from backend.modules.agents.api import router as agents_router
 from backend.modules.ai.api import router as ai_router
 from backend.modules.alerts.api import router as alerts_router
 from backend.modules.alerts.evaluation_service import alert_engine
@@ -62,6 +62,7 @@ from backend.modules.telemetry.api import (
 from backend.modules.telemetry.websocket_api import router as websockets_router
 from backend.modules.vehicle_runtime.cleanup import start_cleanup_jobs, stop_cleanup_jobs
 from backend.modules.video_analysis.api import router as video_analysis_router
+from backend.modules.vision_models.api import router as vision_models_router
 from backend.modules.warehouse.api import router as warehouse_router
 from backend.observability.correlation import CorrelationMiddleware
 from backend.observability.event_loop_lag import event_loop_lag_monitor
@@ -212,6 +213,7 @@ app.include_router(fleet_router, prefix="/tasks")
 app.include_router(integrations_router)
 app.include_router(deliverables_share_router)
 app.include_router(video_analysis_router)
+app.include_router(vision_models_router)
 app.include_router(warehouse_router)
 app.include_router(observability_router)
 

@@ -29,24 +29,52 @@ const ControlledFlightPage = lazyWithStaleChunkReload(
 const PhotoGrammetryPage = lazyWithStaleChunkReload(
   () => import("../../modules/photogrammetry"),
 );
-const FieldPage = lazyWithStaleChunkReload(() => import("../../modules/field-survey"));
-const AgricultureFieldListPage = lazyWithStaleChunkReload(() => import("../../modules/agriculture/views/AgricultureFieldListPage"));
-const AgricultureFieldDetailPage = lazyWithStaleChunkReload(() => import("../../modules/agriculture/views/AgricultureFieldDetailPage"));
-const AgricultureFlightPage = lazyWithStaleChunkReload(() => import("../../modules/agriculture/views/AgricultureFlightPage"));
-const AgricultureAnalysisPage = lazyWithStaleChunkReload(() => import("../../modules/agriculture/views/AgricultureAnalysisPage"));
-const WarehousePage = lazyWithStaleChunkReload(() => import("../../modules/warehouse"));
-const AnimalFarmPage = lazyWithStaleChunkReload(() => import("../../modules/animal-farm"));
+const FieldPage = lazyWithStaleChunkReload(
+  () => import("../../modules/field-survey"),
+);
+const AgricultureFieldListPage = lazyWithStaleChunkReload(
+  () => import("../../modules/agriculture/views/AgricultureFieldListPage"),
+);
+const AgricultureFieldDetailPage = lazyWithStaleChunkReload(
+  () => import("../../modules/agriculture/views/AgricultureFieldDetailPage"),
+);
+const AgricultureFlightPage = lazyWithStaleChunkReload(
+  () => import("../../modules/agriculture/views/AgricultureFlightPage"),
+);
+const AgricultureAnalysisPage = lazyWithStaleChunkReload(
+  () => import("../../modules/agriculture/views/AgricultureAnalysisPage"),
+);
+const AgricultureVisionModelsPage = lazyWithStaleChunkReload(
+  () => import("../../modules/agriculture/views/AgricultureVisionModelsPage"),
+);
+const AgricultureLabelingWorkspace = lazyWithStaleChunkReload(
+  () => import("../../modules/agriculture/views/LabelingWorkspace"),
+);
+const WarehousePage = lazyWithStaleChunkReload(
+  () => import("../../modules/warehouse"),
+);
+const AnimalFarmPage = lazyWithStaleChunkReload(
+  () => import("../../modules/animal-farm"),
+);
 const PrivatePatrolPage = lazyWithStaleChunkReload(
   () => import("../../modules/private-patrol"),
 );
 const PropertyPatrolPage = lazyWithStaleChunkReload(
   () => import("../../modules/property-patrol"),
 );
-const MissionTimeline = lazyWithStaleChunkReload(() => import("../../modules/mission-history"));
+const MissionTimeline = lazyWithStaleChunkReload(
+  () => import("../../modules/mission-history"),
+);
 const AdminPage = lazyWithStaleChunkReload(() => import("../../modules/admin"));
-const TemplatesPage = lazyWithStaleChunkReload(() => import("../../modules/templates"));
-const VideoAnalysisPage = lazyWithStaleChunkReload(() => import("../../modules/video-analysis"));
-const ObservabilityPage = lazyWithStaleChunkReload(() => import("../../modules/observability"));
+const TemplatesPage = lazyWithStaleChunkReload(
+  () => import("../../modules/templates"),
+);
+const VideoAnalysisPage = lazyWithStaleChunkReload(
+  () => import("../../modules/video-analysis"),
+);
+const ObservabilityPage = lazyWithStaleChunkReload(
+  () => import("../../modules/observability"),
+);
 
 export function AppRouter() {
   return (
@@ -57,9 +85,7 @@ export function AppRouter() {
         <Route
           path="/"
           element={
-            <GuestRoute>
-              {renderLazyRoute(<LandingPage />, true)}
-            </GuestRoute>
+            <GuestRoute>{renderLazyRoute(<LandingPage />, true)}</GuestRoute>
           }
         />
         <Route
@@ -89,23 +115,73 @@ export function AppRouter() {
           <Route index element={renderLazyRoute(<DashboardHome />)} />
           <Route path="insights" element={renderLazyRoute(<InsightsPage />)} />
           <Route path="fleet" element={renderLazyRoute(<FleetPage />)} />
-          <Route path="settings" element={renderLazyRoute(<AdminSettingsPage />)} />
-          <Route path="controlled" element={renderLazyRoute(<ControlledFlightPage />)} />
+          <Route
+            path="settings"
+            element={renderLazyRoute(<AdminSettingsPage />)}
+          />
+          <Route
+            path="controlled"
+            element={renderLazyRoute(<ControlledFlightPage />)}
+          />
           <Route path="account" element={renderLazyRoute(<AccountPage />)} />
-          <Route path="photogrammetry" element={renderLazyRoute(<PhotoGrammetryPage />)} />
-          <Route path="animalfarm" element={renderLazyRoute(<AnimalFarmPage />)} />
-          <Route path="privatepatrol" element={renderLazyRoute(<PrivatePatrolPage />)} />
-          <Route path="property-patrol" element={renderLazyRoute(<PropertyPatrolPage />)} />
+          <Route
+            path="photogrammetry"
+            element={renderLazyRoute(<PhotoGrammetryPage />)}
+          />
+          <Route
+            path="animalfarm"
+            element={renderLazyRoute(<AnimalFarmPage />)}
+          />
+          <Route
+            path="privatepatrol"
+            element={renderLazyRoute(<PrivatePatrolPage />)}
+          />
+          <Route
+            path="property-patrol"
+            element={renderLazyRoute(<PropertyPatrolPage />)}
+          />
           <Route path="field" element={renderLazyRoute(<FieldPage />)} />
-          <Route path="agriculture/fields" element={renderLazyRoute(<AgricultureFieldListPage />)} />
-          <Route path="agriculture/fields/:fieldId" element={renderLazyRoute(<AgricultureFieldDetailPage />)} />
-          <Route path="agriculture/flights/:flightId" element={renderLazyRoute(<AgricultureFlightPage />)} />
-          <Route path="agriculture/analysis/:runId" element={renderLazyRoute(<AgricultureAnalysisPage />)} />
-          <Route path="warehouse" element={renderLazyRoute(<WarehousePage />)} />
+          <Route
+            path="agriculture/fields"
+            element={renderLazyRoute(<AgricultureFieldListPage />)}
+          />
+          <Route
+            path="agriculture/fields/:fieldId"
+            element={renderLazyRoute(<AgricultureFieldDetailPage />)}
+          />
+          <Route
+            path="agriculture/flights/:flightId"
+            element={renderLazyRoute(<AgricultureFlightPage />)}
+          />
+          <Route
+            path="agriculture/analysis/:runId"
+            element={renderLazyRoute(<AgricultureAnalysisPage />)}
+          />
+          <Route
+            path="agriculture/vision-models"
+            element={renderLazyRoute(<AgricultureVisionModelsPage />)}
+          />
+          <Route
+            path="agriculture/vision-models/datasets/:datasetId/label"
+            element={renderLazyRoute(<AgricultureLabelingWorkspace />)}
+          />
+          <Route
+            path="warehouse"
+            element={renderLazyRoute(<WarehousePage />)}
+          />
           <Route path="admin" element={renderLazyRoute(<AdminPage />)} />
-          <Route path="templates" element={renderLazyRoute(<TemplatesPage />)} />
-          <Route path="video-analysis" element={renderLazyRoute(<VideoAnalysisPage />)} />
-          <Route path="observability" element={renderLazyRoute(<ObservabilityPage />)} />
+          <Route
+            path="templates"
+            element={renderLazyRoute(<TemplatesPage />)}
+          />
+          <Route
+            path="video-analysis"
+            element={renderLazyRoute(<VideoAnalysisPage />)}
+          />
+          <Route
+            path="observability"
+            element={renderLazyRoute(<ObservabilityPage />)}
+          />
         </Route>
         <Route
           path="/observability"
@@ -125,9 +201,17 @@ export function AppRouter() {
             </ProtectedRoute>
           }
         >
-          <Route index element={renderLazyRoute(<AdminSettingsPage initialTab="profile" />)} />
+          <Route
+            index
+            element={renderLazyRoute(
+              <AdminSettingsPage initialTab="profile" />,
+            )}
+          />
         </Route>
-        <Route path="/profile" element={<Navigate to="/admin/settings" replace />} />
+        <Route
+          path="/profile"
+          element={<Navigate to="/admin/settings" replace />}
+        />
         <Route
           path="/missions/:flightId/timeline"
           element={

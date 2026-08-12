@@ -3353,6 +3353,33 @@
             ],
             "title": "Model Name",
             "type": "string"
+          },
+          "model_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version Id"
+          },
+          "small_object_mode": {
+            "default": false,
+            "title": "Small Object Mode",
+            "type": "boolean"
+          },
+          "tracker_type": {
+            "const": "bytetrack",
+            "default": "bytetrack",
+            "title": "Tracker Type",
+            "type": "string"
+          },
+          "tracking_enabled": {
+            "default": false,
+            "title": "Tracking Enabled",
+            "type": "boolean"
           }
         },
         "title": "AnalyzeVideoRequest",
@@ -3604,165 +3631,44 @@
         "title": "AnimalPositionOut",
         "type": "object"
       },
-      "AnnotationIn": {
+      "AnnotationImportOut": {
         "properties": {
-          "evidence_ids": {
-            "items": {},
-            "maxItems": 500,
-            "title": "Evidence Ids",
-            "type": "array"
+          "annotations_imported": {
+            "title": "Annotations Imported",
+            "type": "integer"
           },
-          "geometry_geojson": {
-            "additionalProperties": true,
-            "title": "Geometry Geojson",
-            "type": "object"
-          },
-          "label": {
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Label",
-            "type": "string"
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes"
-          },
-          "severity": {
-            "default": 0,
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Severity",
-            "type": "number"
-          },
-          "status": {
-            "default": "draft",
-            "enum": [
-              "draft",
-              "submitted",
-              "approved",
-              "rejected"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "label"
-        ],
-        "title": "AnnotationIn",
-        "type": "object"
-      },
-      "AnnotationOut": {
-        "properties": {
-          "approved_by_user_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approved By User Id"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "created_by_user_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created By User Id"
-          },
-          "evidence_ids": {
-            "items": {},
-            "maxItems": 500,
-            "title": "Evidence Ids",
-            "type": "array"
-          },
-          "geometry_geojson": {
-            "additionalProperties": true,
-            "title": "Geometry Geojson",
-            "type": "object"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "label": {
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Label",
-            "type": "string"
-          },
-          "notes": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes"
-          },
-          "observation_id": {
-            "title": "Observation Id",
-            "type": "string"
-          },
-          "severity": {
-            "default": 0,
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Severity",
-            "type": "number"
-          },
-          "status": {
-            "default": "draft",
-            "enum": [
-              "draft",
-              "submitted",
-              "approved",
-              "rejected"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
+          "images_updated": {
+            "title": "Images Updated",
             "type": "integer"
           }
         },
         "required": [
-          "label",
-          "id",
-          "observation_id",
-          "version",
-          "created_at",
-          "updated_at"
+          "images_updated",
+          "annotations_imported"
         ],
-        "title": "AnnotationOut",
+        "title": "AnnotationImportOut",
+        "type": "object"
+      },
+      "AnnotationReplace": {
+        "properties": {
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/backend__modules__vision_models__schemas__AnnotationIn"
+            },
+            "maxItems": 2000,
+            "title": "Annotations",
+            "type": "array"
+          },
+          "reviewed": {
+            "default": true,
+            "title": "Reviewed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "annotations"
+        ],
+        "title": "AnnotationReplace",
         "type": "object"
       },
       "AnomalyZoneOut": {
@@ -4190,6 +4096,20 @@
         "title": "Body_create_mapping_job_from_uploaded_images_mapping_jobs_upload_post",
         "type": "object"
       },
+      "Body_import_yolo_annotations_vision_datasets__dataset_id__annotations_import_yolo_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_yolo_annotations_vision_datasets__dataset_id__annotations_import_yolo_post",
+        "type": "object"
+      },
       "Body_live_advisory_agriculture_flights__flight_id__live_advisory_post": {
         "properties": {
           "frame": {
@@ -4216,6 +4136,23 @@
           "chunk"
         ],
         "title": "Body_upload_chunk_agriculture_flights__flight_id__uploads__upload_id__chunks_put",
+        "type": "object"
+      },
+      "Body_upload_images_vision_datasets__dataset_id__images_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "format": "binary",
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "title": "Body_upload_images_vision_datasets__dataset_id__images_post",
         "type": "object"
       },
       "Body_upload_live_map_chunk_warehouse_live_map__flight_id__chunks__chunk_id__post": {
@@ -5124,6 +5061,45 @@
         "title": "ComplianceUpsert",
         "type": "object"
       },
+      "ConfidenceDistribution": {
+        "properties": {
+          "maximum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum"
+          },
+          "mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean"
+          },
+          "minimum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum"
+          }
+        },
+        "title": "ConfidenceDistribution",
+        "type": "object"
+      },
       "ContextOption": {
         "description": "A selectable filter value whose ``value`` matches the label used in\ntelemetry/metrics (mission.id = client_flight_id, drone.id = device_id).",
         "properties": {
@@ -5882,6 +5858,242 @@
         "title": "DatasetExportOut",
         "type": "object"
       },
+      "DatasetImageOut": {
+        "properties": {
+          "altitude_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Altitude M"
+          },
+          "annotation_status": {
+            "title": "Annotation Status",
+            "type": "string"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/backend__modules__vision_models__schemas__AnnotationOut"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "content_url": {
+            "title": "Content Url",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "field_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Id"
+          },
+          "frame_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame Index"
+          },
+          "heading_deg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading Deg"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "mission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mission Id"
+          },
+          "quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Score"
+          },
+          "selected": {
+            "title": "Selected",
+            "type": "boolean"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "source_video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Video Id"
+          },
+          "split": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split"
+          },
+          "thumbnail_url": {
+            "title": "Thumbnail Url",
+            "type": "string"
+          },
+          "timestamp_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp Seconds"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_id",
+          "content_url",
+          "thumbnail_url",
+          "source_type",
+          "source_video_id",
+          "mission_id",
+          "field_id",
+          "frame_index",
+          "timestamp_seconds",
+          "width",
+          "height",
+          "quality_score",
+          "selected",
+          "split",
+          "annotation_status",
+          "annotations",
+          "lat",
+          "lon",
+          "altitude_m",
+          "heading_deg",
+          "metadata",
+          "created_at"
+        ],
+        "title": "DatasetImageOut",
+        "type": "object"
+      },
+      "DatasetImagePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetImageOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "DatasetImagePage",
+        "type": "object"
+      },
       "DatasetImportIn": {
         "properties": {
           "crop_types": {
@@ -5971,6 +6183,111 @@
           "items"
         ],
         "title": "DatasetImportIn",
+        "type": "object"
+      },
+      "DatasetOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "image_count": {
+            "title": "Image Count",
+            "type": "integer"
+          },
+          "labeled_count": {
+            "title": "Labeled Count",
+            "type": "integer"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "manifest_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Checksum"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "reviewed_count": {
+            "title": "Reviewed Count",
+            "type": "integer"
+          },
+          "selected_count": {
+            "title": "Selected Count",
+            "type": "integer"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "test_count": {
+            "title": "Test Count",
+            "type": "integer"
+          },
+          "train_count": {
+            "title": "Train Count",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "val_count": {
+            "title": "Val Count",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "version",
+          "status",
+          "source_count",
+          "image_count",
+          "labeled_count",
+          "reviewed_count",
+          "selected_count",
+          "train_count",
+          "val_count",
+          "test_count",
+          "manifest_checksum",
+          "locked_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DatasetOut",
         "type": "object"
       },
       "DetectionListResponse": {
@@ -6336,6 +6653,76 @@
           "created_at"
         ],
         "title": "ExportOut",
+        "type": "object"
+      },
+      "ExtractFramesOut": {
+        "properties": {
+          "candidate_frames": {
+            "title": "Candidate Frames",
+            "type": "integer"
+          },
+          "dataset": {
+            "$ref": "#/components/schemas/DatasetOut"
+          },
+          "effective_interval_seconds": {
+            "title": "Effective Interval Seconds",
+            "type": "number"
+          },
+          "rejected_duplicates": {
+            "title": "Rejected Duplicates",
+            "type": "integer"
+          },
+          "rejected_quality": {
+            "title": "Rejected Quality",
+            "type": "integer"
+          },
+          "selected_frames": {
+            "title": "Selected Frames",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "candidate_frames",
+          "rejected_quality",
+          "rejected_duplicates",
+          "selected_frames",
+          "effective_interval_seconds",
+          "dataset"
+        ],
+        "title": "ExtractFramesOut",
+        "type": "object"
+      },
+      "ExtractFramesRequest": {
+        "properties": {
+          "interval_seconds": {
+            "default": 1.0,
+            "maximum": 30.0,
+            "minimum": 0.2,
+            "title": "Interval Seconds",
+            "type": "number"
+          },
+          "max_frames": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Frames"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "video_id"
+        ],
+        "title": "ExtractFramesRequest",
         "type": "object"
       },
       "FeedbackDecisionIn": {
@@ -8561,6 +8948,53 @@
           "updated_at"
         ],
         "title": "HerdTaskOut",
+        "type": "object"
+      },
+      "ImageSelectionPatch": {
+        "properties": {
+          "selected": {
+            "title": "Selected",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "selected"
+        ],
+        "title": "ImageSelectionPatch",
+        "type": "object"
+      },
+      "ImageUploadResult": {
+        "properties": {
+          "added": {
+            "title": "Added",
+            "type": "integer"
+          },
+          "duplicates": {
+            "title": "Duplicates",
+            "type": "integer"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetImageOut"
+            },
+            "title": "Images",
+            "type": "array"
+          },
+          "rejected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rejected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "added",
+          "duplicates",
+          "rejected",
+          "images"
+        ],
+        "title": "ImageUploadResult",
         "type": "object"
       },
       "IncidentCreate": {
@@ -13165,6 +13599,167 @@
         "title": "MissionValidateIn",
         "type": "object"
       },
+      "ModelEvaluationOut": {
+        "properties": {
+          "artifacts": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "base_model": {
+            "title": "Base Model",
+            "type": "string"
+          },
+          "confusion_matrix": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confusion Matrix"
+          },
+          "confusion_matrix_labels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Confusion Matrix Labels",
+            "type": "array"
+          },
+          "dataset_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Checksum"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "dataset_image_count": {
+            "title": "Dataset Image Count",
+            "type": "integer"
+          },
+          "dataset_version": {
+            "title": "Dataset Version",
+            "type": "integer"
+          },
+          "evaluated_at": {
+            "format": "date-time",
+            "title": "Evaluated At",
+            "type": "string"
+          },
+          "image_size": {
+            "title": "Image Size",
+            "type": "integer"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "model_version_id": {
+            "title": "Model Version Id",
+            "type": "string"
+          },
+          "per_class": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Per Class",
+            "type": "array"
+          },
+          "preset": {
+            "title": "Preset",
+            "type": "string"
+          },
+          "split": {
+            "const": "test",
+            "title": "Split",
+            "type": "string"
+          },
+          "state": {
+            "const": "completed",
+            "title": "State",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Summary",
+            "type": "object"
+          },
+          "test_image_count": {
+            "title": "Test Image Count",
+            "type": "integer"
+          },
+          "training_date": {
+            "format": "date-time",
+            "title": "Training Date",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_version_id",
+          "model_name",
+          "version",
+          "state",
+          "metrics",
+          "summary",
+          "per_class",
+          "confusion_matrix",
+          "confusion_matrix_labels",
+          "dataset_id",
+          "dataset_version",
+          "dataset_image_count",
+          "test_image_count",
+          "dataset_checksum",
+          "split",
+          "image_size",
+          "base_model",
+          "preset",
+          "training_date",
+          "evaluated_at",
+          "artifacts"
+        ],
+        "title": "ModelEvaluationOut",
+        "type": "object"
+      },
       "ModelQualityReportIn": {
         "properties": {
           "drift": {
@@ -13257,6 +13852,89 @@
           "version"
         ],
         "title": "ModelVersionIn",
+        "type": "object"
+      },
+      "ModelVersionOut": {
+        "properties": {
+          "architecture": {
+            "title": "Architecture",
+            "type": "string"
+          },
+          "classes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Classes",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "crop": {
+            "title": "Crop",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "task_type": {
+            "title": "Task Type",
+            "type": "string"
+          },
+          "training_run_id": {
+            "title": "Training Run Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "model_id",
+          "project_id",
+          "training_run_id",
+          "dataset_id",
+          "name",
+          "crop",
+          "task_type",
+          "version",
+          "architecture",
+          "status",
+          "classes",
+          "metrics",
+          "created_at"
+        ],
+        "title": "ModelVersionOut",
         "type": "object"
       },
       "ObservabilityContextOptions": {
@@ -21305,6 +21983,178 @@
         "title": "TemporalCompareIn",
         "type": "object"
       },
+      "TrainingRunCreate": {
+        "properties": {
+          "base_model": {
+            "default": "yolo26s.pt",
+            "enum": [
+              "yolo26n.pt",
+              "yolo26s.pt"
+            ],
+            "title": "Base Model",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "preset": {
+            "default": "balanced",
+            "enum": [
+              "fast",
+              "balanced",
+              "high_accuracy"
+            ],
+            "title": "Preset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_id"
+        ],
+        "title": "TrainingRunCreate",
+        "type": "object"
+      },
+      "TrainingRunOut": {
+        "properties": {
+          "base_model": {
+            "title": "Base Model",
+            "type": "string"
+          },
+          "batch_size": {
+            "title": "Batch Size",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_epoch": {
+            "title": "Current Epoch",
+            "type": "integer"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "epochs": {
+            "title": "Epochs",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "image_size": {
+            "title": "Image Size",
+            "type": "integer"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          },
+          "model_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version Id"
+          },
+          "preset": {
+            "title": "Preset",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "number"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_epochs": {
+            "title": "Total Epochs",
+            "type": "integer"
+          },
+          "trainer": {
+            "title": "Trainer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "dataset_id",
+          "status",
+          "trainer",
+          "base_model",
+          "preset",
+          "epochs",
+          "total_epochs",
+          "image_size",
+          "batch_size",
+          "device",
+          "progress",
+          "current_epoch",
+          "metrics",
+          "error",
+          "model_version_id",
+          "started_at",
+          "finished_at",
+          "created_at"
+        ],
+        "title": "TrainingRunOut",
+        "type": "object"
+      },
       "Translation3D": {
         "properties": {
           "x": {
@@ -21645,9 +22495,25 @@
             "title": "Model Version",
             "type": "string"
           },
+          "model_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version Id"
+          },
           "progress": {
             "title": "Progress",
             "type": "number"
+          },
+          "small_object_mode": {
+            "default": false,
+            "title": "Small Object Mode",
+            "type": "boolean"
           },
           "source_checksum": {
             "anyOf": [
@@ -21681,6 +22547,17 @@
             "title": "Total Inference Latency Ms",
             "type": "number"
           },
+          "tracker_type": {
+            "const": "bytetrack",
+            "default": "bytetrack",
+            "title": "Tracker Type",
+            "type": "string"
+          },
+          "tracking_enabled": {
+            "default": false,
+            "title": "Tracking Enabled",
+            "type": "boolean"
+          },
           "video_id": {
             "title": "Video Id",
             "type": "string"
@@ -21698,6 +22575,103 @@
           "created_at"
         ],
         "title": "VideoAnalysisJobOut",
+        "type": "object"
+      },
+      "VideoAnalysisSummaryOut": {
+        "properties": {
+          "confidence_distribution": {
+            "$ref": "#/components/schemas/ConfidenceDistribution"
+          },
+          "confidence_threshold": {
+            "title": "Confidence Threshold",
+            "type": "number"
+          },
+          "detections_by_class": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Detections By Class",
+            "type": "object"
+          },
+          "frame_stride_seconds": {
+            "title": "Frame Stride Seconds",
+            "type": "number"
+          },
+          "frames_analyzed": {
+            "title": "Frames Analyzed",
+            "type": "integer"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          },
+          "model_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version Id"
+          },
+          "registered_model": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registered Model"
+          },
+          "small_object_mode": {
+            "title": "Small Object Mode",
+            "type": "boolean"
+          },
+          "tracker_type": {
+            "const": "bytetrack",
+            "title": "Tracker Type",
+            "type": "string"
+          },
+          "tracking_enabled": {
+            "title": "Tracking Enabled",
+            "type": "boolean"
+          },
+          "unique_tracked_objects_by_class": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Unique Tracked Objects By Class",
+            "type": "object"
+          }
+        },
+        "required": [
+          "job_id",
+          "frames_analyzed",
+          "detections_by_class",
+          "unique_tracked_objects_by_class",
+          "confidence_distribution",
+          "model_name",
+          "model_version",
+          "tracking_enabled",
+          "tracker_type",
+          "small_object_mode",
+          "frame_stride_seconds",
+          "confidence_threshold"
+        ],
+        "title": "VideoAnalysisSummaryOut",
         "type": "object"
       },
       "VideoAssetOut": {
@@ -21933,6 +22907,257 @@
           "y2"
         ],
         "title": "VideoDetectionOut",
+        "type": "object"
+      },
+      "VisionClassIn": {
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "VisionClassIn",
+        "type": "object"
+      },
+      "VisionClassOut": {
+        "properties": {
+          "class_index": {
+            "title": "Class Index",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class_index"
+        ],
+        "title": "VisionClassOut",
+        "type": "object"
+      },
+      "VisionProjectCreate": {
+        "properties": {
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/VisionClassIn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Classes",
+            "type": "array"
+          },
+          "crop": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Crop",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "task_type": {
+            "const": "detection",
+            "default": "detection",
+            "title": "Task Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "crop",
+          "classes"
+        ],
+        "title": "VisionProjectCreate",
+        "type": "object"
+      },
+      "VisionProjectOut": {
+        "properties": {
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/VisionClassOut"
+            },
+            "title": "Classes",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "crop": {
+            "title": "Crop",
+            "type": "string"
+          },
+          "dataset_count": {
+            "default": 0,
+            "title": "Dataset Count",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_dataset_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Dataset Status"
+          },
+          "latest_model_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Model Version"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "production_model_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Production Model Version"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "task_type": {
+            "title": "Task Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "crop",
+          "task_type",
+          "status",
+          "classes",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "VisionProjectOut",
+        "type": "object"
+      },
+      "VisionProjectPatch": {
+        "properties": {
+          "classes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/VisionClassIn"
+                },
+                "maxItems": 100,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classes"
+          },
+          "crop": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crop"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "VisionProjectPatch",
         "type": "object"
       },
       "WarehouseCommandOut": {
@@ -28198,6 +29423,167 @@
         "title": "ZoneIn",
         "type": "object"
       },
+      "backend__modules__agriculture__schemas__AnnotationIn": {
+        "properties": {
+          "evidence_ids": {
+            "items": {},
+            "maxItems": 500,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "geometry_geojson": {
+            "additionalProperties": true,
+            "title": "Geometry Geojson",
+            "type": "object"
+          },
+          "label": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "severity": {
+            "default": 0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Severity",
+            "type": "number"
+          },
+          "status": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "submitted",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "AnnotationIn",
+        "type": "object"
+      },
+      "backend__modules__agriculture__schemas__AnnotationOut": {
+        "properties": {
+          "approved_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By User Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By User Id"
+          },
+          "evidence_ids": {
+            "items": {},
+            "maxItems": 500,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "geometry_geojson": {
+            "additionalProperties": true,
+            "title": "Geometry Geojson",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "observation_id": {
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "severity": {
+            "default": 0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Severity",
+            "type": "number"
+          },
+          "status": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "submitted",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "id",
+          "observation_id",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AnnotationOut",
+        "type": "object"
+      },
       "backend__modules__patrol__vision_api__ZoneIn": {
         "properties": {
           "name": {
@@ -28223,6 +29609,149 @@
           "polygon"
         ],
         "title": "ZoneIn",
+        "type": "object"
+      },
+      "backend__modules__vision_models__schemas__AnnotationIn": {
+        "properties": {
+          "class_id": {
+            "title": "Class Id",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "source": {
+            "default": "manual",
+            "enum": [
+              "manual",
+              "auto",
+              "imported"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "x1": {
+            "minimum": 0.0,
+            "title": "X1",
+            "type": "number"
+          },
+          "x2": {
+            "minimum": 0.0,
+            "title": "X2",
+            "type": "number"
+          },
+          "y1": {
+            "minimum": 0.0,
+            "title": "Y1",
+            "type": "number"
+          },
+          "y2": {
+            "minimum": 0.0,
+            "title": "Y2",
+            "type": "number"
+          }
+        },
+        "required": [
+          "class_id",
+          "x1",
+          "y1",
+          "x2",
+          "y2"
+        ],
+        "title": "AnnotationIn",
+        "type": "object"
+      },
+      "backend__modules__vision_models__schemas__AnnotationOut": {
+        "properties": {
+          "annotation_type": {
+            "title": "Annotation Type",
+            "type": "string"
+          },
+          "class_id": {
+            "title": "Class Id",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "x1": {
+            "title": "X1",
+            "type": "number"
+          },
+          "x2": {
+            "title": "X2",
+            "type": "number"
+          },
+          "y1": {
+            "title": "Y1",
+            "type": "number"
+          },
+          "y2": {
+            "title": "Y2",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "class_id",
+          "annotation_type",
+          "x1",
+          "y1",
+          "x2",
+          "y2",
+          "confidence",
+          "source",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AnnotationOut",
         "type": "object"
       }
     }
@@ -38935,7 +40464,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/AnnotationOut"
+                    "$ref": "#/components/schemas/backend__modules__agriculture__schemas__AnnotationOut"
                   },
                   "title": "Response Observation Annotations Agriculture Observations  Observation Id  Annotations Get",
                   "type": "array"
@@ -39009,7 +40538,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AnnotationIn"
+                "$ref": "#/components/schemas/backend__modules__agriculture__schemas__AnnotationIn"
               }
             }
           },
@@ -39020,7 +40549,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnnotationOut"
+                  "$ref": "#/components/schemas/backend__modules__agriculture__schemas__AnnotationOut"
                 }
               }
             },

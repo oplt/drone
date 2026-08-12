@@ -9,6 +9,7 @@ from . import (
     photogrammetry_tasks,
     scheduling_tasks,
     video_analysis_tasks,
+    vision_models_tasks,
     warehouse_mapping_tasks,
     webhook_tasks,
 )

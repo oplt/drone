@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from celery import Celery
-from kombu import Queue
 from celery.signals import worker_shutdown
+from kombu import Queue
 
 from backend.core.config.runtime import settings
+from backend.modules.vision_models.config import vision_settings
 
 CELERY_BROKER_URL = settings.celery_broker_url
 CELERY_RESULT_BACKEND = settings.celery_result_backend
@@ -12,6 +13,7 @@ CELERY_DEFAULT_QUEUE = settings.celery_default_queue
 CELERY_PHOTOGRAMMETRY_QUEUE = settings.CELERY_PHOTOGRAMMETRY_QUEUE
 CELERY_WAREHOUSE_MAPPING_QUEUE = settings.celery_warehouse_mapping_queue
 CELERY_VIDEO_ANALYSIS_QUEUE = settings.celery_video_analysis_queue
+CELERY_VISION_TRAINING_QUEUE = vision_settings.celery_vision_training_queue
 CELERY_AGRICULTURE_INFERENCE_QUEUE = settings.celery_agriculture_inference_queue
 CELERY_AGRICULTURE_QUEUES = {
     "ingest": settings.celery_agriculture_ingest_queue,
@@ -24,8 +26,12 @@ CELERY_AGRICULTURE_QUEUES = {
     "exports": settings.celery_agriculture_exports_queue,
     "dead_letter": settings.celery_agriculture_dead_letter_queue,
 }
-CELERY_AGRICULTURE_INFERENCE_TIME_LIMIT_SECONDS = settings.celery_agriculture_inference_time_limit_seconds
-CELERY_AGRICULTURE_INFERENCE_SOFT_TIME_LIMIT_SECONDS = settings.celery_agriculture_inference_soft_time_limit_seconds
+CELERY_AGRICULTURE_INFERENCE_TIME_LIMIT_SECONDS = (
+    settings.celery_agriculture_inference_time_limit_seconds
+)
+CELERY_AGRICULTURE_INFERENCE_SOFT_TIME_LIMIT_SECONDS = (
+    settings.celery_agriculture_inference_soft_time_limit_seconds
+)
 CELERY_WORKER_MAX_TASKS_PER_CHILD = settings.celery_worker_max_tasks_per_child
 CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS = settings.celery_photogrammetry_time_limit_seconds
 CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS = (
@@ -45,6 +51,7 @@ def _close_shared_cache_clients(**_kwargs: object) -> None:
 
     close_worker_cache_clients()
 
+
 celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
@@ -56,19 +63,31 @@ celery_app.conf.update(
     task_acks_late=True,
     broker_connection_retry_on_startup=True,
     task_default_queue=CELERY_DEFAULT_QUEUE,
-    task_queues=(Queue(CELERY_DEFAULT_QUEUE), *(Queue(name) for name in CELERY_AGRICULTURE_QUEUES.values())),
-        task_routes={
+    task_queues=(
+        Queue(CELERY_DEFAULT_QUEUE),
+        Queue(CELERY_PHOTOGRAMMETRY_QUEUE),
+        Queue(CELERY_WAREHOUSE_MAPPING_QUEUE),
+        Queue(CELERY_VIDEO_ANALYSIS_QUEUE),
+        Queue(CELERY_VISION_TRAINING_QUEUE),
+        *(Queue(name) for name in CELERY_AGRICULTURE_QUEUES.values()),
+    ),
+    task_routes={
         "photogrammetry.process_job": {"queue": CELERY_PHOTOGRAMMETRY_QUEUE},
         "warehouse_mapping.process_job": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "warehouse_mapping.extract_structure": {"queue": CELERY_WAREHOUSE_MAPPING_QUEUE},
         "video_analysis.process_job": {"queue": CELERY_VIDEO_ANALYSIS_QUEUE},
+        "vision_models.train": {"queue": CELERY_VISION_TRAINING_QUEUE},
         "agriculture.process_run": {"queue": CELERY_AGRICULTURE_INFERENCE_QUEUE},
         "agriculture.stage.ingest": {"queue": CELERY_AGRICULTURE_QUEUES["ingest"]},
         "agriculture.stage.quality": {"queue": CELERY_AGRICULTURE_QUEUES["quality"]},
         "agriculture.stage.rgb_inference": {"queue": CELERY_AGRICULTURE_QUEUES["rgb_inference"]},
         "agriculture.stage.segmentation": {"queue": CELERY_AGRICULTURE_QUEUES["segmentation"]},
-        "agriculture.stage.geospatial_aggregation": {"queue": CELERY_AGRICULTURE_QUEUES["geospatial_aggregation"]},
-        "agriculture.stage.temporal_comparison": {"queue": CELERY_AGRICULTURE_QUEUES["temporal_comparison"]},
+        "agriculture.stage.geospatial_aggregation": {
+            "queue": CELERY_AGRICULTURE_QUEUES["geospatial_aggregation"]
+        },
+        "agriculture.stage.temporal_comparison": {
+            "queue": CELERY_AGRICULTURE_QUEUES["temporal_comparison"]
+        },
         "agriculture.stage.sensor_fusion": {"queue": CELERY_AGRICULTURE_QUEUES["sensor_fusion"]},
         "agriculture.stage.exports": {"queue": CELERY_AGRICULTURE_QUEUES["exports"]},
         "agriculture.dead_letter": {"queue": CELERY_AGRICULTURE_QUEUES["dead_letter"]},
@@ -136,6 +155,7 @@ from backend.entrypoints.workers import (  # noqa: E402, F401
     photogrammetry_tasks,
     scheduling_tasks,
     video_analysis_tasks,
+    vision_models_tasks,
     warehouse_mapping_tasks,
     webhook_tasks,
 )

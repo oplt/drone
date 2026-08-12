@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.identity.models import User
@@ -119,12 +119,20 @@ class VideoAnalysisRepository:
         model_name: str,
         frame_stride_seconds: float,
         confidence_threshold: float,
+        model_version_id: str | None = None,
+        small_object_mode: bool = False,
+        tracking_enabled: bool = False,
+        tracker_type: str = "bytetrack",
     ) -> VideoAnalysisJob:
         job = VideoAnalysisJob(
             video_id=video.id,
             mission_id=video.mission_id,
             org_id=video.org_id,
             model_name=model_name,
+            model_version_id=model_version_id,
+            small_object_mode=small_object_mode,
+            tracking_enabled=tracking_enabled,
+            tracker_type=tracker_type,
             frame_stride_seconds=frame_stride_seconds,
             confidence_threshold=confidence_threshold,
             status="queued",
@@ -225,3 +233,44 @@ class VideoAnalysisRepository:
             .limit(limit)
         )
         return list((await self.db.scalars(stmt)).all())
+
+    async def summarize_detections(self, job_id: str, user: User) -> dict:
+        visible = self._visible_video(user)
+        counts = await self.db.execute(
+            select(VideoDetection.label, func.count(VideoDetection.id))
+            .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)
+            .where(VideoDetection.job_id == job_id, visible)
+            .group_by(VideoDetection.label)
+        )
+        tracked = await self.db.execute(
+            select(VideoDetection.label, func.count(distinct(VideoDetection.track_id)))
+            .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)
+            .where(
+                VideoDetection.job_id == job_id,
+                VideoDetection.track_id.is_not(None),
+                visible,
+            )
+            .group_by(VideoDetection.label)
+        )
+        confidence = (
+            await self.db.execute(
+                select(
+                    func.min(VideoDetection.confidence),
+                    func.avg(VideoDetection.confidence),
+                    func.max(VideoDetection.confidence),
+                )
+                .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)
+                .where(VideoDetection.job_id == job_id, visible)
+            )
+        ).one()
+        return {
+            "detections_by_class": {label: int(count) for label, count in counts.all()},
+            "unique_tracked_objects_by_class": {
+                label: int(count) for label, count in tracked.all()
+            },
+            "confidence_distribution": {
+                "minimum": float(confidence[0]) if confidence[0] is not None else None,
+                "mean": float(confidence[1]) if confidence[1] is not None else None,
+                "maximum": float(confidence[2]) if confidence[2] is not None else None,
+            },
+        }
