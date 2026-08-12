@@ -3,9 +3,54 @@
   "name": "representative-offline-video",
   "video_path": "backend/storage/video_analysis/uploads/example.mp4",
   "model_name": "yolo26n.pt",
+  "model_hash": "sha256:replace-with-artifact-checksum",
+  "hardware": {
+    "device": "cpu",
+    "gpu_name": null,
+    "worker_label": "local-dev"
+  },
   "frame_stride_seconds": 1.0,
   "confidence_threshold": 0.35,
+  "sahi_enabled": false,
   "tracking_enabled": true,
+  "experiments": {
+    "baseline": {
+      "label": "baseline",
+      "decode_stride_enabled": false,
+      "inference_batch_size": 1,
+      "defer_low_confidence_crops": true,
+      "sahi_enabled": false,
+      "tracking_enabled": true
+    },
+    "decode_stride": {
+      "label": "decode-stride",
+      "decode_stride_enabled": true,
+      "inference_batch_size": 1,
+      "defer_low_confidence_crops": true
+    },
+    "bounded_batch": {
+      "label": "bounded-batch",
+      "decode_stride_enabled": false,
+      "inference_batch_size": 4,
+      "defer_low_confidence_crops": true
+    },
+    "crop_deferral": {
+      "label": "crop-deferral",
+      "decode_stride_enabled": false,
+      "inference_batch_size": 1,
+      "defer_low_confidence_crops": true
+    },
+    "sahi_small_object": {
+      "label": "sahi-small-object",
+      "sahi_enabled": true,
+      "tracking_enabled": false
+    },
+    "tracking_enabled": {
+      "label": "tracking-enabled",
+      "sahi_enabled": false,
+      "tracking_enabled": true
+    }
+  },
   "expected_stage_keys": [
     "queue_wait",
     "decode",
@@ -16,5 +61,54 @@
     "persist",
     "summary",
     "total"
-  ]
+  ],
+  "parity_tolerances": {
+    "confidence": 1e-5,
+    "box": 1e-5,
+    "frames_must_match": true,
+    "classes_must_match": true,
+    "detection_count_must_match": true
+  },
+  "fixture": {
+    "baseline": {
+      "stage_timings_seconds": {
+        "queue_wait": 0.4,
+        "decode": 12.0,
+        "inference": 48.0,
+        "tracking": 6.0,
+        "telemetry": 1.2,
+        "crop": 8.0,
+        "persist": 3.5,
+        "summary": 0.3,
+        "total": 79.4
+      },
+      "frames_per_second": 1.26,
+      "inference_batch_throughput": 1.0,
+      "detection_count": 420,
+      "peak_memory_mb": 1800,
+      "selected_frames": [0, 30, 60, 90],
+      "classes": ["weed", "crop"],
+      "class_counts": {"weed": 280, "crop": 140}
+    },
+    "experiment": {
+      "stage_timings_seconds": {
+        "queue_wait": 0.4,
+        "decode": 4.0,
+        "inference": 46.0,
+        "tracking": 6.0,
+        "telemetry": 1.2,
+        "crop": 8.0,
+        "persist": 3.5,
+        "summary": 0.3,
+        "total": 69.4
+      },
+      "frames_per_second": 1.44,
+      "inference_batch_throughput": 1.0,
+      "detection_count": 420,
+      "peak_memory_mb": 1750,
+      "selected_frames": [0, 30, 60, 90],
+      "classes": ["weed", "crop"],
+      "class_counts": {"weed": 280, "crop": 140}
+    }
+  }
 }

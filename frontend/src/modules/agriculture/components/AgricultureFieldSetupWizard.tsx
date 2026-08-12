@@ -36,17 +36,34 @@ export function AgricultureFieldSetupWizard() {
   const [boundary, setBoundary] = useState<AgriculturePolygon | null>(null);
   const [geoJsonText, setGeoJsonText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [mapFocusToken, setMapFocusToken] = useState(0);
 
   const boundaryRing = useMemo(() => polygonRing(boundary), [boundary]);
-  const setValidatedBoundary = (value: unknown) => {
+  const setValidatedBoundary = (value: unknown, options?: { fitMap?: boolean }) => {
     try {
       const valid = validateAgriculturePolygon(value);
       setBoundary(valid);
       setGeoJsonText(JSON.stringify(valid, null, 2));
       setError(null);
+      if (options?.fitMap) setMapFocusToken((token) => token + 1);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Invalid field boundary.");
     }
+  };
+  const applyBoundaryRing = (ring: [number, number][]) => {
+    if (!ring.length) {
+      setBoundary(null);
+      setGeoJsonText("");
+      setError(null);
+      return;
+    }
+    if (ring.length < 3) {
+      setBoundary({ type: "Polygon", coordinates: [ring] });
+      setGeoJsonText("");
+      setError(null);
+      return;
+    }
+    setValidatedBoundary({ type: "Polygon", coordinates: [ring] });
   };
   const next = () => {
     if (activeStep === 0 && !name.trim()) {
@@ -115,14 +132,17 @@ export function AgricultureFieldSetupWizard() {
           {activeStep === 0 ? (
             <Stack spacing={1.5}>
               <TextField autoFocus required label="Field name" value={name} onChange={(event) => setName(event.target.value)} helperText="Use the name your team recognizes." />
-              <Typography variant="body2" color="text.secondary">The map opens around your boundary when you draw or import it.</Typography>
+              <Typography variant="body2" color="text.secondary">
+                On the next step, search a location or draw the boundary. Raw GeoJSON stays under Advanced.
+              </Typography>
             </Stack>
           ) : null}
           {activeStep === 1 ? (
             <Stack spacing={1.5}>
               <AgricultureGeometryMapEditor
                 boundary={boundaryRing}
-                onBoundaryChange={(ring) => setValidatedBoundary({ type: "Polygon", coordinates: [ring] })}
+                focusRequestToken={mapFocusToken}
+                onBoundaryChange={applyBoundaryRing}
               />
               <Button component="label" variant="outlined" sx={{ minHeight: 44, alignSelf: "flex-start" }}>
                 Import GeoJSON
@@ -135,7 +155,7 @@ export function AgricultureFieldSetupWizard() {
                     if (!file) return;
                     void file.text().then((text) => {
                       setGeoJsonText(text);
-                      try { setValidatedBoundary(JSON.parse(text)); }
+                      try { setValidatedBoundary(JSON.parse(text), { fitMap: true }); }
                       catch { setError("The selected file is not valid GeoJSON."); }
                     });
                   }}
@@ -147,7 +167,7 @@ export function AgricultureFieldSetupWizard() {
                   <Stack spacing={1}>
                     <TextField label="Boundary GeoJSON (EPSG:4326)" value={geoJsonText} onChange={(event) => setGeoJsonText(event.target.value)} multiline minRows={5} fullWidth />
                     <Button onClick={() => {
-                      try { setValidatedBoundary(JSON.parse(geoJsonText)); }
+                      try { setValidatedBoundary(JSON.parse(geoJsonText), { fitMap: true }); }
                       catch { setError("Boundary GeoJSON is not valid JSON."); }
                     }}>Apply GeoJSON</Button>
                   </Stack>

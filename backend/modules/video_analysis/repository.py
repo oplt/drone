@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, distinct, func, select, update
+from sqlalchemy import Integer, cast, delete, distinct, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.selectable import Select
 
 from backend.core.config.runtime import settings
 from backend.modules.identity.models import User
@@ -54,11 +55,41 @@ class VideoAnalysisRepository:
             return VideoAsset.org_id == user.org_id
         return VideoAsset.uploaded_by_user_id == user.id
 
+    @staticmethod
+    def _apply_detection_filters(
+        stmt: Select,
+        *,
+        min_confidence: float | None = None,
+        label: str | None = None,
+        since_ts: float | None = None,
+        until_ts: float | None = None,
+    ) -> Select:
+        if min_confidence is not None:
+            stmt = stmt.where(VideoDetection.confidence >= min_confidence)
+        if label is not None:
+            stmt = stmt.where(VideoDetection.label == label)
+        if since_ts is not None:
+            stmt = stmt.where(VideoDetection.timestamp_seconds >= since_ts)
+        if until_ts is not None:
+            stmt = stmt.where(VideoDetection.timestamp_seconds <= until_ts)
+        return stmt
+
     async def get_video_for_user(self, video_id: str, user: User) -> VideoAsset | None:
         result = await self.db.execute(
             select(VideoAsset).where(VideoAsset.id == video_id, self._visible_video(user))
         )
         return result.scalar_one_or_none()
+
+    async def video_has_analyzed_jobs(self, video_id: str) -> bool:
+        count = await self.db.scalar(
+            select(func.count())
+            .select_from(VideoAnalysisJob)
+            .where(
+                VideoAnalysisJob.video_id == video_id,
+                VideoAnalysisJob.status.in_(("completed", "failed", "running", "queued")),
+            )
+        )
+        return int(count or 0) > 0
 
     async def get_video(self, video_id: str) -> VideoAsset | None:
         return await self.db.get(VideoAsset, video_id)
@@ -454,6 +485,9 @@ class VideoAnalysisRepository:
         progress: float | None = None,
         expected_attempt: int | None = None,
     ) -> bool:
+        for detection in detections:
+            if detection.storage_object is not None:
+                detection.storage_object.state = "staged"
         self.db.add_all(detections)
         if job is not None and progress is not None:
             now = datetime.now(UTC)
@@ -479,6 +513,18 @@ class VideoAnalysisRepository:
                 await self.db.rollback()
                 return False
         await self.db.commit()
+        storage_ids = [
+            detection.storage_object_id
+            for detection in detections
+            if detection.storage_object_id
+        ]
+        if storage_ids:
+            await self.db.execute(
+                update(StorageObject)
+                .where(StorageObject.id.in_(storage_ids), StorageObject.state == "staged")
+                .values(state="final")
+            )
+            await self.db.commit()
         return True
 
     async def set_video_status(self, video: VideoAsset, status: str) -> None:
@@ -577,12 +623,24 @@ class VideoAnalysisRepository:
         limit: int,
         after: tuple[float, str] | None = None,
         since_id: str | None = None,
+        min_confidence: float | None = None,
+        label: str | None = None,
+        since_ts: float | None = None,
+        until_ts: float | None = None,
     ) -> tuple[list[VideoDetection], bool, int]:
+        visible = self._visible_video(user)
         stmt = (
             select(VideoDetection)
             .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)
-            .where(VideoDetection.job_id == job_id, self._visible_video(user))
+            .where(VideoDetection.job_id == job_id, visible)
             .options(selectinload(VideoDetection.storage_object))
+        )
+        stmt = self._apply_detection_filters(
+            stmt,
+            min_confidence=min_confidence,
+            label=label,
+            since_ts=since_ts,
+            until_ts=until_ts,
         )
         if after is not None:
             timestamp, detection_id = after
@@ -612,14 +670,19 @@ class VideoAnalysisRepository:
                 )
             ).all()
         )
-        total = int(
-            await self.db.scalar(
-                select(func.count(VideoDetection.id))
-                .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)
-                .where(VideoDetection.job_id == job_id, self._visible_video(user))
-            )
-            or 0
+        total_stmt = (
+            select(func.count(VideoDetection.id))
+            .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)
+            .where(VideoDetection.job_id == job_id, visible)
         )
+        total_stmt = self._apply_detection_filters(
+            total_stmt,
+            min_confidence=min_confidence,
+            label=label,
+            since_ts=since_ts,
+            until_ts=until_ts,
+        )
+        total = int(await self.db.scalar(total_stmt) or 0)
         return rows[:limit], len(rows) > limit, total
 
     async def get_detection_for_user(
@@ -691,14 +754,43 @@ class VideoAnalysisRepository:
         }
 
     async def aggregate_detections(
-        self, job_id: str, user: User, *, bucket_seconds: float
+        self,
+        job_id: str,
+        user: User,
+        *,
+        bucket_seconds: float,
+        min_confidence: float | None = None,
+        label: str | None = None,
+        since_ts: float | None = None,
+        until_ts: float | None = None,
     ) -> list[dict]:
-        rows = await self.list_detections_for_user(job_id, user, limit=2000)
+        visible = self._visible_video(user)
+        # Truncation toward zero matches Python // for non-negative timestamps.
+        bucket_index = cast(
+            VideoDetection.timestamp_seconds / bucket_seconds, Integer
+        )
+        stmt = (
+            select(
+                bucket_index,
+                VideoDetection.label,
+                func.count(VideoDetection.id),
+            )
+            .join(VideoAsset, VideoAsset.id == VideoDetection.video_id)
+            .where(VideoDetection.job_id == job_id, visible)
+            .group_by(bucket_index, VideoDetection.label)
+            .order_by(bucket_index.asc(), VideoDetection.label.asc())
+        )
+        stmt = self._apply_detection_filters(
+            stmt,
+            min_confidence=min_confidence,
+            label=label,
+            since_ts=since_ts,
+            until_ts=until_ts,
+        )
         buckets: dict[int, dict[str, int]] = {}
-        for row in rows:
-            index = int(row.timestamp_seconds // bucket_seconds)
-            counts = buckets.setdefault(index, {})
-            counts[row.label] = counts.get(row.label, 0) + 1
+        for index, class_label, count in (await self.db.execute(stmt)).all():
+            counts = buckets.setdefault(int(index), {})
+            counts[str(class_label)] = int(count)
         return [
             {
                 "start_seconds": index * bucket_seconds,

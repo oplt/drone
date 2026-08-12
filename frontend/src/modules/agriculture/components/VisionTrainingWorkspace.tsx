@@ -19,6 +19,7 @@ import {
   useVisionTrainingRuns,
 } from "../hooks/useVisionModels";
 import type { VisionDataset } from "../visionTypes";
+import { VisionCurationQualityAlerts } from "./VisionCurationQualityAlerts";
 
 export function VisionTrainingWorkspace({
   projectId,
@@ -41,6 +42,10 @@ export function VisionTrainingWorkspace({
       dataset.selected_count >= 3 &&
       dataset.reviewed_count >= dataset.selected_count,
   );
+  const leakageBlocked = Boolean(
+    dataset?.curation_summary?.split_leakage_risk ||
+      dataset?.curation_summary?.quality_flags?.split_leakage_risk,
+  );
   const hasActiveRun = Boolean(
     runs.data?.some((run) => ["queued", "running", "cancelling"].includes(run.status)),
   );
@@ -51,16 +56,22 @@ export function VisionTrainingWorkspace({
           <Stack spacing={2}>
             <Typography variant="h6">Train crop-specific detector</Typography>
             {dataset ? (
-              <Alert severity={ready ? "success" : "info"}>
-                {ready
-                  ? dataset.status === "locked"
-                    ? "This immutable snapshot is ready to train again. Every retry creates a new run and preserves prior attempt history."
-                    : "Dataset is ready. Starting training locks this version and its deterministic splits."
-                  : `Review every selected image (${dataset.reviewed_count}/${dataset.selected_count} reviewed; at least 3 selected required).`}
+              <Alert severity={ready && !leakageBlocked ? "success" : "info"}>
+                {leakageBlocked
+                  ? "Dataset quality flags block training until split leakage is resolved."
+                  : ready
+                    ? dataset.status === "locked"
+                      ? "This immutable snapshot is ready to train again. Every retry creates a new run and preserves prior attempt history."
+                      : "Dataset is ready. Starting training locks this version and its deterministic splits."
+                    : `Review every selected image (${dataset.reviewed_count}/${dataset.selected_count} reviewed; at least 3 selected required).`}
               </Alert>
             ) : (
               <Alert severity="warning">Create a dataset first.</Alert>
             )}
+            <VisionCurationQualityAlerts
+              summary={dataset?.curation_summary}
+              context="training"
+            />
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <TextField
                 select
@@ -88,7 +99,7 @@ export function VisionTrainingWorkspace({
               <Button
                 variant="contained"
                 startIcon={<ModelTraining />}
-                disabled={!ready || !dataset || start.isPending || hasActiveRun}
+                disabled={!ready || leakageBlocked || !dataset || start.isPending || hasActiveRun}
                 onClick={() =>
                   dataset &&
                   start.mutate({

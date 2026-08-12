@@ -6,7 +6,6 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from fastapi import HTTPException
 
 from backend.modules.video_analysis import api as video_api
 from backend.modules.video_analysis.models import StorageObject, VideoAnalysisJob
@@ -134,19 +133,6 @@ async def test_evidence_resolver_returns_url_without_backend_key(monkeypatch):
     assert "/host/private" not in str(result)
 
 
-@pytest.mark.asyncio
-async def test_query_token_is_rejected_when_disabled(monkeypatch):
-    monkeypatch.setattr(video_api.settings, "allow_media_query_token", False)
-    with pytest.raises(HTTPException) as exc:
-        await video_api.stream_video(
-            "video-1",
-            token="secret",
-            db=SimpleNamespace(),
-            user=SimpleNamespace(),
-        )
-    assert exc.value.status_code == 401
-
-
 def test_crop_policy_and_successful_storage_object_registration(tmp_path: Path):
     pipeline = OfflineVideoAnalysisPipeline(
         SimpleNamespace(), evidence_root=tmp_path
@@ -162,17 +148,19 @@ def test_crop_policy_and_successful_storage_object_registration(tmp_path: Path):
         xyxy=(1, 1, 10, 10),
     )
     assert crop is not None
-    path, checksum, size = crop
+    backend_key, checksum, size = crop
+    assert backend_key == "crops/job-1/frame_00000001_det_000.jpg"
+    assert not Path(backend_key).is_absolute()
     storage = StorageObject(
         checksum=checksum,
         size=size,
         mime="image/jpeg",
         owner_type="video_detection",
         owner_id="det-1",
-        state="final",
+        state="staged",
         retention_policy="analysis_evidence",
-        backend_key=str(path),
+        backend_key=backend_key,
     )
-    assert path.is_file()
+    assert (tmp_path / backend_key).is_file()
     assert storage.checksum == checksum
-    assert storage.state == "final"
+    assert storage.state == "staged"

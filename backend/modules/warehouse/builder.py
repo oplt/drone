@@ -16,7 +16,7 @@ from fastapi.responses import StreamingResponse
 
 from backend.core.config.runtime import settings
 from backend.infrastructure.camera.stream_client import DroneVideoStream, opencv_has_gstreamer
-from backend.modules.identity.dependencies import require_user, require_user_header_or_query
+from backend.modules.identity.dependencies import require_user
 
 logger = logging.getLogger(__name__)
 
@@ -455,7 +455,7 @@ async def start_pi_camera_server(user=Depends(require_user)):
 
 @router.get("/mjpeg")
 async def mjpeg_proxy(
-    request: Request, user=Depends(require_user_header_or_query)
+    request: Request, user=Depends(require_user)
 ) -> StreamingResponse:
     if settings.drone_video_use_gazebo:
         await asyncio.to_thread(_ensure_gazebo_streaming_enabled)

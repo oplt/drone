@@ -60,4 +60,47 @@ describe("AnalysisResultsSection terminal states", () => {
     screen.getByRole("button", { name: /Cancel analysis/i }).click();
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+
+  it("warns when capture time came from upload time", () => {
+    render(
+      <AnalysisResultsSection
+        job={job({ status: "completed", error: null, terminal_reason_code: null })}
+        detectionCount={2}
+        video={{
+          id: "video-1",
+          original_filename: "flight.mp4",
+          status: "analyzed",
+          created_at: "2026-08-12T00:00:00Z",
+          capture_time_source: "upload_time",
+        }}
+      />,
+    );
+    expect(screen.getByText(/fell back to upload time/i)).toBeVisible();
+  });
+
+  it("warns when telemetry match quality is low confidence", () => {
+    render(
+      <AnalysisResultsSection
+        job={job({ status: "completed", error: null, terminal_reason_code: null })}
+        detectionCount={1}
+        detections={[
+          {
+            id: "det-1",
+            job_id: "job-1",
+            video_id: "video-1",
+            frame_index: 1,
+            timestamp_seconds: 1,
+            label: "weed",
+            confidence: 0.9,
+            x1: 0,
+            y1: 0,
+            x2: 1,
+            y2: 1,
+            telemetry_match_quality: "low_confidence_upload_time",
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText(/low-confidence telemetry matches/i)).toBeVisible();
+  });
 });

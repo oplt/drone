@@ -1,17 +1,41 @@
 import { Alert, Button, Chip, LinearProgress, Stack, Typography } from "@mui/material";
-import type { VideoAnalysisJob } from "../types";
+import type { VideoAnalysisJob, VideoAsset, VideoDetection } from "../types";
 
 export type AnalysisStatusProps = {
   job?: VideoAnalysisJob;
   detectionCount: number;
   cancelling?: boolean;
   onCancel?: () => void;
+  video?: VideoAsset | null;
+  detections?: VideoDetection[];
 };
 
-export function AnalysisResultsSection({ job, detectionCount, cancelling, onCancel }: AnalysisStatusProps) {
+function hasLowConfidenceGeoref(detections: VideoDetection[] | undefined): boolean {
+  return (detections ?? []).some((detection) => {
+    const quality = detection.telemetry_match_quality ?? "";
+    return (
+      quality === "low_confidence" ||
+      quality === "low_confidence_upload_time" ||
+      quality.includes("low_confidence")
+    );
+  });
+}
+
+export function AnalysisResultsSection({
+  job,
+  detectionCount,
+  cancelling,
+  onCancel,
+  video,
+  detections,
+}: AnalysisStatusProps) {
   const progress = Math.min(100, Math.max(0, job?.progress ?? 0));
   const color = job?.status === "failed" ? "error" : job?.status === "completed" ? "success" : "info";
   const completedWithoutMatches = job?.status === "completed" && detectionCount === 0;
+  const uploadTimeFallback =
+    video?.capture_time_source === "upload_time" ||
+    (detections ?? []).some((detection) => detection.capture_time_source === "upload_time");
+  const lowConfidenceMatch = hasLowConfidenceGeoref(detections);
   const failureGuidance: Record<string, string> = {
     QUEUE_UNAVAILABLE: "The analysis worker was unavailable. Wait briefly, then run analysis again.",
     WORKER_LEASE_EXPIRED: "The worker stopped reporting progress. Run analysis again to create a fresh attempt.",
@@ -31,6 +55,23 @@ export function AnalysisResultsSection({ job, detectionCount, cancelling, onCanc
           ? `${progress.toFixed(1)}% processed | ${detectionCount} detections received`
           : "Run analysis to populate review layers."}
       </Typography>
+      {video?.reanalysis_required ? (
+        <Alert severity="warning">
+          Capture time or sync offset changed after a prior analysis. Run analysis again so
+          georeferencing uses the corrected metadata. Existing detection provenance is unchanged.
+        </Alert>
+      ) : null}
+      {uploadTimeFallback ? (
+        <Alert severity="warning">
+          Capture time fell back to upload time. Map locations may be inaccurate until an operator
+          sets the true capture time or sync offset.
+        </Alert>
+      ) : null}
+      {lowConfidenceMatch ? (
+        <Alert severity="warning">
+          Some detections have low-confidence telemetry matches. Treat map positions as approximate.
+        </Alert>
+      ) : null}
       {job?.status === "queued" ? (
         <Alert severity="info">Waiting for an analysis worker to start this job.</Alert>
       ) : null}

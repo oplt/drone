@@ -20,6 +20,13 @@ const lockedDataset: VisionDataset = {
   val_count: 1,
   test_count: 1,
   manifest_checksum: "checksum",
+  curation_summary: {
+    split_leakage_risk: true,
+    quality_flags: { split_leakage_risk: true },
+    split_leakage: { nearest_cross_split_similarity_count: 2 },
+    duplicate_cluster_count: 1,
+    near_duplicate_rejected: 1,
+  },
   locked_at: "2026-08-01T00:00:00Z",
   created_at: "2026-08-01T00:00:00Z",
   updated_at: "2026-08-01T00:00:00Z",
@@ -48,5 +55,7 @@ describe("VisionDatasetWorkspace", () => {
     expect(screen.getByRole("button", { name: /create blank vnext/i })).toBeEnabled();
     expect(screen.getByRole("button", { name: /clone to vnext/i })).toBeEnabled();
     expect(screen.getByText(/content controls are disabled/i)).toBeVisible();
+    expect(screen.getByText(/cross-split leakage detected/i)).toBeVisible();
+    expect(screen.getByText(/near-duplicate cluster/i)).toBeVisible();
   });
 });

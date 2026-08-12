@@ -201,10 +201,14 @@ class OfflineVideoAnalysisPipeline:
             }:
                 video.capture_time_source = "upload_time"
             capture_base = getattr(video, "captured_at", None) or video.created_at
-            if getattr(video, "sync_offset_seconds", 0.0):
+            sync_offset = float(getattr(video, "sync_offset_seconds", 0.0) or 0.0)
+            if sync_offset:
                 from datetime import timedelta
 
-                capture_base += timedelta(seconds=video.sync_offset_seconds)
+                capture_base += timedelta(seconds=sync_offset)
+            capture_uncertainty = getattr(video, "capture_time_uncertainty_seconds", None)
+            if video.capture_time_source == "upload_time":
+                capture_uncertainty = float(capture_uncertainty or 0.0) + 300.0
             telemetry = NearestTelemetryMatcher(
                 video.mission_id, telemetry_samples, capture_base
             )
@@ -402,7 +406,7 @@ class OfflineVideoAnalysisPipeline:
                                 time.monotonic() - crop_started
                             ) * 1000.0
                             if crop_result is not None:
-                                crop_path, checksum, size = crop_result
+                                backend_key, checksum, size = crop_result
                                 storage_object = StorageObject(
                                     id=new_uuid(),
                                     checksum=checksum,
@@ -410,9 +414,9 @@ class OfflineVideoAnalysisPipeline:
                                     mime="image/jpeg",
                                     owner_type="video_detection",
                                     owner_id=detection_id,
-                                    state="final",
+                                    state="staged",
                                     retention_policy="analysis_evidence",
-                                    backend_key=str(crop_path),
+                                    backend_key=backend_key,
                                 )
                         pending_detections.append(
                             VideoDetection(
@@ -452,9 +456,12 @@ class OfflineVideoAnalysisPipeline:
                                         else geo.quality
                                     ),
                                     "telemetry_match_delta_ms": geo.error_ms,
-                                    "telemetry_match_method": "nearest",
+                                    "telemetry_match_method": geo.method,
                                     "telemetry_match_version": "nearest-telemetry.v1",
+                                    "telemetry_sample_ids": list(geo.sample_ids),
                                     "capture_time_source": video.capture_time_source,
+                                    "sync_offset_seconds": sync_offset,
+                                    "capture_time_uncertainty_seconds": capture_uncertainty,
                                 },
                             )
                         )
@@ -682,7 +689,7 @@ class OfflineVideoAnalysisPipeline:
         detection_index: int,
         image_bgr: NDArray,
         xyxy: tuple[float, float, float, float],
-    ) -> tuple[Path, str, int] | None:
+    ) -> tuple[str, str, int] | None:
         x1, y1, x2, y2 = [round(v) for v in xyxy]
         h, w = image_bgr.shape[:2]
 
@@ -695,13 +702,13 @@ class OfflineVideoAnalysisPipeline:
             return None
 
         crop = image_bgr[y1:y2, x1:x2]
-        out_dir = self.evidence_root / "crops" / job_id
-        out_dir.mkdir(parents=True, exist_ok=True)
-        out_path = out_dir / f"frame_{frame_index:08d}_det_{detection_index:03d}.jpg"
+        relative_key = f"crops/{job_id}/frame_{frame_index:08d}_det_{detection_index:03d}.jpg"
+        out_path = self.evidence_root / relative_key
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         if not cv2.imwrite(str(out_path), crop) or not out_path.is_file():
             out_path.unlink(missing_ok=True)
             raise RuntimeError("Detection crop write failed.")
-        return out_path, self._sha256_file(out_path), out_path.stat().st_size
+        return relative_key, self._sha256_file(out_path), out_path.stat().st_size
 
     def _clear_prior_evidence(self, job_id: str) -> None:
         crop_dir = self.evidence_root / "crops" / job_id

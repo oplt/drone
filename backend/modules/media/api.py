@@ -10,7 +10,7 @@ from backend.infrastructure.camera.runtime import (
     drone_video_link_connected,
     shared_video_runtime,
 )
-from backend.modules.identity.dependencies import require_user, require_user_header_or_query
+from backend.modules.identity.dependencies import require_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/video", tags=["video"])
@@ -87,14 +87,14 @@ async def start_video_stream(user: Any = Depends(require_user)) -> dict[str, Any
 
 
 @router.get("/status")
-async def video_status(user: Any = Depends(require_user_header_or_query)) -> dict[str, Any]:
+async def video_status(user: Any = Depends(require_user)) -> dict[str, Any]:
     return await shared_video_runtime.readiness_status()
 
 
 @router.get("/mjpeg")
 async def mjpeg_proxy(
     request: Request,
-    user: Any = Depends(require_user_header_or_query),
+    user: Any = Depends(require_user),
 ) -> StreamingResponse:
     if not drone_video_link_connected():
         raise HTTPException(

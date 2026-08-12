@@ -76,6 +76,16 @@ inference.
 - Missing media, weights, and evaluation artifacts return 404. Missing SAHI or
   training dependencies produce actionable job failures.
 
+## STOR-001 note (vision weights)
+
+`ModelVersionOut` does not expose `weights_uri` or host filesystem paths.
+On successful training publish, weights are registered as a Vision-local
+`VisionStorageObject` (`vision_storage_objects`) with relative `backend_key`,
+checksum, size, and `final` state, linked from `ModelVersion.storage_object_id`.
+Dual-read remains via `vision://` URI resolution. Cross-module use of Video
+Analysis `video_storage_objects` is intentionally avoided to preserve module
+boundaries (ADR-002).
+
 ## Dependency choices
 
 The frontend pins React-Konva 19.2.5 and Konva 10.3.0 for React 19. The backend

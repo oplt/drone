@@ -66,12 +66,20 @@ class TrainingOperations:
             raise VisionValidationError("At least three selected images are required")
         if any(image.annotation_status != "reviewed" for image in selected):
             raise VisionValidationError("Review every selected image before training")
-        quality_flags = getattr(dataset, "curation_summary", {}).get(
-            "quality_flags", {}
+        curation = getattr(dataset, "curation_summary", None) or {}
+        quality_flags = (
+            curation.get("quality_flags", {}) if isinstance(curation, dict) else {}
         )
-        if (
-            vision_settings.vision_require_curation_quality
-            and any(bool(value) for value in quality_flags.values())
+        split_leakage_risk = bool(
+            (curation.get("split_leakage_risk") if isinstance(curation, dict) else False)
+            or (quality_flags.get("split_leakage_risk") if isinstance(quality_flags, dict) else False)
+        )
+        if vision_settings.vision_require_curation_quality and (
+            split_leakage_risk
+            or (
+                isinstance(quality_flags, dict)
+                and any(bool(value) for value in quality_flags.values())
+            )
         ):
             raise VisionValidationError(
                 "Dataset curation quality flags must be resolved before training"
@@ -200,6 +208,22 @@ class TrainingOperations:
             raise VisionNotFound("Vision model not found")
         return [self.model_output(version) for version in versions]
 
+    async def _verify_weights_checksum(self, weights_uri: str, expected: str) -> bool:
+        try:
+            path = self.storage.resolve_uri(weights_uri)
+        except VisionStorageError:
+            return False
+        if not path.is_file():
+            return False
+        checksum = await run_blocking(
+            lambda value: hashlib.sha256(value.read_bytes()).hexdigest(),
+            path,
+            boundary="filesystem",
+            operation="verify_deploy_model_checksum",
+            timeout_s=120,
+        )
+        return checksum == expected
+
     async def deploy_model(
         self,
         db: AsyncSession,
@@ -216,20 +240,12 @@ class TrainingOperations:
             raise VisionNotFound("Model version not found")
         if version.status == "archived":
             raise VisionConflict("Archived model versions cannot be deployed")
-        policy = evaluate_release(
-            status=version.status,
-            metrics=version.metrics,
-            weights_uri=version.weights_uri,
-            checksum=version.checksum,
-            capability_id=version.model.project.capability_id,
-            minimum_map50=vision_settings.vision_release_min_map50,
-        )
         if override and (
-            getattr(user, "role", None) not in ORG_WRITE_ROLES or not reason
+            getattr(user, "role", None) not in ORG_WRITE_ROLES
+            or not (reason and str(reason).strip())
         ):
             raise VisionConflict("Release overrides require an authorized role and reason")
-        if not policy.eligible and not override:
-            raise VisionValidationError("; ".join(policy.reasons))
+
         previous = await db.scalar(
             select(ModelVersion)
             .where(
@@ -239,6 +255,41 @@ class TrainingOperations:
             )
             .with_for_update()
         )
+        dataset = await db.get(DatasetVersion, version.dataset_id)
+        artifact_verified = await self._verify_weights_checksum(
+            version.weights_uri, version.checksum
+        )
+        production_summary = (
+            previous.metrics.get("summary", {}) if previous is not None else {}
+        )
+        production_map50 = production_summary.get("map50")
+        capability_id = version.model.project.capability_id
+        policy = evaluate_release(
+            status=version.status,
+            metrics=version.metrics,
+            weights_uri=version.weights_uri,
+            checksum=version.checksum,
+            capability_id=capability_id,
+            minimum_map50=vision_settings.vision_release_min_map50,
+            training_run_id=version.training_run_id,
+            dataset_id=version.dataset_id,
+            dataset_version=dataset.version if dataset is not None else None,
+            dataset_manifest_checksum=(
+                dataset.manifest_checksum if dataset is not None else None
+            ),
+            test_count=dataset.test_count if dataset is not None else None,
+            artifact_verified=artifact_verified,
+            production_map50=(
+                float(production_map50)
+                if isinstance(production_map50, (int, float))
+                else None
+            ),
+            max_map50_regression=vision_settings.vision_max_map50_regression,
+            task_type=version.model.task_type,
+            classes=version.classes,
+        )
+        if not policy.eligible and not override:
+            raise VisionValidationError("; ".join(policy.reasons))
         await db.execute(
             update(ModelVersion)
             .where(
@@ -252,12 +303,21 @@ class TrainingOperations:
             "action": action,
             "policy_version": policy.policy_version,
             "actor": user.id,
-            "metrics_snapshot": policy.metrics_snapshot,
-            "previous_production_id": previous.id if previous else None,
+            "reason": reason,
             "rationale": reason,
             "override": override,
+            "failed_checks": list(policy.reasons),
             "policy_reasons": list(policy.reasons),
+            "metrics_snapshot": policy.metrics_snapshot,
+            "previous_production_id": previous.id if previous else None,
             "artifact_checksum": version.checksum,
+            "checksums": {
+                "model": version.checksum,
+                "dataset": dataset.manifest_checksum if dataset is not None else None,
+            },
+            "capability_id": capability_id,
+            "classes": list(version.classes or []),
+            "inference_contract": policy.inference_contract,
             "at": datetime.now(UTC).isoformat(),
         }
         version.metrics = {

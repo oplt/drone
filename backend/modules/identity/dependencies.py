@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from fastapi import Cookie, Depends, Header, HTTPException, Query
+from fastapi import Cookie, Depends, Header, HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -120,8 +120,6 @@ async def resolve_user_from_request(
     db: AsyncSession,
     authorization: str | None = None,
     access_token: str | None = None,
-    query_token: str | None = None,
-    include_query_token: bool = False,
 ) -> User:
     # --- API key path (Bearer sk-...) ---
     # Must be checked before the generic JWT bearer path so the format-specific
@@ -141,8 +139,6 @@ async def resolve_user_from_request(
             token_candidates.append(("authorization", bearer))
     if access_token:
         token_candidates.append(("cookie", access_token))
-    if include_query_token and query_token:
-        token_candidates.append(("query", query_token))
 
     if not token_candidates:
         raise HTTPException(status_code=401, detail="Missing token")
@@ -168,25 +164,6 @@ async def require_user(
     )
     bind_log_context(org_id=user.org_id, user_id=user.id)
     return user
-
-
-async def require_user_header_or_query(
-    token: str | None = Query(default=None),
-    authorization: str | None = Header(default=None),
-    access_token: str | None = Cookie(default=None),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    """
-    Require auth from Authorization header, cookie, or `?token=` query param.
-    Useful for endpoints accessed by <img> or other clients without headers.
-    """
-    return await resolve_user_from_request(
-        db=db,
-        authorization=authorization,
-        access_token=access_token,
-        query_token=token,
-        include_query_token=True,
-    )
 
 
 def _split_list(value: str) -> set[str]:

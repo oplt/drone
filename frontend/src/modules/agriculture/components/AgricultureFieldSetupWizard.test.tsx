@@ -19,12 +19,27 @@ vi.mock("../hooks", () => ({
 }));
 
 vi.mock("./AgricultureGeometryMapEditor", () => ({
-  AgricultureGeometryMapEditor: ({ onBoundaryChange }: { onBoundaryChange: (ring: [number, number][]) => void }) => (
+  AgricultureGeometryMapEditor: ({
+    onBoundaryChange,
+    focusRequestToken,
+  }: {
+    onBoundaryChange: (ring: [number, number][]) => void;
+    focusRequestToken?: number;
+  }) => (
     <div>
       <span>Click boundary points on the map.</span>
-      <button onClick={() => onBoundaryChange([[4, 50], [4.01, 50], [4.01, 50.01], [4, 50.01]])}>
+      <span data-testid="focus-token">{focusRequestToken ?? 0}</span>
+      <button type="button" onClick={() => onBoundaryChange([[4, 50], [4.01, 50], [4.01, 50.01], [4, 50.01]])}>
         Draw test boundary
       </button>
+      <button type="button" onClick={() => onBoundaryChange([[4, 50], [4.01, 50], [4.01, 50.01]])}>
+        Undo to three points
+      </button>
+      <button type="button" onClick={() => onBoundaryChange([])}>
+        Clear boundary
+      </button>
+      <label htmlFor="mock-search">Search location</label>
+      <input id="mock-search" aria-label="Search location" />
     </div>
   ),
 }));
@@ -60,5 +75,38 @@ describe("AgricultureFieldSetupWizard", () => {
     });
     await user.click(screen.getByRole("button", { name: "Apply GeoJSON" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/crosses itself/i);
+  });
+
+  it("keeps raw GeoJSON under Advanced and fits map after apply", async () => {
+    const user = userEvent.setup();
+    render(<AgricultureFieldSetupWizard />);
+    await user.type(screen.getByLabelText(/Field name/i), "Fit field");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByTestId("focus-token")).toHaveTextContent("0");
+    const advanced = screen.getByRole("button", { name: /Advanced GeoJSON/i });
+    expect(advanced).toHaveAttribute("aria-expanded", "false");
+    await user.click(advanced);
+    expect(advanced).toHaveAttribute("aria-expanded", "true");
+    fireEvent.change(screen.getByLabelText(/Boundary GeoJSON/i), {
+      target: {
+        value: JSON.stringify({
+          type: "Polygon",
+          coordinates: [[[4, 50], [4.02, 50], [4.02, 50.02], [4, 50.02], [4, 50]]],
+        }),
+      },
+    });
+    await user.click(screen.getByRole("button", { name: "Apply GeoJSON" }));
+    expect(screen.getByTestId("focus-token")).toHaveTextContent("1");
+  });
+
+  it("supports clear boundary from the map editor", async () => {
+    const user = userEvent.setup();
+    render(<AgricultureFieldSetupWizard />);
+    await user.type(screen.getByLabelText(/Field name/i), "Clear field");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Draw test boundary" }));
+    await user.click(screen.getByRole("button", { name: "Clear boundary" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/Draw or import/i);
   });
 });

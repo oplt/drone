@@ -21,6 +21,31 @@ export type VisionProject = {
   updated_at: string;
 };
 
+export type VisionCurationSummary = {
+  policy_version?: string;
+  duplicate_cluster_count?: number;
+  near_duplicate_clusters?: Array<{
+    cluster_id: string;
+    size: number;
+    image_ids: string[];
+  }>;
+  near_duplicate_rejected?: number;
+  excluded_images?: number;
+  quality_exclusions?: number;
+  split_leakage_risk?: boolean;
+  split_leakage?: {
+    held_boundary_frames?: number;
+    nearest_cross_split_similarity_count?: number;
+  };
+  source_distribution?: {
+    by_source_group?: Record<string, number>;
+    by_split?: Record<string, Record<string, number>>;
+  };
+  quality_flags?: Record<string, boolean>;
+  blur?: Record<string, number | null | undefined>;
+  exposure?: Record<string, number | null | undefined>;
+};
+
 export type VisionDataset = {
   id: string;
   project_id: string;
@@ -35,6 +60,7 @@ export type VisionDataset = {
   val_count: number;
   test_count: number;
   manifest_checksum: string | null;
+  curation_summary?: VisionCurationSummary;
   locked_at: string | null;
   created_at: string;
   updated_at: string;

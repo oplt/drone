@@ -19,6 +19,11 @@ const dataset: VisionDataset = {
   val_count: 1,
   test_count: 1,
   manifest_checksum: "checksum",
+  curation_summary: {
+    split_leakage_risk: true,
+    quality_flags: { split_leakage_risk: true },
+    split_leakage: { nearest_cross_split_similarity_count: 1 },
+  },
   locked_at: "2026-08-01T00:00:00Z",
   created_at: "2026-08-01T00:00:00Z",
   updated_at: "2026-08-01T00:00:00Z",
@@ -62,6 +67,8 @@ describe("vision training workspace", () => {
     expect(screen.getByText("Model evaluation failed.")).toBeVisible();
     expect(screen.getByText("failed")).toBeVisible();
     expect(screen.getByRole("button", { name: /retry same snapshot/i })).toBeEnabled();
-    expect(screen.getByText(/immutable snapshot is ready to train again/i)).toBeVisible();
+    expect(screen.getByText(/quality flags block training/i)).toBeVisible();
+    expect(screen.getByText(/training is blocked while split leakage remains/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: /start training/i })).toBeDisabled();
   });
 });

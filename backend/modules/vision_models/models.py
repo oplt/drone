@@ -9,6 +9,7 @@ from backend.modules.vision_models.training_models import (
     ModelVersion,
     TrainingRun,
     VisionModel,
+    VisionStorageObject,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "VisionClass",
     "VisionModel",
     "VisionProject",
+    "VisionStorageObject",
 ]

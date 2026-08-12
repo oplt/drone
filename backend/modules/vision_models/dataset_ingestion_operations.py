@@ -15,7 +15,6 @@ from backend.modules.agriculture.ports.telemetry import (
     list_mission_telemetry_for_georef,
 )
 from backend.modules.identity.models import User
-from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
 from backend.modules.vision_models.application_base import (
     VisionConflict,
@@ -28,8 +27,11 @@ from backend.modules.vision_models.repository import VisionRepository
 from backend.modules.vision_models.schemas import ExtractFramesRequest, ImageUploadResult
 from backend.modules.vision_models.service.dataset_service import (
     DatasetServiceError,
+    apply_dataset_near_duplicate_clustering,
     assign_deterministic_splits,
+    count_cross_split_near_duplicates,
     prepare_uploaded_image,
+    source_distribution,
     write_manifest,
 )
 from backend.modules.vision_models.service.frame_curation import curate_video_frames
@@ -42,11 +44,39 @@ class DatasetIngestionOperations:
         repo = VisionRepository(db)
         await db.flush()
         images = await repo.all_dataset_images(dataset.id)
-        split_summary = (getattr(dataset, "curation_summary", None) or {}).get(
-            "split_leakage", {}
-        )
-        if dataset.status != "locked":
+        mutate = dataset.status != "locked"
+        if mutate:
+            cluster_summary = apply_dataset_near_duplicate_clustering(
+                images, mutate_selection=True
+            )
             split_summary = assign_deterministic_splits(images)
+        else:
+            cluster_ids = sorted(
+                {
+                    image.metadata_json.get("duplicate_cluster_id")
+                    for image in images
+                    if isinstance(image.metadata_json, dict)
+                    and image.metadata_json.get("duplicate_cluster_id")
+                }
+            )
+            prior_split = (getattr(dataset, "curation_summary", None) or {}).get(
+                "split_leakage", {}
+            )
+            cluster_summary = {
+                "duplicate_cluster_count": len(cluster_ids),
+                "near_duplicate_rejected": 0,
+                "comparison_count": 0,
+                "near_duplicate_clusters": [
+                    {"cluster_id": cluster_id, "size": 0, "image_ids": []}
+                    for cluster_id in cluster_ids
+                ],
+            }
+            split_summary = {
+                "held_boundary_frames": int(prior_split.get("held_boundary_frames", 0) or 0),
+                "nearest_cross_split_similarity_count": count_cross_split_near_duplicates(
+                    images
+                ),
+            }
         selected = [image for image in images if image.selected]
         dataset.image_count = len(images)
         dataset.source_count = len({image.source_group for image in images})
@@ -74,19 +104,28 @@ class DatasetIngestionOperations:
             for row in quality_rows
             if isinstance(row.get("mean_exposure"), (int, float))
         ]
-        duplicate_clusters = {
-            image.metadata_json.get("duplicate_cluster_id")
+        quality_exclusions = sum(
+            1
             for image in images
             if isinstance(image.metadata_json, dict)
-            and image.metadata_json.get("duplicate_cluster_id")
-        }
+            and (image.metadata_json.get("quality") or {}).get("rejection_reasons")
+            and not image.selected
+        )
+        leakage_count = int(
+            split_summary.get("nearest_cross_split_similarity_count", 0) or 0
+        )
+        split_leakage_risk = leakage_count > 0
         dataset.curation_summary = {
             "policy_version": "vision-data-quality.v1",
-            "duplicate_cluster_count": len(duplicate_clusters),
+            "duplicate_cluster_count": cluster_summary.get("duplicate_cluster_count", 0),
+            "near_duplicate_clusters": cluster_summary.get("near_duplicate_clusters", []),
+            "near_duplicate_rejected": cluster_summary.get("near_duplicate_rejected", 0),
+            "comparison_count": cluster_summary.get("comparison_count", 0),
+            "excluded_images": sum(1 for image in images if not image.selected),
+            "quality_exclusions": quality_exclusions,
             "split_leakage": split_summary,
-            "split_leakage_risk": bool(
-                split_summary.get("nearest_cross_split_similarity_count", 0)
-            ),
+            "split_leakage_risk": split_leakage_risk,
+            "source_distribution": source_distribution(images),
             "blur": {
                 "minimum": min(blur) if blur else None,
                 "mean": sum(blur) / len(blur) if blur else None,
@@ -96,10 +135,9 @@ class DatasetIngestionOperations:
                 "maximum": max(exposure) if exposure else None,
                 "mean": sum(exposure) / len(exposure) if exposure else None,
             },
+            # Blocking flags only — resolved near-dupe clusters are informational.
             "quality_flags": {
-                "split_leakage_risk": bool(
-                    split_summary.get("nearest_cross_split_similarity_count", 0)
-                )
+                "split_leakage_risk": split_leakage_risk,
             },
         }
         dataset.manifest_checksum = await run_blocking(
@@ -240,8 +278,11 @@ class DatasetIngestionOperations:
         if dataset is None:
             raise VisionNotFound("Dataset not found")
         self._assert_mutable(dataset)
-        video = await VideoAnalysisRepository(db).get_video_for_user(
-            payload.video_id, user
+        # Lazy import: VideoAnalysisApplication depends on VisionApplication.
+        from backend.modules.video_analysis.contracts import video_analysis_port
+
+        video = await video_analysis_port.get_source_for_user(
+            db, payload.video_id, user
         )
         if video is None:
             raise VisionNotFound("Video not found")
@@ -286,7 +327,7 @@ class DatasetIngestionOperations:
         telemetry = NearestTelemetryMatcher(
             video.mission_id,
             telemetry_samples,
-            getattr(video, "captured_at", None) or video.created_at,
+            video.captured_at or video.created_at,
         )
         for frame in result.frames:
             path = Path(frame.path)
@@ -338,8 +379,8 @@ class DatasetIngestionOperations:
                         "telemetry_match_quality": geo.quality,
                         "telemetry_error_ms": geo.error_ms,
                         "capture_time_source": (
-                            getattr(video, "capture_time_source", None)
-                            if getattr(video, "captured_at", None)
+                            video.capture_time_source
+                            if video.captured_at
                             else "upload_time_fallback"
                         ),
                         "duplicate_cluster_id": frame.duplicate_cluster_id,

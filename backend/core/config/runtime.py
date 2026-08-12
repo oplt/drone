@@ -320,7 +320,6 @@ class RuntimeSettings(BaseSettings):
     cookie_secure: bool = False  # Set True in production with HTTPS
     cookie_domain: str = ""
     cookie_samesite: str = "lax"
-    allow_media_query_token: bool = False
     admin_emails: str = ""
     admin_domains: str = ""
 

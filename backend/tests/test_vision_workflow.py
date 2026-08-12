@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import numpy as np
@@ -421,11 +422,15 @@ async def test_deploy_is_blocked_by_low_map50(monkeypatch):
         id="version-1",
         model_id="model-1",
         status="candidate",
+        training_run_id="run-1",
+        dataset_id="dataset-1",
         metrics={"summary": {"map50": 0.1}},
         weights_uri="vision://weights.pt",
         checksum="a" * 64,
+        classes=["weed"],
         model=SimpleNamespace(
-            project=SimpleNamespace(capability_id="object_detection")
+            task_type="detection",
+            project=SimpleNamespace(capability_id="object_detection"),
         ),
     )
 
@@ -437,10 +442,151 @@ async def test_deploy_is_blocked_by_low_map50(monkeypatch):
             return version if version_id == version.id else None
 
     monkeypatch.setattr(training_operations, "VisionRepository", FakeRepository)
+    app = VisionApplication()
+    monkeypatch.setattr(app, "_verify_weights_checksum", AsyncMock(return_value=True))
+    db = SimpleNamespace(
+        scalar=AsyncMock(return_value=None),
+        get=AsyncMock(
+            return_value=SimpleNamespace(
+                version=1, test_count=3, manifest_checksum="c" * 64
+            )
+        ),
+    )
 
     with pytest.raises(ValueError, match="map50"):
-        await VisionApplication().deploy_model(
-            SimpleNamespace(), version.id, SimpleNamespace(id=1, org_id=7)
+        await app.deploy_model(db, version.id, SimpleNamespace(id=1, org_id=7))
+
+
+def test_upload_near_duplicate_clustering_deselects_secondary():
+    from backend.modules.vision_models.service.dataset_service import (
+        apply_dataset_near_duplicate_clustering,
+    )
+
+    shared_hash = "aaaaaaaaaaaaaaaa"
+    images = [
+        SimpleNamespace(
+            id="img-1",
+            selected=True,
+            perceptual_hash=shared_hash,
+            metadata_json={},
+        ),
+        SimpleNamespace(
+            id="img-2",
+            selected=True,
+            perceptual_hash=shared_hash,
+            metadata_json={},
+        ),
+        SimpleNamespace(
+            id="img-3",
+            selected=True,
+            perceptual_hash="ffffffffffffffff",
+            metadata_json={},
+        ),
+    ]
+    summary = apply_dataset_near_duplicate_clustering(images)
+    assert summary["duplicate_cluster_count"] == 1
+    assert summary["near_duplicate_rejected"] == 1
+    assert images[0].selected is True
+    assert images[1].selected is False
+    assert images[1].metadata_json["duplicate_cluster_id"].startswith("near-duplicate:")
+    assert images[2].selected is True
+
+
+def test_multi_source_split_reports_cross_split_near_duplicates():
+    shared_hash = "bbbbbbbbbbbbbbbb"
+    images = [
+        SimpleNamespace(
+            id="image-a",
+            selected=True,
+            source_group="video:a",
+            timestamp_seconds=0.0,
+            frame_index=0,
+            sha256="1" * 64,
+            perceptual_hash=shared_hash,
+            split=None,
+        ),
+        SimpleNamespace(
+            id="image-b",
+            selected=True,
+            source_group="video:b",
+            timestamp_seconds=1.0,
+            frame_index=1,
+            sha256="2" * 64,
+            perceptual_hash="1111111111111111",
+            split=None,
+        ),
+        SimpleNamespace(
+            id="image-c",
+            selected=True,
+            source_group="video:c",
+            timestamp_seconds=2.0,
+            frame_index=2,
+            sha256="3" * 64,
+            perceptual_hash=shared_hash,
+            split=None,
+        ),
+    ]
+    summary = assign_deterministic_splits(images)
+    assert {image.split for image in images} == {"train", "val", "test"}
+    assert summary["nearest_cross_split_similarity_count"] > 0
+
+
+@pytest.mark.asyncio
+async def test_create_training_run_blocks_when_split_leakage_policy_on(monkeypatch):
+    from backend.modules.vision_models.schemas import TrainingRunCreate
+
+    dataset = SimpleNamespace(
+        id="dataset-1",
+        project_id="project-1",
+        status="locked",
+        curation_summary={
+            "split_leakage_risk": True,
+            "quality_flags": {"split_leakage_risk": True},
+        },
+        manifest_checksum="checksum",
+    )
+    project = SimpleNamespace(id="project-1", classes=[SimpleNamespace(name="weed")])
+    images = [
+        SimpleNamespace(
+            selected=True,
+            annotation_status="reviewed",
+            split=split,
+        )
+        for split in ("train", "val", "test")
+    ]
+
+    class FakeRepository:
+        def __init__(self, _db):
+            pass
+
+        async def get_project(self, _project_id, _user):
+            return project
+
+        async def get_dataset(self, _dataset_id, _user):
+            return dataset
+
+        async def all_dataset_images(self, _dataset_id):
+            return images
+
+        @staticmethod
+        def project_visible_to(_user):
+            return True
+
+    monkeypatch.setattr(training_operations, "VisionRepository", FakeRepository)
+    monkeypatch.setattr(
+        training_operations.vision_settings,
+        "vision_require_curation_quality",
+        True,
+    )
+
+    with pytest.raises(ValueError, match="curation quality"):
+        await VisionApplication().create_training_run(
+            SimpleNamespace(),
+            "project-1",
+            TrainingRunCreate(
+                dataset_id="dataset-1", base_model="yolo26s.pt", preset="balanced"
+            ),
+            SimpleNamespace(id=1, org_id=7),
         )
 
 

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse
 
 from backend.core.api_errors import map_domain_exception
-from backend.core.config.runtime import settings
 from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import (
     OrgUser,
@@ -24,6 +23,7 @@ from backend.modules.video_analysis.schemas import (
     VideoAnalysisJobOut,
     VideoAnalysisSummaryOut,
     VideoAssetOut,
+    VideoCaptureMetadataPatch,
     VideoDetectionAggregateOut,
     VideoDetectionPageOut,
 )
@@ -53,15 +53,30 @@ async def list_videos(
         raise map_domain_exception(exc, domain="video_analysis") from exc
 
 
+@router.patch("/videos/{video_id}/capture-metadata", response_model=VideoAssetOut)
+async def patch_capture_metadata(
+    video_id: str,
+    request: VideoCaptureMetadataPatch,
+    db=Depends(get_db),
+    org_user: OrgUser = Depends(require_org_user),
+) -> VideoAssetOut:
+    try:
+        return await application.update_capture_metadata(
+            db,
+            video_id=video_id,
+            user=org_user.user,
+            patch=request,
+        )
+    except VideoAnalysisNotFound as exc:
+        raise map_domain_exception(exc, domain="video_analysis") from exc
+
+
 @router.get("/videos/{video_id}/stream")
 async def stream_video(
     video_id: str,
-    token: str | None = Query(default=None),
     db=Depends(get_db),
     user=Depends(require_user),
 ) -> FileResponse:
-    if token and not settings.allow_media_query_token:
-        raise HTTPException(status_code=401, detail="Query token authentication is disabled")
     try:
         path, content_type = await application.resolve_video_stream_path(
             db, video_id=video_id, user=user
@@ -149,6 +164,10 @@ async def list_detections(
     cursor: str | None = Query(default=None),
     since_id: str | None = Query(default=None),
     limit: int = Query(250, ge=1, le=500),
+    min_confidence: float | None = Query(default=None, ge=0.0, le=1.0),
+    label: str | None = Query(default=None, min_length=1, max_length=128),
+    since_ts: float | None = Query(default=None, ge=0.0),
+    until_ts: float | None = Query(default=None, ge=0.0),
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> VideoDetectionPageOut:
@@ -160,6 +179,10 @@ async def list_detections(
             limit=limit,
             cursor=cursor,
             since_id=since_id,
+            min_confidence=min_confidence,
+            label=label,
+            since_ts=since_ts,
+            until_ts=until_ts,
         )
     except VideoAnalysisNotFound as exc:
         raise map_domain_exception(exc, domain="video_analysis") from exc
@@ -174,6 +197,10 @@ async def list_detections(
 async def aggregate_detections(
     job_id: str,
     bucket_seconds: float = Query(10.0, ge=0.5, le=3600.0),
+    min_confidence: float | None = Query(default=None, ge=0.0, le=1.0),
+    label: str | None = Query(default=None, min_length=1, max_length=128),
+    since_ts: float | None = Query(default=None, ge=0.0),
+    until_ts: float | None = Query(default=None, ge=0.0),
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> VideoDetectionAggregateOut:
@@ -183,6 +210,10 @@ async def aggregate_detections(
             job_id=job_id,
             user=org_user.user,
             bucket_seconds=bucket_seconds,
+            min_confidence=min_confidence,
+            label=label,
+            since_ts=since_ts,
+            until_ts=until_ts,
         )
     except VideoAnalysisNotFound as exc:
         raise map_domain_exception(exc, domain="video_analysis") from exc

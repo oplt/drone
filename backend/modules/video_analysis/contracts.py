@@ -140,6 +140,15 @@ class VideoAnalysisPort:
         )
         return [_source_ref(row) for row in rows]
 
+    async def get_source_for_user(
+        self,
+        db: AsyncSession,
+        video_id: str,
+        user: User,
+    ) -> VideoSourceRef | None:
+        row = await VideoAnalysisRepository(db).get_video_for_user(video_id, user)
+        return _source_ref(row) if row is not None else None
+
     async def start_or_reuse_job(
         self,
         db: AsyncSession,

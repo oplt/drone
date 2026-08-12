@@ -56,6 +56,7 @@ class VideoAsset(Base):
         Float, nullable=True
     )
     sync_offset_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    reanalysis_required: Mapped[bool] = mapped_column(nullable=False, default=False)
 
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="uploaded")
     created_at: Mapped[datetime] = mapped_column(

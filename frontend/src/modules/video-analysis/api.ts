@@ -5,6 +5,8 @@ import type {
   VideoAnalysisJob,
   VideoAnalysisSummary,
   VideoAsset,
+  VideoCaptureMetadataPatch,
+  VideoDetectionAggregate,
   VideoDetectionPage,
 } from "./types";
 
@@ -74,13 +76,46 @@ export async function cancelVideoAnalysis(jobId: string): Promise<VideoAnalysisJ
 
 export async function listDetections(
   jobId: string,
-  params: { cursor?: string | null; sinceId?: string | null; limit?: number } = {},
+  params: {
+    cursor?: string | null;
+    sinceId?: string | null;
+    limit?: number;
+    sinceTs?: number | null;
+    untilTs?: number | null;
+  } = {},
 ): Promise<VideoDetectionPage> {
   const search = new URLSearchParams({ limit: String(params.limit ?? 250) });
   if (params.cursor) search.set("cursor", params.cursor);
   if (params.sinceId) search.set("since_id", params.sinceId);
+  if (params.sinceTs != null) search.set("since_ts", String(params.sinceTs));
+  if (params.untilTs != null) search.set("until_ts", String(params.untilTs));
   return httpRequest<VideoDetectionPage>(
     `/video-analysis/jobs/${jobId}/detections?${search}`,
+  );
+}
+
+export async function getDetectionAggregates(
+  jobId: string,
+  params: { bucketSeconds?: number } = {},
+): Promise<VideoDetectionAggregate> {
+  const search = new URLSearchParams({
+    bucket_seconds: String(params.bucketSeconds ?? 10),
+  });
+  return httpRequest<VideoDetectionAggregate>(
+    `/video-analysis/jobs/${jobId}/detections/aggregate?${search}`,
+  );
+}
+
+export async function patchCaptureMetadata(
+  videoId: string,
+  patch: VideoCaptureMetadataPatch,
+): Promise<VideoAsset> {
+  return httpRequest<VideoAsset>(
+    `/video-analysis/videos/${videoId}/capture-metadata`,
+    {
+      method: "PATCH",
+      body: patch,
+    },
   );
 }
 

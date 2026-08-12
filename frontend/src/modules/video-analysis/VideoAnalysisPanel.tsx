@@ -20,6 +20,8 @@ import {
   useAnalysisJob,
   useAnalysisSummary,
   useCancelAnalysis,
+  useDetectionAggregates,
+  useDetectionWindow,
   useDetections,
   useLiveSavedDetections,
   useMissionVideos,
@@ -27,7 +29,12 @@ import {
   useUploadVideo,
 } from "./hooks";
 import { DEFAULT_MODEL } from "./modelOptions";
-import type { AnalyzeVideoPayload, VideoAsset, VideoDetection } from "./types";
+import type {
+  AnalyzeVideoPayload,
+  DetectionAggregateBucket,
+  VideoAsset,
+  VideoDetection,
+} from "./types";
 
 const DEFAULT_PAYLOAD: AnalyzeVideoPayload = {
   model_name: DEFAULT_MODEL,
@@ -64,6 +71,8 @@ export function VideoAnalysisPanel({
   const [requestedEvidenceId, setRequestedEvidenceId] = useState<string | null>(
     null,
   );
+  const [selectedBucket, setSelectedBucket] =
+    useState<DetectionAggregateBucket | null>(null);
 
   const queryMissionId = missionId;
   const missionVideos = useMissionVideos(queryMissionId, fieldId, {
@@ -74,6 +83,20 @@ export function VideoAnalysisPanel({
   const start = useStartAnalysis();
   const job = useAnalysisJob(jobId);
   const detections = useDetections(jobId, job.data?.status);
+  const aggregates = useDetectionAggregates(
+    jobId,
+    job.data?.status,
+    durationSeconds,
+  );
+  const windowDetections = useDetectionWindow(
+    jobId,
+    selectedBucket
+      ? {
+          sinceTs: selectedBucket.start_seconds,
+          untilTs: selectedBucket.end_seconds,
+        }
+      : null,
+  );
   const summary = useAnalysisSummary(jobId, job.data?.status);
   const cancel = useCancelAnalysis();
   const liveDetections = useLiveSavedDetections();
@@ -83,19 +106,25 @@ export function VideoAnalysisPanel({
     [file, video],
   );
 
-  const rows = useMemo(
-    () => detections.data?.items ?? [],
-    [detections.data?.items],
-  );
+  const rows = useMemo(() => {
+    const windowItems = windowDetections.data?.items;
+    if (windowItems?.length) return windowItems;
+    return detections.data?.items ?? [];
+  }, [detections.data?.items, windowDetections.data?.items]);
   const topLabels = useMemo(() => {
-    const counts = new Map<string, number>();
-    rows.forEach((detection) =>
-      counts.set(detection.label, (counts.get(detection.label) ?? 0) + 1),
-    );
-    return [...counts.entries()]
+    const counts = summary.data?.detections_by_class;
+    if (!counts) return [];
+    return Object.entries(counts)
       .sort((left, right) => right[1] - left[1])
       .slice(0, 5);
-  }, [rows]);
+  }, [summary.data?.detections_by_class]);
+  const detectionCount =
+    summary.data
+      ? Object.values(summary.data.detections_by_class).reduce(
+          (sum, count) => sum + count,
+          0,
+        )
+      : (detections.data?.total_estimate ?? rows.length);
   const error =
     fileError ??
     [
@@ -143,6 +172,13 @@ export function VideoAnalysisPanel({
   }, [requestedEvidenceId, rows]);
 
   useEffect(() => {
+    const items = windowDetections.data?.items;
+    if (!items?.length || !selectedBucket) return;
+    const best = [...items].sort((a, b) => b.confidence - a.confidence)[0];
+    if (best) setSelected(best);
+  }, [selectedBucket, windowDetections.data?.items]);
+
+  useEffect(() => {
     const recordings = missionVideos.data ?? [];
     if (!recordings.length || video || file) return;
     setVideo(recordings[0]);
@@ -154,6 +190,7 @@ export function VideoAnalysisPanel({
     setVideo(null);
     setJobId(null);
     setSelected(null);
+    setSelectedBucket(null);
   };
 
   const selectMissionRecording = (recording: VideoAsset) => {
@@ -162,6 +199,7 @@ export function VideoAnalysisPanel({
     setVideo(recording);
     setJobId(null);
     setSelected(null);
+    setSelectedBucket(null);
   };
 
   const handleUpload = async () => {
@@ -180,6 +218,7 @@ export function VideoAnalysisPanel({
     const created = await start.mutateAsync({ videoId: video.id, payload });
     setJobId(created.id);
     setSelected(null);
+    setSelectedBucket(null);
   };
 
   return (
@@ -221,8 +260,10 @@ export function VideoAnalysisPanel({
             onPayload={setPayload}
             onUpload={handleUpload}
             onAnalyze={handleAnalyze}
+            onVideoUpdated={setVideo}
             job={job.data}
-            detectionCount={rows.length}
+            detectionCount={detectionCount}
+            detections={rows}
             cancelling={cancel.isPending}
             onCancel={jobId ? () => cancel.mutate(jobId) : undefined}
           />
@@ -237,11 +278,13 @@ export function VideoAnalysisPanel({
               onDurationChange={setDurationSeconds}
             />
             <DetectionTimeline
+              buckets={aggregates.data?.buckets}
               detections={rows}
               selected={selected}
               durationSeconds={durationSeconds}
               status={job.data?.status}
               onSelect={setSelected}
+              onSelectBucket={setSelectedBucket}
             />
             {topLabels.length ? (
               <Alert severity="info">

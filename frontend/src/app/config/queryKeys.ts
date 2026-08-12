@@ -55,6 +55,14 @@ export const videoAnalysisKeys = {
     [...videoAnalysisKeys.all, "videos", missionId, fieldId] as const,
   job: (jobId: string | null) => [...videoAnalysisKeys.all, "job", jobId] as const,
   detections: (jobId: string | null) => [...videoAnalysisKeys.all, "detections", jobId] as const,
+  detectionAggregates: (jobId: string | null, bucketSeconds: number) =>
+    [...videoAnalysisKeys.all, "detection-aggregates", jobId, bucketSeconds] as const,
+  detectionWindow: (
+    jobId: string | null,
+    sinceTs: number | null,
+    untilTs: number | null,
+  ) =>
+    [...videoAnalysisKeys.all, "detection-window", jobId, sinceTs, untilTs] as const,
   liveDetections: () => [...videoAnalysisKeys.all, "live-detections"] as const,
 };
 

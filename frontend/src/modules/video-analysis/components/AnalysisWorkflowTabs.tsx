@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Box, Card, CardContent, Tab, Tabs, Typography } from "@mui/material";
+import type { VideoDetection } from "../types";
 import {
   AnalysisInferenceSection,
   AnalysisSourceSection,
@@ -7,7 +8,10 @@ import {
 } from "./AnalysisControls";
 import { AnalysisResultsSection, type AnalysisStatusProps } from "./AnalysisStatus";
 
-type AnalysisWorkflowTabsProps = AnalysisControlsProps & AnalysisStatusProps;
+type AnalysisWorkflowTabsProps = AnalysisControlsProps &
+  AnalysisStatusProps & {
+    detections?: VideoDetection[];
+  };
 
 export function AnalysisWorkflowTabs(props: AnalysisWorkflowTabsProps) {
   const [tab, setTab] = useState<"source" | "inference" | "results">("source");
@@ -55,6 +59,8 @@ export function AnalysisWorkflowTabs(props: AnalysisWorkflowTabsProps) {
               detectionCount={props.detectionCount}
               cancelling={props.cancelling}
               onCancel={props.onCancel}
+              video={props.video}
+              detections={props.detections}
             />
           </Box>
         ) : null}

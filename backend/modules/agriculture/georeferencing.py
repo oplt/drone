@@ -23,6 +23,25 @@ class InterpolationResult:
     pose: Pose | None
     status: str
     error_ms: float | None
+    sample_ids: tuple[int | str, ...] = ()
+
+
+def _sample_id(row: Any) -> int | str | None:
+    value = getattr(row, "id", None)
+    if value is None:
+        return None
+    if isinstance(value, (int, str)):
+        return value
+    return str(value)
+
+
+def _sample_ids(*rows: Any) -> tuple[int | str, ...]:
+    ids: list[int | str] = []
+    for row in rows:
+        sample_id = _sample_id(row)
+        if sample_id is not None and sample_id not in ids:
+            ids.append(sample_id)
+    return tuple(ids)
 
 
 def interpolate_pose(samples: Iterable[Any], timestamp_utc: datetime, max_gap_s: float = 5.0) -> InterpolationResult:
@@ -45,14 +64,19 @@ def interpolate_pose(samples: Iterable[Any], timestamp_utc: datetime, max_gap_s:
     if before is None or after is None or before.timestamp_utc == after.timestamp_utc:
         error_ms = abs((anchor.timestamp_utc - timestamp_utc).total_seconds()) * 1000
         if error_ms > max_gap_s * 1000:
-            return InterpolationResult(None, "gap", error_ms)
-        return InterpolationResult(_pose(anchor), "nearest", error_ms)
+            return InterpolationResult(None, "gap", error_ms, _sample_ids(anchor))
+        return InterpolationResult(_pose(anchor), "nearest", error_ms, _sample_ids(anchor))
     span = (after.timestamp_utc - before.timestamp_utc).total_seconds()
     if span <= 0 or span > max_gap_s:
         error_ms = min(abs((timestamp_utc - before.timestamp_utc).total_seconds()), abs((after.timestamp_utc - timestamp_utc).total_seconds())) * 1000
-        return InterpolationResult(None, "gap", error_ms)
+        return InterpolationResult(None, "gap", error_ms, _sample_ids(before, after))
     ratio = (timestamp_utc - before.timestamp_utc).total_seconds() / span
-    return InterpolationResult(_interpolate(before, after, ratio, timestamp_utc), "interpolated", 0.0)
+    return InterpolationResult(
+        _interpolate(before, after, ratio, timestamp_utc),
+        "interpolated",
+        0.0,
+        _sample_ids(before, after),
+    )
 
 
 def _pose(row: Any) -> Pose:

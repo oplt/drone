@@ -4,9 +4,8 @@ import hashlib
 import json
 import shutil
 import zipfile
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass
-from itertools import pairwise
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -17,6 +16,8 @@ import yaml
 
 from backend.modules.vision_models.models import DatasetImage, DatasetVersion, VisionClass
 from backend.modules.vision_models.service.frame_curation import (
+    HASH_BUCKET_LIMIT,
+    HASH_PREFIX_LENGTH,
     MAX_HASH_DISTANCE,
     assess_quality,
     average_hash,
@@ -123,6 +124,122 @@ def _split_counts(total: int) -> tuple[int, int, int]:
     return train, val, test
 
 
+def count_cross_split_near_duplicates(images: list[DatasetImage]) -> int:
+    """Count near-dupe pairs that span different splits using hash-prefix buckets."""
+    assigned = [
+        image
+        for image in images
+        if image.selected
+        and image.split in {"train", "val", "test"}
+        and getattr(image, "perceptual_hash", None)
+    ]
+    buckets: dict[str, list[DatasetImage]] = defaultdict(list)
+    for image in assigned:
+        buckets[image.perceptual_hash[:HASH_PREFIX_LENGTH]].append(image)
+
+    leakage = 0
+    seen: set[tuple[str, str]] = set()
+    for members in buckets.values():
+        ordered = sorted(members, key=lambda item: item.id)
+        for index, left in enumerate(ordered):
+            for right in ordered[index + 1 : index + 1 + HASH_BUCKET_LIMIT]:
+                if left.split == right.split:
+                    continue
+                if (
+                    hash_distance(left.perceptual_hash, right.perceptual_hash)
+                    > MAX_HASH_DISTANCE
+                ):
+                    continue
+                pair = tuple(sorted((left.id, right.id)))
+                if pair in seen:
+                    continue
+                seen.add(pair)
+                leakage += 1
+    return leakage
+
+
+def apply_dataset_near_duplicate_clustering(
+    images: list[DatasetImage],
+    *,
+    mutate_selection: bool = True,
+) -> dict[str, Any]:
+    """Dataset-wide near-dupe clustering with pHash prefix bucketing (subquadratic)."""
+    # Prefer selected images as cluster representatives.
+    ordered = sorted(images, key=lambda item: (not item.selected, item.id))
+    for image in ordered:
+        meta = dict(image.metadata_json or {})
+        meta.pop("duplicate_cluster_id", None)
+        image.metadata_json = meta
+
+    buckets: dict[str, deque] = defaultdict(lambda: deque(maxlen=HASH_BUCKET_LIMIT))
+    clusters: dict[str, list[str]] = {}
+    comparison_count = 0
+    rejected_duplicates = 0
+
+    for image in ordered:
+        perceptual_hash = getattr(image, "perceptual_hash", None)
+        if not perceptual_hash:
+            continue
+        match = None
+        for previous in buckets[perceptual_hash[:HASH_PREFIX_LENGTH]]:
+            comparison_count += 1
+            if (
+                hash_distance(perceptual_hash, previous.perceptual_hash)
+                <= MAX_HASH_DISTANCE
+            ):
+                match = previous
+                break
+        if match is None:
+            buckets[perceptual_hash[:HASH_PREFIX_LENGTH]].append(image)
+            continue
+
+        match_meta = dict(match.metadata_json or {})
+        cluster_id = match_meta.get("duplicate_cluster_id") or f"near-duplicate:{match.id}"
+        match_meta["duplicate_cluster_id"] = cluster_id
+        match.metadata_json = match_meta
+        clusters.setdefault(cluster_id, [match.id])
+        if match.id not in clusters[cluster_id]:
+            clusters[cluster_id].append(match.id)
+
+        image_meta = dict(image.metadata_json or {})
+        image_meta["duplicate_cluster_id"] = cluster_id
+        image.metadata_json = image_meta
+        if image.id not in clusters[cluster_id]:
+            clusters[cluster_id].append(image.id)
+        if mutate_selection and image.selected:
+            image.selected = False
+            rejected_duplicates += 1
+
+    return {
+        "duplicate_cluster_count": len(clusters),
+        "near_duplicate_rejected": rejected_duplicates,
+        "comparison_count": comparison_count,
+        "near_duplicate_clusters": [
+            {"cluster_id": cluster_id, "size": len(ids), "image_ids": ids[:32]}
+            for cluster_id, ids in sorted(clusters.items())
+        ],
+    }
+
+
+def source_distribution(images: list[DatasetImage]) -> dict[str, Any]:
+    by_source_group: dict[str, int] = defaultdict(int)
+    by_split: dict[str, dict[str, int]] = {
+        "train": defaultdict(int),
+        "val": defaultdict(int),
+        "test": defaultdict(int),
+    }
+    for image in images:
+        by_source_group[image.source_group] += 1
+        if image.selected and image.split in by_split:
+            by_split[image.split][image.source_group] += 1
+    return {
+        "by_source_group": dict(sorted(by_source_group.items())),
+        "by_split": {
+            split: dict(sorted(groups.items())) for split, groups in by_split.items()
+        },
+    }
+
+
 def assign_deterministic_splits(
     images: list[DatasetImage], *, temporal_exclusion_buffer: int = 1
 ) -> dict[str, Any]:
@@ -137,6 +254,7 @@ def assign_deterministic_splits(
     for image in selected:
         groups[image.source_group].append(image)
 
+    held = 0
     if len(groups) == 1:
         ordered = sorted(
             selected,
@@ -155,7 +273,6 @@ def assign_deterministic_splits(
                 if index < train_count + val_count
                 else "test"
             )
-        held = 0
         buffer = max(0, temporal_exclusion_buffer)
         for boundary in (train_count, train_count + val_count):
             for offset in range(buffer):
@@ -169,37 +286,27 @@ def assign_deterministic_splits(
                         continue
                     ordered[index].split = None
                     held += 1
-        leakage_count = 0
-        assigned = [item for item in ordered if item.split is not None]
-        for left, right in pairwise(assigned):
-            if (
-                left.split != right.split
-                and getattr(left, "perceptual_hash", None)
-                and getattr(right, "perceptual_hash", None)
-                and hash_distance(left.perceptual_hash, right.perceptual_hash)
-                <= MAX_HASH_DISTANCE
-            ):
-                leakage_count += 1
-        return {
-            "held_boundary_frames": held,
-            "nearest_cross_split_similarity_count": leakage_count,
-        }
-
-    ordered_groups = sorted(
-        groups.items(), key=lambda item: hashlib.sha256(item[0].encode()).hexdigest()
-    )
-    train_groups, val_groups, _ = _split_counts(len(ordered_groups))
-    for index, (_, group_images) in enumerate(ordered_groups):
-        split = (
-            "train"
-            if index < train_groups
-            else "val"
-            if index < train_groups + val_groups
-            else "test"
+    else:
+        ordered_groups = sorted(
+            groups.items(), key=lambda item: hashlib.sha256(item[0].encode()).hexdigest()
         )
-        for image in group_images:
-            image.split = split
-    return {"held_boundary_frames": 0, "nearest_cross_split_similarity_count": 0}
+        train_groups, val_groups, _ = _split_counts(len(ordered_groups))
+        for index, (_, group_images) in enumerate(ordered_groups):
+            split = (
+                "train"
+                if index < train_groups
+                else "val"
+                if index < train_groups + val_groups
+                else "test"
+            )
+            for image in group_images:
+                image.split = split
+
+    leakage_count = count_cross_split_near_duplicates(images)
+    return {
+        "held_boundary_frames": held,
+        "nearest_cross_split_similarity_count": leakage_count,
+    }
 
 
 def dataset_manifest(dataset: DatasetVersion, images: list[DatasetImage]) -> dict[str, Any]:

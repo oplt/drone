@@ -20,6 +20,7 @@ from backend.modules.vision_models.models import (
     TrainingRun,
     VisionModel,
     VisionProject,
+    VisionStorageObject,
 )
 from backend.modules.vision_models.service.dataset_service import build_yolo_dataset
 from backend.modules.vision_models.service.storage import VisionStorage, vision_storage
@@ -328,11 +329,15 @@ class VisionTrainingService:
                 model_root.mkdir(parents=True, exist_ok=True)
                 weights_path = model_root / "best.pt"
                 shutil.copy2(result.best_weights, weights_path)
+                if not weights_path.is_file() or weights_path.stat().st_size <= 0:
+                    raise RuntimeError("Weights publish failed: empty or missing artifact")
                 checksum = hashlib.sha256(weights_path.read_bytes()).hexdigest()
                 artifact_uris: dict[str, str] = {}
                 for name, source in result.evaluation_artifacts.items():
                     target = model_root / f"{name}{source.suffix}"
                     shutil.copy2(source, target)
+                    if not target.is_file() or target.stat().st_size <= 0:
+                        raise RuntimeError(f"Evaluation artifact publish failed: {name}")
                     artifact_uris[name] = self.storage.to_uri(target)
                 metadata = {
                     "training_run_id": run.id,
@@ -348,20 +353,36 @@ class VisionTrainingService:
                 (model_root / "metadata.json").write_text(
                     json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8"
                 )
+                weights_uri = self.storage.to_uri(weights_path)
+                storage_object = VisionStorageObject(
+                    checksum=checksum,
+                    size=int(weights_path.stat().st_size),
+                    mime="application/octet-stream",
+                    owner_type="model_version_weights",
+                    owner_id=run.id,
+                    state="final",
+                    retention_policy="model_artifact",
+                    backend_key=weights_uri.removeprefix("vision://"),
+                )
+                db.add(storage_object)
+                await db.flush()
                 version = ModelVersion(
                     model_id=model.id,
                     training_run_id=run.id,
                     dataset_id=dataset.id,
                     version=version_number,
                     architecture=run.base_model,
-                    weights_uri=self.storage.to_uri(weights_path),
+                    weights_uri=weights_uri,
                     classes=[item.name for item in classes],
                     metrics=result.metrics,
                     evaluation_artifacts=artifact_uris,
                     checksum=checksum,
+                    storage_object_id=storage_object.id,
                     status="candidate",
                 )
                 db.add(version)
+                await db.flush()
+                storage_object.owner_id = version.id
                 run.status = "completed"
                 run.progress = 100.0
                 run.current_epoch = run.epochs

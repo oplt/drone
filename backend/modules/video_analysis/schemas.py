@@ -33,10 +33,27 @@ class VideoAssetOut(BaseModel):
     capture_timezone: str | None = None
     capture_time_uncertainty_seconds: float | None = None
     sync_offset_seconds: float = 0.0
+    reanalysis_required: bool = False
     status: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class VideoCaptureMetadataPatch(BaseModel):
+    captured_at: datetime | None = None
+    capture_timezone: str | None = Field(default=None, max_length=64)
+    sync_offset_seconds: float | None = Field(default=None, ge=-3600.0, le=3600.0)
+
+    @model_validator(mode="after")
+    def require_at_least_one_field(self) -> VideoCaptureMetadataPatch:
+        if (
+            self.captured_at is None
+            and self.capture_timezone is None
+            and self.sync_offset_seconds is None
+        ):
+            raise ValueError("At least one capture metadata field is required")
+        return self
 
 
 class AnalyzeVideoRequest(BaseModel):
@@ -133,6 +150,10 @@ class VideoDetectionOut(BaseModel):
     telemetry_match_delta_ms: float | None = None
     telemetry_match_method: str | None = None
     telemetry_match_version: str | None = None
+    telemetry_sample_ids: list[int | str] | None = None
+    capture_time_source: str | None = None
+    sync_offset_seconds: float | None = None
+    capture_time_uncertainty_seconds: float | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -158,8 +179,17 @@ class VideoDetectionOut(BaseModel):
         data["telemetry_match_delta_ms"] = raw.get(
             "telemetry_match_delta_ms", raw.get("telemetry_error_ms")
         )
-        data["telemetry_match_method"] = raw.get("telemetry_match_method", "nearest")
+        data["telemetry_match_method"] = raw.get("telemetry_match_method")
         data["telemetry_match_version"] = raw.get("telemetry_match_version")
+        sample_ids = raw.get("telemetry_sample_ids")
+        data["telemetry_sample_ids"] = (
+            list(sample_ids) if isinstance(sample_ids, (list, tuple)) else None
+        )
+        data["capture_time_source"] = raw.get("capture_time_source")
+        data["sync_offset_seconds"] = raw.get("sync_offset_seconds")
+        data["capture_time_uncertainty_seconds"] = raw.get(
+            "capture_time_uncertainty_seconds"
+        )
         if storage is not None:
             available = getattr(storage, "state", None) == "final"
             spatial = (

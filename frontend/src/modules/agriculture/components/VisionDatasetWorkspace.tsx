@@ -19,6 +19,7 @@ import {
   VisionImageUploadCard,
   VisionVideoCurationCard,
 } from "./VisionDatasetSources";
+import { VisionCurationQualityAlerts } from "./VisionCurationQualityAlerts";
 
 export function VisionDatasetWorkspace({
   projectId,
@@ -96,6 +97,12 @@ export function VisionDatasetWorkspace({
             </Stack>
           </Stack>
           {createDataset.error ? <Alert severity="error" sx={{ mt: 2 }}>{createDataset.error.message}</Alert> : null}
+          <Box sx={{ mt: 2 }}>
+            <VisionCurationQualityAlerts
+              summary={dataset.curation_summary}
+              context="dataset"
+            />
+          </Box>
         </CardContent>
       </Card>
       <Grid container spacing={2}>

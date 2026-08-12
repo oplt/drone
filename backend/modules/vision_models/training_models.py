@@ -27,6 +27,33 @@ from backend.modules.vision_models.dataset_models import (
 )
 
 
+class VisionStorageObject(Base):
+    """Managed artifact metadata for Vision weights and evaluation files."""
+
+    __tablename__ = "vision_storage_objects"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('staged', 'final', 'orphan', 'deleted')",
+            name="ck_vision_storage_object_state",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    checksum: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    mime: Mapped[str] = mapped_column(String(128), nullable=False)
+    owner_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    owner_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    state: Mapped[str] = mapped_column(String(16), nullable=False, default="staged", index=True)
+    retention_policy: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="model_artifact"
+    )
+    backend_key: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class TrainingRun(Base):
     __tablename__ = "vision_training_runs"
     __table_args__ = (
@@ -151,6 +178,11 @@ class ModelVersion(Base):
         JSON, nullable=False, default=dict
     )
     checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_object_id: Mapped[str | None] = mapped_column(
+        ForeignKey("vision_storage_objects.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="candidate")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -158,3 +190,4 @@ class ModelVersion(Base):
 
     model: Mapped[VisionModel] = relationship(back_populates="versions")
     training_run: Mapped[TrainingRun] = relationship(back_populates="model_version")
+    storage_object: Mapped[VisionStorageObject | None] = relationship()

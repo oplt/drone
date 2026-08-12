@@ -8,7 +8,7 @@ from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_org_user,
-    require_user_header_or_query,
+    require_user,
 )
 from backend.modules.vision_models.api_dependencies import application, http_error
 from backend.modules.vision_models.application import (
@@ -190,7 +190,7 @@ async def get_evaluation_artifact(
     version_id: str,
     name: str,
     db=Depends(get_db),
-    user=Depends(require_user_header_or_query),
+    user=Depends(require_user),
 ) -> FileResponse:
     try:
         path = await application.resolve_evaluation_artifact(db, version_id, name, user)

@@ -14,6 +14,7 @@ async def test_telemetry_port_returns_ordered_persistence_neutral_dtos(monkeypat
     captured = datetime(2026, 8, 12, 10, tzinfo=UTC)
     rows = [
         SimpleNamespace(
+            id=42,
             timestamp_utc=captured,
             lat=50,
             lon=4,
@@ -48,6 +49,7 @@ async def test_telemetry_port_returns_ordered_persistence_neutral_dtos(monkeypat
             pitch_deg=2,
             yaw_deg=3,
             gps_quality=0.9,
+            id=42,
         )
     ]
     match = NearestTelemetryMatcher("mission-1", result, captured).match(0)
@@ -57,6 +59,8 @@ async def test_telemetry_port_returns_ordered_persistence_neutral_dtos(monkeypat
         12,
         3,
     )
+    assert match.sample_ids == (42,)
+    assert match.method == "nearest"
 
 
 def test_module_port_dependency_guard_has_no_violations():
@@ -75,3 +79,58 @@ def test_module_port_dependency_guard_detects_reverse_repository_import(tmp_path
 
     assert len(violations) == 1
     assert violations[0].imported == "backend.modules.agriculture.repository"
+
+
+def test_module_port_dependency_guard_detects_vision_video_repository_import(tmp_path):
+    source = tmp_path / "backend/modules/vision_models/bad.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "from backend.modules.video_analysis.repository import VideoAnalysisRepository\n",
+        encoding="utf-8",
+    )
+
+    violations = collect_violations(tmp_path / "backend/modules")
+
+    assert len(violations) == 1
+    assert violations[0].imported == "backend.modules.video_analysis.repository"
+
+
+def test_module_port_dependency_guard_detects_vision_video_models_import(tmp_path):
+    source = tmp_path / "backend/modules/vision_models/bad.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "from backend.modules.video_analysis.models import VideoAsset\n",
+        encoding="utf-8",
+    )
+
+    violations = collect_violations(tmp_path / "backend/modules")
+
+    assert len(violations) == 1
+    assert violations[0].imported == "backend.modules.video_analysis.models"
+
+
+def test_module_port_dependency_guard_detects_agriculture_video_repository_import(
+    tmp_path,
+):
+    source = tmp_path / "backend/modules/agriculture/bad.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "from backend.modules.video_analysis.repository import VideoAnalysisRepository\n",
+        encoding="utf-8",
+    )
+
+    violations = collect_violations(tmp_path / "backend/modules")
+
+    assert len(violations) == 1
+    assert violations[0].imported == "backend.modules.video_analysis.repository"
+
+
+def test_module_port_dependency_guard_allows_video_analysis_contracts(tmp_path):
+    source = tmp_path / "backend/modules/vision_models/ok.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "from backend.modules.video_analysis.contracts import video_analysis_port\n",
+        encoding="utf-8",
+    )
+
+    assert collect_violations(tmp_path / "backend/modules") == []

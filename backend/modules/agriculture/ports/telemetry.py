@@ -22,6 +22,7 @@ async def list_mission_telemetry_for_georef(
             pitch_deg=row.pitch_deg,
             yaw_deg=row.yaw_deg,
             gps_quality=row.gps_quality,
+            id=getattr(row, "id", None),
         )
         for row in rows
     ]

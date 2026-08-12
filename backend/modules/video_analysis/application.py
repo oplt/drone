@@ -21,12 +21,15 @@ from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.schemas import (
     CUSTOM_MODEL_PREFIX,
     AnalyzeVideoRequest,
+    VideoCaptureMetadataPatch,
     VideoDetectionOut,
 )
 from backend.modules.video_analysis.service.queue import VideoAnalysisQueue, VideoAnalysisQueueError
 from backend.modules.vision_models.application import VisionApplication, VisionNotFound
+from backend.observability.audit import emit_audit_event
 
 UPLOAD_ROOT = Path(settings.video_analysis_upload_dir)
+EVIDENCE_ROOT = UPLOAD_ROOT.parent
 MAX_UPLOAD_BYTES = settings.video_analysis_max_upload_bytes
 VIDEO_SUFFIXES = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
 
@@ -198,6 +201,10 @@ class VideoAnalysisApplication:
             if existing is None or existing.video_id != video.id:
                 raise
             return existing
+        if video.reanalysis_required:
+            video.reanalysis_required = False
+            await db.commit()
+            await db.refresh(video)
         try:
             self.queue.enqueue(job_id=job.id)
         except VideoAnalysisQueueError as exc:
@@ -253,6 +260,10 @@ class VideoAnalysisApplication:
         limit: int,
         cursor: str | None,
         since_id: str | None,
+        min_confidence: float | None = None,
+        label: str | None = None,
+        since_ts: float | None = None,
+        until_ts: float | None = None,
     ) -> dict:
         repo = VideoAnalysisRepository(db)
         job = await repo.get_job_for_user(job_id, user)
@@ -264,6 +275,10 @@ class VideoAnalysisApplication:
             limit=limit,
             after=self._decode_cursor(cursor),
             since_id=since_id,
+            min_confidence=min_confidence,
+            label=label,
+            since_ts=since_ts,
+            until_ts=until_ts,
         )
         last = rows[-1] if rows else None
         return {
@@ -286,6 +301,10 @@ class VideoAnalysisApplication:
         job_id: str,
         user: User,
         bucket_seconds: float,
+        min_confidence: float | None = None,
+        label: str | None = None,
+        since_ts: float | None = None,
+        until_ts: float | None = None,
     ) -> dict:
         repo = VideoAnalysisRepository(db)
         if await repo.get_job_for_user(job_id, user) is None:
@@ -294,7 +313,13 @@ class VideoAnalysisApplication:
             "job_id": job_id,
             "bucket_seconds": bucket_seconds,
             "buckets": await repo.aggregate_detections(
-                job_id, user, bucket_seconds=bucket_seconds
+                job_id,
+                user,
+                bucket_seconds=bucket_seconds,
+                min_confidence=min_confidence,
+                label=label,
+                since_ts=since_ts,
+                until_ts=until_ts,
             ),
         }
 
@@ -324,10 +349,78 @@ class VideoAnalysisApplication:
         storage = detection.storage_object if detection is not None else None
         if storage is None or storage.state != "final":
             raise VideoAnalysisNotFound("Evidence is unavailable")
-        path = Path(storage.backend_key)
-        if not path.is_file():
+        path = self._resolve_storage_path(storage.backend_key)
+        if path is None or not path.is_file():
             raise VideoAnalysisNotFound("Evidence is unavailable")
         return path, storage.mime
+
+    @staticmethod
+    def _resolve_storage_path(backend_key: str) -> Path | None:
+        """Dual-read absolute legacy keys and relative keys under evidence root."""
+        key = Path(backend_key)
+        if key.is_absolute():
+            return key if key.is_file() else None
+        relative = EVIDENCE_ROOT / key
+        if relative.is_file():
+            return relative
+        # Tolerate absolute-looking keys stored without leading slash on some hosts.
+        absolute_candidate = Path("/") / key
+        if absolute_candidate.is_file():
+            return absolute_candidate
+        return None
+
+    async def update_capture_metadata(
+        self,
+        db: AsyncSession,
+        *,
+        video_id: str,
+        user: User,
+        patch: VideoCaptureMetadataPatch,
+    ):
+        repo = VideoAnalysisRepository(db)
+        video = await repo.get_video_for_user(video_id, user)
+        if video is None:
+            raise VideoAnalysisNotFound("Video not found")
+        before = {
+            "captured_at": video.captured_at.isoformat() if video.captured_at else None,
+            "capture_timezone": video.capture_timezone,
+            "sync_offset_seconds": video.sync_offset_seconds,
+            "capture_time_source": video.capture_time_source,
+        }
+        if patch.captured_at is not None:
+            video.captured_at = patch.captured_at
+            video.capture_time_source = "operator"
+        if patch.capture_timezone is not None:
+            video.capture_timezone = patch.capture_timezone
+        if patch.sync_offset_seconds is not None:
+            video.sync_offset_seconds = float(patch.sync_offset_seconds)
+        analyzed = await repo.video_has_analyzed_jobs(video.id)
+        if analyzed:
+            video.reanalysis_required = True
+        await db.commit()
+        await db.refresh(video)
+        emit_audit_event(
+            event_name="video_capture_metadata_updated",
+            action="patch_capture_metadata",
+            resource_type="video_asset",
+            result="success",
+            actor_type="user",
+            actor_id=str(user.id),
+            resource_id=video.id,
+            extra={
+                "before": before,
+                "after": {
+                    "captured_at": (
+                        video.captured_at.isoformat() if video.captured_at else None
+                    ),
+                    "capture_timezone": video.capture_timezone,
+                    "sync_offset_seconds": video.sync_offset_seconds,
+                    "capture_time_source": video.capture_time_source,
+                },
+                "reanalysis_required": video.reanalysis_required,
+            },
+        )
+        return video
 
     async def get_summary(self, db: AsyncSession, *, job_id: str, user: User):
         repo = VideoAnalysisRepository(db)

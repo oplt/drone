@@ -18,6 +18,7 @@ class MissionTelemetrySample:
     pitch_deg: float | None = None
     yaw_deg: float | None = None
     gps_quality: float | None = None
+    id: int | str | None = None
 
 
 def irrigation_observation_type(zone_type: str) -> str:

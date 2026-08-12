@@ -12,6 +12,7 @@ export type VideoAsset = {
   capture_timezone?: string | null;
   capture_time_uncertainty_seconds?: number | null;
   sync_offset_seconds?: number;
+  reanalysis_required?: boolean;
   status: string;
   created_at: string;
 };
@@ -85,6 +86,10 @@ export type VideoDetection = {
   telemetry_match_delta_ms?: number | null;
   telemetry_match_method?: string | null;
   telemetry_match_version?: string | null;
+  telemetry_sample_ids?: Array<number | string> | null;
+  capture_time_source?: string | null;
+  sync_offset_seconds?: number | null;
+  capture_time_uncertainty_seconds?: number | null;
 };
 
 export type VideoDetectionPage = {
@@ -94,6 +99,24 @@ export type VideoDetectionPage = {
   job_version: number;
   status: string;
   total_estimate?: number | null;
+};
+
+export type DetectionAggregateBucket = {
+  start_seconds: number;
+  end_seconds: number;
+  class_counts: Record<string, number>;
+};
+
+export type VideoDetectionAggregate = {
+  job_id: string;
+  bucket_seconds: number;
+  buckets: DetectionAggregateBucket[];
+};
+
+export type VideoCaptureMetadataPatch = {
+  captured_at?: string | null;
+  capture_timezone?: string | null;
+  sync_offset_seconds?: number | null;
 };
 
 export type AnalyzeVideoPayload = {

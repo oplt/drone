@@ -4,15 +4,17 @@ import {
   getAnalysisJob,
   cancelVideoAnalysis,
   getAnalysisSummary,
+  getDetectionAggregates,
   listDetections,
   listLiveSavedDetections,
   listMissionVideos,
+  patchCaptureMetadata,
   startVideoAnalysis,
   uploadVideo,
 } from "./api";
 import type {
   AnalyzeVideoPayload,
-  VideoAnalysisJob,
+  VideoCaptureMetadataPatch,
   VideoDetectionPage,
 } from "./types";
 
@@ -51,13 +53,8 @@ export function useUploadVideo() {
   return useMutation({
     mutationFn: ({ file, missionId, fieldId }: UploadVideoInput) =>
       uploadVideo(file, { missionId, fieldId }),
-    onSuccess: (_video, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: videoAnalysisKeys.videos(
-          variables.missionId ?? null,
-          variables.fieldId ?? null,
-        ),
-      });
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: videoAnalysisKeys.all });
     },
   });
 }
@@ -72,18 +69,19 @@ export function useStartAnalysis() {
       videoId: string;
       payload: AnalyzeVideoPayload;
     }) => startVideoAnalysis(videoId, payload),
-    onSuccess: (job) =>
-      queryClient.setQueryData(videoAnalysisKeys.job(job.id), job),
+    onSuccess: (job) => {
+      queryClient.setQueryData(videoAnalysisKeys.job(job.id), job);
+    },
   });
 }
 
 export function useAnalysisJob(jobId: string | null) {
-  return useQuery<VideoAnalysisJob>({
+  return useQuery({
     queryKey: videoAnalysisKeys.job(jobId),
     queryFn: () => getAnalysisJob(jobId as string),
     enabled: Boolean(jobId),
     refetchInterval: (query) =>
-      isActive(query.state.data?.status) && isDocumentVisible() ? 1200 : false,
+      isDocumentVisible() && isActive(query.state.data?.status) ? 1500 : false,
   });
 }
 
@@ -95,6 +93,7 @@ export function useCancelAnalysis() {
   });
 }
 
+/** Live jobs: delta-accumulate. Completed: one page only (timeline uses aggregates). */
 export function useDetections(jobId: string | null, status?: string) {
   const queryClient = useQueryClient();
   const queryKey = videoAnalysisKeys.detections(jobId);
@@ -106,10 +105,14 @@ export function useDetections(jobId: string | null, status?: string) {
   return useQuery({
     queryKey,
     queryFn: async () => {
+      if (!isActive(status)) {
+        return listDetections(jobId as string, { limit: 250 });
+      }
       const previous = queryClient.getQueryData<VideoDetectionPage>(queryKey);
       const last = previous?.items.at(-1);
       const page = await listDetections(jobId as string, {
         sinceId: last?.id,
+        limit: 250,
       });
       if (!previous || !last) return page;
       const byId = new Map(previous.items.map((item) => [item.id, item]));
@@ -119,9 +122,49 @@ export function useDetections(jobId: string | null, status?: string) {
     enabled,
     refetchInterval: (query) =>
       isDocumentVisible() &&
-      (isActive(status) || query.state.data?.has_more)
+      (isActive(status) || Boolean(query.state.data?.has_more && isActive(status)))
         ? 1500
         : false,
+  });
+}
+
+export function useDetectionAggregates(
+  jobId: string | null,
+  status?: string,
+  durationSeconds = 1,
+) {
+  const bucketSeconds = Math.max(1, durationSeconds / 100);
+  return useQuery({
+    queryKey: videoAnalysisKeys.detectionAggregates(jobId, bucketSeconds),
+    queryFn: () =>
+      getDetectionAggregates(jobId as string, { bucketSeconds }),
+    enabled:
+      Boolean(jobId) &&
+      Boolean(status) &&
+      status !== "queued" &&
+      status !== "failed",
+    refetchInterval: () =>
+      isDocumentVisible() && isActive(status) ? 2000 : false,
+  });
+}
+
+export function useDetectionWindow(
+  jobId: string | null,
+  window: { sinceTs: number; untilTs: number } | null,
+) {
+  return useQuery({
+    queryKey: videoAnalysisKeys.detectionWindow(
+      jobId,
+      window?.sinceTs ?? null,
+      window?.untilTs ?? null,
+    ),
+    queryFn: () =>
+      listDetections(jobId as string, {
+        sinceTs: window!.sinceTs,
+        untilTs: window!.untilTs,
+        limit: 100,
+      }),
+    enabled: Boolean(jobId && window),
   });
 }
 
@@ -130,6 +173,22 @@ export function useAnalysisSummary(jobId: string | null, status?: string) {
     queryKey: [...videoAnalysisKeys.job(jobId), "summary"],
     queryFn: () => getAnalysisSummary(jobId as string),
     enabled: Boolean(jobId) && status === "completed",
+  });
+}
+
+export function usePatchCaptureMetadata() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      videoId,
+      patch,
+    }: {
+      videoId: string;
+      patch: VideoCaptureMetadataPatch;
+    }) => patchCaptureMetadata(videoId, patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: videoAnalysisKeys.all });
+    },
   });
 }
 

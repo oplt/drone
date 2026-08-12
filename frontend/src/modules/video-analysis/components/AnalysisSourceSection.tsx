@@ -11,6 +11,7 @@ import {
   ActionIconLabel,
 } from "../../../shared/ui/ActionIconButton";
 import type { AnalysisControlsProps } from "./analysisControlsTypes";
+import { CaptureMetadataEditor } from "./CaptureMetadataEditor";
 
 const MAX_SIZE_BYTES = 1024 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = /\.(mp4|mov|avi|mkv|webm)$/i;
@@ -73,6 +74,12 @@ export function AnalysisSourceSection(props: AnalysisControlsProps) {
         disabled={!props.file}
         onClick={props.onUpload}
       />
+      {props.video && !props.file ? (
+        <CaptureMetadataEditor
+          video={props.video}
+          onUpdated={props.onVideoUpdated}
+        />
+      ) : null}
     </Stack>
   );
 }

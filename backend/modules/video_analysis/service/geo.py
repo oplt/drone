@@ -16,6 +16,8 @@ class TelemetryMatch:
     heading_deg: float | None
     quality: str = "unresolved"
     error_ms: float | None = None
+    method: str = "unresolved"
+    sample_ids: tuple[int | str, ...] = ()
 
 
 class NearestTelemetryMatcher:
@@ -46,6 +48,8 @@ class NearestTelemetryMatcher:
                 heading_deg=result.pose.yaw_deg,
                 quality=result.status,
                 error_ms=result.error_ms,
+                method=result.status,
+                sample_ids=result.sample_ids,
             )
         return TelemetryMatch(
             lat=None,
@@ -54,4 +58,6 @@ class NearestTelemetryMatcher:
             heading_deg=None,
             quality=result.status if result is not None else "unresolved",
             error_ms=result.error_ms if result is not None else None,
+            method=result.status if result is not None else "unresolved",
+            sample_ids=result.sample_ids if result is not None else (),
         )
