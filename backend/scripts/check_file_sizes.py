@@ -12,6 +12,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = REPO_ROOT / "backend"
 BASELINE_PATH = Path(__file__).with_name("file_size_baseline.json")
 
+# Historical Alembic revisions and large test modules are excluded from size
+# metrics — migration immutability and golden tests outweigh line-count targets.
+SKIP_PREFIXES: tuple[str, ...] = (
+    "backend/infrastructure/persistence/alembic/versions/",
+    "backend/tests/",
+)
+
 
 def effective_lines(path: Path) -> int:
     return sum(
@@ -19,6 +26,10 @@ def effective_lines(path: Path) -> int:
         for line in path.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     )
+
+
+def should_skip(relative_path: str) -> bool:
+    return relative_path.startswith(SKIP_PREFIXES)
 
 
 def limit_for(relative_path: str) -> int:
@@ -70,6 +81,8 @@ def collect_violations() -> dict[str, dict[str, int]]:
         if ".venv" in path.parts or "__pycache__" in path.parts:
             continue
         relative_path = path.relative_to(REPO_ROOT).as_posix()
+        if should_skip(relative_path):
+            continue
         count = effective_lines(path)
         limit = limit_for(relative_path)
         if count > limit:
@@ -89,24 +102,14 @@ def load_baseline() -> dict[str, dict[str, int]]:
     )
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--update-baseline",
-        action="store_true",
-        help="Record current violations as migration debt.",
-    )
-    args = parser.parse_args()
-    current = collect_violations()
-
-    if args.update_baseline:
-        BASELINE_PATH.write_text(json.dumps(current, indent=2) + "\n", encoding="utf-8")
-        print(f"Recorded {len(current)} existing file-size violations in baseline.")
-        return 0
-
-    baseline = load_baseline()
+def evaluate_against_baseline(
+    current: dict[str, dict[str, int]],
+    baseline: dict[str, dict[str, int]],
+) -> tuple[list[str], list[str], int]:
+    """Return regressions, stale baseline paths, and grandfathered count."""
     regressions: list[str] = []
     grandfathered = 0
+
     for path, violation in current.items():
         permitted = baseline.get(path)
         if permitted is not None and violation["effective_lines"] <= permitted["effective_lines"]:
@@ -118,10 +121,63 @@ def main() -> int:
             f"(limit {violation['limit']}, baseline {prior})"
         )
 
+    stale = sorted(path for path in baseline if path not in current)
+    return regressions, stale, grandfathered
+
+
+def prune_baseline(baseline: dict[str, dict[str, int]], current: dict[str, dict[str, int]]) -> dict[str, dict[str, int]]:
+    """Drop baseline entries for files that are now at or below their category limit."""
+    return {path: baseline[path] for path in sorted(baseline) if path in current}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--update-baseline",
+        action="store_true",
+        help="Record current violations as migration debt (drops resolved/stale entries).",
+    )
+    parser.add_argument(
+        "--prune-baseline",
+        action="store_true",
+        help="Remove baseline entries for files now at or below their size limit.",
+    )
+    args = parser.parse_args()
+    current = collect_violations()
+
+    if args.update_baseline:
+        BASELINE_PATH.write_text(json.dumps(current, indent=2) + "\n", encoding="utf-8")
+        print(f"Recorded {len(current)} existing file-size violations in baseline.")
+        return 0
+
+    if args.prune_baseline:
+        baseline = load_baseline()
+        pruned = prune_baseline(baseline, current)
+        removed = sorted(set(baseline) - set(pruned))
+        BASELINE_PATH.write_text(json.dumps(pruned, indent=2) + "\n", encoding="utf-8")
+        print(f"Pruned {len(removed)} resolved baseline entries.")
+        for path in removed:
+            print(f"- {path}")
+        return 0
+
+    baseline = load_baseline()
+    regressions, stale, grandfathered = evaluate_against_baseline(current, baseline)
+
+    failed = False
+    if stale:
+        failed = True
+        print("Stale file-size baseline entries (file is now at or below limit — remove them):")
+        for path in stale:
+            print(f"- {path}")
+        print("Run: python backend/scripts/check_file_sizes.py --prune-baseline")
+
     if regressions:
+        failed = True
         print("File-size architecture regressions:")
         for regression in regressions:
             print(f"- {regression}")
+
+    if failed:
         return 1
 
     print(f"File-size guard passed; {grandfathered} baseline violations remain to extract.")

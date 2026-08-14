@@ -60,6 +60,7 @@ backend-test-env-down:
 backend-guardrails:
 	$(MAKE) PYTHON=$(PYTHON) security-scan
 	$(PYTHON) backend/scripts/check_file_sizes.py
+	$(PYTHON) backend/scripts/check_characterization_registry.py
 	$(PYTHON) backend/scripts/check_backend_boundaries.py
 	$(PYTHON) backend/scripts/check_module_ports.py
 	$(MAKE) PYTHON=$(PYTHON) backend-typecheck

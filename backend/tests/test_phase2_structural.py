@@ -58,9 +58,21 @@ def test_async_mission_paths_use_vehicle_port_boundary() -> None:
     paths = [
         root / "modules/missions/planning/photogrammetry.py",
         root / "modules/missions/planning/waypoint.py",
-        root / "modules/missions/planning/grid.py",
-        root / "modules/patrol/planning.py",
-        root / "modules/warehouse/planning/scan.py",
+        root / "modules/missions/planning/grid/mission.py",
+        *sorted(
+            p
+            for p in (root / "modules/patrol/planning/missions").glob("*.py")
+            if p.name != "__init__.py"
+        ),
+        *[
+            root / f"modules/warehouse/planning/scan/{name}"
+            for name in (
+                "fly_scan.py",
+                "fly_scan_teardown.py",
+                "legs.py",
+                "capture.py",
+            )
+        ],
     ]
     for path in paths:
         text = path.read_text(encoding="utf-8")

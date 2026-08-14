@@ -48,6 +48,15 @@ class BoundedTTLCache(Generic[T]):
         with self._lock:
             self._entries.clear()
 
+    def __getitem__(self, key: object) -> T:
+        value = self.get(key)
+        if value is None:
+            raise KeyError(key)
+        return value
+
+    def __setitem__(self, key: object, value: T) -> None:
+        self.set(key, value)
+
     def __len__(self) -> int:
         with self._lock:
             return len(self._entries)

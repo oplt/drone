@@ -75,6 +75,12 @@ jobs:
       - name: Module port boundary guard
         run: python backend/scripts/check_module_ports.py
 
+      - name: Backend file-size architecture guard
+        run: python backend/scripts/check_file_sizes.py
+
+      - name: Characterization registry
+        run: python backend/scripts/check_characterization_registry.py
+
       - name: Dependency cleanup gates
         run: python backend/scripts/check_dependency_gates.py
 
@@ -114,7 +120,8 @@ jobs:
             backend/tests/test_video_analysis_benchmark_fixture.py \
             backend/tests/test_observability_platform.py \
             backend/tests/test_worker_async_concurrency.py \
-            backend/tests/test_dependency_cleanup.py
+            backend/tests/test_dependency_cleanup.py \
+            backend/tests/test_architecture_file_size_guard.py
 
   frontend:
     name: Frontend gates
@@ -136,6 +143,9 @@ jobs:
 
       - name: Lint (CI baseline)
         run: npm run lint:ci
+
+      - name: File-size architecture guard
+        run: npm run check:arch
 
       - name: Unit tests
         run: |

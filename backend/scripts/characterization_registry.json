@@ -1,0 +1,343 @@
+{
+  "version": 1,
+  "description": "Behavior-heavy modules require characterization tests before file-size splits (Phase 0).",
+  "entries": [
+    {
+      "source": "backend/modules/patrol/planning/__init__.py",
+      "phase": 3,
+      "tests": [
+        "backend/tests/test_patrol_event_orbit.py",
+        "backend/tests/test_property_patrol.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/planning/scan/__init__.py",
+      "phase": 3,
+      "tests": [
+        "backend/tests/test_warehouse_scan_to_layout.py",
+        "backend/tests/test_warehouse_inspection.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/planning/exploration/__init__.py",
+      "phase": 3,
+      "tests": [
+        "backend/tests/test_mission_builder_indoor_exploration.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/planning/local_planner/__init__.py",
+      "phase": 3,
+      "tests": [
+        "backend/tests/test_warehouse_local_planner_contracts.py"
+      ]
+    },
+    {
+      "source": "backend/modules/missions/planning/grid/__init__.py",
+      "phase": 3,
+      "tests": [
+        "backend/tests/test_missions_grid_planner_contracts.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/structure_jobs/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_warehouse_extraction_lineage.py",
+        "backend/tests/test_warehouse_api_quick_wins.py",
+        "backend/tests/test_warehouse_inspection.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/structure_extraction/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_warehouse_api_quick_wins.py",
+        "backend/tests/test_warehouse_inspection.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/live_map_readiness/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_live_map_readiness.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/mapping_stack_lifecycle/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_live_map_readiness.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/live_map_manifest/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_live_map_manifest.py",
+        "backend/tests/test_live_map_replay.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/pointcloud2_parser/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_pointcloud2_parser.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/colored_pointcloud_live_map_bridge/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_ros_logging_contract.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/raw_pointcloud_live_map_bridge/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_ros_logging_contract.py",
+        "backend/tests/test_observability.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/service/live_map_bridge/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_live_map_readiness.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/routers/layouts/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_warehouse_api_quick_wins.py",
+        "backend/tests/test_warehouse_layout_bins.py",
+        "backend/tests/test_warehouse_scan_to_layout.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/routers/scan_targets/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_warehouse_scan_target_import.py",
+        "backend/tests/test_warehouse_scan_target_router_regressions.py",
+        "backend/tests/test_warehouse_scan_target_cache_headers.py",
+        "backend/tests/test_warehouse_query_budget.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/routers/coordinate_frames/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_warehouse_coordinate_frames.py",
+        "backend/tests/test_warehouse_drift_guard.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/routers/layout_candidates/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_warehouse_api_quick_wins.py",
+        "backend/tests/test_warehouse_scan_to_layout.py"
+      ]
+    },
+    {
+      "source": "backend/modules/warehouse/models/__init__.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_warehouse_coordinate_frames.py",
+        "backend/tests/test_warehouse_drift_guard.py",
+        "backend/tests/test_warehouse_map_setups.py",
+        "backend/tests/test_warehouse_extraction_lineage.py",
+        "backend/tests/test_warehouse_inspection.py"
+      ]
+    },
+    {
+      "source": "backend/modules/missions/api/routes.py",
+      "phase": 2,
+      "tests": [
+        "backend/tests/test_mission_runtime_finalization.py",
+        "backend/tests/test_p0_safe_vertical_slice.py",
+        "backend/tests/test_missions_private_patrol_preview.py"
+      ]
+    },
+    {
+      "source": "backend/infrastructure/warehouse/bridge_config/__init__.py",
+      "phase": 4,
+      "tests": [
+        "backend/tests/test_bridge_config_contracts.py",
+        "backend/tests/test_live_map_readiness.py",
+        "backend/tests/test_ros_logging_contract.py"
+      ]
+    },
+    {
+      "source": "backend/infrastructure/photogrammetry/webodm_client/__init__.py",
+      "phase": 4,
+      "tests": [
+        "backend/tests/test_webodm_client_contracts.py"
+      ]
+    },
+    {
+      "source": "backend/infrastructure/messaging/websocket_publisher/__init__.py",
+      "phase": 4,
+      "tests": [
+        "backend/tests/test_websocket_envelope_contract.py",
+        "backend/tests/test_telemetry_redis_fallback.py",
+        "backend/tests/test_telemetry_websocket.py"
+      ]
+    },
+    {
+      "source": "backend/infrastructure/camera/runtime/__init__.py",
+      "phase": 4,
+      "tests": [
+        "backend/tests/test_camera_runtime_contracts.py",
+        "backend/tests/test_local_dev_runtime.py"
+      ]
+    },
+    {
+      "source": "backend/infrastructure/vehicle/mavlink/__init__.py",
+      "phase": 4,
+      "tests": [
+        "backend/tests/test_module_ports.py"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/maps/adapters/CesiumMap.tsx",
+      "phase": 5,
+      "tests": [
+        "frontend/src/modules/maps/tests/cesiumCameraGeometry.test.ts",
+        "frontend/src/modules/maps/tests/useMapEngine.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/maps/adapters/MapLibreMap.tsx",
+      "phase": 5,
+      "tests": [
+        "frontend/src/modules/maps/tests/flatMapShapeClick.test.ts",
+        "frontend/src/modules/maps/tests/useMapEngine.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/mission-runtime/components/TelemetryHud.tsx",
+      "phase": 5,
+      "tests": [
+        "frontend/src/modules/mission-runtime/utils/deriveTelemetry.test.ts",
+        "frontend/src/modules/mission-runtime/tests/telemetryHudFormatters.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/mission-runtime/hooks/useTelemetryStream.ts",
+      "phase": 5,
+      "tests": [
+        "frontend/src/modules/mission-runtime/tests/useMissionRuntime.test.tsx",
+        "frontend/src/modules/mission-runtime/tests/telemetryStreamParse.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelScene.tsx",
+      "phase": 5,
+      "tests": [
+        "frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts",
+        "frontend/src/modules/warehouse/tests/liveMapChunkRetention.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/warehouse/components/WarehouseLiveVoxelMapViewer.tsx",
+      "phase": 5,
+      "tests": [
+        "frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/warehouse/hooks/useWarehouseLiveVoxelMap.ts",
+      "phase": 5,
+      "tests": [
+        "frontend/src/modules/warehouse/tests/liveMapPipeline.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/warehouse/views/Warehouse.tsx",
+      "phase": 1,
+      "tests": [
+        "frontend/src/modules/warehouse/tests/warehousePageState.test.ts",
+        "frontend/src/modules/warehouse/tests/warehousePageSupport.test.ts",
+        "frontend/src/modules/warehouse/tests/warehouseSystemStatus.test.ts",
+        "frontend/src/modules/warehouse/tests/scannedMapSelectors.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/private-patrol/components/PrivatePatrolParamsSection.tsx",
+      "phase": 1,
+      "tests": [
+        "frontend/src/modules/private-patrol/tests/effectivePatrolRepeatInterval.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/private-patrol/hooks/usePrivatePatrolMission.ts",
+      "phase": 1,
+      "tests": []
+    },
+    {
+      "source": "frontend/src/modules/settings/views/SettingsPage.tsx",
+      "phase": 1,
+      "tests": [
+        "frontend/src/modules/settings/settingsValidation.test.ts",
+        "frontend/src/modules/settings/hooks/useSettingsDirtyFlag.test.tsx"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/animal-farm/views/AnimalFarmPage.tsx",
+      "phase": 1,
+      "tests": [
+        "frontend/src/modules/animal-farm/tests/animalFarmRouteDrawingUtils.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/controlled-flight/views/ControlledFlightView.tsx",
+      "phase": 1,
+      "tests": [
+        "frontend/src/modules/controlled-flight/tests/telemetryHealth.test.ts"
+      ]
+    },
+    {
+      "source": "frontend/src/modules/fleet/views/FleetPage.tsx",
+      "phase": 1,
+      "tests": [
+        "frontend/src/modules/fleet/tests/fleetRecentFlightRows.test.ts",
+        "frontend/src/modules/fleet/tests/fleetDeviceStatus.test.ts"
+      ]
+    },
+    {
+      "source": "backend/modules/mapping/api/routes.py",
+      "phase": 2,
+      "tests": [
+        "backend/tests/test_mapping_job_state_machine.py",
+        "backend/tests/test_mapping_api_contracts.py"
+      ]
+    },
+    {
+      "source": "backend/modules/property_patrol/api/routes.py",
+      "phase": 2,
+      "tests": [
+        "backend/tests/test_property_patrol_sites_pagination.py",
+        "backend/tests/test_property_patrol.py"
+      ]
+    },
+    {
+      "source": "backend/modules/telemetry/api/routes.py",
+      "phase": 2,
+      "tests": [
+        "backend/tests/test_telemetry_api_contracts.py"
+      ]
+    },
+    {
+      "source": "backend/modules/analytics/api/routes.py",
+      "phase": 2,
+      "tests": [
+        "backend/tests/test_analytics_api_contracts.py",
+        "backend/tests/test_phase1_quick_wins.py"
+      ]
+    }
+  ]
+}

@@ -290,7 +290,7 @@ async def start_mission_for_user(
                     await workflow_db.commit()
         emit_agriculture_event("flight_started", flight_id=client_flight_id, field_id=payload.field_id)
 
-    from backend.modules.missions.api.routes import execute_mission
+    from backend.modules.missions.service.mission_execution import execute_mission
 
     task = asyncio.create_task(
         execute_mission(

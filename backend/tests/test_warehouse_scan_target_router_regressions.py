@@ -50,6 +50,8 @@ def _target(*, target_id: int = 1, frame_id: int = 42) -> WarehouseScanTarget:
         scan_timeout_s=2.0,
         priority=10,
         active=True,
+        scanner_metadata_json={},
+        path_validation_json={},
         created_at=NOW,
         updated_at=NOW,
     )
@@ -80,7 +82,7 @@ def _patch_dependencies(monkeypatch) -> None:
             },
         )
 
-    monkeypatch.setattr(api, "get_map_or_404", allow_map)
+    monkeypatch.setattr(api, "assert_map_or_404", allow_map)
     monkeypatch.setattr(api, "get_locked_coordinate_frame", locked_frame)
 
     async def bin_context(*args, **kwargs):

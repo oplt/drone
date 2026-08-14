@@ -60,24 +60,25 @@ def test_finalize_execution_preserves_concurrent_terminal_state() -> None:
 
 
 def test_execute_mission_uses_one_authoritative_finalizer(monkeypatch) -> None:
-    from backend.modules.missions.api import routes
+    from backend.modules.missions import service
 
+    mission_execution = service.mission_execution
     mission = MagicMock()
     mission.execute = AsyncMock()
     set_runtime_state = AsyncMock()
     finalize_execution = AsyncMock(return_value=None)
     legacy_get = AsyncMock()
-    monkeypatch.setattr(routes, "_set_runtime_state", set_runtime_state)
+    monkeypatch.setattr(mission_execution, "set_runtime_state", set_runtime_state)
     monkeypatch.setattr(
-        routes.mission_application,
+        mission_execution.mission_application,
         "finalize_execution",
         finalize_execution,
     )
-    monkeypatch.setattr(routes.mission_application, "get_by_client_id", legacy_get)
+    monkeypatch.setattr(mission_execution.mission_application, "get_by_client_id", legacy_get)
     orchestrator = SimpleNamespace(current_client_flight_id=None)
 
     asyncio.run(
-        routes.execute_mission(
+        mission_execution.execute_mission(
             orchestrator,
             mission,
             cruise_alt=12.0,

@@ -1,24 +1,15 @@
-import {
-  Box,
-  Chip,
-  Stack,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Box, Chip, Stack, Tooltip, Typography } from "@mui/material";
 import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
 import type { WarehouseMappingStackStatus } from "../api/warehouseMissionsApi";
+import { LIVE_MAP_LAYER_LABELS, type LiveMapLayerKey } from "../utils/liveMapLayerUtils";
 import {
-  LIVE_MAP_LAYER_LABELS,
-  type LiveMapLayerKey,
-} from "../utils/liveMapLayerUtils";
-import type { NvbloxLiveStatus } from "../api/warehouseLiveMapApi";
-
-function formatTime(value: string | null): string {
-  if (!value) return "--";
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) return value;
-  return new Date(parsed).toLocaleTimeString();
-}
+  formatLiveVoxelTime,
+  liveVoxelNvbloxStatusColor,
+  liveVoxelOverlayCopy,
+  liveVoxelStatusColor,
+  LIVE_VOXEL_STATUS_LABELS,
+  resolveLiveVoxelNvbloxStatus,
+} from "./liveVoxel/liveVoxelStatusHelpers";
 
 function metricRow(label: string, value: string) {
   return (
@@ -47,50 +38,6 @@ function metricRow(label: string, value: string) {
   );
 }
 
-const STATUS_LABELS: Record<
-  WarehouseLiveVoxelMapState["connectionState"],
-  string
-> = {
-  empty: "empty",
-  connecting: "connecting",
-  live: "live",
-  stale: "stale",
-  reconnecting: "reconnecting",
-  finalized: "finalized",
-  failed: "failed",
-};
-
-function statusColor(
-  status: WarehouseLiveVoxelMapState["connectionState"],
-): "success" | "warning" | "error" | "default" {
-  if (status === "live" || status === "finalized") return "success";
-  if (
-    status === "stale" ||
-    status === "reconnecting" ||
-    status === "connecting"
-  ) {
-    return "warning";
-  }
-  if (status === "failed") return "error";
-  return "default";
-}
-
-function nvbloxStatusColor(
-  status: NvbloxLiveStatus | null | undefined,
-): "success" | "warning" | "error" | "default" {
-  if (status === "live") return "success";
-  if (status === "warming" || status === "degraded") return "warning";
-  if (status === "error") return "error";
-  return "default";
-}
-
-function resolveNvbloxStatus(
-  state: WarehouseLiveVoxelMapState,
-): NvbloxLiveStatus {
-  if (state.health.nvblox_status) return state.health.nvblox_status;
-  return state.health.nvblox_ready ? "live" : "off";
-}
-
 export function WarehouseLiveVoxelHeader({
   state,
   cachedBytes,
@@ -101,33 +48,20 @@ export function WarehouseLiveVoxelHeader({
   streamPaused?: boolean;
 }) {
   return (
-    <Stack
-      direction="row"
-      justifyContent="space-between"
-      alignItems="center"
-      flexWrap="wrap"
-    >
+    <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap">
       <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
         <Typography variant="subtitle2" color="text.secondary">
           Stream
         </Typography>
         <Chip
           size="small"
-          label={streamPaused ? "paused" : STATUS_LABELS[state.connectionState]}
-          color={streamPaused ? "warning" : statusColor(state.connectionState)}
+          label={streamPaused ? "paused" : LIVE_VOXEL_STATUS_LABELS[state.connectionState]}
+          color={streamPaused ? "warning" : liveVoxelStatusColor(state.connectionState)}
         />
-        {state.finalizedScanJobId != null && (
-          <Chip
-            size="small"
-            variant="outlined"
-            label={`saved #${state.finalizedScanJobId}`}
-          />
-        )}
-        <Chip
-          size="small"
-          variant="outlined"
-          label={`${state.chunks.length} chunks`}
-        />
+        {state.finalizedScanJobId != null ? (
+          <Chip size="small" variant="outlined" label={`saved #${state.finalizedScanJobId}`} />
+        ) : null}
+        <Chip size="small" variant="outlined" label={`${state.chunks.length} chunks`} />
         <Chip
           size="small"
           variant="outlined"
@@ -159,12 +93,15 @@ export function WarehouseLiveVoxelMetrics({
   const pose = state.latestUpdate?.pose ?? null;
   const lastChunk = state.chunks.at(-1);
   const stackPhase = mappingStackStatus?.phase ?? "stopped";
-  const nvbloxStatus = resolveNvbloxStatus(state);
+  const nvbloxStatus = resolveLiveVoxelNvbloxStatus(state);
 
   const rows = [
-    ["Stream", STATUS_LABELS[state.connectionState]],
-    ["Last update", formatTime(state.lastUpdateAt)],
-    ["Sequence", String(state.latestUpdate?.changed_chunks?.[0]?.sequence ?? lastChunk?.sequence ?? "--")],
+    ["Stream", LIVE_VOXEL_STATUS_LABELS[state.connectionState]],
+    ["Last update", formatLiveVoxelTime(state.lastUpdateAt)],
+    [
+      "Sequence",
+      String(state.latestUpdate?.changed_chunks?.[0]?.sequence ?? lastChunk?.sequence ?? "--"),
+    ],
     ["Points (last)", String(lastChunk?.point_count ?? "--")],
     ["Pose X", pose ? `${pose.x_m.toFixed(2)} m` : "--"],
     ["Pose Y", pose ? `${pose.y_m.toFixed(2)} m` : "--"],
@@ -178,11 +115,14 @@ export function WarehouseLiveVoxelMetrics({
     ["Path samples", String(state.scanPath.length)],
     ["Cached", `${((cachedBytes ?? 0) / 1048576).toFixed(1)} MB`],
     ...(renderStats
-      ? [
-          ["Render budget", `${renderStats.renderedPointEstimate.toLocaleString()} / ${renderStats.pointBudget.toLocaleString()} pts`],
+      ? ([
+          [
+            "Render budget",
+            `${renderStats.renderedPointEstimate.toLocaleString()} / ${renderStats.pointBudget.toLocaleString()} pts`,
+          ],
           ["Dropped chunks", String(renderStats.droppedChunkCount)],
           ["Download slots", String(renderStats.maxConcurrentDownloads)],
-        ] as const
+        ] as const)
       : []),
   ] as const;
 
@@ -201,7 +141,7 @@ export function WarehouseLiveVoxelMetrics({
       >
         {rows.map(([label, value]) => metricRow(label, value))}
       </Box>
-      {pointsByLayer && (
+      {pointsByLayer ? (
         <Stack direction="row" spacing={0.75} flexWrap="wrap">
           {(Object.keys(pointsByLayer) as LiveMapLayerKey[])
             .filter((key) => pointsByLayer[key] > 0)
@@ -214,26 +154,21 @@ export function WarehouseLiveVoxelMetrics({
               />
             ))}
         </Stack>
-      )}
+      ) : null}
     </Stack>
   );
 }
 
-export function WarehouseLiveVoxelHealthChips({
-  state,
-}: {
-  state: WarehouseLiveVoxelMapState;
-}) {
-  const badgeColor = (value: boolean): "success" | "warning" =>
-    value ? "success" : "warning";
-  const nvbloxStatus = resolveNvbloxStatus(state);
+export function WarehouseLiveVoxelHealthChips({ state }: { state: WarehouseLiveVoxelMapState }) {
+  const badgeColor = (value: boolean): "success" | "warning" => (value ? "success" : "warning");
+  const nvbloxStatus = resolveLiveVoxelNvbloxStatus(state);
 
   return (
     <Stack direction="row" spacing={0.75} flexWrap="wrap">
       <Chip
         size="small"
-        color={statusColor(state.connectionState)}
-        label={`stream ${STATUS_LABELS[state.connectionState]}`}
+        color={liveVoxelStatusColor(state.connectionState)}
+        label={`stream ${LIVE_VOXEL_STATUS_LABELS[state.connectionState]}`}
       />
       <Chip
         size="small"
@@ -247,15 +182,13 @@ export function WarehouseLiveVoxelHealthChips({
       />
       <Chip
         size="small"
-        color={nvbloxStatusColor(nvbloxStatus)}
+        color={liveVoxelNvbloxStatusColor(nvbloxStatus)}
         label={`nvblox ${nvbloxStatus}`}
       />
       <Chip
         size="small"
         color={badgeColor(state.health.mapping_recording)}
-        label={
-          state.health.mapping_recording ? "recording" : "not recording"
-        }
+        label={state.health.mapping_recording ? "recording" : "not recording"}
       />
       <Chip
         size="small"
@@ -272,9 +205,7 @@ export function WarehouseLiveVoxelHealthChips({
       <Tooltip title="Estimated localization drift">
         <Chip
           size="small"
-          color={
-            (state.health.drift_estimate_m ?? 0) > 0.5 ? "warning" : "success"
-          }
+          color={(state.health.drift_estimate_m ?? 0) > 0.5 ? "warning" : "success"}
           label={`drift ${state.health.drift_estimate_m?.toFixed(2) ?? "--"}m`}
         />
       </Tooltip>
@@ -296,38 +227,16 @@ export function WarehouseLiveVoxelHealthChips({
         <Chip
           size="small"
           color={badgeColor(!state.health.missing_point_cloud)}
-          label={
-            state.health.missing_point_cloud
-              ? "missing point cloud"
-              : "point cloud"
-          }
+          label={state.health.missing_point_cloud ? "missing point cloud" : "point cloud"}
         />
       </Tooltip>
     </Stack>
   );
 }
 
-export function WarehouseLiveVoxelOverlay({
-  state,
-}: {
-  state: WarehouseLiveVoxelMapState;
-}) {
-  const title =
-    state.connectionState === "reconnecting"
-      ? "Reconnecting"
-      : state.connectionState === "stale"
-        ? "Stream stale"
-        : state.connectionState === "failed"
-          ? "Live map failed"
-          : "Waiting for live voxel updates";
-  const body =
-    state.connectionState === "failed"
-      ? (state.error ?? "Stream unavailable.")
-      : state.connectionState === "reconnecting"
-        ? "Keeping the last rendered chunks visible."
-        : state.connectionState === "stale"
-          ? "No voxel update has arrived recently."
-          : "Start a warehouse flight or manual mapping session.";
+export function WarehouseLiveVoxelOverlay({ state }: { state: WarehouseLiveVoxelMapState }) {
+  const { title, body } = liveVoxelOverlayCopy(state);
+
   return (
     <Box
       sx={{

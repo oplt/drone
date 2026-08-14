@@ -1,47 +1,55 @@
 {
   "backend/core/config/runtime.py": {
-    "effective_lines": 587,
+    "effective_lines": 663,
     "limit": 400
   },
   "backend/core/events/envelope.py": {
-    "effective_lines": 629,
+    "effective_lines": 646,
     "limit": 400
+  },
+  "backend/entrypoints/api/app.py": {
+    "effective_lines": 244,
+    "limit": 220
+  },
+  "backend/entrypoints/workers/agriculture_tasks.py": {
+    "effective_lines": 359,
+    "limit": 280
+  },
+  "backend/infrastructure/ai/gateway.py": {
+    "effective_lines": 287,
+    "limit": 260
   },
   "backend/infrastructure/ai/llama_cpp_server.py": {
     "effective_lines": 282,
-    "limit": 260
-  },
-  "backend/infrastructure/camera/runtime.py": {
-    "effective_lines": 702,
     "limit": 260
   },
   "backend/infrastructure/camera/stream_client.py": {
     "effective_lines": 271,
     "limit": 260
   },
-  "backend/infrastructure/messaging/websocket_publisher.py": {
-    "effective_lines": 366,
-    "limit": 260
-  },
-  "backend/infrastructure/persistence/alembic/versions/93c855aeb073_create_users_table.py": {
-    "effective_lines": 1792,
-    "limit": 260
-  },
   "backend/infrastructure/photogrammetry/raster_tiling.py": {
     "effective_lines": 263,
     "limit": 260
   },
-  "backend/infrastructure/photogrammetry/webodm_client.py": {
-    "effective_lines": 554,
-    "limit": 260
+  "backend/modules/agriculture/analysis_orchestration.py": {
+    "effective_lines": 491,
+    "limit": 400
   },
-  "backend/infrastructure/vehicle/mavlink_client.py": {
-    "effective_lines": 1059,
-    "limit": 260
+  "backend/modules/agriculture/models.py": {
+    "effective_lines": 522,
+    "limit": 250
   },
-  "backend/infrastructure/warehouse/bridge_config.py": {
-    "effective_lines": 533,
-    "limit": 260
+  "backend/modules/agriculture/routers/analysis.py": {
+    "effective_lines": 1480,
+    "limit": 400
+  },
+  "backend/modules/agriculture/schemas.py": {
+    "effective_lines": 951,
+    "limit": 400
+  },
+  "backend/modules/agriculture/service.py": {
+    "effective_lines": 737,
+    "limit": 300
   },
   "backend/modules/ai/service.py": {
     "effective_lines": 691,
@@ -50,10 +58,6 @@
   "backend/modules/alerts/evaluation_service.py": {
     "effective_lines": 476,
     "limit": 400
-  },
-  "backend/modules/analytics/api.py": {
-    "effective_lines": 406,
-    "limit": 220
   },
   "backend/modules/fleet/api.py": {
     "effective_lines": 264,
@@ -64,36 +68,28 @@
     "limit": 220
   },
   "backend/modules/irrigation/api.py": {
-    "effective_lines": 316,
+    "effective_lines": 330,
     "limit": 220
   },
   "backend/modules/irrigation/service/processing.py": {
     "effective_lines": 483,
     "limit": 400
   },
-  "backend/modules/mapping/api.py": {
-    "effective_lines": 624,
-    "limit": 220
+  "backend/modules/mapping/service/flight_capture.py": {
+    "effective_lines": 416,
+    "limit": 400
   },
-  "backend/modules/missions/api/routes.py": {
-    "effective_lines": 1488,
-    "limit": 220
-  },
-  "backend/modules/missions/planning/grid.py": {
-    "effective_lines": 677,
+  "backend/modules/mapping/service/workflow.py": {
+    "effective_lines": 407,
     "limit": 400
   },
   "backend/modules/missions/planning/photogrammetry.py": {
-    "effective_lines": 428,
+    "effective_lines": 412,
     "limit": 400
   },
   "backend/modules/missions/schemas/mission_types.py": {
     "effective_lines": 341,
     "limit": 250
-  },
-  "backend/modules/patrol/planning.py": {
-    "effective_lines": 1753,
-    "limit": 400
   },
   "backend/modules/patrol/sensor_config_api.py": {
     "effective_lines": 436,
@@ -108,32 +104,60 @@
     "limit": 400
   },
   "backend/modules/patrol/vision/pipeline.py": {
-    "effective_lines": 402,
+    "effective_lines": 419,
     "limit": 400
   },
   "backend/modules/preflight/checks/base.py": {
-    "effective_lines": 932,
+    "effective_lines": 878,
     "limit": 400
   },
-  "backend/modules/preflight/checks/mission_specific.py": {
-    "effective_lines": 1765,
+  "backend/modules/preflight/checks/missions/base.py": {
+    "effective_lines": 438,
     "limit": 400
   },
-  "backend/modules/property_patrol/api.py": {
-    "effective_lines": 544,
-    "limit": 220
+  "backend/modules/preflight/checks/missions/warehouse_scan.py": {
+    "effective_lines": 770,
+    "limit": 400
   },
   "backend/modules/settings/repository.py": {
     "effective_lines": 294,
     "limit": 250
   },
-  "backend/modules/telemetry/api.py": {
-    "effective_lines": 486,
-    "limit": 220
-  },
   "backend/modules/vehicle_runtime/execution_service.py": {
     "effective_lines": 384,
     "limit": 300
+  },
+  "backend/modules/video_analysis/api.py": {
+    "effective_lines": 245,
+    "limit": 220
+  },
+  "backend/modules/video_analysis/application.py": {
+    "effective_lines": 461,
+    "limit": 300
+  },
+  "backend/modules/video_analysis/repository.py": {
+    "effective_lines": 859,
+    "limit": 250
+  },
+  "backend/modules/video_analysis/service/pipeline.py": {
+    "effective_lines": 700,
+    "limit": 400
+  },
+  "backend/modules/vision_models/dataset_ingestion_operations.py": {
+    "effective_lines": 474,
+    "limit": 400
+  },
+  "backend/modules/vision_models/service/dataset_service.py": {
+    "effective_lines": 471,
+    "limit": 400
+  },
+  "backend/modules/vision_models/service/training_service.py": {
+    "effective_lines": 436,
+    "limit": 400
+  },
+  "backend/modules/vision_models/training_operations.py": {
+    "effective_lines": 554,
+    "limit": 400
   },
   "backend/modules/warehouse/application.py": {
     "effective_lines": 357,
@@ -143,49 +167,17 @@
     "effective_lines": 433,
     "limit": 400
   },
-  "backend/modules/warehouse/models.py": {
-    "effective_lines": 914,
-    "limit": 250
-  },
-  "backend/modules/warehouse/planning/exploration.py": {
-    "effective_lines": 1265,
-    "limit": 400
-  },
   "backend/modules/warehouse/planning/indoor/models.py": {
     "effective_lines": 640,
     "limit": 250
   },
-  "backend/modules/warehouse/planning/local_planner.py": {
-    "effective_lines": 825,
-    "limit": 400
-  },
-  "backend/modules/warehouse/planning/scan.py": {
-    "effective_lines": 1781,
-    "limit": 400
-  },
   "backend/modules/warehouse/repository/jobs.py": {
-    "effective_lines": 321,
+    "effective_lines": 327,
     "limit": 250
   },
   "backend/modules/warehouse/repository/sensor_rigs.py": {
     "effective_lines": 286,
     "limit": 250
-  },
-  "backend/modules/warehouse/routers/coordinate_frames.py": {
-    "effective_lines": 653,
-    "limit": 400
-  },
-  "backend/modules/warehouse/routers/layout_candidates.py": {
-    "effective_lines": 582,
-    "limit": 400
-  },
-  "backend/modules/warehouse/routers/layouts.py": {
-    "effective_lines": 957,
-    "limit": 400
-  },
-  "backend/modules/warehouse/routers/scan_targets.py": {
-    "effective_lines": 898,
-    "limit": 400
   },
   "backend/modules/warehouse/routers/structure.py": {
     "effective_lines": 404,
@@ -195,24 +187,12 @@
     "effective_lines": 458,
     "limit": 400
   },
-  "backend/modules/warehouse/service/colored_pointcloud_live_map_bridge.py": {
-    "effective_lines": 719,
-    "limit": 400
-  },
   "backend/modules/warehouse/service/inspection.py": {
     "effective_lines": 495,
     "limit": 400
   },
-  "backend/modules/warehouse/service/live_map_bridge.py": {
-    "effective_lines": 545,
-    "limit": 400
-  },
-  "backend/modules/warehouse/service/live_map_manifest.py": {
-    "effective_lines": 748,
-    "limit": 400
-  },
-  "backend/modules/warehouse/service/live_map_readiness.py": {
-    "effective_lines": 815,
+  "backend/modules/warehouse/service/layout.py": {
+    "effective_lines": 416,
     "limit": 400
   },
   "backend/modules/warehouse/service/live_map_replay.py": {
@@ -220,51 +200,23 @@
     "limit": 400
   },
   "backend/modules/warehouse/service/live_map_stream.py": {
-    "effective_lines": 441,
-    "limit": 400
-  },
-  "backend/modules/warehouse/service/mapping_stack_lifecycle.py": {
-    "effective_lines": 792,
+    "effective_lines": 558,
     "limit": 400
   },
   "backend/modules/warehouse/service/nvblox_layers_live_map_bridge.py": {
     "effective_lines": 649,
     "limit": 400
   },
-  "backend/modules/warehouse/service/pointcloud2_parser.py": {
-    "effective_lines": 635,
-    "limit": 400
-  },
   "backend/modules/warehouse/service/preflight_snapshot.py": {
-    "effective_lines": 417,
-    "limit": 400
-  },
-  "backend/modules/warehouse/service/raw_pointcloud_live_map_bridge.py": {
-    "effective_lines": 572,
-    "limit": 400
-  },
-  "backend/modules/warehouse/service/structure_extraction.py": {
-    "effective_lines": 1662,
-    "limit": 400
-  },
-  "backend/modules/warehouse/service/structure_jobs.py": {
-    "effective_lines": 1857,
+    "effective_lines": 416,
     "limit": 400
   },
   "backend/modules/warehouse/service/warehouse_preflight.py": {
     "effective_lines": 524,
     "limit": 400
   },
-  "backend/tests/test_live_map_readiness.py": {
-    "effective_lines": 474,
-    "limit": 400
-  },
-  "backend/tests/test_warehouse_api_quick_wins.py": {
-    "effective_lines": 469,
-    "limit": 400
-  },
-  "backend/tests/test_warehouse_inspection.py": {
-    "effective_lines": 661,
+  "backend/observability/prometheus_metrics.py": {
+    "effective_lines": 504,
     "limit": 400
   }
 }

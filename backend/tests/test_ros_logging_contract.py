@@ -92,8 +92,8 @@ def test_live_map_storage_calls_include_coordinate_frame() -> None:
 
 def test_embedded_live_map_nodes_use_simulation_time() -> None:
     bridge_files = (
-        Path("backend/modules/warehouse/service/colored_pointcloud_live_map_bridge.py"),
-        Path("backend/modules/warehouse/service/raw_pointcloud_live_map_bridge.py"),
+        Path("backend/modules/warehouse/service/colored_pointcloud_live_map_bridge/node.py"),
+        Path("backend/modules/warehouse/service/raw_pointcloud_live_map_bridge/node.py"),
         Path("backend/modules/warehouse/service/nvblox_layers_live_map_bridge.py"),
     )
     for path in bridge_files:

@@ -2,6 +2,7 @@
 /**
  * Fail when frontend source files introduce or increase architecture size violations.
  * Run with --update-baseline to record current migration debt.
+ * Run with --prune-baseline to drop entries for files now at or below their limit.
  */
 
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
@@ -82,19 +83,7 @@ export function collectViolations() {
   return violations;
 }
 
-function main() {
-  const updateBaseline = process.argv.includes("--update-baseline");
-  const current = collectViolations();
-
-  if (updateBaseline) {
-    writeFileSync(`${BASELINE_PATH}`, `${JSON.stringify(current, null, 2)}\n`, "utf8");
-    console.log(
-      `Recorded ${Object.keys(current).length} existing file-size violations in baseline.`,
-    );
-    return 0;
-  }
-
-  const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
+export function evaluateAgainstBaseline(current, baseline) {
   const regressions = [];
   let grandfathered = 0;
 
@@ -113,11 +102,72 @@ function main() {
     );
   }
 
+  const stale = Object.keys(baseline)
+    .filter((path) => !(path in current))
+    .sort();
+
+  return { regressions, stale, grandfathered };
+}
+
+export function pruneBaseline(baseline, current) {
+  const pruned = {};
+  for (const path of Object.keys(baseline).sort()) {
+    if (path in current) {
+      pruned[path] = baseline[path];
+    }
+  }
+  return pruned;
+}
+
+function main() {
+  const updateBaseline = process.argv.includes("--update-baseline");
+  const pruneBaselineFlag = process.argv.includes("--prune-baseline");
+  const current = collectViolations();
+
+  if (updateBaseline) {
+    writeFileSync(`${BASELINE_PATH}`, `${JSON.stringify(current, null, 2)}\n`, "utf8");
+    console.log(
+      `Recorded ${Object.keys(current).length} existing file-size violations in baseline.`,
+    );
+    return 0;
+  }
+
+  if (pruneBaselineFlag) {
+    const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
+    const pruned = pruneBaseline(baseline, current);
+    const removed = Object.keys(baseline).filter((path) => !(path in pruned));
+    writeFileSync(`${BASELINE_PATH}`, `${JSON.stringify(pruned, null, 2)}\n`, "utf8");
+    console.log(`Pruned ${removed.length} resolved baseline entries.`);
+    for (const path of removed) {
+      console.log(`- ${path}`);
+    }
+    return 0;
+  }
+
+  const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
+  const { regressions, stale, grandfathered } = evaluateAgainstBaseline(current, baseline);
+
+  let failed = false;
+  if (stale.length > 0) {
+    failed = true;
+    console.error(
+      "Stale file-size baseline entries (file is now at or below limit — remove them):",
+    );
+    for (const path of stale) {
+      console.error(`- ${path}`);
+    }
+    console.error("Run: node scripts/check_file_sizes.mjs --prune-baseline");
+  }
+
   if (regressions.length > 0) {
+    failed = true;
     console.error("File-size architecture regressions:");
     for (const regression of regressions) {
       console.error(`- ${regression}`);
     }
+  }
+
+  if (failed) {
     return 1;
   }
 

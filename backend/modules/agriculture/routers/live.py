@@ -26,7 +26,8 @@ from backend.modules.agriculture.live import LiveFrame
 from backend.modules.identity.dependencies import OrgUser, require_mission_exec, require_org_user
 from backend.observability.instruments import observed_span
 from backend.modules.agriculture.runtime_service import append_event, replay_events
-from backend.modules.missions.api.routes import _apply_mission_command, _get_runtime_for_user
+from backend.modules.missions.api.runtime_dto import get_runtime_for_user
+from backend.modules.missions.service.command_applicator import apply_mission_command
 from backend.modules.vehicle_runtime.factory import get_orchestrator
 from backend.infrastructure.runtime.blocking import run_blocking
 
@@ -142,10 +143,10 @@ async def issue_agriculture_runtime_command(
         latest = await replay_events(db, flight_id=flight.id, after_sequence=0, limit=1)
         if payload.expected_sequence != latest["latest_sequence"]:
             raise HTTPException(status_code=409, detail={"code": "STALE_RUNTIME_CURSOR", "latest_sequence": latest["latest_sequence"], "message": "Refresh runtime events before issuing a safety command."})
-    runtime = await _get_runtime_for_user(flight.mission_id, user_id=int(org_user.user.id))
+    runtime = await get_runtime_for_user(flight.mission_id, user_id=int(org_user.user.id))
     orchestrator = await get_orchestrator()
     try:
-        result = await _apply_mission_command(
+        result = await apply_mission_command(
             orch=orchestrator,
             runtime=runtime,
             command=payload.command,

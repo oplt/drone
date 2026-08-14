@@ -233,8 +233,6 @@ async def test_analytics_cache_is_org_scoped_and_typed() -> None:
 
 @pytest.mark.asyncio
 async def test_analytics_cache_hit_skips_database_queries(monkeypatch) -> None:
-    from backend.modules.analytics import api
-
     class FakeRedis:
         async def get(self, key):
             assert key == "analytics:overview:v1:org:42"
@@ -251,8 +249,13 @@ async def test_analytics_cache_hit_skips_database_queries(monkeypatch) -> None:
             self.calls += 1
             raise AssertionError("analytics cache hit must not query the database")
 
-    monkeypatch.setattr(api, "get_redis_client", lambda: FakeRedis())
-    result = await api.overview(
+    monkeypatch.setattr(
+        "backend.modules.analytics.api.overview_routes.get_redis_client",
+        lambda: FakeRedis(),
+    )
+    from backend.modules.analytics.api import overview
+
+    result = await overview(
         db=FakeDB(),
         org_user=SimpleNamespace(org_id=42),
     )

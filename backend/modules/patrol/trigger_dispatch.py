@@ -516,7 +516,7 @@ async def dispatch_sensor_trigger(
             },
         )
 
-        from backend.modules.missions.api.routes import execute_mission
+        from backend.modules.missions.service.mission_execution import execute_mission
 
         task = asyncio.create_task(
             execute_mission(

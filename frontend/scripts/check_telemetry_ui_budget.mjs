@@ -19,12 +19,15 @@ import { fileURLToPath } from "node:url";
 
 const EXPECTED_MS = Number(process.env.TELEMETRY_UI_BUDGET_MS ?? "100");
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const streamPath = resolve(
-  root,
-  "src/modules/mission-runtime/hooks/useTelemetryStream.ts",
-);
+const streamPaths = [
+  resolve(root, "src/modules/mission-runtime/hooks/useTelemetryStream.ts"),
+  resolve(root, "src/modules/mission-runtime/realtime/telemetryStreamConstants.ts"),
+];
 
-const source = readFileSync(streamPath, "utf8");
+let source = "";
+for (const streamPath of streamPaths) {
+  source += readFileSync(streamPath, "utf8");
+}
 const match = source.match(
   /export const TELEMETRY_UI_NOTIFY_MIN_MS\s*=\s*(\d+)/,
 );

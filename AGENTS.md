@@ -58,3 +58,13 @@ When principles conflict, prioritize:
 4. Simplicity
 5. Consistency with the current architecture
 6. Extensibility for demonstrated, not hypothetical, needs
+
+## Architecture extraction (Phase 0+)
+
+When splitting oversized files (see `docs/architecture-phase0.md` and `prompt.txt`):
+
+- Do **not** combine behavior changes with file-size/architecture extraction in the same PR.
+- Add or extend **characterization tests** before splitting behavior-heavy modules; register them in `backend/scripts/characterization_registry.json`.
+- Run file-size guards locally: `python backend/scripts/check_file_sizes.py` and `cd frontend && npm run check:arch`.
+- When a file drops below its category limit, **prune** its baseline entry (`--prune-baseline`); do not leave stale grandfathered rows.
+- Prefer vertical slices (one coherent reason to change per file) over arbitrary line-count chunking.

@@ -1,72 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  Box,
-  Button,
-  Checkbox,
-  Drawer,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-  Slider,
-  Stack,
-  Switch,
-  Tab,
-  Tabs,
-  Typography,
-  CircularProgress,
-} from "@mui/material";
+import { Alert, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { WarehouseCoordinateSetupPanel } from "./WarehouseCoordinateSetupPanel";
-import { WarehouseLayerBudgetSlider } from "./WarehouseLayerBudgetSlider";
 import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
-import { useLiveMapChunkCache, chunkCacheKey } from "../hooks/useLiveMapChunkCache";
-import {
-  fetchWarehouseLiveMapConfig,
-} from "../api/warehouseLiveMapApi";
-import {
-  DEFAULT_LIVE_MAP_CONFIG,
-  isChunkLayerVisible,
-  mergeLiveMapConfig,
-} from "../config/liveMapConfig";
-import {
-  WarehouseLiveVoxelScene,
-  type LiveVoxelLayers,
-  type LiveVoxelRenderOptions,
-} from "./WarehouseLiveVoxelScene";
-import type { WarehouseMapPlacementViewerProps, WarehouseMapPlacementPanelProps } from "../hooks/useWarehouseMapPlacement";
+import { useLiveMapChunkCache } from "../hooks/useLiveMapChunkCache";
+import type { WarehouseMapPlacementPanelProps, WarehouseMapPlacementViewerProps } from "../hooks/useWarehouseMapPlacement";
 import { useWarehouseStructure } from "../hooks/useWarehouseStructure";
-import {
-  WarehouseLiveVoxelHeader,
-  WarehouseLiveVoxelHealthChips,
-  WarehouseLiveVoxelMetrics,
-  WarehouseLiveVoxelOverlay,
-} from "./WarehouseLiveVoxelStatus";
-import {
-  WarehouseMappingHealthPanel,
-  type WarehouseMappingRuntimeStatus,
-} from "./WarehouseMappingHealthPanel";
 import type { WarehouseMappingStackStatus } from "../api/warehouseMissionsApi";
-import {
-  chunksAvailableByLayer,
-  countPointsByLayer,
-  DEFAULT_LAYER_POINT_BUDGET,
-  DEFAULT_LAYER_VISIBILITY,
-  defaultLayerVisibilityForChunks,
-  isRawLidarOnlyMap,
-  layerHasStoredChunks,
-  LAYER_CAPTURE_UNAVAILABLE,
-  LIVE_MAP_LAYER_LABELS,
-  MAP_INSPECTION_LAYER_KEYS,
-  type LiveMapColorMode,
-  type LiveMapLayerKey,
-} from "../utils/liveMapLayerUtils";
-import {
-  createWarehouseSceneTransform,
-  resolveDisplayedFrame,
-  WAREHOUSE_MAP_FRAME,
-} from "../utils/warehouseSceneCoordinates";
+import type { WarehouseMappingRuntimeStatus } from "./WarehouseMappingHealthPanel";
+import { WarehouseLiveVoxelHealthChips } from "./WarehouseLiveVoxelStatus";
+import { LiveVoxelViewerDiagnosticsDrawer, LiveVoxelViewerMapFrame } from "./liveVoxel/LiveVoxelViewerMapFrame";
+import { LiveVoxelViewerLayerPanel, LiveVoxelViewerToolbar } from "./liveVoxel/LiveVoxelViewerPanels";
+import { useLiveVoxelViewerModel } from "./liveVoxel/useLiveVoxelViewerModel";
+import { useLiveVoxelViewerChunkStats } from "./liveVoxel/useLiveVoxelViewerChunkStats";
 
 export function WarehouseLiveVoxelMapViewer({
   state,
@@ -111,367 +55,87 @@ export function WarehouseLiveVoxelMapViewer({
   coordinateSetupToken?: string | null;
   replayLoading?: boolean;
 }) {
-  const [layers, setLayers] = useState<LiveVoxelLayers>(DEFAULT_LAYER_VISIBILITY);
-  const [pointSize, setPointSize] = useState(0.035);
-  const [colorMode, setColorMode] = useState<LiveMapColorMode>("rgb");
-  const [layerPointBudget, setLayerPointBudget] = useState(
-    DEFAULT_LAYER_POINT_BUDGET,
-  );
-  const [highDensity, setHighDensity] = useState(false);
-  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
-  const [liveMapConfig, setLiveMapConfig] = useState(DEFAULT_LIVE_MAP_CONFIG);
-  const [configError, setConfigError] = useState<string | null>(null);
-  const layerDefaultsFlightRef = useRef<string | null>(null);
-
+  const model = useLiveVoxelViewerModel(state, flightId, scannedMapId, cacheMode, mapPlacement);
   const structure = useWarehouseStructure(
     mapDetailTab === "coordinateSetup" ? warehouseMapId : null,
     coordinateSetupToken,
   );
 
-  useEffect(() => {
-    if (!state.token) return;
-    void fetchWarehouseLiveMapConfig(state.token)
-      .then((payload) => {
-        setLiveMapConfig(mergeLiveMapConfig(payload));
-        setConfigError(null);
-      })
-      .catch((error: unknown) => {
-        setConfigError(
-          error instanceof Error
-            ? error.message
-            : "Live-map configuration is unavailable.",
-        );
-      });
-  }, [state.token]);
-
-  useEffect(() => {
-    if (!highDensity) {
-      setLayerPointBudget(DEFAULT_LAYER_POINT_BUDGET);
-      return;
-    }
-    const max = liveMapConfig.frontend.max_points_per_layer;
-    setLayerPointBudget({
-      ...DEFAULT_LAYER_POINT_BUDGET,
-      rgbdColored: max,
-      rgbdDepth: max,
-      nvbloxColor: max,
-      nvbloxEsdf: Math.floor(max * 0.5),
-      nvbloxTsdf: Math.floor(max * 0.5),
-      mid360LiDAR: Math.floor(max * 0.35),
-      nvbloxMesh: 1,
-    });
-  }, [highDensity, liveMapConfig.frontend.max_points_per_layer]);
-
-  const resolvedFlightId =
-    flightId ?? state.latestUpdate?.flight_id ?? null;
-
-  useEffect(() => {
-    const flightKey =
-      resolvedFlightId ??
-      (scannedMapId != null ? `scan:${scannedMapId}` : null);
-    if (!flightKey) {
-      layerDefaultsFlightRef.current = null;
-      return;
-    }
-    if (state.chunks.length === 0) return;
-    if (layerDefaultsFlightRef.current === flightKey) return;
-    layerDefaultsFlightRef.current = flightKey;
-    setLayers(defaultLayerVisibilityForChunks(state.chunks, state.manifest));
-  }, [resolvedFlightId, scannedMapId, state.chunks.length, state.connectionState, state.manifest]);
-
-  const rawLidarOnly = useMemo(
-    () => isRawLidarOnlyMap(state.chunks, state.manifest),
-    [state.chunks, state.manifest],
-  );
-
-  const resolvedCacheMode =
-    cacheMode ?? (state.connectionState === "finalized" ? "replay" : "live");
   const {
     cachedChunks,
     downloadedChunkIds,
     inFlightChunkIds,
     droppedChunkCount,
     maxConcurrentDownloads,
-  } =
-    useLiveMapChunkCache(resolvedFlightId, state.chunks, state.token, {
-      mode: resolvedCacheMode,
-      visibleLayers: layers,
-      config: liveMapConfig,
-    });
-  const cachedBytes = useMemo(
-    () => cachedChunks.reduce((sum, entry) => sum + entry.bytes, 0),
-    [cachedChunks],
-  );
-  const pointsByLayer = useMemo(
-    () => countPointsByLayer(state.chunks),
-    [state.chunks],
-  );
-  const chunksByLayer = useMemo(
-    () => chunksAvailableByLayer(state.chunks, state.manifest),
-    [state.chunks, state.manifest],
-  );
-  const manifestChunkTotal = useMemo(() => {
-    const counts = state.manifest?.chunk_counts;
-    if (!counts) return state.chunks.length;
-    return Object.values(counts).reduce((sum, value) => sum + Number(value), 0);
-  }, [state.chunks.length, state.manifest?.chunk_counts]);
-  const manifestPointTotal = useMemo(() => {
-    const counts = state.manifest?.point_counts;
-    if (!counts) {
-      return state.chunks.reduce(
-        (sum, chunk) => sum + (chunk.point_count ?? 0),
-        0,
-      );
-    }
-    return Object.values(counts).reduce((sum, value) => sum + Number(value), 0);
-  }, [state.chunks, state.manifest?.point_counts]);
-  const visiblePointTotal = useMemo(
-    () =>
-      cachedChunks.reduce((sum, chunk) => sum + (chunk.point_count ?? 0), 0),
-    [cachedChunks],
-  );
-  const renderStats = useMemo(() => {
-    const keys = Object.keys(layerPointBudget) as LiveMapLayerKey[];
-    const pointBudget = keys
-      .filter((key) => layers[key])
-      .reduce((sum, key) => sum + (layerPointBudget[key] ?? 0), 0);
-    const renderedPointEstimate = keys
-      .filter((key) => layers[key])
-      .reduce(
-        (sum, key) => sum + Math.min(pointsByLayer[key] ?? 0, layerPointBudget[key] ?? 0),
-        0,
-      );
-    return { renderedPointEstimate, pointBudget, droppedChunkCount, maxConcurrentDownloads };
-  }, [droppedChunkCount, layerPointBudget, layers, maxConcurrentDownloads, pointsByLayer]);
-  const visiblePendingChunkCount = useMemo(() => {
-    if (!resolvedFlightId) return 0;
-    let pending = 0;
-    for (const chunk of state.chunks) {
-      if (!chunk.url || !isChunkLayerVisible(chunk, layers)) continue;
-      const key = chunkCacheKey(resolvedFlightId, chunk);
-      if (!downloadedChunkIds.has(key) && !inFlightChunkIds.has(key)) {
-        pending += 1;
-      }
-    }
-    return pending;
-  }, [
+  } = useLiveMapChunkCache(model.resolvedFlightId, state.chunks, state.token, {
+    mode: model.resolvedCacheMode,
+    visibleLayers: model.layers,
+    config: model.liveMapConfig,
+  });
+
+  const chunkStats = useLiveVoxelViewerChunkStats(
+    state,
+    model.resolvedFlightId,
+    model.layers,
+    cachedChunks,
     downloadedChunkIds,
     inFlightChunkIds,
-    layers,
-    resolvedFlightId,
-    state.chunks,
-  ]);
-
-  const renderOptions: LiveVoxelRenderOptions = useMemo(
-    () => ({
-      pointSize,
-      colorMode,
-      layerPointBudget,
-    }),
-    [colorMode, layerPointBudget, pointSize],
+    model.layerPointBudget,
+    model.pointsByLayer,
+    droppedChunkCount,
+    maxConcurrentDownloads,
   );
-
-  const scenePickBlockReason = useMemo(() => {
-    if (!mapPlacement) return null;
-    if (mapPlacement.pickBlockReason) return mapPlacement.pickBlockReason;
-    const frameIds = [
-      ...state.chunks.map((chunk) => chunk.frame_id),
-      state.latestUpdate?.frame_id,
-      ...state.scanPath.map((pose) => pose.frame_id),
-    ];
-    const populated = frameIds.filter((frame) => Boolean(frame?.trim()));
-    const displayFrame = populated.length
-      ? resolveDisplayedFrame(frameIds)
-      : WAREHOUSE_MAP_FRAME;
-    if (!displayFrame) return "Visible map layers use incompatible coordinate frames.";
-    if (
-      !mapPlacement.coordinateFrame ||
-      !createWarehouseSceneTransform(displayFrame, mapPlacement.coordinateFrame)
-    ) {
-      return `No transform from displayed ${displayFrame} frame to warehouse_map.`;
-    }
-    return null;
-  }, [mapPlacement, state.chunks, state.latestUpdate?.frame_id, state.scanPath]);
-
-  const effectiveMapPlacement = useMemo(
-    () =>
-      mapPlacement
-        ? { ...mapPlacement, pickBlockReason: scenePickBlockReason }
-        : null,
-    [mapPlacement, scenePickBlockReason],
-  );
-
-  const updateLayer = (key: LiveMapLayerKey) => {
-    setLayers((current) => ({ ...current, [key]: !current[key] }));
-  };
-
-  const updateBudget = (key: LiveMapLayerKey, value: number) => {
-    setLayerPointBudget((current) => ({ ...current, [key]: value }));
-  };
 
   return (
     <Stack spacing={1.25}>
-      {configError ? (
+      {model.configError ? (
         <Alert severity="warning">
-          Live-map configuration could not be loaded. Safe display defaults are active. {configError}
+          Live-map configuration could not be loaded. Safe display defaults are active.{" "}
+          {model.configError}
         </Alert>
       ) : null}
-      {rawLidarOnly && (
+      {model.rawLidarOnly ? (
         <Alert severity="warning">
-          This saved map contains raw Mid360 LiDAR only. RGB-D or nvBlox colored
-          layers were not available when the scan was finalized.
+          This saved map contains raw Mid360 LiDAR only. RGB-D or nvBlox colored layers were not
+          available when the scan was finalized.
         </Alert>
-      )}
+      ) : null}
 
-      <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-        <Button size="small" variant="outlined" onClick={() => setDiagnosticsOpen(true)}>
-          Diagnostics
-        </Button>
-        <FormControlLabel
-          control={
-            <Switch
-              size="small"
-              checked={highDensity}
-              onChange={(_event, checked) => setHighDensity(checked)}
-            />
-          }
-          label="High density"
-        />
-        {onReloadReplay && (
-          <Button size="small" variant="outlined" onClick={onReloadReplay}>
-            Refresh map from disk
-          </Button>
-        )}
-        {onToggleStream && (
-          <Button size="small" variant="outlined" onClick={onToggleStream}>
-            {streamPaused ? "Resume stream" : "Pause stream"}
-          </Button>
-        )}
-        {onClearMap && (
-          <Button size="small" variant="outlined" onClick={onClearMap}>
-            Clear accumulated map
-          </Button>
-        )}
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel id="live-map-color-mode">Color mode</InputLabel>
-          <Select
-            labelId="live-map-color-mode"
-            label="Color mode"
-            value={colorMode}
-            onChange={(event) =>
-              setColorMode(event.target.value as LiveMapColorMode)
-            }
-          >
-            <MenuItem value="rgb">RGB</MenuItem>
-            <MenuItem value="height">Height</MenuItem>
-            <MenuItem value="distance">Distance</MenuItem>
-            <MenuItem value="layer">Layer color</MenuItem>
-          </Select>
-        </FormControl>
-        <Box sx={{ width: 180, px: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            Point size
-          </Typography>
-          <Slider
-            size="small"
-            min={0.01}
-            max={0.12}
-            step={0.005}
-            value={pointSize}
-            onChange={(_event, value) => setPointSize(Number(value))}
-          />
-        </Box>
-      </Stack>
+      <LiveVoxelViewerToolbar
+        highDensity={model.highDensity}
+        onHighDensityChange={model.setHighDensity}
+        colorMode={model.colorMode}
+        onColorModeChange={model.setColorMode}
+        pointSize={model.pointSize}
+        onPointSizeChange={model.setPointSize}
+        onOpenDiagnostics={() => model.setDiagnosticsOpen(true)}
+        onReloadReplay={onReloadReplay}
+        onToggleStream={onToggleStream}
+        onClearMap={onClearMap}
+        streamPaused={streamPaused}
+      />
 
-      <Box
-        sx={{
-          borderRadius: 1,
-          overflow: "hidden",
-          border: "1px solid",
-          borderColor: "divider",
-          position: "relative",
-          cursor:
-            mapPlacement?.pickMode && !scenePickBlockReason
-              ? "crosshair"
-              : "default",
-        }}
-        role="img"
-        aria-label="Interactive warehouse voxel map"
-        aria-describedby="warehouse-voxel-map-description"
-        tabIndex={0}
-      >
-        <Typography
-          id="warehouse-voxel-map-description"
-          component="span"
-          sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}
-        >
-          {state.chunks.length} chunks and {visiblePointTotal.toLocaleString()} loaded points. Use mouse or touch to orbit, pan, and zoom. Layer visibility and point budgets are listed below.
-        </Typography>
-          {!hidden && (
-              <WarehouseLiveVoxelScene
-                  state={state}
-                  layers={layers}
-                  cachedChunks={cachedChunks}
-                  renderOptions={renderOptions}
-                  mapPlacement={effectiveMapPlacement}
-                  structure={
-                    structure.structure?.status === "ready"
-                      ? structure.structure.summary
-                      : null
-                  }
-              />
-          )}
-        {mapPlacement?.pickMode ? (
-          <Box
-            sx={{
-              position: "absolute",
-              top: 8,
-              left: 8,
-              right: 8,
-              zIndex: 2,
-              pointerEvents: "none",
-            }}
-          >
-            <Alert severity={scenePickBlockReason ? "warning" : "info"} sx={{ py: 0.25 }}>
-              {scenePickBlockReason ??
-                `Click the map to place a bin target at warehouse Z=${mapPlacement.placementZ.toFixed(2)} m. Orange = saved targets, yellow = draft.`}
-            </Alert>
-          </Box>
-        ) : null}
-        {replayLoading ? (
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              bgcolor: "rgba(0,0,0,0.45)",
-              zIndex: 3,
-              pointerEvents: "none",
-            }}
-          >
-            <Stack spacing={0.5} alignItems="center">
-              <CircularProgress size={28} sx={{ color: "common.white" }} />
-              <Typography variant="caption" sx={{ color: "common.white" }}>
-                Loading scan replay from disk…
-              </Typography>
-            </Stack>
-          </Box>
-        ) : null}
-        {["empty", "connecting", "reconnecting", "stale", "failed"].includes(
-          state.connectionState,
-        ) && !replayLoading && <WarehouseLiveVoxelOverlay state={state} />}
-      </Box>
+      <LiveVoxelViewerMapFrame
+        state={state}
+        hidden={hidden}
+        layers={model.layers}
+        cachedChunks={cachedChunks}
+        renderOptions={model.renderOptions}
+        mapPlacement={model.effectiveMapPlacement}
+        structure={
+          structure.structure?.status === "ready" ? structure.structure.summary : null
+        }
+        scenePickBlockReason={model.scenePickBlockReason}
+        visiblePointTotal={chunkStats.visiblePointTotal}
+        replayLoading={replayLoading}
+      />
 
       <WarehouseLiveVoxelHealthChips state={state} />
 
       {warehouseMapId != null ? (
         <Tabs
           value={mapDetailTab}
-          onChange={(_, value: "layers" | "coordinateSetup") =>
-            onMapDetailTabChange?.(value)
-          }
+          onChange={(_, value: "layers" | "coordinateSetup") => onMapDetailTabChange?.(value)}
           variant="fullWidth"
         >
           <Tab value="layers" label="Layers" />
@@ -484,70 +148,16 @@ export function WarehouseLiveVoxelMapViewer({
       )}
 
       {mapDetailTab === "layers" || warehouseMapId == null ? (
-        <>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {(
-              [
-                ...MAP_INSPECTION_LAYER_KEYS,
-                "dronePath",
-                "grid",
-              ] as LiveMapLayerKey[]
-            ).map((key) => {
-              const hasData = layerHasStoredChunks(
-                key,
-                state.chunks,
-                state.manifest,
-              );
-              const captureUnavailable = LAYER_CAPTURE_UNAVAILABLE[key];
-              const disabled =
-                key !== "dronePath" && key !== "grid" && !hasData;
-              const helper = !hasData
-                ? captureUnavailable ??
-                  (key === "mid360LiDAR"
-                    ? "No Mid360 chunks in this saved scan. Re-run the flight after the latest backend update, or enable WAREHOUSE_LIVE_MAP_RAW_LIDAR_ENABLED before scanning."
-                    : "No stored chunks for this layer in the selected scan.")
-                : null;
-              const label = `${LIVE_MAP_LAYER_LABELS[key]}${
-                hasData && key !== "dronePath" && key !== "grid"
-                  ? ` (${chunksByLayer[key]})`
-                  : ""
-              }`;
-
-              return (
-                <FormControlLabel
-                  key={key}
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={layers[key]}
-                      disabled={disabled}
-                      onChange={() => updateLayer(key)}
-                    />
-                  }
-                  label={label}
-                  title={helper ?? undefined}
-                />
-              );
-            })}
-          </Stack>
-
-          <Stack spacing={0.75}>
-            <Typography variant="caption" color="text.secondary">
-              Max points per layer
-              {highDensity
-                ? ` (high density up to ${liveMapConfig.frontend.max_points_per_layer.toLocaleString()})`
-                : " (safe defaults — enable High density for config max)"}
-            </Typography>
-            {MAP_INSPECTION_LAYER_KEYS.map((key) => (
-              <WarehouseLayerBudgetSlider
-                key={key}
-                label={LIVE_MAP_LAYER_LABELS[key]}
-                value={layerPointBudget[key]}
-                onCommit={(value) => updateBudget(key, value)}
-              />
-            ))}
-          </Stack>
-        </>
+        <LiveVoxelViewerLayerPanel
+          state={state}
+          layers={model.layers}
+          layerPointBudget={model.layerPointBudget}
+          chunksByLayer={model.chunksByLayer}
+          highDensity={model.highDensity}
+          maxPointsPerLayer={model.liveMapConfig.frontend.max_points_per_layer}
+          onToggleLayer={model.updateLayer}
+          onBudgetCommit={model.updateBudget}
+        />
       ) : mapPlacementPanel && onCoordinateSetupError ? (
         <WarehouseCoordinateSetupPanel
           warehouseMapId={warehouseMapId}
@@ -566,49 +176,27 @@ export function WarehouseLiveVoxelMapViewer({
         />
       ) : null}
 
-      <Drawer
-        anchor="right"
-        open={diagnosticsOpen}
-        onClose={() => setDiagnosticsOpen(false)}
-        PaperProps={{ sx: { width: { xs: "100%", sm: 420 }, p: 2 } }}
-      >
-        <Stack spacing={1.25}>
-          <Typography variant="h6">Map diagnostics</Typography>
-          <WarehouseLiveVoxelHeader
-            state={state}
-            cachedBytes={cachedBytes}
-            streamPaused={streamPaused}
-          />
-          <WarehouseMappingHealthPanel
-            status={mappingStatus}
-            liveHealth={state.health}
-            mappingStackStatus={mappingStackStatus}
-          />
-          <WarehouseLiveVoxelMetrics
-            state={state}
-            mappingStackStatus={mappingStackStatus}
-            pointsByLayer={pointsByLayer}
-            cachedBytes={cachedBytes}
-            renderStats={renderStats}
-          />
-          <Typography variant="caption" color="text.secondary">
-            Mode: {mapMode} · flight: {flightId ?? state.latestUpdate?.flight_id ?? "—"}
-            {scannedMapId != null ? ` · scan #${scannedMapId}` : ""} · manifest:{" "}
-            {state.manifest ? "disk" : "live"} · chunks{" "}
-            {cachedChunks.length}/{manifestChunkTotal || state.chunks.length} loaded ·
-            points {visiblePointTotal.toLocaleString()}/
-            {manifestPointTotal.toLocaleString()} visible
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Downloads: {downloadedChunkIds.size} complete, {inFlightChunkIds.size} in
-            flight
-            {visiblePendingChunkCount > 0
-              ? ` · ${visiblePendingChunkCount} visible chunk(s) queued`
-              : ""}
-          </Typography>
-          <Button onClick={() => setDiagnosticsOpen(false)}>Close</Button>
-        </Stack>
-      </Drawer>
+      <LiveVoxelViewerDiagnosticsDrawer
+        open={model.diagnosticsOpen}
+        onClose={() => model.setDiagnosticsOpen(false)}
+        state={state}
+        mappingStatus={mappingStatus}
+        mappingStackStatus={mappingStackStatus}
+        cachedBytes={chunkStats.cachedBytes}
+        streamPaused={streamPaused}
+        pointsByLayer={model.pointsByLayer}
+        renderStats={chunkStats.renderStats}
+        mapMode={mapMode}
+        flightId={flightId}
+        scannedMapId={scannedMapId}
+        cachedChunkCount={cachedChunks.length}
+        manifestChunkTotal={model.manifestChunkTotal}
+        visiblePointTotal={chunkStats.visiblePointTotal}
+        manifestPointTotal={model.manifestPointTotal}
+        downloadedChunkCount={downloadedChunkIds.size}
+        inFlightChunkCount={inFlightChunkIds.size}
+        visiblePendingChunkCount={chunkStats.visiblePendingChunkCount}
+      />
     </Stack>
   );
 }

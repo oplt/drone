@@ -1,9 +1,12 @@
 # Frontend Architecture Baseline (Stage 0)
 
-Recorded: 2026-05-26
+Recorded: 2026-05-26 · Phase 0 lock-in: 2026-08-14 (`docs/architecture-phase0.md`)
 
 This document captures migration guardrails. CI fails on **new** violations; existing debt
 is grandfathered in `frontend/scripts/*_baseline.json` until extracted in later stages.
+
+**Phase 0 rules:** no regressions above baseline counts; remove baseline rows when a file
+drops below its limit (`node scripts/check_file_sizes.mjs --prune-baseline`).
 
 ## ESLint baseline (`npm run lint:ci`)
 
@@ -51,7 +54,8 @@ Update baseline only after shrinking a file or splitting it with tests:
 
 ```bash
 cd frontend
-node scripts/check_file_sizes.mjs --update-baseline
+node scripts/check_file_sizes.mjs --prune-baseline   # after file is under limit
+node scripts/check_file_sizes.mjs --update-baseline  # record new grandfathered debt (rare)
 ```
 
 ## Stage 1 layout (2026-05-26)

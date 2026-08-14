@@ -1,345 +1,36 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { emitAppLog, type AppLogEvent } from "../../../shared/logging";
+import {
+  connectSharedTelemetry,
+  disconnectSharedTelemetry,
+  disconnectSharedTelemetryWhenIdle,
+  resetSharedTelemetryAttempt,
+  setSharedTelemetryWebSocketFactory,
+  sharedTelemetryState,
+  telemetrySubscribers,
+} from "../realtime/sharedTelemetryConnection";
+import { TELEMETRY_UI_NOTIFY_MIN_MS } from "../realtime/telemetryStreamConstants";
+import type {
+  SharedTelemetryState,
+  TelemetrySubscriber,
+  TelemetryWebSocketOptions,
+} from "../realtime/telemetryStreamTypes";
 
-type TelemetryWebSocketOptions = {
-  enabled?: boolean;
-  onTelemetry?: (data: TelemetrySnapshot) => void;
-  onMessage?: (message: TelemetrySocketPayload) => void;
-};
-
-type TelemetryObject = Record<string, unknown>;
-type TelemetrySnapshot = TelemetryObject & {
-  battery?: TelemetryObject;
-  gps?: TelemetryObject;
-  link?: TelemetryObject;
-  position?: TelemetryObject;
-  status?: TelemetryObject;
-  wind?: TelemetryObject;
-};
-type TelemetrySocketPayload = TelemetrySnapshot | string | null;
-
-type Subscriber = {
-  onState: (state: SharedTelemetryState) => void;
-  onTelemetry?: (data: TelemetrySnapshot) => void;
-  onMessage?: (message: TelemetrySocketPayload) => void;
-};
-
-type SharedTelemetryState = {
-  telemetry: TelemetrySnapshot | null;
-  isConnected: boolean;
-  error: string | null;
-  reconnectAttempt: number;
-  /** Epoch ms of last telemetry packet (not pings/logs). */
-  lastPacketAt: number | null;
-};
-
-const state: SharedTelemetryState = {
-  telemetry: null,
-  isConnected: false,
-  error: null,
-  reconnectAttempt: 0,
-  lastPacketAt: null,
-};
-
-let socket: WebSocket | null = null;
-let reconnectTimer: number | null = null;
-let pingTimer: number | null = null;
-let closeTimer: number | null = null;
-/** Coalesce React state fan-out to ~10 Hz (not every sensor tick / RAF). */
-export const TELEMETRY_UI_NOTIFY_MIN_MS = 100;
-const UI_NOTIFY_MIN_MS = TELEMETRY_UI_NOTIFY_MIN_MS;
-let notifyRaf: number | null = null;
-let notifyThrottleTimer: number | null = null;
-let lastNotifyAt = 0;
-let pendingTelemetryCallback: TelemetrySnapshot | null = null;
-let attempt = 0;
-let explicitlyClosed = false;
-const subscribers = new Set<Subscriber>();
-let websocketFactory: ((url: string) => WebSocket) | null = null;
-
-function flushNotify() {
-  lastNotifyAt = Date.now();
-  if (notifyRaf != null) {
-    window.cancelAnimationFrame(notifyRaf);
-    notifyRaf = null;
-  }
-  if (notifyThrottleTimer != null) {
-    window.clearTimeout(notifyThrottleTimer);
-    notifyThrottleTimer = null;
-  }
-  const telemetryCb = pendingTelemetryCallback;
-  pendingTelemetryCallback = null;
-  if (telemetryCb) {
-    subscribers.forEach((subscriber) => subscriber.onTelemetry?.(telemetryCb));
-  }
-  notify();
-}
-
-function scheduleNotify() {
-  const elapsed = Date.now() - lastNotifyAt;
-  if (elapsed >= UI_NOTIFY_MIN_MS) {
-    if (notifyRaf != null) return;
-    notifyRaf = window.requestAnimationFrame(() => {
-      notifyRaf = null;
-      flushNotify();
-    });
-    return;
-  }
-  if (notifyThrottleTimer != null) return;
-  notifyThrottleTimer = window.setTimeout(() => {
-    notifyThrottleTimer = null;
-    flushNotify();
-  }, UI_NOTIFY_MIN_MS - elapsed);
-}
+export { TELEMETRY_UI_NOTIFY_MIN_MS };
 
 export function setTelemetryWebSocketFactoryForTests(
   factory: ((url: string) => WebSocket) | null,
 ) {
-  websocketFactory = factory;
+  setSharedTelemetryWebSocketFactory(factory);
   if (factory === null) {
-    subscribers.clear();
-    disconnectShared({ clearTelemetry: true });
+    telemetrySubscribers.clear();
+    disconnectSharedTelemetry({ clearTelemetry: true });
   }
-}
-
-function notify() {
-  subscribers.forEach((subscriber) => subscriber.onState({ ...state }));
-}
-
-function wsUrl(): string {
-  const apiBaseRaw = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  const apiBase = (apiBaseRaw?.trim() || "").replace(/\/$/, "");
-  if (!apiBase) {
-    return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws/telemetry`;
-  }
-  if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-    return `${apiBase.replace(/^http/, "ws")}/ws/telemetry`;
-  }
-  const prefix = apiBase.startsWith("/") ? apiBase : `/${apiBase}`;
-  return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${prefix}/ws/telemetry`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
-
-async function parseMessage(data: unknown): Promise<TelemetrySocketPayload> {
-  try {
-    const parsed =
-      typeof data === "string"
-        ? JSON.parse(data)
-        : data instanceof Blob
-          ? JSON.parse(await data.text())
-          : data instanceof ArrayBuffer
-            ? JSON.parse(new TextDecoder("utf-8").decode(data))
-            : null;
-    if (typeof parsed === "string" || isRecord(parsed)) return parsed;
-    return null;
-  } catch {
-    if (typeof data === "string") return data;
-    return null;
-  }
-}
-
-function telemetryFromMessage(msg: TelemetrySocketPayload): TelemetrySnapshot | null {
-  if (!isRecord(msg)) return null;
-  if (msg.type === "telemetry") {
-    if (msg.protocol === "v1" && isRecord(msg.envelope)) {
-      const payload = (msg.envelope as Record<string, unknown>).payload;
-      if (isRecord(payload)) {
-        const position = isRecord(payload.position) ? payload.position : {};
-        const attitude = isRecord(payload.attitude) ? payload.attitude : {};
-        const battery = isRecord(payload.battery) ? payload.battery : {};
-        const gps = isRecord(payload.gps) ? payload.gps : {};
-        const link = isRecord(payload.link) ? payload.link : {};
-        const wind = isRecord(payload.wind) ? payload.wind : {};
-        const motion = isRecord(payload.motion) ? payload.motion : {};
-        return {
-          position: {
-            lat: position.lat ?? 0,
-            lon: position.lon ?? 0,
-            alt: position.alt_m ?? 0,
-            relative_alt: position.relative_alt_m ?? 0,
-          },
-          attitude: {
-            roll: attitude.roll_rad ?? 0,
-            pitch: attitude.pitch_rad ?? 0,
-            yaw: attitude.yaw_rad ?? 0,
-          },
-          battery: {
-            remaining: battery.remaining_pct ?? 0,
-            voltage: battery.voltage_v ?? 0,
-          },
-          gps,
-          link,
-          wind,
-          status: {
-            groundspeed: motion.groundspeed_mps ?? 0,
-            heading: motion.heading_deg ?? 0,
-          },
-          mode: payload.flight_mode,
-          armed: payload.armed,
-        } as TelemetrySnapshot;
-      }
-    }
-    return isRecord(msg.data) ? (msg.data as TelemetrySnapshot) : null;
-  }
-  if (msg.type) {
-    return null;
-  }
-  return msg as TelemetrySnapshot;
-}
-
-function clearTimers() {
-  if (reconnectTimer) window.clearTimeout(reconnectTimer);
-  if (pingTimer) window.clearInterval(pingTimer);
-  if (closeTimer) window.clearTimeout(closeTimer);
-  reconnectTimer = null;
-  pingTimer = null;
-  closeTimer = null;
-}
-
-function connectShared() {
-  if (closeTimer) {
-    window.clearTimeout(closeTimer);
-    closeTimer = null;
-  }
-  if (
-    socket?.readyState === WebSocket.OPEN ||
-    socket?.readyState === WebSocket.CONNECTING
-  ) {
-    return;
-  }
-  explicitlyClosed = false;
-  attempt += 1;
-  const currentAttempt = attempt;
-  socket = websocketFactory?.(wsUrl()) ?? new globalThis.WebSocket(wsUrl());
-
-  socket.onopen = () => {
-    state.isConnected = true;
-    state.error = null;
-    state.reconnectAttempt = 0;
-    attempt = 0;
-    emitAppLog({
-      level: "info",
-      source: "websocket",
-      message: "Telemetry websocket connected",
-    });
-    scheduleNotify();
-    if (pingTimer) window.clearInterval(pingTimer);
-    pingTimer = window.setInterval(() => {
-      if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "ping" }));
-      }
-    }, 30000);
-  };
-
-  socket.onmessage = async (event) => {
-    const msg = await parseMessage(event.data);
-    if (msg === "pong" || (isRecord(msg) && msg.type === "pong")) return;
-    if (isRecord(msg) && msg.type === "app_log" && msg.data) {
-      emitAppLog(msg.data as AppLogEvent, { mirrorToConsole: false });
-      subscribers.forEach((subscriber) => subscriber.onMessage?.(msg));
-      return;
-    }
-    subscribers.forEach((subscriber) => subscriber.onMessage?.(msg));
-    const telemetry = telemetryFromMessage(msg);
-    if (telemetry) {
-      state.telemetry = telemetry;
-      state.lastPacketAt = Date.now();
-      pendingTelemetryCallback = telemetry;
-      scheduleNotify();
-    }
-  };
-
-  socket.onerror = () => {
-    state.error = "WebSocket connection error";
-    emitAppLog({
-      level: "error",
-      source: "websocket",
-      message: "Telemetry websocket connection error",
-      details: { attempt: currentAttempt },
-    });
-    scheduleNotify();
-  };
-
-  socket.onclose = (event) => {
-    socket = null;
-    state.isConnected = false;
-    scheduleNotify();
-    if (pingTimer) window.clearInterval(pingTimer);
-    pingTimer = null;
-    if (explicitlyClosed || event.code === 1000 || event.code === 1008) return;
-    if (subscribers.size === 0) return;
-    const nextAttempt = currentAttempt + 1;
-    if (nextAttempt > 10) {
-      state.error = "Max reconnection attempts reached";
-      emitAppLog({
-        level: "critical",
-        source: "websocket",
-        message: "Telemetry websocket could not reconnect",
-        details: { close_code: event.code, close_reason: event.reason },
-      });
-      scheduleNotify();
-      return;
-    }
-    state.reconnectAttempt = nextAttempt;
-    scheduleNotify();
-    const delay = Math.min(
-      1000 * Math.pow(2, Math.max(0, nextAttempt - 1)),
-      30000,
-    );
-    reconnectTimer = window.setTimeout(connectShared, delay);
-  };
-}
-
-function disconnectShared({ clearTelemetry = false } = {}) {
-  clearTimers();
-  if (notifyRaf != null) {
-    window.cancelAnimationFrame(notifyRaf);
-    notifyRaf = null;
-  }
-  if (notifyThrottleTimer != null) {
-    window.clearTimeout(notifyThrottleTimer);
-    notifyThrottleTimer = null;
-  }
-  pendingTelemetryCallback = null;
-  explicitlyClosed = true;
-  if (socket) {
-    socket.onopen = null;
-    socket.onmessage = null;
-    socket.onerror = null;
-    socket.onclose = null;
-    if (
-      socket.readyState === WebSocket.OPEN ||
-      socket.readyState === WebSocket.CONNECTING
-    ) {
-      socket.close(1000, "No telemetry subscribers");
-    }
-    socket = null;
-  }
-  state.isConnected = false;
-  state.reconnectAttempt = 0;
-  if (clearTelemetry) {
-    state.telemetry = null;
-    state.error = null;
-    state.lastPacketAt = null;
-  }
-  notify();
-}
-
-function disconnectSharedWhenIdle() {
-  if (closeTimer) window.clearTimeout(closeTimer);
-  closeTimer = window.setTimeout(() => {
-    closeTimer = null;
-    if (subscribers.size === 0) disconnectShared();
-  }, 250);
 }
 
 export function useTelemetryStream(options: TelemetryWebSocketOptions = {}) {
   const enabled = options.enabled ?? false;
-  const [snapshot, setSnapshot] = useState<SharedTelemetryState>({ ...state });
-  const subscriberRef = useRef<Subscriber>({
+  const [snapshot, setSnapshot] = useState<SharedTelemetryState>({ ...sharedTelemetryState });
+  const subscriberRef = useRef<TelemetrySubscriber>({
     onState: setSnapshot,
     onTelemetry: options.onTelemetry,
     onMessage: options.onMessage,
@@ -354,25 +45,25 @@ export function useTelemetryStream(options: TelemetryWebSocketOptions = {}) {
   useEffect(() => {
     const subscriber = subscriberRef.current;
     if (!enabled) return undefined;
-    subscribers.add(subscriber);
-    subscriber.onState({ ...state });
-    connectShared();
+    telemetrySubscribers.add(subscriber);
+    subscriber.onState({ ...sharedTelemetryState });
+    connectSharedTelemetry();
     return () => {
-      subscribers.delete(subscriber);
-      if (subscribers.size === 0) disconnectSharedWhenIdle();
+      telemetrySubscribers.delete(subscriber);
+      if (telemetrySubscribers.size === 0) disconnectSharedTelemetryWhenIdle();
     };
   }, [enabled]);
 
   const reconnect = useCallback(() => {
     if (!enabled) return;
-    attempt = 0;
-    disconnectShared({ clearTelemetry: false });
-    connectShared();
+    resetSharedTelemetryAttempt();
+    disconnectSharedTelemetry({ clearTelemetry: false });
+    connectSharedTelemetry();
   }, [enabled]);
 
   const disconnect = useCallback(() => {
-    if (subscriberRef.current) subscribers.delete(subscriberRef.current);
-    if (subscribers.size === 0) disconnectShared({ clearTelemetry: true });
+    if (subscriberRef.current) telemetrySubscribers.delete(subscriberRef.current);
+    if (telemetrySubscribers.size === 0) disconnectSharedTelemetry({ clearTelemetry: true });
   }, []);
 
   return {
