@@ -6,7 +6,14 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
 
-class AgricultureMissionProfile(BaseModel):
+class AgricultureAnalyticsConfiguration(BaseModel):
+    expected_plant_spacing_m: float | None = Field(default=None, gt=0, le=10)
+    stand_gap_multiplier: float = Field(default=1.75, gt=1, le=10)
+    weed_density_cell_m: float = Field(default=10.0, ge=2, le=100)
+    weed_hotspot_percentile: float = Field(default=0.8, gt=0, le=1)
+
+
+class AgricultureMissionProfile(AgricultureAnalyticsConfiguration):
     flight_kind: Literal["agriculture_survey"] = "agriculture_survey"
     preset: Literal["early_stand_count", "rgb_weed_water", "repeat_monitoring", "multispectral_thermal"] = "rgb_weed_water"
     crop_type: str | None = Field(default=None, max_length=96)
@@ -43,7 +50,7 @@ class AgricultureMissionProfile(BaseModel):
         return normalized
 
 
-class FieldProfilePatch(BaseModel):
+class FieldProfilePatch(AgricultureAnalyticsConfiguration):
     crop_type: str | None = Field(default=None, max_length=96)
     variety: str | None = Field(default=None, max_length=128)
     season: str | None = Field(default=None, max_length=64)
@@ -263,6 +270,10 @@ class AgricultureCapabilityReadinessOut(BaseModel):
     requires_model: bool
     output_type: str
     action_relevance: str
+    crop_specific: bool = False
+    capture_conditions: dict[str, Any] = Field(default_factory=dict)
+    evaluation_thresholds: dict[str, float] = Field(default_factory=dict)
+    limitations: list[str] = Field(default_factory=list)
     advanced_defaults: dict[str, Any] = Field(default_factory=dict)
     release: dict[str, Any] | None = None
 
@@ -337,44 +348,11 @@ class TemporalCompareIn(BaseModel):
     min_quality_score: float = Field(default=0.6, ge=0, le=1)
 
 
-class AgricultureChangeOut(BaseModel):
-    id: str
-    field_id: int
-    current_flight_id: str
-    reference_flight_id: str
-    current_observation_id: str | None = None
-    previous_observation_id: str | None = None
-    observation_type: str
-    state: str
-    geometry_geojson: dict[str, Any]
-    reference_geometry_geojson: dict[str, Any]
-    area_m2: float | None = None
-    delta_area_m2: float | None = None
-    delta_intensity: float | None = None
-    confidence: float
-    evidence_ids: list[Any]
-    uncertainty: dict[str, Any]
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
 class FieldComparisonIn(BaseModel):
     current_flight_id: str = Field(..., min_length=1, max_length=64)
     reference_flight_id: str | None = Field(default=None, min_length=1, max_length=64)
     min_quality_score: float = Field(default=0.6, ge=0, le=1)
     model_config = {"json_schema_extra": {"examples": [{"current_flight_id": "flight-current", "reference_flight_id": "flight-reference", "min_quality_score": 0.7}]}}
-
-
-class AgricultureComparisonOut(BaseModel):
-    id: str | None = None
-    status: str
-    current_flight_id: str
-    reference_flight_id: str | None = None
-    alignment: dict[str, Any] = Field(default_factory=dict)
-    comparability: dict[str, Any] = Field(default_factory=dict)
-    summary: dict[str, Any] = Field(default_factory=dict)
-    changes: list[AgricultureChangeOut] = Field(default_factory=list)
 
 
 class AnnotationIn(BaseModel):
@@ -512,10 +490,11 @@ class SensorReadingBatchIn(BaseModel):
 
 
 class FusionIn(BaseModel):
-    requested_indices: list[Literal["ndvi", "gndvi"]] = Field(default_factory=lambda: ["ndvi"])
+    requested_indices: list[Literal["ndvi", "gndvi", "ndre"]] = Field(default_factory=lambda: ["ndvi"])
     band_values: dict[str, list[float]] = Field(default_factory=dict)
     thermal_values_c: list[float] = Field(default_factory=list)
     thermal_calibrated: bool = False
+    environmental_context: dict[str, float] = Field(default_factory=dict)
     geometries: list[dict[str, Any]] = Field(default_factory=list, max_length=100_000)
     visual_inputs: dict[str, float] = Field(default_factory=dict)
     crop_context: dict[str, Any] = Field(default_factory=dict)
@@ -828,7 +807,7 @@ class PrescriptionOut(BaseModel):
 
 
 class ExportIn(BaseModel):
-    artifact_kind: Literal["observations", "report", "inspection_actions", "prescription"]
+    artifact_kind: Literal["observations", "report", "inspection_actions", "prescription", "intervention_zones"]
     format: Literal["geojson", "shapefile", "csv", "pdf"]
     source_id: str | None = Field(default=None, max_length=64)
     model_config = {"json_schema_extra": {"examples": [{"artifact_kind": "observations", "format": "geojson"}, {"artifact_kind": "report", "format": "pdf"}]}}
@@ -959,7 +938,7 @@ class AgricultureLayerOut(BaseModel):
     checksum: str
 
 
-class AgricultureFieldProfileOut(BaseModel):
+class AgricultureFieldProfileOut(AgricultureAnalyticsConfiguration):
     id: int
     field_id: int
     crop_type: str | None = None
@@ -1028,6 +1007,27 @@ class AgricultureTelemetryOut(BaseModel):
     gap_count: int
 
 
+class InferenceReuseDetailOut(BaseModel):
+    capability_id: str
+    video_id: str
+    video_job_id: str
+    reused: bool
+    reused_from_run_id: str | None = None
+    source_checksum: str | None = None
+    model_checksum: str | None = None
+    vision_model_version_id: str | None = None
+    inference_profile: dict[str, Any] = Field(default_factory=dict)
+    original_completed_at: datetime | None = None
+
+
+class InferenceReuseSummaryOut(BaseModel):
+    run_input_checksum: str | None = None
+    reused_job_count: int
+    total_job_count: int
+    fully_reused: bool
+    details: list[InferenceReuseDetailOut] = Field(default_factory=list)
+
+
 class AnalysisRunOut(BaseModel):
     id: str
     flight_id: str
@@ -1050,6 +1050,7 @@ class AnalysisRunOut(BaseModel):
     created_at: datetime
     started_at: datetime | None = None
     finished_at: datetime | None = None
+    inference_reuse: InferenceReuseSummaryOut | None = None
 
     class Config:
         from_attributes = True

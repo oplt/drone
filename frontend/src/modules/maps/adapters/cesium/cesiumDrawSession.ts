@@ -52,7 +52,6 @@ function clearDrawEntities(args: AttachCesiumDrawHandlerArgs) {
 function finishDraw(args: AttachCesiumDrawHandlerArgs, mode: DrawMode) {
   const {
     CesiumModule,
-    viewer,
     drawFloatingCartesianRef,
     drawPositionsRef,
     onDrawCompleteRef,

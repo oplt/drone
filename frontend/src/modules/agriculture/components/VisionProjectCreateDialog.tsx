@@ -21,6 +21,8 @@ const CAPABILITIES: Array<{ id: CreateVisionProjectInput["capability_id"]; label
   { id: "canopy_cover", label: "Canopy cover" },
   { id: "row_detection", label: "Crop rows" },
   { id: "standing_water", label: "Standing water" },
+  { id: "fruit_counting", label: "Crop-specific fruit counting" },
+  { id: "ripeness_classification", label: "Crop-specific ripeness" },
 ];
 
 export function VisionProjectCreateDialog({

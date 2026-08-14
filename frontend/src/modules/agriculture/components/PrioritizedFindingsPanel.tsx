@@ -2,6 +2,7 @@ import {
   Button,
   Checkbox,
   Chip,
+  Drawer,
   FormControlLabel,
   MenuItem,
   Stack,
@@ -9,6 +10,8 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { selectDetectionEvidence } from "../../video-analysis/evidenceSelection";
 import {
   useAgricultureFindings,
   useCreateAgricultureFieldOutcome,
@@ -16,7 +19,14 @@ import {
   useReviewAgricultureObservation,
   useSplitAgricultureFinding,
 } from "../hooks";
+import type { AgricultureObservation } from "../types";
 import type { RankedFinding } from "../types";
+import {
+  ANALYSIS_REVIEW_EVIDENCE,
+  ANALYSIS_REVIEW_OPEN,
+  readAnalysisReviewState,
+  writeObservationSelection,
+} from "../workflows/analysisReviewState";
 import { AgricultureGeoJsonPreview } from "./AgricultureGeoJsonPreview";
 import { ObservationReviewDrawer } from "./ObservationReviewDrawer";
 import { BulkActionBar } from "../../../shared/ui/BulkActionBar";
@@ -42,25 +52,90 @@ function factorSummary(factors: Record<string, unknown>): string {
   return parts.slice(0, 4).join(" · ") || "No factor breakdown";
 }
 
-export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
+function observationFromFinding(
+  runId: string,
+  finding: RankedFinding,
+): AgricultureObservation {
+  return {
+    id: finding.observation_id,
+    run_id: runId,
+    flight_id: "",
+    field_id: 0,
+    observation_type: finding.observation_type || "finding",
+    zone_kind: "observation",
+    geometry_geojson: finding.geometry_geojson,
+    georef_status: finding.georef_status || "unresolved",
+    area_m2: finding.area_m2,
+    severity: finding.severity,
+    confidence: finding.confidence,
+    uncertainty: {},
+    provenance: finding.provenance,
+    first_detected: null,
+    last_detected: null,
+    trend: "unknown",
+    evidence_ids: (finding.evidence_ids || []).map(String),
+    sensor_values: {},
+    model_version: finding.model_version,
+    review_state: finding.review_state || "unreviewed",
+    review_label: null,
+    review_note: null,
+    assigned_to_user_id: finding.assigned_to_user_id,
+    reviewed_at: null,
+    merged_into_id: finding.merged_into_id,
+    member_observation_ids: finding.member_observation_ids,
+  };
+}
+
+export function PrioritizedFindingsPanel({
+  runId,
+  showHotspotMap = true,
+}: {
+  runId: string;
+  showHotspotMap?: boolean;
+}) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { observationId, reviewOpen, focusEvidence } =
+    readAnalysisReviewState(searchParams);
   const findings = useAgricultureFindings(runId);
   const review = useReviewAgricultureObservation();
   const merge = useMergeAgricultureFindings();
   const split = useSplitAgricultureFinding();
   const outcome = useCreateAgricultureFieldOutcome();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mergeSelection, setMergeSelection] = useState<string[]>([]);
   const [primaryId, setPrimaryId] = useState<string>("");
   const [outcomeStatus, setOutcomeStatus] = useState<(typeof OUTCOME_OPTIONS)[number]>("confirmed_present");
   const [outcomeNotes, setOutcomeNotes] = useState("");
-  const [showReview, setShowReview] = useState(false);
 
   const items = findings.data?.items ?? [];
-  const selected = items.find((item) => item.observation_id === selectedId) ?? null;
+  const selected =
+    items.find((item) => item.observation_id === observationId) ?? null;
   const hotspots = useMemo(
     () => findings.data?.hotspots ?? { type: "FeatureCollection", features: [] },
     [findings.data?.hotspots],
   );
+
+  const selectObservation = (
+    id: string,
+    options?: { review?: typeof ANALYSIS_REVIEW_OPEN | typeof ANALYSIS_REVIEW_EVIDENCE | false },
+  ) => {
+    setSearchParams(
+      writeObservationSelection(searchParams, id, options),
+      { replace: true },
+    );
+  };
+
+  const closeReviewDrawer = () => {
+    setSearchParams(
+      writeObservationSelection(searchParams, observationId, { review: false }),
+      { replace: true },
+    );
+  };
+
+  const jumpToEvidence = (item: RankedFinding) => {
+    selectObservation(item.observation_id, { review: ANALYSIS_REVIEW_EVIDENCE });
+    const evidenceId = item.evidence_ids?.[0];
+    if (evidenceId) selectDetectionEvidence(String(evidenceId));
+  };
 
   const toggleMergeMember = (id: string) => {
     setMergeSelection((current) =>
@@ -98,11 +173,13 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
             : undefined
         }
       >
-      <AgricultureGeoJsonPreview
-        geojson={hotspots}
-        selectedId={selectedId}
-        onSelect={(id) => setSelectedId(id)}
-      />
+      {showHotspotMap ? (
+        <AgricultureGeoJsonPreview
+          geojson={hotspots}
+          selectedId={observationId}
+          onSelect={(id) => selectObservation(id, { review: false })}
+        />
+      ) : null}
       <Stack spacing={1}>
         {items.map((item) => (
           <Stack
@@ -112,7 +189,7 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
             alignItems={{ md: "center" }}
             sx={{
               border: "1px solid",
-              borderColor: selectedId === item.observation_id ? "primary.main" : "divider",
+              borderColor: observationId === item.observation_id ? "primary.main" : "divider",
               borderRadius: 1,
               p: 1,
             }}
@@ -133,7 +210,18 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
             <Typography variant="caption" sx={{ flex: 1 }}>
               Score {item.score.toFixed(3)} · {factorSummary(item.factors)}
             </Typography>
-            <Button size="small" onClick={() => { setSelectedId(item.observation_id); setShowReview(false); }}>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => jumpToEvidence(item)}
+              aria-label={`Jump to evidence for finding ${item.rank}`}
+            >
+              Jump to evidence
+            </Button>
+            <Button
+              size="small"
+              onClick={() => selectObservation(item.observation_id, { review: false })}
+            >
               Select
             </Button>
             <Button
@@ -161,7 +249,7 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
           <Typography variant="caption" color="text.secondary">
             Evidence: {(selected.evidence_ids || []).join(", ") || "none"} · model {selected.model_version || "n/a"}
           </Typography>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap" useFlexGap>
             <TextField
               select
               size="small"
@@ -238,45 +326,31 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
             >
               Split finding
             </Button>
-            <Button size="small" onClick={() => setShowReview((value) => !value)}>
-              {showReview ? "Hide review drawer" : "Open review drawer"}
+            <Button
+              size="small"
+              onClick={() =>
+                selectObservation(selected.observation_id, { review: ANALYSIS_REVIEW_OPEN })
+              }
+            >
+              Open review drawer
             </Button>
           </Stack>
-          {showReview ? (
-            <ObservationReviewDrawer
-              observation={{
-                id: selected.observation_id,
-                run_id: runId,
-                flight_id: "",
-                field_id: 0,
-                observation_type: selected.observation_type || "finding",
-                zone_kind: "observation",
-                geometry_geojson: selected.geometry_geojson,
-                georef_status: selected.georef_status || "unresolved",
-                area_m2: selected.area_m2,
-                severity: selected.severity,
-                confidence: selected.confidence,
-                uncertainty: {},
-                provenance: selected.provenance,
-                first_detected: null,
-                last_detected: null,
-                trend: "unknown",
-                evidence_ids: (selected.evidence_ids || []).map(String),
-                sensor_values: {},
-                model_version: selected.model_version,
-                review_state: selected.review_state || "unreviewed",
-                review_label: null,
-                review_note: null,
-                assigned_to_user_id: selected.assigned_to_user_id,
-                reviewed_at: null,
-                merged_into_id: selected.merged_into_id,
-                member_observation_ids: selected.member_observation_ids,
-              }}
-              onClose={() => setShowReview(false)}
-            />
-          ) : null}
         </Stack>
       ) : null}
+      <Drawer
+        anchor="right"
+        open={reviewOpen && Boolean(selected)}
+        onClose={closeReviewDrawer}
+        PaperProps={{ sx: { width: { xs: "100%", sm: 420 }, p: 2 } }}
+      >
+        {selected ? (
+          <ObservationReviewDrawer
+            observation={observationFromFinding(runId, selected)}
+            focusEvidence={focusEvidence}
+            onClose={closeReviewDrawer}
+          />
+        ) : null}
+      </Drawer>
       <BulkActionBar selectedCount={mergeSelection.length} label="Findings bulk actions">
         <TextField
           select

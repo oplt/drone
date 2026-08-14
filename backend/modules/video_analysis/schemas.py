@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import math
 from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend.modules.video_analysis.evidence import EvidenceRef
 
@@ -57,6 +60,48 @@ class VideoCaptureMetadataPatch(BaseModel):
         return self
 
 
+class VideoInferenceProfile(BaseModel):
+    """Immutable execution settings supplied by a versioned caller profile."""
+
+    profile_id: str = Field(..., min_length=1, max_length=128)
+    profile_version: str = Field(..., min_length=1, max_length=64)
+    profile_digest: str = Field(..., pattern=r"^[0-9a-f]{64}$")
+    capability_id: str = Field(..., min_length=1, max_length=64)
+    sample_fps: float = Field(..., ge=1 / 30, le=10)
+    image_size: int = Field(..., ge=32, le=4096)
+    confidence_threshold: float = Field(..., ge=0.01, le=0.99)
+    batch_size: int = Field(..., ge=1, le=32)
+    precision_mode: Literal["fp32", "fp16"]
+    sahi_enabled: bool
+    sahi_slice_height: int = Field(..., ge=32, le=4096)
+    sahi_slice_width: int = Field(..., ge=32, le=4096)
+    sahi_overlap_height_ratio: float = Field(..., ge=0, lt=1)
+    sahi_overlap_width_ratio: float = Field(..., ge=0, lt=1)
+    sahi_postprocess_match_threshold: float = Field(..., ge=0, le=1)
+    tracking_enabled: bool
+    tracker_type: str = Field(..., min_length=1, max_length=32)
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("image_size", "sahi_slice_height", "sahi_slice_width")
+    @classmethod
+    def validate_image_dimension(cls, value: int) -> int:
+        if value % 32:
+            raise ValueError("Inference image and slice dimensions must be multiples of 32")
+        return value
+
+    @model_validator(mode="after")
+    def validate_profile_digest(self) -> VideoInferenceProfile:
+        if self.sahi_enabled and self.precision_mode != "fp32":
+            raise ValueError("FP16 with SAHI requires a separate validated profile.")
+        values = self.model_dump(exclude={"profile_digest"})
+        encoded = json.dumps(
+            values, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode()
+        if hashlib.sha256(encoded).hexdigest() != self.profile_digest:
+            raise ValueError("Inference profile digest does not match its settings.")
+        return self
+
+
 class AnalyzeVideoRequest(BaseModel):
     model_name: str = Field(
         default="yolo26s.pt",
@@ -68,11 +113,21 @@ class AnalyzeVideoRequest(BaseModel):
     small_object_mode: bool = False
     tracking_enabled: bool = False
     tracker_type: Literal["bytetrack"] = "bytetrack"
+    inference_profile: VideoInferenceProfile | None = None
 
     @model_validator(mode="after")
     def validate_tracking_stride(self) -> AnalyzeVideoRequest:
         if self.tracking_enabled and self.frame_stride_seconds > 2.0:
             raise ValueError("Tracking requires a sampling interval of 2 seconds or less.")
+        profile = self.inference_profile
+        if profile is not None and not (
+            math.isclose(profile.sample_fps, 1.0 / self.frame_stride_seconds)
+            and math.isclose(profile.confidence_threshold, self.confidence_threshold)
+            and profile.sahi_enabled == self.small_object_mode
+            and profile.tracking_enabled == self.tracking_enabled
+            and profile.tracker_type == self.tracker_type
+        ):
+            raise ValueError("Inference profile conflicts with video analysis settings.")
         return self
 
     @field_validator("model_name")
@@ -105,6 +160,7 @@ class VideoAnalysisJobOut(BaseModel):
     source_checksum: str | None = None
     frame_stride_seconds: float
     confidence_threshold: float
+    inference_profile: dict[str, Any] = Field(default_factory=dict)
     frames_received: int = 0
     frames_decoded: int = 0
     frames_attempted: int = 0

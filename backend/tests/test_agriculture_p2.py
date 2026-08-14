@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 import pytest
 
-from backend.modules.agriculture.temporal import alignment_metrics, build_changes
+from backend.modules.agriculture.temporal import alignment_metrics, build_changes, summarize_changes
 from backend.modules.agriculture.evaluation import drift_report, evaluate_predictions
 from backend.modules.agriculture.schemas import AgricultureGridUpdateIn
 from backend.modules.agriculture.workflow import update_plan_grid
@@ -18,6 +18,11 @@ def test_temporal_comparison_emits_states_and_keeps_rejected_out():
     changes = build_changes(current, previous, current_flight_id="f2", reference_flight_id="f1", field_id=1)
     assert {row["state"] for row in changes} >= {"expanding", "new"}
     assert all("rejected" not in row["evidence_ids"] for row in changes)
+    summary = summarize_changes(changes)
+    assert summary["new"] == 1
+    assert summary["persistent"] == 1
+    assert summary["count_change"] == 1
+    assert summary["area_change_m2"] == pytest.approx(7)
 
 
 def test_temporal_comparison_emits_resolved_for_unmatched_previous():
@@ -25,6 +30,32 @@ def test_temporal_comparison_emits_resolved_for_unmatched_previous():
     changes = build_changes([], previous, current_flight_id="f2", reference_flight_id="f1", field_id=1)
     assert changes[0]["state"] == "resolved"
     assert changes[0]["current_observation_id"] is None
+
+
+def test_temporal_comparison_does_not_consume_barely_overlapping_reference():
+    current = _observation(
+        "current",
+        geometry={
+            "type": "Polygon",
+            "coordinates": [[[0.99, 0.99], [2, 0.99], [2, 2], [0.99, 0.99]]],
+        },
+    )
+    previous = _observation(
+        "previous",
+        geometry={
+            "type": "Polygon",
+            "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+        },
+    )
+    changes = build_changes(
+        [current],
+        [previous],
+        current_flight_id="f2",
+        reference_flight_id="f1",
+        field_id=1,
+    )
+    assert [row["state"] for row in changes] == ["new", "resolved"]
+    assert changes[0]["previous_observation_id"] is None
 
 
 def test_alignment_is_deterministic_and_reports_failure_reason():

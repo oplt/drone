@@ -31,8 +31,8 @@ import {
   useDuplicateAgriculturePlan,
   useReviewAgricultureObservation,
 } from "../hooks";
-import type { Comparability } from "../types";
-import { AgricultureGeoJsonPreview } from "./AgricultureGeoJsonPreview";
+import type { AgricultureComparison } from "../types";
+import { AgricultureTemporalChangeMap } from "./AgricultureTemporalChangeMap";
 import { FlightTimeline } from "./FlightTimeline";
 
 const TREND_COLORS: Record<
@@ -75,8 +75,6 @@ export function AgricultureTemporalWorkspace({
   );
   const [referenceFlightId, setReferenceFlightId] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState("split");
-  const [blinkCurrent, setBlinkCurrent] = useState(true);
   const [timelineIndex, setTimelineIndex] = useState(0);
   const [annotationMode, setAnnotationMode] = useState(false);
   const [label, setLabel] = useState("agronomist_review");
@@ -84,9 +82,9 @@ export function AgricultureTemporalWorkspace({
   const [notes, setNotes] = useState("");
   const [geometry, setGeometry] = useState("{}");
   const [comparisonId, setComparisonId] = useState<string | null>(null);
-  const [lastComparability, setLastComparability] = useState<Comparability | null>(null);
+  const [lastComparison, setLastComparison] = useState<AgricultureComparison | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
-  const rows = changes.data ?? EMPTY_ROWS;
+  const rows = lastComparison?.changes ?? changes.data ?? EMPTY_ROWS;
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0] ?? null;
   const latestRunId = analysisRuns.data?.[0]?.id ?? null;
   const planId =
@@ -100,43 +98,6 @@ export function AgricultureTemporalWorkspace({
   );
   const referenceBlocked =
     selectedComparable != null && selectedComparable.comparability.eligible === false;
-  const currentGeojson = useMemo(
-    () => ({
-      features: rows
-        .filter((row) => row.state !== "resolved")
-        .map((row) => ({
-          type: "Feature",
-          geometry: row.geometry_geojson,
-          properties: {
-            observation_id: row.id,
-            severity: Math.max(
-              0,
-              Math.min(
-                1,
-                row.delta_intensity == null ? 0.5 : 0.5 + row.delta_intensity,
-              ),
-            ),
-          },
-        })),
-    }),
-    [rows],
-  );
-  const previousGeojson = useMemo(
-    () => ({
-      features: rows
-        .map((row) => ({
-          type: "Feature",
-          geometry: row.reference_geometry_geojson,
-          properties: { observation_id: row.id, severity: 0.5 },
-        }))
-        .filter(
-          (feature) =>
-            feature.geometry && Object.keys(feature.geometry).length > 0,
-        ),
-    }),
-    [rows],
-  );
-
   const activeReferenceFlightId = referenceFlightId || references[0]?.id || "";
   useEffect(() => {
     if (selected)
@@ -241,7 +202,12 @@ export function AgricultureTemporalWorkspace({
               <Select
                 size="small"
                 value={activeReferenceFlightId}
-                onChange={(event) => setReferenceFlightId(event.target.value)}
+                onChange={(event) => {
+                  setReferenceFlightId(event.target.value);
+                  setComparisonId(null);
+                  setLastComparison(null);
+                  setWizardStep(0);
+                }}
                 inputProps={{ "aria-label": "Reference flight" }}
                 sx={{ minWidth: { xs: "100%", md: 220 } }}
               >
@@ -277,7 +243,7 @@ export function AgricultureTemporalWorkspace({
                     {
                       onSuccess: (result) => {
                         setComparisonId(result.id);
-                        setLastComparability(result.comparability ?? null);
+                        setLastComparison(result);
                         setWizardStep(2);
                       },
                     },
@@ -287,15 +253,6 @@ export function AgricultureTemporalWorkspace({
               >
                 {compare.isPending ? "Comparing…" : "Compare flights"}
               </Button>
-              <Select
-                size="small"
-                value={viewMode}
-                onChange={(event) => setViewMode(event.target.value)}
-                inputProps={{ "aria-label": "Comparison view" }}
-              >
-                <MenuItem value="split">Split</MenuItem>
-                <MenuItem value="blink">Toggle layers</MenuItem>
-              </Select>
             </Stack>
             {selectedComparable ? (
               <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
@@ -329,13 +286,22 @@ export function AgricultureTemporalWorkspace({
                 Selected reference is not eligible for trustworthy comparison. Choose another flight or resolve blockers first.
               </Alert>
             ) : null}
-            {lastComparability ? (
-              <Alert severity={lastComparability.eligible ? "success" : "warning"}>
-                Last compare: {lastComparability.status} (score {Number(lastComparability.score ?? 0).toFixed(2)})
-                {(lastComparability.warnings || []).length
-                  ? ` · warnings: ${(lastComparability.warnings || []).join(", ")}`
+            {lastComparison?.comparability ? (
+              <Alert severity={lastComparison.comparability.eligible ? "success" : "warning"}>
+                Last compare: {lastComparison.comparability.status} (score {Number(lastComparison.comparability.score ?? 0).toFixed(2)})
+                {(lastComparison.comparability.warnings || []).length
+                  ? ` · warnings: ${(lastComparison.comparability.warnings || []).join(", ")}`
                   : ""}
               </Alert>
+            ) : null}
+            {lastComparison ? (
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {lastComparison.source_runs?.current ? <Button size="small" component="a" href={`/dashboard/agriculture/analysis/${lastComparison.source_runs.current}`}>Current source run</Button> : null}
+                {lastComparison.source_runs?.reference ? <Button size="small" component="a" href={`/dashboard/agriculture/analysis/${lastComparison.source_runs.reference}`}>Reference source run</Button> : null}
+                <Typography variant="caption" color="text.secondary" sx={{ alignSelf: "center" }}>
+                  Method {String(lastComparison.methodology?.version ?? "observation_change.v1")} · {String(lastComparison.methodology?.matching ?? "same-type geometric overlap")}
+                </Typography>
+              </Stack>
             ) : null}
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
               <Button
@@ -388,6 +354,9 @@ export function AgricultureTemporalWorkspace({
                 setTimelineIndex(next);
                 if (flights[next]?.id && flights[next].id !== currentFlightId)
                   setReferenceFlightId(flights[next].id);
+                setComparisonId(null);
+                setLastComparison(null);
+                setWizardStep(0);
               }}
             />
             {changes.isError || compare.isError ? (
@@ -405,64 +374,7 @@ export function AgricultureTemporalWorkspace({
             ) : null}
             {rows.length ? (
               <>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                  {viewMode === "split" ? (
-                    <>
-                      <Stack sx={{ flex: 1 }}>
-                        <Typography variant="caption">Current</Typography>
-                        <AgricultureGeoJsonPreview
-                          geojson={currentGeojson}
-                          selectedId={selected?.id}
-                          onSelect={setSelectedId}
-                        />
-                      </Stack>
-                      <Stack sx={{ flex: 1 }}>
-                        <Typography variant="caption">Previous</Typography>
-                        <AgricultureGeoJsonPreview
-                          geojson={previousGeojson}
-                          selectedId={selected?.id}
-                          onSelect={setSelectedId}
-                        />
-                      </Stack>
-                    </>
-                  ) : (
-                    <Stack sx={{ flex: 1 }} spacing={1}>
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          size="small"
-                          variant={blinkCurrent ? "contained" : "outlined"}
-                          aria-pressed={blinkCurrent}
-                          onClick={() => setBlinkCurrent(true)}
-                        >
-                          Current
-                        </Button>
-                        <Button
-                          size="small"
-                          variant={!blinkCurrent ? "contained" : "outlined"}
-                          aria-pressed={!blinkCurrent}
-                          onClick={() => setBlinkCurrent(false)}
-                        >
-                          Previous
-                        </Button>
-                      </Stack>
-                      <Typography variant="caption">
-                        Showing {blinkCurrent ? "current" : "previous"} layer
-                      </Typography>
-                      <AgricultureGeoJsonPreview
-                        geojson={
-                          blinkCurrent ? currentGeojson : previousGeojson
-                        }
-                        selectedId={selected?.id}
-                        onSelect={setSelectedId}
-                      />
-                    </Stack>
-                  )}
-                </Stack>
-                <Typography variant="caption" color="text.secondary">
-                  {viewMode === "blink"
-                    ? "Toggle layers uses a static Current/Previous highlight (no auto-blink)."
-                    : "Split compares current and previous geometries side by side."}
-                </Typography>
+                <AgricultureTemporalChangeMap changes={rows} selectedId={selected?.id} onSelect={setSelectedId} />
                 <Divider />
                 <Stack
                   component="ul"

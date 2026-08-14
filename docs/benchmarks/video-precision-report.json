@@ -1,0 +1,57 @@
+{
+  "analysis": {
+    "accuracy_complete": true,
+    "live_evidence": false,
+    "map50_regression": 0.0020000000000000018,
+    "numeric_gates_pass": true,
+    "promote_fp16": false,
+    "reason": "Fixture data cannot promote FP16; run on the target CUDA worker.",
+    "recall_regression": 0.0020000000000000018,
+    "throughput_improvement_percent": 35.00000000000001
+  },
+  "captured_at": "2026-08-14T15:10:01Z",
+  "manifest": {
+    "batch_size": 8,
+    "confidence_threshold": 0.35,
+    "device": "cuda:0",
+    "fixture_model_checksum": "sha256:replace-with-production-model-checksum",
+    "gates": {
+      "max_map50_regression": 0.01,
+      "max_recall_regression": 0.01,
+      "min_throughput_improvement_percent": 15.0
+    },
+    "image_size": 640,
+    "model_name": "yolo26n.pt",
+    "name": "video-precision-representative",
+    "source_height": 1080,
+    "source_width": 1920,
+    "timed_batches": 10,
+    "validation_data": null,
+    "version": 1,
+    "warmup_batches": 2
+  },
+  "mode": "fixture",
+  "model_checksum": "sha256:replace-with-production-model-checksum",
+  "production_default": "fp32",
+  "rows": [
+    {
+      "batch_latency_ms": 200.0,
+      "images_per_second": 40.0,
+      "map50": 0.7,
+      "precision_mode": "fp32",
+      "recall": 0.72,
+      "stable": true,
+      "supported": true
+    },
+    {
+      "batch_latency_ms": 148.1,
+      "images_per_second": 54.0,
+      "map50": 0.698,
+      "precision_mode": "fp16",
+      "recall": 0.718,
+      "stable": true,
+      "supported": true
+    }
+  ],
+  "version": 1
+}

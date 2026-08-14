@@ -1,12 +1,29 @@
-from types import SimpleNamespace
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
-from backend.modules.agriculture.fusion import compute_vegetation_index, multimodal_risk, sensor_freshness, thermal_summary, validate_spectral_inputs
+from backend.modules.agriculture.fusion import (
+    compute_vegetation_index,
+    multimodal_risk,
+    sensor_freshness,
+    thermal_summary,
+    validate_spectral_inputs,
+)
 from backend.modules.agriculture.rgb_products import evaluate_rgb_products, product_gate_summary
 
 
 def _band(name, calibration_id="cal-1", alignment_status="pass", quality_status="pass", panel=True):
-    return SimpleNamespace(band_name=name, calibration_id=calibration_id, alignment_status=alignment_status, quality_status=quality_status, reflectance_panel={"reference": 1} if panel else {})
+    wavelengths = {"green": 550, "red": 660, "red_edge": 720, "nir": 840}
+    return SimpleNamespace(
+        id=f"band-{name}",
+        media_id="media-1",
+        band_name=name,
+        wavelength_nm=wavelengths[name],
+        sensor_serial="sensor-1",
+        calibration_id=calibration_id,
+        alignment_status=alignment_status,
+        quality_status=quality_status,
+        reflectance_panel={"reference": 1} if panel else {},
+    )
 
 
 def test_ndvi_requires_calibrated_aligned_red_and_nir():
@@ -17,19 +34,39 @@ def test_ndvi_requires_calibrated_aligned_red_and_nir():
 
 
 def test_rgb_cannot_become_ndvi_and_calibrated_index_is_auditable():
-    assert abs(compute_vegetation_index({"red": [0.2], "nir": [0.8]})["values"][0] - .6) < 1e-9
+    assert abs(compute_vegetation_index({"red": [0.2], "nir": [0.8]})["values"][0] - 0.6) < 1e-9
     assert compute_vegetation_index({"rgb": [0.2]})["status"] == "blocked"
+    ndre = compute_vegetation_index({"red_edge": [0.3], "nir": [0.7]}, index_name="ndre")
+    assert ndre["status"] == "pass"
+    assert ndre["required_bands"] == ["red_edge", "nir"]
 
 
 def test_thermal_without_radiometric_calibration_is_not_measured():
     assert thermal_summary([20, 40], calibrated=False)["status"] == "blocked"
     assert thermal_summary([], calibrated=True)["status"] == "not_measured"
+    assert thermal_summary([30], calibrated=True)["status"] == "blocked"
+    measured = thermal_summary(
+        [30, 35], calibrated=True, environmental_context={"ambient_air_temp_c": 25}
+    )
+    assert measured["status"] == "pass"
+    assert measured["mean_canopy_delta_c"] == 7.5
 
 
 def test_stale_sensor_reduces_multimodal_confidence_and_explains_gap():
-    reading = SimpleNamespace(sensor_type="soil_moisture", timestamp_utc=datetime.now(UTC) - timedelta(hours=2), stale_after_seconds=60, quality=.9, source="iot", values={"percent": 20}, units={"percent": "%"}, id="r1")
+    reading = SimpleNamespace(
+        sensor_type="soil_moisture",
+        timestamp_utc=datetime.now(UTC) - timedelta(hours=2),
+        stale_after_seconds=60,
+        quality=0.9,
+        source="iot",
+        values={"percent": 20},
+        units={"percent": "%"},
+        id="r1",
+    )
     state = sensor_freshness([reading])
-    risk = multimodal_risk(visual={"canopy_stress": .8}, thermal=None, sensor_state=state, crop_context={}, history={})
+    risk = multimodal_risk(
+        visual={"canopy_stress": 0.8}, thermal=None, sensor_state=state, crop_context={}, history={}
+    )
     assert state["soil_moisture"]["status"] == "stale"
     assert "soil_moisture" in risk["missing_inputs"]
     assert risk["explanation"].endswith("not a confirmed disease")

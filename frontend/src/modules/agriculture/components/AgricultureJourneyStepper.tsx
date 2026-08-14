@@ -1,6 +1,9 @@
-import { Button, Paper, Stack, Step, StepLabel, Stepper, Typography, useMediaQuery } from "@mui/material";
+import { Button, Chip, Paper, Stack, Step, StepLabel, Stepper, Typography, useMediaQuery } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { agricultureJourneyStages, deriveAgricultureJourneyStage } from "../journeyState";
+import {
+  buildAnalysisRunStatusPresentation,
+} from "../workflows/analysisRunStatusPresentation";
 
 export function AgricultureJourneyStepper({
   flightStatus,
@@ -16,6 +19,9 @@ export function AgricultureJourneyStepper({
   startAnalysisDisabled?: boolean;
 }) {
   const stage = deriveAgricultureJourneyStage({ flightStatus, analysisStatus });
+  const analysisPresentation = analysisStatus
+    ? buildAnalysisRunStatusPresentation({ status: analysisStatus })
+    : null;
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 
   return (
@@ -52,21 +58,30 @@ export function AgricultureJourneyStepper({
           alignItems={{ sm: "center" }}
           spacing={1}
         >
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              bgcolor: "action.selected",
-              border: "1px solid",
-              borderColor: "primary.main",
-              transition: reduceMotion ? "none" : "background-color 160ms ease",
-            }}
-          >
-            Current stage: {agricultureJourneyStages[stage]}
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                bgcolor: "action.selected",
+                border: "1px solid",
+                borderColor: "primary.main",
+                transition: reduceMotion ? "none" : "background-color 160ms ease",
+              }}
+            >
+              Current stage: {agricultureJourneyStages[stage]}
+            </Typography>
+            {analysisPresentation ? (
+              <Chip
+                size="small"
+                label={analysisPresentation.label}
+                color={analysisPresentation.chipColor}
+              />
+            ) : null}
+          </Stack>
           {analysisRunId ? (
             <Button
               sx={{ minHeight: 44 }}

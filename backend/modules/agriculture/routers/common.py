@@ -81,6 +81,10 @@ def _profile_out(profile) -> AgricultureFieldProfileOut:
         growth_stage=profile.growth_stage,
         row_direction_deg=profile.row_direction_deg,
         expected_row_spacing_m=profile.expected_row_spacing_m,
+        expected_plant_spacing_m=profile.expected_plant_spacing_m,
+        stand_gap_multiplier=profile.stand_gap_multiplier,
+        weed_density_cell_m=profile.weed_density_cell_m,
+        weed_hotspot_percentile=profile.weed_hotspot_percentile,
         soil_type=profile.soil_type,
         irrigation_method=profile.irrigation_method,
         management_zone=profile.management_zone,
@@ -218,4 +222,3 @@ def _parse_spatial_bbox(value: str | None) -> tuple[float, float, float, float] 
     if len(result) != 4 or result[0] >= result[2] or result[1] >= result[3] or result[0] < -180 or result[2] > 180 or result[1] < -90 or result[3] > 90:
         raise HTTPException(status_code=422, detail="bbox must be a valid EPSG:4326 extent")
     return result
-

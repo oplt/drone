@@ -29,6 +29,13 @@ export function AgricultureFieldProfile({
       value.expected_row_spacing_m == null
         ? ""
         : String(value.expected_row_spacing_m),
+    expected_plant_spacing_m:
+      value.expected_plant_spacing_m == null
+        ? ""
+        : String(value.expected_plant_spacing_m),
+    stand_gap_multiplier: String(value.stand_gap_multiplier ?? 1.75),
+    weed_density_cell_m: String(value.weed_density_cell_m ?? 10),
+    weed_hotspot_percentile: String(value.weed_hotspot_percentile ?? 0.8),
     soil_type: value.soil_type ?? "",
     irrigation_method: value.irrigation_method ?? "",
     management_zone: value.management_zone ?? "",
@@ -58,6 +65,10 @@ export function AgricultureFieldProfile({
               ["growth_stage", "Growth stage"],
               ["row_direction_deg", "Row direction (°)"],
               ["expected_row_spacing_m", "Row spacing (m)"],
+              ["expected_plant_spacing_m", "Plant spacing (m)"],
+              ["stand_gap_multiplier", "Gap threshold (× spacing)"],
+              ["weed_density_cell_m", "Weed grid cell (m)"],
+              ["weed_hotspot_percentile", "Weed hotspot percentile"],
               ["soil_type", "Soil type"],
               ["irrigation_method", "Irrigation"],
               ["management_zone", "Management zone"],
@@ -106,6 +117,12 @@ export function AgricultureFieldProfile({
                 expected_row_spacing_m: draft.expected_row_spacing_m
                   ? Number(draft.expected_row_spacing_m)
                   : null,
+                expected_plant_spacing_m: draft.expected_plant_spacing_m
+                  ? Number(draft.expected_plant_spacing_m)
+                  : null,
+                stand_gap_multiplier: Number(draft.stand_gap_multiplier),
+                weed_density_cell_m: Number(draft.weed_density_cell_m),
+                weed_hotspot_percentile: Number(draft.weed_hotspot_percentile),
               },
             })
           }

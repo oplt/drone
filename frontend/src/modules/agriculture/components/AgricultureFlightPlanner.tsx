@@ -16,7 +16,7 @@ import { AgriculturePlanPreviewCard } from "./AgriculturePlanPreviewCard";
 
 const defaultProfile: AgricultureMissionProfile = {
   flight_kind: "agriculture_survey", preset: "rgb_weed_water", crop_type: "", variety: "", season: "", growth_stage: "",
-  row_direction_deg: null, expected_row_spacing_m: null, target_gsd_cm: 2, speed_mps: 5, front_overlap_pct: 70, side_overlap_pct: 60,
+  row_direction_deg: null, expected_row_spacing_m: null, expected_plant_spacing_m: null, stand_gap_multiplier: 1.75, weed_density_cell_m: 10, weed_hotspot_percentile: 0.8, target_gsd_cm: 2, speed_mps: 5, front_overlap_pct: 70, side_overlap_pct: 60,
   camera_orientation: "nadir", fov_h_deg: 78, fov_v_deg: 62, camera_resolution_width_px: 4000, camera_resolution_height_px: 3000,
   focal_length_mm: null, grid_angle_deg: 0, sensor_inventory: ["rgb"], calibration_ids: [], requested_analyses: ["quality", "coverage"], repeat_interval_days: null,
 };

@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "name": "small-offline-video",
+  "video_path": "backend/storage/video_analysis/uploads/example-short.mp4",
+  "model_name": "yolo26n.pt",
+  "model_hash": "sha256:replace-with-artifact-checksum",
+  "hardware": {
+    "device": "cpu",
+    "gpu_name": null,
+    "worker_label": "local-dev"
+  },
+  "frame_stride_seconds": 1.0,
+  "confidence_threshold": 0.35,
+  "sahi_enabled": false,
+  "tracking_enabled": true,
+  "experiments": {
+    "baseline": {
+      "label": "baseline"
+    }
+  },
+  "expected_stage_keys": [
+    "queue_wait",
+    "decode",
+    "inference",
+    "tracking",
+    "telemetry",
+    "crop",
+    "persist",
+    "summary",
+    "total"
+  ],
+  "parity_tolerances": {
+    "confidence": 1e-5,
+    "box": 1e-5,
+    "frames_must_match": true,
+    "classes_must_match": true,
+    "detection_count_must_match": true
+  },
+  "fixture": {
+    "baseline": {
+      "stage_timings_seconds": {
+        "queue_wait": 0.2,
+        "decode": 2.4,
+        "inference": 6.5,
+        "tracking": 0.8,
+        "telemetry": 0.3,
+        "crop": 1.1,
+        "persist": 0.7,
+        "summary": 0.1,
+        "total": 12.1
+      },
+      "frames_per_second": 4.2,
+      "inference_batch_throughput": 1.0,
+      "detection_count": 42,
+      "peak_memory_mb": 640,
+      "selected_frames": [0, 15, 30],
+      "classes": ["weed"],
+      "class_counts": { "weed": 42 },
+      "detections": [
+        { "confidence": 0.88, "x1": 5, "y1": 10, "x2": 20, "y2": 30 }
+      ]
+    },
+    "experiment": {
+      "stage_timings_seconds": {
+        "queue_wait": 0.2,
+        "decode": 2.4,
+        "inference": 6.5,
+        "tracking": 0.8,
+        "telemetry": 0.3,
+        "crop": 1.1,
+        "persist": 0.7,
+        "summary": 0.1,
+        "total": 12.1
+      },
+      "frames_per_second": 4.2,
+      "inference_batch_throughput": 1.0,
+      "detection_count": 42,
+      "peak_memory_mb": 640,
+      "selected_frames": [0, 15, 30],
+      "classes": ["weed"],
+      "class_counts": { "weed": 42 },
+      "detections": [
+        { "confidence": 0.88, "x1": 5, "y1": 10, "x2": 20, "y2": 30 }
+      ]
+    }
+  }
+}

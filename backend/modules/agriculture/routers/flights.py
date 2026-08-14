@@ -101,8 +101,10 @@ async def get_telemetry_window(flight_id: str, timestamp_utc: datetime | None = 
     if timestamp_utc is not None:
         center = timestamp_utc.astimezone(UTC) if timestamp_utc.tzinfo else timestamp_utc.replace(tzinfo=UTC)
         query = query.where(AgricultureTelemetrySample.timestamp_utc >= center - timedelta(seconds=window_seconds), AgricultureTelemetrySample.timestamp_utc <= center + timedelta(seconds=window_seconds))
-    rows = list((await db.scalars(query.order_by(AgricultureTelemetrySample.timestamp_utc.asc()).limit(limit))).all())
-    return {"schema_version": AGRICULTURE_SCHEMA_VERSION, "flight_id": flight.id, "center_timestamp_utc": timestamp_utc, "window_seconds": window_seconds, "samples": [{"id": row.id, "timestamp_utc": row.timestamp_utc, "lat": row.lat, "lon": row.lon, "relative_altitude_m": row.relative_altitude_m, "absolute_altitude_m": row.absolute_altitude_m, "ground_speed_mps": row.ground_speed_mps, "gps_quality": row.gps_quality, "yaw_deg": row.yaw_deg, "camera_trigger": row.camera_trigger, "source": row.source} for row in rows]}
+    rows = list((await db.scalars(query.order_by(AgricultureTelemetrySample.timestamp_utc.asc()).limit(limit + 1))).all())
+    truncated = len(rows) > limit
+    rows = rows[:limit]
+    return {"schema_version": AGRICULTURE_SCHEMA_VERSION, "flight_id": flight.id, "center_timestamp_utc": timestamp_utc, "window_seconds": window_seconds, "truncated": truncated, "samples": [{"id": row.id, "timestamp_utc": row.timestamp_utc, "lat": row.lat, "lon": row.lon, "relative_altitude_m": row.relative_altitude_m, "absolute_altitude_m": row.absolute_altitude_m, "ground_speed_mps": row.ground_speed_mps, "gps_quality": row.gps_quality, "yaw_deg": row.yaw_deg, "camera_trigger": row.camera_trigger, "source": row.source} for row in rows]}
 
 
 @router.get("/flights/{flight_id}/timeline/bookmarks")
@@ -137,4 +139,3 @@ async def delete_timeline_bookmark(flight_id: str, bookmark_id: str, db: AsyncSe
     if row is None:
         raise HTTPException(status_code=404, detail="Timeline bookmark not found")
     await db.delete(row); await db.commit()
-

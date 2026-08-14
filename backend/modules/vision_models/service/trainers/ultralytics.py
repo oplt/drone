@@ -166,7 +166,7 @@ class UltralyticsTrainer:
             pretrained=True,
             seed=0,
             deterministic=True,
-            workers=0,
+            workers=request.dataloader_workers,
             plots=True,
             verbose=False,
             hsv_h=0.0,

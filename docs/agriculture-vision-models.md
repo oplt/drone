@@ -69,6 +69,11 @@ inference.
 - `worker-vision` consumes only the `vision-training` queue at concurrency one.
 - CPU training works but is expected to be slow; production deployments should
   configure an accelerator and suitable worker limits.
+- `VISION_TRAINING_DATALOADER_WORKERS` controls Ultralytics PyTorch dataloader
+  workers (default `0`, safest on macOS/Windows and small CPU hosts). On Linux
+  GPU workstations, benchmark `2`–`4` before raising. See
+  `docs/benchmarks/vision-training-dataloader.md`. Value stored on each run as
+  `config.dataloader_workers` and in published `metadata.json`.
 - Training run status is `queued`, `running`, `cancelling`, `completed`,
   `failed`, or `cancelled`. A model version exists only after evaluation completes, so its
   evaluation resource is always `completed`; failed evaluation remains on the

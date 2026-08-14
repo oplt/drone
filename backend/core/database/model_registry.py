@@ -16,6 +16,7 @@ _MODEL_MODULES = (
     "backend.modules.agriculture.sensor_models",
     "backend.modules.agriculture.p4_models",
     "backend.modules.agriculture.p5_models",
+    "backend.modules.agriculture.intervention_models",
     "backend.modules.agriculture.governance_models",
     "backend.modules.agents.models",
     "backend.modules.alerts.models",
@@ -43,6 +44,7 @@ _MODEL_MODULES = (
     "backend.modules.warehouse.models",
     "backend.modules.video_analysis.models",
     "backend.modules.vision_models.models",
+    "backend.modules.workflow_events.models",
 )
 
 _registered = False

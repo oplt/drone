@@ -72,10 +72,11 @@ vi.mock("../hooks", () => ({
   useAgricultureObservationAudits: () => ({ data: [] }),
 }));
 
-vi.mock("./ObservationMap", () => ({
-  ObservationMap: () => <div>Observation map</div>,
+vi.mock("./AgricultureReviewMapPanel", () => ({
+  AgricultureReviewMapPanel: ({ onSelect }: { onSelect: (id: string) => void }) => (
+    <button onClick={() => onSelect("obs-1")}>Select weed on map</button>
+  ),
 }));
-vi.mock("./CoverageMapLayer", () => ({ CoverageMapLayer: () => null }));
 vi.mock("./RGBProductPanel", () => ({ RGBProductPanel: () => null }));
 vi.mock("./EvidenceFrameCarousel", () => ({
   EvidenceFrameCarousel: () => <div>Evidence</div>,
@@ -110,7 +111,7 @@ describe("AgricultureReviewWorkspace", () => {
       screen.queryByRole("button", { name: /Review standing water/i }),
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Review weed/i }));
+    await user.click(screen.getByRole("button", { name: "Select weed on map" }));
     await user.click(screen.getByRole("button", { name: "Confirm" }));
     expect(reviewMutate).toHaveBeenCalled();
   });

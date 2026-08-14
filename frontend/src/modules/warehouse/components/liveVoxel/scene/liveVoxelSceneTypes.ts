@@ -1,4 +1,4 @@
-import type { LiveMapColorMode, LiveMapLayerKey } from "../../utils/liveMapLayerUtils";
+import type { LiveMapColorMode, LiveMapLayerKey } from "../../../utils/liveMapLayerUtils";
 
 export type LiveVoxelLayers = Record<LiveMapLayerKey, boolean>;
 

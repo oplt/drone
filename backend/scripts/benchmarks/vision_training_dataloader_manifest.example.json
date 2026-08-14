@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "name": "vision-training-dataloader-representative",
+  "base_model": "yolo26n.pt",
+  "benchmark_epochs": 1,
+  "image_size": 640,
+  "batch_size": 8,
+  "images_per_split": 16,
+  "worker_counts": [0, 2, 4],
+  "hardware": {
+    "device_label": "example-gpu-workstation",
+    "gpu_name": "replace-with-live-nvidia-smi-name",
+    "cpu_cores": 16,
+    "ram_gb": 32
+  },
+  "adoption_threshold_percent": 15,
+  "fixture": {
+    "0": {
+      "epoch_duration_seconds": 42.5,
+      "total_duration_seconds": 42.5,
+      "gpu_util_avg_pct": 62.0,
+      "cpu_util_avg_pct": 28.0,
+      "ram_peak_mb": 6800,
+      "stable": true,
+      "notes": "Baseline single-process loading; lowest RAM."
+    },
+    "2": {
+      "epoch_duration_seconds": 36.1,
+      "total_duration_seconds": 36.1,
+      "gpu_util_avg_pct": 74.0,
+      "cpu_util_avg_pct": 41.0,
+      "ram_peak_mb": 7100,
+      "stable": true,
+      "notes": "~15% faster epoch vs workers=0 with higher GPU occupancy."
+    },
+    "4": {
+      "epoch_duration_seconds": 35.4,
+      "total_duration_seconds": 35.4,
+      "gpu_util_avg_pct": 76.0,
+      "cpu_util_avg_pct": 48.0,
+      "ram_peak_mb": 7600,
+      "stable": true,
+      "notes": "Marginal gain vs workers=2; more CPU/RAM pressure."
+    }
+  }
+}

@@ -5,6 +5,8 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+import threading
+import time
 
 import cv2
 import numpy as np
@@ -76,7 +78,28 @@ def iter_frames(
     *,
     every_seconds: float = 1.0,
     decode_stride_enabled: bool = False,
+    decoder_mode: str | None = None,
+    cancel_event: threading.Event | None = None,
 ) -> Iterator[ExtractedFrame]:
+    from backend.shared.media_frame_decoders import (
+        DEFAULT_DECODER,
+        iter_frames_with_decoder,
+        resolve_effective_decoder,
+    )
+
+    configured = decoder_mode or DEFAULT_DECODER
+    effective = resolve_effective_decoder(
+        configured=configured,
+        decode_stride_enabled=decode_stride_enabled,
+    )
+    if effective != DEFAULT_DECODER or configured != DEFAULT_DECODER:
+        yield from iter_frames_with_decoder(
+            video_path,
+            every_seconds=every_seconds,
+            decoder_mode=effective,
+            cancel_event=cancel_event,
+        )
+        return
     if every_seconds <= 0:
         raise ValueError("every_seconds must be > 0")
     capture = cv2.VideoCapture(str(video_path))
@@ -92,6 +115,8 @@ def iter_frames(
                 fps=fps,
                 every_seconds=every_seconds,
             ):
+                if cancel_event is not None and cancel_event.is_set():
+                    raise RuntimeError("Video frame decode cancelled")
                 capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
                 ok, frame = capture.read()
                 if not ok:
@@ -104,6 +129,8 @@ def iter_frames(
             return
         frame_index = 0
         while True:
+            if cancel_event is not None and cancel_event.is_set():
+                raise RuntimeError("Video frame decode cancelled")
             ok, frame = capture.read()
             if not ok:
                 break
@@ -127,17 +154,23 @@ async def async_iter_frames(
     *,
     every_seconds: float = 1.0,
     decode_stride_enabled: bool = False,
+    decoder_mode: str | None = None,
+    stage_timings: dict[str, float] | None = None,
 ) -> AsyncIterator[ExtractedFrame]:
+    cancel_event = threading.Event()
     iterator = iter_frames(
         video_path,
         every_seconds=every_seconds,
         decode_stride_enabled=decode_stride_enabled,
+        decoder_mode=decoder_mode,
+        cancel_event=cancel_event,
     )
     queue: asyncio.Queue[object] = asyncio.Queue(maxsize=MAX_FRAME_BUFFER)
 
     async def _decode() -> None:
         try:
             while True:
+                started = time.monotonic()
                 frame = await run_blocking(
                     _next_frame_or_none,
                     iterator,
@@ -145,6 +178,10 @@ async def async_iter_frames(
                     operation="decode_video_frame",
                     timeout_s=30.0,
                 )
+                if stage_timings is not None:
+                    stage_timings["decode"] = stage_timings.get("decode", 0.0) + (
+                        (time.monotonic() - started) * 1000.0
+                    )
                 await queue.put(frame)
                 if frame is None:
                     return
@@ -162,6 +199,7 @@ async def async_iter_frames(
                 return
             yield item
     finally:
+        cancel_event.set()
         producer.cancel()
         with suppress(asyncio.CancelledError):
             await producer

@@ -1,0 +1,2114 @@
+# DRONE PLATFORM IMPROVEMENT ROADMAP
+# Cursor execution plan — ordered from easiest / lowest-risk to hardest / highest-dependency
+
+# Purpose:
+#   Convert the architecture/product audit into an implementation backlog Cursor can execute phase by phase.
+#
+# EXECUTION RULES FOR CURSOR
+# --------------------------------------------------------------------
+# 1. Work in phase order. Do not start a task whose dependencies are incomplete.
+# 2. Before modifying code, inspect the referenced files and confirm the current implementation.
+# 3. Prefer small, reversible commits. One logical task per commit where practical.
+# 4. Do not replace working architecture merely to match this roadmap.
+# 5. Preserve existing APIs and URLs unless the task explicitly requires migration.
+# 6. Add or update tests for every behavior change.
+# 7. Run relevant backend/frontend tests, linting, type checks, and build checks after each task.
+# 8. For performance tasks, measure before and after. Do not merge speculative optimizations.
+# 9. For ML changes, preserve dataset/model reproducibility, immutable dataset versions,
+#    model checksums, audit history, and human approval gates.
+# 10. For agriculture claims, preserve the current evidence-first policy:
+#     visual evidence != diagnosis unless the model/data contract explicitly supports diagnosis.
+# 11. Keep accessibility behavior when replacing or restructuring map/review interfaces.
+# 12. If a task uncovers a blocking architectural issue, document it before expanding scope.
+#
+# COMPLEXITY
+#   XS = very small / isolated
+#   S  = small
+#   M  = medium
+#   L  = large
+#   XL = architectural / multi-system
+#
+# PRIORITY
+#   P1 = high-value / near-term
+#   P2 = important after P1
+#   P3 = defer until demand or scale justifies it
+#
+# --------------------------------------------------------------------
+# PHASE 0 — BASELINE, SAFETY, AND MEASUREMENT
+# Easiest tasks first. These create guardrails for later optimization work.
+# --------------------------------------------------------------------
+
+[x] TASK 0.1 — Document current performance baseline
+Priority: P1
+Complexity: XS
+Dependencies: none
+
+Goal:
+Create a reproducible baseline for backend, video, agriculture, training, and frontend behavior before optimizations.
+
+Measure at minimum:
+- API p50 / p95 latency for agriculture read endpoints.
+- API request count while an agriculture analysis page is open.
+- Video decode FPS.
+- Video inference FPS.
+- End-to-end analysis seconds per source-video minute.
+- GPU utilization during inference.
+- GPU utilization during training.
+- Training epoch duration.
+- Agriculture job queue wait time.
+- Time from upload/flight completion to first actionable finding.
+- Frontend route bundle sizes for agriculture, vision training, maps, and video analysis.
+
+Likely files:
+- backend/observability/*
+- frontend existing performance/bundle scripts
+- docs/performance-baseline.md or equivalent
+- backend/scripts/*
+
+Acceptance criteria:
+- A documented command/runbook reproduces the measurements.
+- Baseline values are recorded for at least one small and one representative video.
+- No production behavior changes.
+
+Tests:
+- Existing test suite only.
+
+------------------------------------------------------------
+
+[x] TASK 0.2 — Add/verify named timing metrics for the critical media pipeline
+Priority: P1
+Complexity: S
+Dependencies: TASK 0.1
+
+Goal:
+Ensure the video/agriculture path exposes separate timings instead of one total duration.
+
+Record:
+- media open/probe
+- decode
+- frame sampling
+- preprocessing
+- inference
+- tracking
+- telemetry matching
+- evidence generation
+- database persistence
+- agriculture aggregation
+- export generation
+
+Likely files:
+- backend/modules/video_analysis/*
+- backend/modules/agriculture/*
+- backend/observability/*
+
+Acceptance criteria:
+- Metrics can identify whether decode, inference, persistence, or aggregation is dominant.
+- Metrics use bounded labels to avoid Prometheus cardinality explosions.
+- Existing analysis behavior is unchanged.
+
+Tests:
+- Unit test metric instrumentation where practical.
+- Existing video/agriculture tests pass.
+
+------------------------------------------------------------
+
+[x] TASK 0.3 — Add a performance-regression checklist to repository docs
+Priority: P2
+Complexity: XS
+Dependencies: TASK 0.1
+
+Goal:
+Prevent future Cursor changes from silently degrading throughput.
+
+Checklist should require:
+- before/after timing for media changes
+- API request-count comparison for polling/query changes
+- GPU utilization check for training/inference changes
+- bundle size check for frontend dependency changes
+- memory usage check for dataset/training materialization changes
+
+Acceptance criteria:
+- Checklist is concise and referenced from contributor/development docs.
+
+# --------------------------------------------------------------------
+# PHASE 1 — QUICK FRONTEND/BACKEND EFFICIENCY WINS
+# Low-risk tasks with clear implementation boundaries.
+# --------------------------------------------------------------------
+
+[x] TASK 1.1 — Stop agriculture polling after terminal analysis states
+Priority: P1
+Complexity: S
+Dependencies: none
+
+Goal:
+Prevent findings/fusion/actions/exports/crop-risk/growth-stage queries from polling every 5 seconds after the run is finished.
+
+Inspect:
+- frontend/src/modules/agriculture/workflows/analysis/hooks.ts
+- frontend/src/modules/agriculture/workflows/queryKeys.ts
+- related agriculture hooks
+
+Implementation:
+- Define/reuse one shared helper for active vs terminal analysis states.
+- Poll only while state is queued/running/waiting/pending.
+- Stop polling for completed/failed/cancelled/blocked terminal states.
+- Continue to invalidate queries after mutations.
+
+Acceptance criteria:
+- No repeated polling after terminal state.
+- Active analyses continue updating.
+- Hidden-tab visibility behavior remains correct.
+- No stale data after review/action mutations.
+
+Tests:
+- React Query tests with fake timers.
+- Test active and terminal states.
+
+------------------------------------------------------------
+
+[x] TASK 1.2 — Centralize agriculture lifecycle-state helpers
+Priority: P2
+Complexity: XS
+Dependencies: TASK 1.1
+
+Goal:
+Remove duplicated status arrays across hooks/components.
+
+Implementation:
+Create helpers such as:
+- isAgricultureRunActive(status)
+- isAgricultureRunTerminal(status)
+- isAgricultureQualityTerminal(status)
+
+Acceptance criteria:
+- Status logic is defined in one small module.
+- Existing components/hooks import shared helpers.
+- No behavior regression.
+
+------------------------------------------------------------
+
+[x] TASK 1.3 — Make Ultralytics dataloader worker count configurable
+Priority: P1
+Complexity: S
+Dependencies: TASK 0.1
+
+Goal:
+Replace hard-coded training workers=0 with environment/config driven concurrency.
+
+Implementation:
+- Add setting: VISION_TRAINING_DATALOADER_WORKERS.
+- Keep default conservative/safe.
+- Pass value into Ultralytics training.
+- Document recommended local CPU and GPU values.
+
+Acceptance criteria:
+- Current default behavior remains safe.
+- Worker count can be changed without source edits.
+- Training run metadata records the configured worker count.
+
+Tests:
+- Config parsing test.
+- Trainer invocation test.
+
+------------------------------------------------------------
+
+[x] TASK 1.4 — Benchmark training dataloader worker values
+Priority: P1
+Complexity: S
+Dependencies: TASK 1.3
+
+Goal:
+Determine whether workers 2–4 improve GPU occupancy and epoch time.
+
+Benchmark:
+- workers=0
+- workers=2
+- workers=4
+
+Measure:
+- epoch duration
+- GPU utilization
+- CPU utilization
+- RAM
+- training stability
+
+Adoption rule:
+Do not change production defaults unless results show a meaningful improvement
+(e.g. ~15% lower epoch duration or materially better GPU occupancy).
+
+Output:
+- docs/benchmarks/vision-training-dataloader.md
+
+------------------------------------------------------------
+
+[x] TASK 1.5 — Add candidate-vs-production metric deltas
+Priority: P2
+Complexity: S
+Dependencies: none
+
+Goal:
+Make model evaluation answer “should I deploy this candidate?”
+
+Inspect:
+- frontend/src/modules/agriculture/components/EvaluationDashboard.tsx
+- EvaluationMetricsPanel.tsx
+- EvaluationComparison.tsx
+
+Show deltas for:
+- mAP50
+- mAP50-95
+- precision
+- recall
+- inference FPS/latency if available
+- model size if available
+
+Acceptance criteria:
+- Positive/negative change is clear without requiring manual comparison.
+- Missing metrics degrade gracefully.
+- Current production model remains identifiable.
+
+Tests:
+- Component tests for better/worse/equal/missing comparisons.
+
+------------------------------------------------------------
+
+[x] TASK 1.6 — Add “reuse validated inference” messaging to agriculture analysis
+Priority: P2
+Complexity: S
+Dependencies: none
+
+Goal:
+Expose existing analysis/result reuse so operators know the system is not reprocessing identical inputs.
+
+Show when applicable:
+- source checksum match
+- model/version match
+- profile match
+- reused prior run/job ID
+- original completion time
+
+Acceptance criteria:
+- Reuse is transparent but not visually dominant.
+- Users can distinguish reused validated output from newly computed output.
+
+------------------------------------------------------------
+
+[x] TASK 1.7 — Audit map-library usage and produce removal candidates
+Priority: P2
+Complexity: S
+Dependencies: none
+
+Goal:
+Identify duplicate mapping dependencies and unused map engines.
+
+Inspect:
+- package.json
+- Google Maps usage
+- MapLibre usage
+- Leaflet usage
+- Cesium usage
+- map provider wrappers
+
+Output:
+Create docs/map-library-audit.md with:
+- actual consumers
+- route
+- reason library is required
+- candidate for removal
+- bundle impact where available
+
+Do NOT remove dependencies in this task.
+
+------------------------------------------------------------
+
+[x] TASK 1.8 — Remove unused mapping dependencies confirmed by audit
+Priority: P2
+Complexity: S/M
+Dependencies: TASK 1.7
+
+Goal:
+Reduce frontend bundle/dependency surface without breaking map workflows.
+
+Acceptance criteria:
+- Only libraries with zero required consumers are removed.
+- Frontend typecheck/build/e2e map tests pass.
+- Bundle size is compared before/after.
+
+# --------------------------------------------------------------------
+# PHASE 2 — PRODUCT SHELL AND AGRICULTURE UX CLEANUP
+# Moderate UI work before replacing map technology.
+# --------------------------------------------------------------------
+
+[x] TASK 2.1 — Promote agriculture map/review workspace out of the accordion
+Priority: P1
+Complexity: M
+Dependencies: none
+
+Goal:
+Align the product with the geospatial-first agriculture principle.
+
+Inspect:
+- frontend/src/modules/agriculture/views/AgricultureAnalysisPage.tsx
+- AgricultureReviewWorkspace.tsx
+- PrioritizedFindingsPanel.tsx
+
+Target desktop structure:
+- left/main: map/evidence workspace
+- right: prioritized findings
+- below: report/secondary analysis information
+
+Mobile/tablet:
+- preserve usable stacked layout
+- preserve accessible review list
+
+Acceptance criteria:
+- Map is immediately visible on analysis page.
+- Findings remain easy to scan.
+- Advanced specialist tools remain secondary.
+- Existing accessibility tests continue passing.
+
+------------------------------------------------------------
+
+[x] TASK 2.2 — Add direct “jump to evidence” action to prioritized findings
+Priority: P1
+Complexity: S/M
+Dependencies: TASK 2.1
+
+Goal:
+From any finding, reach source evidence in one action.
+
+Behavior:
+- select the observation/finding
+- open review drawer
+- focus evidence carousel
+- preserve deep-link/search-param state where useful
+
+Acceptance criteria:
+- One click from prioritized finding to evidence.
+- Selection remains synchronized across list and review workspace.
+
+------------------------------------------------------------
+
+[x] TASK 2.3 — Simplify top-level navigation into product-oriented groups
+Priority: P1
+Complexity: M
+Dependencies: none
+
+Goal:
+Reduce engineering-oriented navigation clutter.
+
+Target structure:
+Workspace
+- Overview
+
+Operations
+- Missions
+- Fleet
+- Live Operations
+- History
+
+Applications
+- Agriculture
+- Property Inspection/Patrol
+- Warehouse
+- Other verticals as justified
+
+AI & Models
+- Agents
+- Automations
+- Datasets
+- Training
+- Deployments
+
+Administration
+- Team
+- Integrations
+- Audit
+- Usage
+- System/Observability
+
+Rules:
+- Preserve existing URLs initially.
+- Use navigation aliases/redirects rather than breaking routes.
+- Do not expose observability as a primary operator feature.
+
+Likely files:
+- DashboardShell/navigation components
+- AppRouter.tsx
+- feature navigation definitions
+
+Acceptance criteria:
+- Existing deep links still resolve.
+- Primary operator journeys require fewer top-level choices.
+- Admin-only areas remain protected.
+
+------------------------------------------------------------
+
+[x] TASK 2.4 — Separate operator, agronomist/reviewer, and admin navigation visibility
+Priority: P2
+Complexity: M
+Dependencies: TASK 2.3
+
+Goal:
+Use existing role foundations to reduce irrelevant UI.
+
+Examples:
+- pilot: operations/fleet/flight
+- reviewer/agronomist-like role or capability: agriculture review
+- admin/org_admin: system/audit/integrations
+- viewer: read-only dashboards
+
+Important:
+Do not invent new roles unless needed; prefer capability checks on top of existing roles.
+
+Acceptance criteria:
+- Authorization remains backend-enforced.
+- UI hiding is not treated as security.
+- Navigation is role/capability aware.
+
+------------------------------------------------------------
+
+[x] TASK 2.5 — Create unified analysis-status presentation
+Priority: P2
+Complexity: S/M
+Dependencies: TASK 1.2
+
+Goal:
+Make queued/running/waiting/blocked/failed/completed states consistent across agriculture pages.
+
+Include:
+- current stage
+- overall progress
+- retryability
+- quality block reason
+- last update
+- cancellation state
+
+Acceptance criteria:
+- Same status has same label and visual semantics everywhere.
+- No duplicate status formatting logic across multiple components.
+
+------------------------------------------------------------
+
+[x] TASK 2.6 — Improve training-run list vs detail hierarchy
+Priority: P2
+Complexity: M
+Dependencies: none
+
+Goal:
+Keep list cards simple and put advanced metrics on a dedicated run-details view.
+
+List shows:
+- model
+- preset
+- status
+- epoch
+- overall progress
+- device
+- quick cancel/retry
+
+Details show:
+- training/validation loss
+- precision
+- recall
+- mAP50
+- mAP50-95
+- epoch duration
+- GPU utilization if available
+- best epoch
+- checkpoint/evaluation status
+
+Acceptance criteria:
+- Existing training workspace is not overloaded.
+- Run details are deep-linkable.
+- Refresh preserves selected run.
+
+# --------------------------------------------------------------------
+# PHASE 3 — VIDEO PIPELINE PERFORMANCE
+# Benchmark first, then optimize only where measurements justify it.
+# --------------------------------------------------------------------
+
+[x] TASK 3.1 — Create repeatable video decoder benchmark tool
+Priority: P1
+Complexity: M
+Dependencies: TASK 0.1
+
+Goal:
+Benchmark current OpenCV frame sampling against alternatives.
+
+Implement benchmark modes:
+A. OpenCV sequential decode + discard
+B. OpenCV frame seek
+C. PyAV sequential decode/sample
+D. FFmpeg filter/pipe sample, if practical
+
+Inputs:
+- 1080p H.264
+- 4K H.264/H.265 where available
+- short and long clips
+- sample rates such as 0.5, 1, 2, 5 FPS
+
+Metrics:
+- wall time
+- CPU time
+- decoded frames
+- selected frames
+- RAM
+- timestamp error
+- source-video minutes processed per minute
+
+Output:
+- machine-readable JSON/CSV
+- human-readable benchmark report
+
+Acceptance criteria:
+- Benchmark does not alter production code path.
+- Timing methodology is documented.
+
+------------------------------------------------------------
+
+[x] TASK 3.2 — Adopt a better decoder only if benchmark threshold is met
+Priority: P1
+Complexity: M/L
+Dependencies: TASK 3.1
+
+Adoption threshold:
+Use alternative decoder only if representative workload demonstrates approximately:
+- >=30% lower CPU cost, OR
+- >=25% lower end-to-end media processing time,
+with acceptable timestamp accuracy and reliability.
+
+Implementation requirements:
+- feature flag/config switch
+- fallback to current decoder
+- same frame metadata contract
+- cancellation support
+- bounded memory
+
+Likely files:
+- backend/shared/media_frames.py
+- video analysis service/pipeline
+
+Tests:
+- frame-count/timestamp equivalence tests
+- corrupted media tests
+- cancellation tests
+
+------------------------------------------------------------
+
+[x] TASK 3.3 — Add bounded decode/inference prefetch pipeline
+Priority: P1
+Complexity: M
+Dependencies: TASK 3.2 or evidence current decoder is sufficient
+
+Goal:
+Overlap CPU frame preparation with GPU inference.
+
+Design:
+decoder/preprocessor
+    -> bounded queue
+    -> batch builder
+    -> GPU inference
+    -> postprocess/persist
+
+Requirements:
+- strict queue max size
+- cancellation propagation
+- no unbounded frame accumulation
+- configurable prefetch size
+
+Measure:
+- GPU idle percentage
+- end-to-end processing time
+- RAM
+
+Acceptance criteria:
+- Improvement is measurable.
+- Memory remains bounded under long videos.
+
+------------------------------------------------------------
+
+[x] TASK 3.4 — Benchmark inference batch size per device/profile
+Priority: P1
+Complexity: M
+Dependencies: TASK 0.2
+
+Goal:
+Find practical batch sizes for standard YOLO inference.
+
+Benchmark batch sizes:
+- 1
+- 2
+- 4
+- 8
+- larger only if memory permits
+
+Track:
+- images/sec
+- GPU utilization
+- VRAM
+- latency
+- OOM behavior
+
+Output:
+- recommended defaults by device class/profile
+
+Do not hard-code one universal batch size.
+
+------------------------------------------------------------
+
+[x] TASK 3.5 — Add capability-specific inference profiles
+Priority: P1
+Complexity: M
+Dependencies: TASK 3.4
+
+Goal:
+Avoid running every agriculture capability with the same FPS, image size, confidence, or SAHI configuration.
+
+Profiles may differ for:
+- weed detection
+- stand count
+- visible crop-health anomaly
+- row detection
+- standing water
+- general anomaly
+
+Each profile should define:
+- sample FPS
+- image size
+- confidence threshold
+- batch size
+- SAHI enabled/disabled
+- SAHI slice parameters when relevant
+
+Acceptance criteria:
+- Profile is versioned/recorded with analysis fingerprint.
+- Reuse logic includes profile identity.
+- Defaults preserve current behavior until benchmarked.
+
+------------------------------------------------------------
+
+[x] TASK 3.6 — Restrict SAHI to capabilities that benefit from it
+Priority: P2
+Complexity: S/M
+Dependencies: TASK 3.5
+
+Goal:
+Avoid expensive sliced inference where standard full-frame inference is adequate.
+
+Measure:
+- accuracy change
+- runtime multiplier
+- small-object recall
+
+Acceptance criteria:
+- SAHI use is explicitly capability/profile driven.
+- No hidden automatic activation that changes reproducibility.
+
+------------------------------------------------------------
+
+[x] TASK 3.7 — Evaluate FP16 inference where supported
+Priority: P2
+Complexity: M
+Dependencies: TASK 3.4
+
+Goal:
+Improve GPU throughput if precision impact is acceptable.
+
+Requirements:
+- device capability check
+- profile/config flag
+- benchmark accuracy and performance
+- record precision mode in analysis metadata
+
+Do not enable globally without results.
+
+------------------------------------------------------------
+
+[x] TASK 3.8 — TensorRT feasibility experiment
+Priority: P3
+Complexity: L
+Dependencies: TASK 3.4, TASK 3.7
+
+Only perform if profiling proves model inference is still the dominant bottleneck.
+
+Goal:
+Prototype export/runtime for one production model.
+
+Acceptance criteria:
+- Compare accuracy, cold-start, throughput, deployment complexity, model-management burden.
+- Do not replace PyTorch/Ultralytics path unless operational benefit is compelling.
+
+# --------------------------------------------------------------------
+# PHASE 4 — PROFESSIONAL AGRICULTURE GIS WORKSPACE
+# This is the highest-value visible product improvement.
+# --------------------------------------------------------------------
+
+[x] TASK 4.1 — Build reusable AgricultureAnalysisMap abstraction
+Priority: P1
+Complexity: M/L
+Dependencies: TASK 2.1, TASK 1.7
+
+Goal:
+Replace the SVG-only preview with a real GIS analysis surface.
+
+Preferred design:
+AgricultureAnalysisMap
+- FieldBoundaryLayer
+- FlightPathLayer
+- ObservationClusterLayer
+- SeverityLayer
+- HeatmapLayer
+- InterventionZoneLayer
+- SelectionLayer
+
+Preferred renderer:
+- MapLibre for high-volume analytical GeoJSON/raster overlays,
+unless existing project constraints demonstrate another renderer is better.
+
+Keep:
+- accessible text/list alternative
+- keyboard review workflow
+- URL/deep-link selection state where useful
+
+Acceptance criteria:
+- Pan/zoom/fit bounds.
+- 5,000+ observations remain usable.
+- Selection event returns observation/finding ID.
+- Cluster expansion works.
+- Layer visibility can be toggled.
+- No accessibility regression.
+
+------------------------------------------------------------
+
+[x] TASK 4.2 — Replace AgricultureGeoJsonPreview in analysis workflow
+Priority: P1
+Complexity: M
+Dependencies: TASK 4.1
+
+Goal:
+Use the new GIS map in the primary agriculture analysis review workspace.
+
+Acceptance criteria:
+- Existing quality/observation data renders correctly.
+- Selected observation is synchronized with review drawer.
+- Existing SVG component can remain temporarily only where needed by tests/legacy screens.
+
+------------------------------------------------------------
+
+[x] TASK 4.3 — Add field boundary and flight path overlays
+Priority: P1
+Complexity: M
+Dependencies: TASK 4.1
+
+Goal:
+Give findings spatial context.
+
+Show:
+- field polygon
+- flight path
+- coverage/quality gaps if available
+- observation clusters
+
+Acceptance criteria:
+- Overlay data comes from existing geospatial/flight sources.
+- No invented coordinates.
+- Missing telemetry degrades gracefully.
+
+------------------------------------------------------------
+
+[x] TASK 4.4 — Add observation heatmap / density rendering
+Priority: P1
+Complexity: M
+Dependencies: TASK 4.2
+
+Goal:
+Help users understand concentrations instead of individual boxes only.
+
+Use for suitable layers:
+- weed density
+- stand gaps
+- visible stress observations
+- standing water
+- generic anomaly density
+
+Acceptance criteria:
+- Heatmap can be toggled.
+- Scale/legend is interpretable.
+- Raw observations remain inspectable.
+
+------------------------------------------------------------
+
+[x] TASK 4.5 — Synchronize map -> finding -> review drawer
+Priority: P1
+Complexity: M
+Dependencies: TASK 4.2
+
+Behavior:
+- map click selects finding/observation
+- corresponding list item is selected
+- review drawer opens
+- evidence carousel is ready
+
+Acceptance criteria:
+- Selection has one canonical state source.
+- No conflicting map/list/drawer selection states.
+
+------------------------------------------------------------
+
+[x] TASK 4.6 — Synchronize evidence/video timestamp with spatial selection
+Priority: P1
+Complexity: L
+Dependencies: TASK 4.5
+
+Goal:
+Create the critical spatial-temporal review experience.
+
+Behavior:
+map hotspot
+ -> finding
+ -> evidence frame
+ -> source video
+ -> seek to event timestamp
+ -> optionally play a small window around event
+
+Acceptance criteria:
+- Timestamp is traceable to source media.
+- Video seek works when video exists.
+- Image-only evidence remains supported.
+- Selected evidence is visually linked to map location.
+
+------------------------------------------------------------
+
+[x] TASK 4.7 — Add comparable-flight temporal change layer
+Priority: P1
+Complexity: L
+Dependencies: TASK 4.3
+
+Goal:
+Turn repeat flights into change intelligence.
+
+Initial scope:
+- compare same field across compatible flights
+- show new/resolved/persistent findings
+- calculate area/count change
+- explicitly surface comparison quality/compatibility
+
+Example:
+“Weed-pressure zone expanded 24% since previous comparable flight.”
+
+Requirements:
+- only compare compatible data/model/sensor contexts
+- expose uncertainty
+- never present incompatible flights as exact change
+
+Acceptance criteria:
+- Temporal result links to both source runs.
+- Change layer is map-visible.
+- Comparison methodology is recorded.
+
+------------------------------------------------------------
+
+[x] TASK 4.8 — Add intervention-zone editor from reviewed observations
+Priority: P1
+Complexity: L
+Dependencies: TASK 4.5
+
+Goal:
+Convert confirmed findings into actionable geospatial zones.
+
+Flow:
+confirmed observations
+ -> merge/select
+ -> proposed zone
+ -> human edit
+ -> approve
+ -> action/export
+
+Support:
+- zone name
+- category
+- area
+- source observations
+- reviewer
+- approval status
+- audit history
+
+Acceptance criteria:
+- Zone geometry is editable.
+- Source evidence remains linked.
+- No zone becomes operational without explicit approval.
+
+------------------------------------------------------------
+
+[x] TASK 4.9 — Export approved intervention zones
+Priority: P1
+Complexity: M/L
+Dependencies: TASK 4.8
+
+Initial formats:
+- GeoJSON
+- shapefile or other existing supported geospatial output
+- prescription/action format only where technically valid
+
+Acceptance criteria:
+- Export identifies source analysis/model/reviewer.
+- Rejected/unreviewed candidate findings are excluded by default.
+- Export is auditable.
+
+# --------------------------------------------------------------------
+# PHASE 5 — AGRICULTURE ANALYTICS EXPANSION
+# Add value after the geospatial review/action loop is strong.
+# --------------------------------------------------------------------
+
+[x] TASK 5.1 — Add missing-plant / stand-gap analysis
+Priority: P1
+Complexity: M/L
+Dependencies: reliable stand/row observations
+
+Goal:
+Identify missing or abnormal gaps along expected crop rows.
+
+Required:
+- row geometry or reliable plant centers
+- calibrated scale/GSD where needed
+- crop-specific spacing assumptions must be explicit/configured
+
+Output:
+- gap observations
+- severity/confidence
+- map layer
+- affected row/area
+
+Acceptance criteria:
+- No hard-coded agronomic spacing assumptions without field/crop context.
+
+------------------------------------------------------------
+
+[x] TASK 5.2 — Add plant-spacing statistics
+Priority: P2
+Complexity: M
+Dependencies: TASK 5.1
+
+Metrics:
+- median spacing
+- dispersion
+- outlier gaps
+- row-level statistics
+
+Requirements:
+- only when geometry/scale supports metric distances
+- quality warning otherwise
+
+------------------------------------------------------------
+
+[x] TASK 5.3 — Add weed-density map/product
+Priority: P1
+Complexity: M
+Dependencies: TASK 4.4
+
+Goal:
+Aggregate weed detections into operational density instead of only individual detections.
+
+Outputs:
+- detections/m² or validated equivalent
+- hotspot polygons
+- field percentile/rank
+- change vs previous comparable flight if available
+
+------------------------------------------------------------
+
+[x] TASK 5.4 — Add crop-vs-weed segmentation experiment
+Priority: P2 strategic
+Complexity: L
+Dependencies: sufficient segmentation labels
+
+Goal:
+Evaluate whether segmentation materially improves weed area/zone estimates.
+
+Do not ship until:
+- dataset is adequate
+- evaluation demonstrates benefit over detection-based approximation
+
+------------------------------------------------------------
+
+[x] TASK 5.5 — Add crop-specific fruit-counting plugin capability
+Priority: P3 / vertical-specific
+Complexity: L
+Dependencies: crop-specific labeled data
+
+Goal:
+Make fruit counting a pluggable capability rather than generic promise.
+
+Requirements:
+- crop/model contract
+- supported capture conditions
+- confidence/evaluation threshold
+- explicit limitations
+
+------------------------------------------------------------
+
+[x] TASK 5.6 — Add crop-specific ripeness classification capability
+Priority: P3 / vertical-specific
+Complexity: L
+Dependencies: validated crop-specific data
+
+Important:
+Do not infer ripeness generically from arbitrary RGB imagery.
+
+------------------------------------------------------------
+
+[x] TASK 5.7 — Formalize multispectral index capabilities
+Priority: P2 sensor-specific
+Complexity: M/L
+Dependencies: multispectral sensor ingestion
+
+Support where valid:
+- NDVI
+- NDRE
+- other index only with correct bands/calibration
+
+Requirements:
+- sensor metadata
+- calibration state
+- band mapping
+- clear separation from RGB-only workflows
+
+------------------------------------------------------------
+
+[x] TASK 5.8 — Formalize thermal-stress capabilities
+Priority: P3 sensor-specific
+Complexity: L
+Dependencies: calibrated thermal data
+
+Requirements:
+- thermal calibration
+- environmental context
+- no generic “disease” claim
+
+# --------------------------------------------------------------------
+# PHASE 6 — EVENT-DRIVEN WORKFLOW AND REAL CELERY STAGE OWNERSHIP
+# Backend architectural work. Do one stage first and generalize the pattern.
+# --------------------------------------------------------------------
+
+[ ] TASK 6.1 — Add server-sent events (SSE) for analysis/training lifecycle events
+Priority: P1
+Complexity: M/L
+Dependencies: TASK 1.1, TASK 2.5
+
+Goal:
+Replace repeated status polling with event-driven updates where practical.
+
+Events:
+- run queued
+- stage started
+- progress
+- stage completed
+- waiting external/inference
+- failed
+- retryable
+- cancelled
+- completed
+- training epoch/progress summaries
+
+Frontend:
+- reconnect handling
+- last event ID if supported
+- React Query invalidation on events
+- polling fallback
+
+Acceptance criteria:
+- UI still works if SSE connection fails.
+- Event stream is organization/user scoped.
+- No sensitive cross-org events leak.
+
+------------------------------------------------------------
+
+[ ] TASK 6.2 — Replace agriculture process-run self-polling with completion-triggered wakeup
+Priority: P1
+Complexity: L
+Dependencies: TASK 6.1 or equivalent event/continuation mechanism
+
+Current issue:
+agriculture.process_run can requeue itself while waiting for inference.
+
+Goal:
+Resume orchestration when dependency completes instead of repeated no-op polling.
+
+Possible patterns:
+- callback/continuation task
+- Celery chain/chord where appropriate
+- explicit dependency-completed event
+- deduplicated wakeup key in Redis/DB
+
+Acceptance criteria:
+- One waiting run does not repeatedly enqueue no-op orchestration jobs.
+- Resume is idempotent.
+- Duplicate completion signals are safe.
+
+------------------------------------------------------------
+
+[ ] TASK 6.3 — Convert geospatial aggregation into a real Celery stage
+Priority: P1
+Complexity: L
+Dependencies: TASK 0.2
+
+Goal:
+Prove the dedicated agriculture stage architecture using a non-GPU stage first.
+
+Current stage task should own actual geospatial aggregation work rather than only checkpointing.
+
+Requirements:
+- stage-specific input checksum
+- output checksum/version
+- idempotent retry
+- stage status persisted
+- dead-letter support
+- independent queue routing
+- replay support
+- stage metrics
+
+Acceptance criteria:
+- Geospatial stage can fail/retry independently.
+- Main process-run orchestrator does not execute the heavy aggregation itself.
+- Existing analysis results remain compatible.
+
+------------------------------------------------------------
+
+[ ] TASK 6.4 — Convert RGB inference coordination into a real stage boundary
+Priority: P1
+Complexity: L/XL
+Dependencies: TASK 6.3
+
+Goal:
+Make agriculture RGB inference independently schedulable/scalable.
+
+Requirements:
+- preserve existing video-analysis result reuse
+- preserve model checksum/profile fingerprint
+- preserve GPU worker isolation
+- no duplicate inference on retries
+- completion triggers next stage
+
+Acceptance criteria:
+- Agriculture inference workers can scale independently.
+- Orchestrator performs coordination, not heavy inference.
+
+------------------------------------------------------------
+
+[ ] TASK 6.5 — Convert segmentation into a real stage boundary
+Priority: P2
+Complexity: L
+Dependencies: TASK 6.3
+
+Follow the same stage contract:
+input fingerprint -> execution -> persisted result -> output fingerprint -> continuation.
+
+------------------------------------------------------------
+
+[ ] TASK 6.6 — Convert temporal comparison into a real stage boundary
+Priority: P2
+Complexity: L
+Dependencies: TASK 6.3
+
+Requirements:
+- comparable-flight resolution is explicit
+- stage can be skipped cleanly
+- provenance recorded
+
+------------------------------------------------------------
+
+[ ] TASK 6.7 — Convert sensor fusion into a real stage boundary
+Priority: P2
+Complexity: L
+Dependencies: TASK 6.3
+
+Requirements:
+- only executes when required sensor/telemetry inputs exist
+- missing data should produce explainable “not available,” not fabricated output
+
+------------------------------------------------------------
+
+[ ] TASK 6.8 — Convert agriculture exports into a real stage boundary
+Priority: P2
+Complexity: M/L
+Dependencies: TASK 6.3
+
+Goal:
+Keep export CPU/storage work away from orchestration/API workers.
+
+------------------------------------------------------------
+
+[ ] TASK 6.9 — Add stage-level horizontal-scaling documentation
+Priority: P2
+Complexity: S
+Dependencies: TASK 6.3
+
+Document:
+- queue name
+- CPU/GPU characteristics
+- safe concurrency
+- expected memory
+- retry policy
+- timeout
+- scaling guidance
+
+# --------------------------------------------------------------------
+# PHASE 7 — MODEL TRAINING, LABELING, AND ACTIVE LEARNING
+# Builds the self-improving ML loop.
+# --------------------------------------------------------------------
+
+[ ] TASK 7.1 — Add model-assisted pre-labeling
+Priority: P1
+Complexity: M/L
+Dependencies: existing labeling workspace and model registry
+
+Goal:
+Allow a production/candidate model to propose annotations for curated images.
+
+UX:
+- user chooses eligible model
+- suggestions are visually distinct from reviewed labels
+- reviewer can accept/edit/delete
+- suggestions do not count as reviewed until explicitly confirmed
+
+Backend:
+- store proposal provenance
+- model version/checksum
+- confidence
+- generated timestamp
+
+Acceptance criteria:
+- Human review remains mandatory.
+- Proposed labels never silently become ground truth.
+
+------------------------------------------------------------
+
+[ ] TASK 7.2 — Add hard-example / active-learning candidate scoring
+Priority: P1
+Complexity: L
+Dependencies: TASK 7.1
+
+Score examples using signals such as:
+- low confidence
+- reviewer rejection
+- relabel/correction
+- rare class
+- model disagreement
+- high uncertainty
+- visual novelty/embedding distance if available
+- production frequency/importance
+
+Output:
+active_learning_candidate
+- source observation/evidence
+- score
+- reason(s)
+- model version
+- source run
+- review state
+
+Acceptance criteria:
+- Candidate reasons are explainable.
+- Duplicate/near-duplicate candidates are controlled.
+
+------------------------------------------------------------
+
+[ ] TASK 7.3 — Add “Needs labeling from production” queue
+Priority: P1
+Complexity: M
+Dependencies: TASK 7.2
+
+Goal:
+Expose active-learning candidates directly in the labeling workflow.
+
+Capabilities:
+- filter by reason/class/model/field/date
+- preview source evidence
+- accept into dataset vNext
+- dismiss with reason
+- bulk selection with safeguards
+
+Acceptance criteria:
+- No manual download/re-upload required.
+- Added examples preserve source provenance.
+
+------------------------------------------------------------
+
+[ ] TASK 7.4 — Add one-click candidate -> dataset vNext workflow
+Priority: P1
+Complexity: M/L
+Dependencies: TASK 7.3
+
+Flow:
+production candidate
+ -> select target project
+ -> clone/create dataset vNext
+ -> add source image/evidence
+ -> open labeling
+ -> review
+ -> train
+
+Acceptance criteria:
+- Existing locked datasets remain immutable.
+- Source media lineage is preserved.
+
+------------------------------------------------------------
+
+[ ] TASK 7.5 — Add training-metric time series persistence/API
+Priority: P2
+Complexity: M/L
+Dependencies: TASK 2.6
+
+Persist per epoch:
+- train losses
+- val losses
+- precision
+- recall
+- mAP50
+- mAP50-95
+- epoch duration
+- learning rate
+- GPU utilization/memory when available
+
+Acceptance criteria:
+- Metrics survive worker restarts.
+- UI can render historical run charts.
+
+------------------------------------------------------------
+
+[ ] TASK 7.6 — Build detailed training-run charts
+Priority: P2
+Complexity: M
+Dependencies: TASK 7.5
+
+Charts:
+- loss curves
+- precision/recall
+- mAP
+- epoch duration
+- GPU utilization
+
+Rules:
+- no chart clutter on run list
+- tooltip/legend accessible
+- missing series handled gracefully
+
+------------------------------------------------------------
+
+[ ] TASK 7.7 — Add explicit model release gate
+Priority: P1
+Complexity: L
+Dependencies: existing evaluation/deployment flow
+
+Goal:
+Make candidate deployment policy explicit and auditable.
+
+Gate may include:
+- minimum mAP/recall thresholds by task
+- no unresolved leakage flag
+- required evaluation dataset
+- regression threshold vs production
+- reviewer approval
+- artifact checksum present
+
+Acceptance criteria:
+- Gate explains exactly why deploy is allowed/blocked.
+- Override, if permitted, requires reason and audit record.
+
+------------------------------------------------------------
+
+[ ] TASK 7.8 — Add production model drift/feedback dashboard
+Priority: P2
+Complexity: L
+Dependencies: TASK 7.2, TASK 7.7
+
+Track:
+- confirmation rate
+- rejection rate
+- relabel rate
+- confidence distribution
+- class distribution
+- field/crop/environment slices where valid
+- active-learning candidate rate
+
+Goal:
+Detect when a production model needs retraining.
+
+------------------------------------------------------------
+
+[ ] TASK 7.9 — Optimize large dataset materialization
+Priority: P2
+Complexity: L
+Dependencies: baseline shows issue
+
+Goal:
+Avoid excessive ORM/object-store memory pressure for large datasets.
+
+Possible improvements:
+- paged iteration
+- streaming artifact materialization
+- worker-local cache
+- manifest-based dataset preparation
+- avoid loading all images/relationships at once
+
+Acceptance criteria:
+- Peak RAM measured before/after.
+- Dataset checksum/reproducibility preserved.
+
+# --------------------------------------------------------------------
+# PHASE 8 — GPU RESOURCE MANAGEMENT AND MULTI-TENANT SCALE
+# Hard infrastructure work. Implement only when deployment scale requires it.
+# --------------------------------------------------------------------
+
+[ ] TASK 8.1 — Add GPU inventory abstraction
+Priority: P1 at scale
+Complexity: L
+Dependencies: demonstrated multi-GPU need
+
+Model:
+GpuResource
+- id/device_id
+- node/worker
+- total_memory_mb
+- capabilities
+- status
+- last_seen_at
+
+Goal:
+Make GPU resources visible to scheduler/ops.
+
+------------------------------------------------------------
+
+[ ] TASK 8.2 — Add GPU lease/reservation model
+Priority: P1 at scale
+Complexity: XL
+Dependencies: TASK 8.1
+
+Model:
+GpuLease
+- job_id
+- org_id
+- device_id
+- workload_type
+- acquired_at
+- expires_at
+- released_at
+
+Requirements:
+- atomic acquisition
+- TTL/recovery after crashed worker
+- idempotent release
+- metrics
+- audit trail
+
+Use cases:
+- training
+- inference
+- segmentation
+
+------------------------------------------------------------
+
+[ ] TASK 8.3 — Add inference-vs-training GPU priority policy
+Priority: P1 at scale
+Complexity: L/XL
+Dependencies: TASK 8.2
+
+Policy:
+- operational inference generally has higher priority
+- training can wait/preempt only if safe
+- protect minimum inference capacity
+
+Acceptance criteria:
+- Long training job cannot starve live/operational analysis indefinitely.
+
+------------------------------------------------------------
+
+[ ] TASK 8.4 — Add per-organization compute quotas
+Priority: P1 commercial/scale
+Complexity: L
+Dependencies: organization model, TASK 8.2
+
+Quota dimensions:
+- concurrent analyses
+- concurrent training jobs
+- GPU minutes/day/month
+- storage
+- export volume
+- API rate where needed
+
+Requirements:
+- clear error/retry state
+- admin visibility
+- usage metrics
+
+------------------------------------------------------------
+
+[ ] TASK 8.5 — Add fair-share scheduling between organizations
+Priority: P2 scale
+Complexity: XL
+Dependencies: TASK 8.4
+
+Goal:
+Prevent one organization from monopolizing shared compute.
+
+Possible approach:
+- priority queues + org tokens/weights
+- fair-share scheduler
+- workload class priorities
+
+Do not implement until real shared-resource contention exists.
+
+# --------------------------------------------------------------------
+# PHASE 9 — ENTERPRISE GOVERNANCE AND PLATFORM COHERENCE
+# Extend existing enterprise foundations instead of replacing them.
+# --------------------------------------------------------------------
+
+[ ] TASK 9.1 — Audit existing organization scoping across all critical models
+Priority: P1/P2
+Complexity: M
+Dependencies: none
+
+Goal:
+Verify organization isolation is consistently enforced for:
+- agriculture fields/flights/runs
+- media/evidence
+- datasets
+- training runs
+- model versions
+- exports
+- agents/automations
+- API keys
+- audit records
+
+Acceptance criteria:
+- No object is fetchable cross-org through ID guessing.
+- Add missing repository/query filters where needed.
+- Add security regression tests.
+
+------------------------------------------------------------
+
+[ ] TASK 9.2 — Extend coarse RBAC with capability/action policies
+Priority: P2
+Complexity: L
+Dependencies: TASK 9.1
+
+Do not replace existing roles.
+
+Add policies for sensitive actions such as:
+- deploy model
+- approve intervention zone
+- export prescription/action file
+- start training
+- assign reviewer
+- approve agent tool execution
+- manage API keys
+- view system observability
+
+Acceptance criteria:
+- Backend is authoritative.
+- Policy decisions are testable.
+
+------------------------------------------------------------
+
+[ ] TASK 9.3 — Build unified operational audit search
+Priority: P2
+Complexity: L
+Dependencies: existing auth/model/agriculture audit data
+
+Goal:
+Provide one admin timeline/search for:
+- login/auth changes
+- model deploy
+- dataset freeze
+- finding review
+- intervention approval
+- export
+- agent approval/execution
+- API key use where appropriate
+
+Filters:
+- org
+- user
+- action
+- resource type
+- date
+- outcome
+
+------------------------------------------------------------
+
+[ ] TASK 9.4 — Add organization usage dashboard
+Priority: P2 commercial
+Complexity: M/L
+Dependencies: TASK 8.4 or usage metrics
+
+Show:
+- storage
+- analyses
+- media processed
+- GPU minutes
+- training minutes
+- exports
+- API usage
+
+------------------------------------------------------------
+
+[ ] TASK 9.5 — Add SCIM provisioning only when enterprise demand exists
+Priority: P3
+Complexity: XL
+Dependencies: OIDC/enterprise customer requirement
+
+Do not implement speculatively.
+
+------------------------------------------------------------
+
+[ ] TASK 9.6 — Add billing/metering integration only after usage model stabilizes
+Priority: P3
+Complexity: XL
+Dependencies: TASK 9.4
+
+First define billable units clearly.
+
+Potential units:
+- processed video minutes
+- mapped hectares
+- training GPU minutes
+- storage
+- premium exports/automation
+
+# --------------------------------------------------------------------
+# PHASE 10 — AGENTS + VERIFIED COMPUTER-VISION ACTION LOOP
+# Strategic cross-product differentiation.
+# --------------------------------------------------------------------
+
+[ ] TASK 10.1 — Define unified governance object model
+Priority: P1 strategic
+Complexity: L
+Dependencies: stable agriculture review/action model
+
+Target lifecycle:
+Observation
+ -> Recommendation
+ -> Approval
+ -> Execution
+ -> Audit
+
+Apply conceptually to:
+- agriculture intervention
+- property patrol
+- warehouse action
+- agent external tool call
+
+Acceptance criteria:
+- Shared concepts are reused without forcing unrelated domain data into one table.
+- Domain-specific evidence remains preserved.
+
+------------------------------------------------------------
+
+[ ] TASK 10.2 — Add policy-driven human approval before sensitive agent tool calls
+Priority: P1 strategic
+Complexity: L
+Dependencies: existing agent/tool infrastructure
+
+Examples:
+- send email
+- create external task
+- modify operational plan
+- trigger export/integration
+- execute drone/physical-world command
+
+Policy should support:
+- always approve
+- approve above risk threshold
+- auto-approve safe read-only actions
+- deny prohibited actions
+
+Acceptance criteria:
+- Approval event is auditable.
+- Tool cannot execute before required approval.
+
+------------------------------------------------------------
+
+[ ] TASK 10.3 — Allow verified agriculture findings to trigger agent recommendations
+Priority: P1 strategic
+Complexity: L
+Dependencies: TASK 4.8, TASK 10.1
+
+Example:
+confirmed weed cluster
+ -> agent generates inspection/treatment proposal
+ -> human reviews
+ -> approved action/zone/export
+
+Important:
+Agent recommendation must reference:
+- verified finding IDs
+- supporting evidence
+- model version
+- uncertainty
+- applicable operational rule
+
+------------------------------------------------------------
+
+[ ] TASK 10.4 — Build agent evaluation datasets and review queues
+Priority: P1 strategic
+Complexity: XL
+Dependencies: stable agent execution logging
+
+Goal:
+Bring the same rigor used for CV models to agents.
+
+Track:
+- prompt/input
+- tool choices
+- final output
+- human score
+- correction
+- policy violation
+- execution result
+
+Create:
+- evaluation datasets
+- regression tests
+- human annotation queues
+- candidate-vs-production agent comparison
+
+------------------------------------------------------------
+
+[ ] TASK 10.5 — Add reusable cross-domain approval/review UI patterns
+Priority: P2 strategic
+Complexity: L
+Dependencies: TASK 10.1
+
+Goal:
+Create consistent UX for:
+- evidence
+- recommendation
+- approve/reject
+- reason
+- execution status
+- audit history
+
+Reuse across agriculture, agents, warehouse, patrol.
+
+# --------------------------------------------------------------------
+# PHASE 11 — LONGER-TERM PRODUCT DIFFERENTIATION
+# Hardest tasks / highest strategic value.
+# --------------------------------------------------------------------
+
+[ ] TASK 11.1 — Build geospatial-temporal crop intelligence
+Priority: P1 strategic
+Complexity: XL
+Dependencies: TASK 4.7, mature repeat-flight data
+
+Goal:
+Move from isolated detections to field evolution.
+
+Examples:
+- weed pressure expanding/shrinking
+- stand gaps persisting/resolving
+- anomaly zones newly appearing
+- intervention outcome comparison
+
+Requirements:
+- comparable capture/model contracts
+- uncertainty
+- historical provenance
+- field/crop context
+
+------------------------------------------------------------
+
+[ ] TASK 11.2 — Build intervention-outcome learning
+Priority: P2 strategic
+Complexity: XL
+Dependencies: TASK 4.8, field outcomes, repeat flights
+
+Flow:
+finding
+ -> approved action
+ -> field intervention
+ -> follow-up flight
+ -> outcome
+ -> model/decision feedback
+
+Goal:
+Measure whether recommendations/actions actually helped.
+
+------------------------------------------------------------
+
+[ ] TASK 11.3 — Build offline-first agriculture field workflow
+Priority: P2 strategic
+Complexity: XL
+Dependencies: stable online workflow
+
+Potential scope:
+- offline field/review cache
+- resilient upload queue
+- resumable synchronization
+- conflict resolution
+- mobile/tablet optimization
+
+Acceptance criteria:
+- intermittent connectivity does not lose review/actions.
+- Sync conflicts are explicit.
+
+------------------------------------------------------------
+
+[ ] TASK 11.4 — Add crop/program-specific solution packs
+Priority: P2 strategic
+Complexity: XL
+Dependencies: mature capability/plugin contracts
+
+Examples:
+- corn stand establishment
+- orchard fruit counting
+- vineyard canopy/stress review
+- weed scouting
+
+Each pack defines:
+- supported sensors
+- capture requirements
+- models
+- metrics
+- recommended layers
+- limitations
+- action templates
+
+Goal:
+Avoid presenting every agriculture capability to every user.
+
+------------------------------------------------------------
+
+[ ] TASK 11.5 — Build autonomous but governed closed-loop operations
+Priority: P3 strategic
+Complexity: XL
+Dependencies:
+- TASK 10.1
+- TASK 10.2
+- TASK 11.2
+- strong safety/approval infrastructure
+
+Target:
+flight/observation
+ -> verified finding
+ -> generated operational proposal
+ -> human/policy approval
+ -> execution
+ -> outcome monitoring
+ -> learning
+
+Important:
+Physical-world execution must remain policy-controlled, auditable, and fail-safe.
+
+# --------------------------------------------------------------------
+# CROSS-CUTTING REFACTORING TASKS
+# Schedule these when touched by related feature work; do not refactor for its own sake.
+# --------------------------------------------------------------------
+
+[ ] TASK X.1 — Split oversized agriculture frontend components
+Priority: P2
+Complexity: M
+Trigger:
+Only when actively modifying files such as:
+- AgricultureTemporalWorkspace.tsx
+- AgriculturePlannerForm.tsx
+- AgricultureReviewWorkspace.tsx
+- LabelingWorkspacePage.tsx
+- PrioritizedFindingsPanel.tsx
+
+Target boundaries:
+- state/controller hooks
+- data adapters
+- presentational sections
+- dialogs/drawers
+- map layers
+
+Acceptance criteria:
+- Behavior unchanged.
+- Tests cover extracted components/hooks.
+- Avoid “one file per tiny function” fragmentation.
+
+------------------------------------------------------------
+
+[ ] TASK X.2 — Split oversized backend agriculture orchestration modules
+Priority: P2
+Complexity: M/L
+Trigger:
+During real-stage conversion work.
+
+Suggested boundaries:
+- orchestration state machine
+- stage contracts
+- stage execution adapters
+- result reuse/fingerprinting
+- retry/dead-letter policy
+- provenance/audit
+- persistence repositories
+
+Goal:
+Make stage ownership explicit without introducing abstraction for abstraction’s sake.
+
+------------------------------------------------------------
+
+[ ] TASK X.3 — Standardize query-key/invalidation conventions
+Priority: P2
+Complexity: M
+Dependencies: TASK 1.1
+
+Goal:
+Make React Query cache behavior predictable.
+
+Define:
+- canonical key factories
+- terminal-state polling behavior
+- mutation invalidation map
+- event-driven invalidation hooks
+
+------------------------------------------------------------
+
+[ ] TASK X.4 — Standardize evidence provenance contract
+Priority: P1
+Complexity: M/L
+
+Every operational finding should be traceable to:
+- source flight
+- source media
+- timestamp/frame
+- telemetry/geolocation state
+- model version/checksum
+- inference profile
+- observation aggregation
+- reviewer decision
+
+Acceptance criteria:
+- Review, exports, temporal comparisons, and agent recommendations can all cite provenance.
+
+# --------------------------------------------------------------------
+# PERFORMANCE SUCCESS TARGETS
+# Use as goals, not assumptions. Confirm against representative workloads.
+# --------------------------------------------------------------------
+
+[ ] TARGET P.1
+Reduce unnecessary agriculture analysis-page polling to near-zero after terminal state.
+
+[ ] TARGET P.2
+Improve video decode CPU cost by ~30% OR total media pipeline runtime by ~25% before replacing decoder.
+
+[ ] TARGET P.3
+Improve training epoch duration by ~15% or materially increase GPU utilization before changing dataloader defaults.
+
+[ ] TARGET P.4
+Maintain bounded memory for long videos and large datasets.
+
+[ ] TARGET P.5
+Keep API request latency low by moving heavy compute to workers rather than API coroutines.
+
+[ ] TARGET P.6
+Measure and reduce “flight/upload complete -> actionable finding” time.
+
+[ ] TARGET P.7
+Ensure inference workloads are not starved by long-running training jobs at scale.
+
+# --------------------------------------------------------------------
+# UX SUCCESS TARGETS
+# --------------------------------------------------------------------
+
+[ ] TARGET U.1
+A user opening an agriculture analysis should immediately see where the important problems are spatially.
+
+[ ] TARGET U.2
+One action should navigate:
+finding -> map location -> evidence -> source timestamp/video.
+
+[ ] TARGET U.3
+Normal agriculture users should not need to understand photogrammetry, observability, model infrastructure, or generic video-analysis internals to complete their workflow.
+
+[ ] TARGET U.4
+A model evaluator should be able to answer “is this candidate better than production?” without manually comparing raw metrics.
+
+[ ] TARGET U.5
+A reviewer correction should be reusable as future training data without manual export/re-upload.
+
+# --------------------------------------------------------------------
+# ML / GOVERNANCE SUCCESS TARGETS
+# --------------------------------------------------------------------
+
+[ ] TARGET M.1
+Every production model version is reproducible from an immutable dataset/version/config/artifact fingerprint.
+
+[ ] TARGET M.2
+No proposed/model-assisted annotation becomes ground truth without explicit human review.
+
+[ ] TARGET M.3
+No intervention/prescription/action export is treated as approved when based only on unreviewed candidate findings.
+
+[ ] TARGET M.4
+Production model corrections automatically become candidates for future training through an auditable active-learning workflow.
+
+[ ] TARGET M.5
+Sensitive agent actions follow:
+evidence/context -> recommendation -> approval policy -> execution -> audit.
+
+# --------------------------------------------------------------------
+# RECOMMENDED CURSOR EXECUTION ORDER
+# --------------------------------------------------------------------
+#
+# Sprint 1:
+#   0.1, 0.2, 1.1, 1.2, 1.3, 1.5, 1.6
+#
+# Sprint 2:
+#   1.7, 1.8, 2.1, 2.2, 2.5, 2.6
+#
+# Sprint 3:
+#   3.1, 3.2 (only if justified), 3.4, 3.5, 3.6
+#
+# Sprint 4:
+#   4.1, 4.2, 4.3, 4.5
+#
+# Sprint 5:
+#   4.4, 4.6, 4.8, 4.9
+#
+# Sprint 6:
+#   6.1, 6.2, 6.3
+#
+# Sprint 7:
+#   6.4, 6.5, 6.6, 6.7, 6.8
+#
+# Sprint 8:
+#   7.1, 7.2, 7.3, 7.4
+#
+# Sprint 9:
+#   7.5, 7.6, 7.7, 7.8
+#
+# Sprint 10:
+#   2.3, 2.4, 9.1, 9.2, 9.3
+#
+# Scale-triggered:
+#   8.1 -> 8.5
+#
+# Strategic:
+#   10.1 -> 10.5
+#   11.1 -> 11.5
+#
+# --------------------------------------------------------------------
+# DEFINITION OF DONE FOR EACH CURSOR TASK
+# --------------------------------------------------------------------
+#
+# A task is not complete until:
+# [ ] current implementation was inspected first
+# [ ] scope remained limited to the task
+# [ ] code is typed/formatted/linted
+# [ ] unit tests were added/updated
+# [ ] relevant integration/e2e tests pass
+# [ ] frontend build passes when frontend changed
+# [ ] backend tests pass when backend changed
+# [ ] DB migration added when schema changed
+# [ ] migration downgrade/recovery considered
+# [ ] security/org isolation reviewed when data/API changed
+# [ ] observability added for new background work
+# [ ] performance measured when task claims optimization
+# [ ] docs/config examples updated
+# [ ] no unsupported agriculture/AI claims were introduced
+# [ ] audit/provenance preserved for operational decisions
+#
+# END OF ROADMAP

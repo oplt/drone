@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from backend.core.database.session import Session
 from backend.modules.vision_models.config import vision_settings
+from backend.modules.vision_models.lifecycle import append_training_status_event
 from backend.modules.vision_models.models import (
     DatasetImage,
     DatasetVersion,
@@ -65,6 +66,16 @@ async def claim_training_run(run_id: str, lease_owner: str) -> int | None:
             .execution_options(synchronize_session=False)
         )
         attempt = result.scalar_one_or_none()
+        if attempt is not None:
+            run = await db.get(TrainingRun, run_id)
+            if run is not None:
+                await append_training_status_event(
+                    db,
+                    run,
+                    "training.started",
+                    f"started:a{int(attempt)}",
+                    {"attempt": int(attempt)},
+                )
         await db.commit()
         return int(attempt) if attempt is not None else None
 
@@ -98,6 +109,9 @@ async def training_checkpoint(
             run.lease_owner = None
             run.terminal_reason_code = "USER_CANCELLED"
             run.terminal_stage = "training"
+            await append_training_status_event(
+                db, run, "training.cancelled", f"cancelled:a{attempt}"
+            )
             await db.commit()
             raise TrainingCancelled("Training was cancelled")
         if run.status != "running":
@@ -111,6 +125,13 @@ async def training_checkpoint(
         )
         if metrics:
             run.metrics = {**run.metrics, "training": metrics}
+        await append_training_status_event(
+            db,
+            run,
+            "training.progress",
+            f"progress:a{attempt}:e{run.current_epoch}",
+            {"metrics": metrics},
+        )
         await db.commit()
 
 
@@ -205,6 +226,15 @@ class VisionTrainingService:
                         terminal_stage="training",
                     )
                 )
+                failed_run = await db.get(TrainingRun, run_id)
+                if failed_run is not None:
+                    await append_training_status_event(
+                        db,
+                        failed_run,
+                        "training.failed",
+                        f"failed:a{attempt}",
+                        {"error": str(exc)[:4000]},
+                    )
                 await db.commit()
             raise
 
@@ -256,7 +286,13 @@ class VisionTrainingService:
                 batch_size=run.batch_size,
                 requested_device=run.device,
                 class_names=[item.name for item in classes],
+                dataloader_workers=vision_settings.vision_training_dataloader_workers,
             )
+            run.config = {
+                **(getattr(run, "config", None) or {}),
+                "dataloader_workers": request.dataloader_workers,
+            }
+            await db.flush()
             loop = asyncio.get_running_loop()
 
             def progress_callback(epoch: int, total: int, metrics: dict[str, float]) -> None:
@@ -370,6 +406,7 @@ class VisionTrainingService:
                     "base_model": run.base_model,
                     "preset": run.preset,
                     "device": result.device,
+                    "dataloader_workers": request.dataloader_workers,
                     "classes": [item.name for item in classes],
                     "metrics": result.metrics,
                     "checksum": checksum,
@@ -420,6 +457,14 @@ class VisionTrainingService:
                 run.lease_expires_at = None
                 run.terminal_reason_code = "COMPLETED"
                 run.terminal_stage = "completed"
+                await append_training_status_event(
+                    db,
+                    run,
+                    "training.completed",
+                    f"completed:a{attempt}",
+                    {"model_version_id": version.id, "metrics": result.metrics},
+                    project=project,
+                )
                 await db.commit()
                 return {"run_id": run.id, "model_version_id": version.id}
             except Exception:
@@ -455,6 +500,16 @@ async def reconcile_stale_training_runs(*, limit: int = 100) -> int:
             run.lease_expires_at = None
             run.terminal_reason_code = "WORKER_LEASE_EXPIRED"
             run.terminal_stage = "worker_lease"
+            await append_training_status_event(
+                db,
+                run,
+                "training.failed",
+                f"lease-expired:a{run.attempt}",
+                {
+                    "error": run.error,
+                    "terminal_reason_code": run.terminal_reason_code,
+                },
+            )
         if runs:
             await db.commit()
         else:

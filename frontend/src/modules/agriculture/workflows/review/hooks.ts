@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  createAgricultureRunRefetchInterval,
+} from "../analysisLifecycle";
+import {
   createAgricultureAnnotation,
   getAgricultureObservationEvidence,
   listAgricultureObservations,
@@ -12,7 +15,7 @@ import {
   decideAgricultureObservationFeedback,
   createAgricultureObservationAlert,
 } from "../../api";
-import { agricultureInvalidationKeys, agricultureKeys, agriculturePollInterval } from "../queryKeys";
+import { agricultureInvalidationKeys, agricultureKeys } from "../queryKeys";
 
 export function useAgricultureObservationAudits(observationId: string | null) {
   return useQuery({
@@ -49,12 +52,13 @@ export function useAgricultureObservations(
   runId: string | null,
   minConfidence = 0,
 ) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: [...agricultureKeys.observations(runId), minConfidence],
     queryFn: () =>
       listAgricultureObservations(runId as string, { minConfidence }),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
@@ -62,6 +66,7 @@ export function useAgricultureObservationPage(
   runId: string | null,
   filters: { minConfidence?: number; cursor?: string; limit?: number } = {},
 ) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: [
       ...agricultureKeys.observations(runId),
@@ -72,7 +77,7 @@ export function useAgricultureObservationPage(
     ],
     queryFn: () => listAgricultureObservationPage(runId as string, filters),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 

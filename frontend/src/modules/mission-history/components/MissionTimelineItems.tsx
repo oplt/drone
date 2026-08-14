@@ -11,6 +11,12 @@ import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 
 import { formatMissionTimelineTs } from "../utils/missionTimelineFormat";
 
+function optionalText(value: unknown): string | null {
+  if (value == null || value === false) return null;
+  const text = String(value).trim();
+  return text.length > 0 ? text : null;
+}
+
 function stateIcon(state: string) {
   switch (state) {
     case "running":
@@ -35,20 +41,20 @@ export function MissionTimelineTransitionItem({ item }: { item: Record<string, u
       <Box>
         <Typography variant="body2" fontWeight={500}>
           {String(item.state ?? "")}
-          {item.trigger && (
+          {optionalText(item.trigger) ? (
             <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-              via {String(item.trigger)}
+              via {optionalText(item.trigger)}
             </Typography>
-          )}
+          ) : null}
         </Typography>
         <Typography variant="caption" color="text.secondary">
           {formatMissionTimelineTs(item.entered_at as number | null | undefined)}
         </Typography>
-        {item.reason && (
+        {optionalText(item.reason) ? (
           <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-            {String(item.reason)}
+            {optionalText(item.reason)}
           </Typography>
-        )}
+        ) : null}
       </Box>
     </Stack>
   );
@@ -75,11 +81,11 @@ export function MissionTimelineCommandItem({ item }: { item: Record<string, unkn
           {formatMissionTimelineTs(item.requested_at as number | null | undefined)} · {String(item.state_before ?? "")} →{" "}
           {String(item.state_after ?? "")}
         </Typography>
-        {item.message && (
+        {optionalText(item.message) ? (
           <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-            {String(item.message)}
+            {optionalText(item.message)}
           </Typography>
-        )}
+        ) : null}
       </Box>
     </Stack>
   );

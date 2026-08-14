@@ -33,7 +33,7 @@ def test_readiness_marks_research_blocked_capabilities():
 
 def test_stand_count_default_profile_is_standard_baseline():
     profile = default_inference_profile("stand_count")
-    assert profile["small_object_mode"] is False
+    assert profile["sahi_enabled"] is False
     assert profile["tracking_enabled"] is False
     weed = default_inference_profile("weed_detection")
-    assert weed["small_object_mode"] is False
+    assert weed["sahi_enabled"] is False

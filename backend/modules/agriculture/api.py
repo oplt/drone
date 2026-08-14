@@ -10,7 +10,25 @@ from backend.modules.agriculture.analysis_orchestration import agriculture_analy
 from backend.modules.agriculture.live import LiveAgricultureProcessor, decode_rgb_frame
 from backend.modules.agriculture.p5_service import agriculture_safety_service
 from backend.modules.agriculture.repository import agriculture_repository
-from backend.modules.agriculture.routers import analysis, fields, flights, live, media, ops, planning
+from backend.modules.agriculture.routers import (
+    analysis,
+    evidence,
+    exports,
+    fields,
+    flights,
+    intervention_zones,
+    lifecycle,
+    live,
+    media,
+    ops,
+    planning,
+)
+
+# Re-export route handlers and helpers that tests import from this module.
+from backend.modules.agriculture.routers.analysis import (  # noqa: F401
+    create_analysis_run,
+    register_frame_manifest,
+)
 from backend.modules.agriculture.routers.common import (
     AGRICULTURE_SCHEMA_VERSION,
     _live_processors,
@@ -19,19 +37,13 @@ from backend.modules.agriculture.routers.common import (
     _parse_spatial_bbox,
     get_live_processor,
 )
-from backend.modules.agriculture.service import agriculture_service
-from backend.modules.agriculture.storage import agriculture_storage
-from backend.observability.audit import emit_audit_event
-
-# Re-export route handlers and helpers that tests import from this module.
-from backend.modules.agriculture.routers.analysis import (  # noqa: F401
-    create_agriculture_export,
-    create_analysis_run,
-    register_frame_manifest,
-)
+from backend.modules.agriculture.routers.exports import create_agriculture_export  # noqa: F401
 from backend.modules.agriculture.routers.flights import get_media_inventory  # noqa: F401
 from backend.modules.agriculture.routers.live import ingest_telemetry, live_advisory  # noqa: F401
 from backend.modules.agriculture.routers.media import initiate_upload  # noqa: F401
+from backend.modules.agriculture.service import agriculture_service
+from backend.modules.agriculture.storage import agriculture_storage
+from backend.observability.audit import emit_audit_event
 
 
 def agriculture_contract_headers(response: Response) -> None:
@@ -51,6 +63,10 @@ router.include_router(flights.router)
 router.include_router(live.router)
 router.include_router(media.router)
 router.include_router(analysis.router)
+router.include_router(lifecycle.router)
+router.include_router(evidence.router)
+router.include_router(exports.router)
+router.include_router(intervention_zones.router)
 
 __all__ = [
     "AGRICULTURE_SCHEMA_VERSION",

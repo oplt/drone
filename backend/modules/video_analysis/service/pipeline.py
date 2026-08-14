@@ -13,12 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
 from backend.core.database.session import Session
-from backend.observability.database import observed_db_session_scope
 from backend.infrastructure.runtime.blocking import run_blocking
+from backend.modules.agriculture.georeferencing import NearestTelemetryMatcher
 from backend.modules.agriculture.ports.telemetry import (
     list_mission_telemetry_for_georef,
 )
-from backend.modules.agriculture.georeferencing import NearestTelemetryMatcher
 from backend.modules.video_analysis.models import (
     StorageObject,
     VideoDetection,
@@ -26,15 +25,25 @@ from backend.modules.video_analysis.models import (
 )
 from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.service.detector import create_frame_detector
-from backend.modules.video_analysis.service.frame_extractor import (
-    async_iter_frames,
-    read_video_metadata_async,
+from backend.modules.video_analysis.service.frame_extractor import read_video_metadata_async
+from backend.modules.video_analysis.service.inference_prefetch import (
+    async_iter_prefetched_inference,
+    resolve_inference_prefetch_size,
+)
+from backend.modules.video_analysis.service.inference_profile_runtime import (
+    detector_options,
+    resolve_inference_batch_size,
+    resolve_sahi_enabled,
 )
 from backend.modules.video_analysis.service.tracker import FrameTracker
 from backend.modules.vision_models.application import VisionApplication
-from backend.modules.vision_models.config import vision_settings
 from backend.observability import prometheus_metrics
+from backend.observability.database import observed_db_session_scope
 from backend.observability.instruments import observed_span, structured_error
+from backend.observability.media_pipeline_metrics import (
+    PIPELINE_VIDEO,
+    record_media_pipeline_stages_ms,
+)
 from backend.observability.metrics import add as metric_add
 from backend.observability.metrics import record as metric_record
 
@@ -99,11 +108,15 @@ class OfflineVideoAnalysisPipeline:
         )
         stage_timings = {
             "queue_wait": queue_wait_ms,
+            "media_probe": 0.0,
+            "preprocessing": 0.0,
             "decode": 0.0,
+            "frame_sampling": 0.0,
             "inference": 0.0,
             "tracking": 0.0,
             "telemetry": 0.0,
             "crop": 0.0,
+            "evidence_generation": 0.0,
             "persist": 0.0,
             "summary": 0.0,
             "total": 0.0,
@@ -112,6 +125,7 @@ class OfflineVideoAnalysisPipeline:
 
         try:
             video_path = Path(video.storage_path)
+            probe_started = time.monotonic()
             source_checksum = await run_blocking(
                 self._sha256_file,
                 video_path,
@@ -121,7 +135,6 @@ class OfflineVideoAnalysisPipeline:
             )
             await self.repo.set_source_checksum(job, source_checksum)
             failure_stage = "video_decode"
-            decode_started = time.monotonic()
             with observed_span(
                 "video.metadata",
                 mission_id=video.mission_id,
@@ -129,7 +142,7 @@ class OfflineVideoAnalysisPipeline:
                 **{"model.name": job.model_name},
             ):
                 metadata = await read_video_metadata_async(video_path)
-            stage_timings["decode"] += (time.monotonic() - decode_started) * 1000.0
+            stage_timings["media_probe"] += (time.monotonic() - probe_started) * 1000.0
             logger.info(
                 "Processing video analysis job_id=%s video_id=%s "
                 "duration_seconds=%.2f stride_seconds=%.2f model=%s",
@@ -150,7 +163,10 @@ class OfflineVideoAnalysisPipeline:
 
             registered_version = None
             registered_path = None
+            inference_profile = getattr(job, "inference_profile", None)
+            sahi_enabled = resolve_sahi_enabled(inference_profile, job.small_object_mode)
             failure_stage = "model_loading"
+            preprocessing_started = time.monotonic()
             if job.model_version_id:
                 (
                     registered_path,
@@ -167,12 +183,13 @@ class OfflineVideoAnalysisPipeline:
                 model_name=job.model_name,
                 confidence_threshold=job.confidence_threshold,
                 model_path=registered_path,
-                small_object_mode=job.small_object_mode,
+                small_object_mode=sahi_enabled,
                 expected_checksum=(
                     registered_version.checksum
                     if registered_version is not None
                     else None
                 ),
+                **detector_options(inference_profile),
                 boundary="media",
                 operation="load_detector",
                 timeout_s=120.0,
@@ -188,6 +205,9 @@ class OfflineVideoAnalysisPipeline:
             if loaded_hash_setter is not None:
                 await loaded_hash_setter(job, loaded_model_hash)
             await self.db.commit()
+            stage_timings["preprocessing"] += (
+                time.monotonic() - preprocessing_started
+            ) * 1000.0
             telemetry_samples = (
                 await list_mission_telemetry_for_georef(
                     self.db, mission_id=video.mission_id
@@ -225,12 +245,12 @@ class OfflineVideoAnalysisPipeline:
                     job.tracker_type,
                     tracker.sampled_frame_rate,
                 )
-            if job.small_object_mode:
+            if sahi_enabled:
                 logger.info(
                     "sahi_enabled slice=%dx%d overlap=%.2f",
-                    vision_settings.video_sahi_slice_width,
-                    vision_settings.video_sahi_slice_height,
-                    vision_settings.video_sahi_overlap_width_ratio,
+                    getattr(detector, "slice_width", 0),
+                    getattr(detector, "slice_height", 0),
+                    getattr(detector, "overlap_width_ratio", 0.0),
                 )
 
             pending_detections: list[VideoDetection] = []
@@ -251,8 +271,11 @@ class OfflineVideoAnalysisPipeline:
                 video_path,
                 every_seconds=job.frame_stride_seconds,
                 decode_stride_enabled=settings.video_analysis_decode_stride_enabled,
+                decoder_mode=settings.video_analysis_decoder,
                 detector=detector,
-                allow_batching=not job.small_object_mode and not job.tracking_enabled,
+                allow_batching=not sahi_enabled and not job.tracking_enabled,
+                inference_profile=inference_profile,
+                stage_timings=stage_timings,
             ):
                 processed += 1
                 frames_attempted += 1
@@ -295,7 +318,7 @@ class OfflineVideoAnalysisPipeline:
                         stage_timings["inference"] += detection_latency_ms
                         metric_record(
                             "video_sahi_inference_latency"
-                            if job.small_object_mode
+                            if sahi_enabled
                             else "video_standard_inference_latency",
                             detection_latency_ms,
                             {"model": job.model_name},
@@ -332,7 +355,7 @@ class OfflineVideoAnalysisPipeline:
                             job.id,
                             frame.frame_index,
                         )
-                        if job.small_object_mode:
+                        if sahi_enabled:
                             raise RuntimeError(
                                 "Small-object analysis failed. Check worker logs for details."
                             ) from exc
@@ -404,9 +427,9 @@ class OfflineVideoAnalysisPipeline:
                                 operation="save_detection_crop",
                                 timeout_s=30.0,
                             )
-                            stage_timings["crop"] += (
-                                time.monotonic() - crop_started
-                            ) * 1000.0
+                            crop_delta = (time.monotonic() - crop_started) * 1000.0
+                            stage_timings["crop"] += crop_delta
+                            stage_timings["evidence_generation"] += crop_delta
                             if crop_result is not None:
                                 backend_key, checksum, size = crop_result
                                 storage_object = StorageObject(
@@ -449,7 +472,7 @@ class OfflineVideoAnalysisPipeline:
                                     **det.raw,
                                     "model_version": resolved_version,
                                     "loaded_model_hash": loaded_model_hash,
-                                    "small_object_mode": job.small_object_mode,
+                                    "small_object_mode": sahi_enabled,
                                     "tracking_enabled": job.tracking_enabled,
                                     "tracker_type": job.tracker_type,
                                     "telemetry_match_quality": (
@@ -536,12 +559,7 @@ class OfflineVideoAnalysisPipeline:
             stage_timings["summary"] = (time.monotonic() - summary_started) * 1000.0
             stage_timings["total"] = (time.monotonic() - pipeline_started) * 1000.0
             await self._persist_stage_timings(job, stage_timings)
-            for stage, duration_ms in stage_timings.items():
-                metric_record(
-                    "video_stage_duration",
-                    duration_ms,
-                    {"stage": stage},
-                )
+            record_media_pipeline_stages_ms(stage_timings, pipeline=PIPELINE_VIDEO)
             completed = await self.repo.mark_job_completed(
                 job, video=video, expected_attempt=claimed_attempt
             )
@@ -583,6 +601,7 @@ class OfflineVideoAnalysisPipeline:
             if not metrics_saved:
                 return
             await self._persist_stage_timings(job, stage_timings)
+            record_media_pipeline_stages_ms(stage_timings, pipeline=PIPELINE_VIDEO)
             error_message = (
                 str(exc)
                 if isinstance(exc, RuntimeError)
@@ -636,53 +655,32 @@ class OfflineVideoAnalysisPipeline:
         *,
         every_seconds: float,
         decode_stride_enabled: bool,
+        decoder_mode: str,
         detector,
         allow_batching: bool,
+        inference_profile: dict | None = None,
+        stage_timings: dict[str, float] | None = None,
     ) -> AsyncIterator[tuple[object, list | None, Exception | None, float]]:
-        frames = async_iter_frames(
+        batch_size = resolve_inference_batch_size(
+            inference_profile,
+            default=int(settings.video_analysis_inference_batch_size or 1),
+        )
+        prefetch_size = resolve_inference_prefetch_size(
+            batch_size=batch_size,
+            configured=settings.video_analysis_inference_prefetch_size,
+        )
+        async for item in async_iter_prefetched_inference(
             video_path,
             every_seconds=every_seconds,
             decode_stride_enabled=decode_stride_enabled,
-        )
-        batch_size = settings.video_analysis_inference_batch_size
-        predict_batch = getattr(detector, "predict_batch", None)
-        if batch_size <= 1 or not allow_batching or predict_batch is None:
-            async for frame in frames:
-                yield frame, None, None, 0.0
-            return
-
-        pending = []
-        async for frame in frames:
-            pending.append(frame)
-            if len(pending) >= batch_size:
-                async for item in self._run_inference_batch(pending, predict_batch):
-                    yield item
-                pending = []
-        if pending:
-            async for item in self._run_inference_batch(pending, predict_batch):
-                yield item
-
-    async def _run_inference_batch(
-        self, frames: list, predict_batch
-    ) -> AsyncIterator[tuple[object, list | None, Exception | None, float]]:
-        started = time.monotonic()
-        try:
-            results = await run_blocking(
-                predict_batch,
-                [frame.image_bgr for frame in frames],
-                boundary="cpu",
-                operation="video_inference_batch",
-                timeout_s=120.0,
-            )
-            if len(results) != len(frames):
-                raise RuntimeError("Detector batch returned an unexpected result count.")
-            per_frame_latency_ms = (time.monotonic() - started) * 1000.0 / len(frames)
-            for frame, detections in zip(frames, results, strict=True):
-                yield frame, detections, None, per_frame_latency_ms
-        except Exception as exc:
-            per_frame_latency_ms = (time.monotonic() - started) * 1000.0 / len(frames)
-            for frame in frames:
-                yield frame, None, exc, per_frame_latency_ms
+            decoder_mode=decoder_mode,
+            detector=detector,
+            batch_size=batch_size,
+            prefetch_size=prefetch_size,
+            allow_batching=allow_batching,
+            stage_timings=stage_timings,
+        ):
+            yield item
 
     def _save_crop(
         self,

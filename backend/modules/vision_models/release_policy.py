@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from backend.modules.agriculture.capabilities import default_inference_profile
+from backend.modules.agriculture.inference_profiles import resolve_inference_profile
 
 POLICY_VERSION = "vision-release-policy.v2"
 KNOWN_CAPABILITIES = {
@@ -14,6 +14,8 @@ KNOWN_CAPABILITIES = {
     "canopy_cover",
     "row_detection",
     "standing_water",
+    "fruit_counting",
+    "ripeness_classification",
 }
 
 # Capability-specific evidence floors for production-backed inference.
@@ -26,6 +28,17 @@ CAPABILITY_METRIC_OVERRIDES: dict[str, dict[str, float]] = {
     "canopy_cover": {"min_map50": 0.28},
     "row_detection": {"min_map50": 0.28},
     "standing_water": {"min_map50": 0.28},
+    "fruit_counting": {
+        "min_map50": 0.45,
+        "min_recall": 0.55,
+        "min_per_class_map50": 0.35,
+    },
+    "ripeness_classification": {
+        "min_map50": 0.50,
+        "min_precision": 0.60,
+        "min_recall": 0.55,
+        "min_per_class_map50": 0.45,
+    },
 }
 
 
@@ -102,7 +115,16 @@ def build_inference_contract(
     tracking_enabled: bool | None = None,
     tracker_type: str | None = None,
 ) -> dict[str, Any]:
-    profile = default_inference_profile(capability_id)
+    profile = resolve_inference_profile(
+        capability_id,
+        {
+            "confidence_threshold": confidence_threshold,
+            "frame_stride_seconds": frame_stride_seconds,
+            "small_object_mode": small_object_mode,
+            "tracking_enabled": tracking_enabled,
+            "tracker_type": tracker_type,
+        },
+    )
     return {
         "capability_id": capability_id,
         "task_type": task_type or "detection",
@@ -111,27 +133,10 @@ def build_inference_contract(
         "dataset_checksum": dataset_checksum,
         "evaluation_metrics": dict(metrics_snapshot),
         "policy_version": policy_version,
-        "confidence_threshold": (
-            float(confidence_threshold)
-            if confidence_threshold is not None
-            else profile["confidence_threshold"]
-        ),
-        "frame_stride_seconds": (
-            float(frame_stride_seconds)
-            if frame_stride_seconds is not None
-            else profile["frame_stride_seconds"]
-        ),
-        "small_object_mode": (
-            bool(small_object_mode)
-            if small_object_mode is not None
-            else profile["small_object_mode"]
-        ),
-        "tracking_enabled": (
-            bool(tracking_enabled)
-            if tracking_enabled is not None
-            else profile["tracking_enabled"]
-        ),
-        "tracker_type": tracker_type or profile["tracker_type"],
+        **profile,
+        # Preserve the legacy audit keys while readers migrate to the profile schema.
+        "frame_stride_seconds": 1.0 / profile["sample_fps"],
+        "small_object_mode": profile["sahi_enabled"],
     }
 
 

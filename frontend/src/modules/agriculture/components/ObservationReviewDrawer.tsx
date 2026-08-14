@@ -8,15 +8,18 @@ import { AssignReviewerDialog } from "./AssignReviewerDialog";
 export function ObservationReviewDrawer({
   observation,
   onClose,
+  focusEvidence = false,
 }: {
   observation: AgricultureObservation | null;
   onClose?: () => void;
+  focusEvidence?: boolean;
 }) {
   const [note, setNote] = useState("");
   const [correctionLabel, setCorrectionLabel] = useState("");
   const [correctionSeverity, setCorrectionSeverity] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const evidenceSectionRef = useRef<HTMLDivElement | null>(null);
   const headingId = useId();
   const review = useReviewAgricultureObservation();
   const assign = useAssignAgricultureObservation();
@@ -28,13 +31,21 @@ export function ObservationReviewDrawer({
 
   useEffect(() => {
     if (!observation) return;
+    if (focusEvidence) {
+      evidenceSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+      evidenceSectionRef.current?.focus();
+      return;
+    }
     const node = panelRef.current;
     if (!node) return;
     const focusable = node.querySelector<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
     focusable?.focus();
-  }, [observation]);
+  }, [focusEvidence, observation]);
 
   useEffect(() => {
     if (!observation || !onClose) return;
@@ -173,7 +184,9 @@ export function ObservationReviewDrawer({
         {createAlert.isSuccess ? <Alert severity="success">Linked operational alert created.</Alert> : null}
         {feedback.data?.map((item) => <Stack key={item.id} direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}><Chip size="small" label={`${item.feedback_type} · ${item.status}`} /><Typography variant="caption" sx={{ flex: 1 }}>{item.comment}</Typography>{item.status === "submitted" ? <><Button size="small" onClick={() => decideFeedback.mutate({ id: item.id, payload: { status: "accepted" } })}>Accept</Button><Button size="small" color="error" onClick={() => decideFeedback.mutate({ id: item.id, payload: { status: "rejected" } })}>Reject</Button></> : null}</Stack>)}
       </Stack>
-      <EvidenceFrameCarousel observationId={observation.id} />
+      <div ref={evidenceSectionRef} tabIndex={-1} aria-label="Evidence carousel">
+        <EvidenceFrameCarousel observationId={observation.id} />
+      </div>
       <Typography variant="caption" color="text.secondary">
         Evidence: {observation.evidence_ids.join(", ") || "none"}. Trend:{" "}
         {observation.trend}. Sensor/telemetry:{" "}

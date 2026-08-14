@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
 from backend.core.config.runtime import settings
-from backend.core.rate_limit import enforce_rate_limit
 from backend.core.database.session import get_db
+from backend.core.rate_limit import enforce_rate_limit
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_org_user,

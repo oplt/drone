@@ -25,6 +25,7 @@ import {
 import { ExportApprovalDialog } from "./ExportApprovalDialog";
 import { InspectionActionPanel } from "./InspectionActionPanel";
 import { AssignReviewerDialog } from "./AssignReviewerDialog";
+import { AgricultureInterventionZoneWorkspace } from "./AgricultureInterventionZoneWorkspace";
 
 export function AgricultureActionExportPanel({ runId }: { runId: string }) {
   const actions = useAgricultureInspectionActions(runId);
@@ -47,6 +48,8 @@ export function AgricultureActionExportPanel({ runId }: { runId: string }) {
         <Typography variant="subtitle2">
           Actions, prescriptions and exports
         </Typography>
+        <AgricultureInterventionZoneWorkspace runId={runId} />
+        <Divider />
         <InspectionActionPanel
           actions={actions.data ?? []}
           loading={plan.isPending || updateRoute.isPending}

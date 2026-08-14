@@ -115,7 +115,10 @@ async def test_standard_detector_batches_are_bounded(monkeypatch):
             batch_sizes.append(len(images))
             return [[] for _ in images]
 
-    monkeypatch.setattr(pipeline_module, "async_iter_frames", frames)
+    monkeypatch.setattr(
+        "backend.modules.video_analysis.service.inference_prefetch._decode_source",
+        frames,
+    )
     monkeypatch.setattr(pipeline_module, "run_blocking", inline)
     monkeypatch.setattr(
         pipeline_module.settings,
@@ -130,6 +133,7 @@ async def test_standard_detector_batches_are_bounded(monkeypatch):
             Path("video.mp4"),
             every_seconds=1.0,
             decode_stride_enabled=False,
+            decoder_mode="opencv_sequential",
             detector=Detector(),
             allow_batching=True,
         )

@@ -8,6 +8,10 @@ export type AgricultureFieldProfile = {
   growth_stage: string | null;
   row_direction_deg: number | null;
   expected_row_spacing_m: number | null;
+  expected_plant_spacing_m?: number | null;
+  stand_gap_multiplier?: number;
+  weed_density_cell_m?: number;
+  weed_hotspot_percentile?: number;
   soil_type: string | null;
   irrigation_method: string | null;
   management_zone: string | null;

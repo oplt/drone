@@ -40,7 +40,7 @@ from backend.modules.agriculture.policy import agriculture_validator
 from backend.modules.agriculture.quality import aggregate_quality, analysis_suitability, compute_frame_quality, telemetry_quality_summary
 from backend.modules.agriculture.heuristics import infer_row_structure, segment_rgb_crop_soil_water
 from backend.modules.agriculture.heuristics import anomaly_signature
-from backend.modules.agriculture.stand import summarize_stands
+from backend.modules.agriculture.analytics_service import agriculture_analytics_service
 from backend.modules.agriculture.rgb_products import evaluate_rgb_products, product_gate_summary
 from backend.modules.agriculture.contracts import irrigation_zone_to_observation
 from backend.modules.agriculture.analysis_orchestration import (
@@ -427,42 +427,38 @@ class AgricultureService:
         emit_agriculture_event("analysis_started", flight_id=flight.id, analysis_run_id=run.id)
         return run
 
-    async def process_analysis_run(self, db: AsyncSession, *, run: AgricultureAnalysisRun, flight: AgricultureFlight, force: bool = False, cluster_radius_m: float = 8.0) -> AgricultureAnalysisRun:
-        if run.status in {"cancelled", "review", "published", "completed"} and not force:
+    async def process_analysis_run(self, db: AsyncSession, *, run: AgricultureAnalysisRun, flight: AgricultureFlight, force: bool=False, cluster_radius_m: float=8.0) -> AgricultureAnalysisRun:
+        if run.status in {'cancelled', 'review', 'published', 'completed'} and (not force):
             return run
-        prerequisite, linked_job_ids = (
-            await agriculture_analysis_orchestration.prerequisite_state(
-                db, run=run, flight=flight
-            )
-        )
-        if prerequisite != "completed":
+        prerequisite, linked_job_ids = await agriculture_analysis_orchestration.prerequisite_state(db, run=run, flight=flight)
+        if prerequisite != 'completed':
             return run
-        if flight.status == "captured":
-            await self.transition_flight(db, flight=flight, target="processing")
-        stage = await db.scalar(select(AgricultureAnalysisStage).where(AgricultureAnalysisStage.run_id == run.id, AgricultureAnalysisStage.stage_name == "quality"))
+        if flight.status == 'captured':
+            await self.transition_flight(db, flight=flight, target='processing')
+        stage = await db.scalar(select(AgricultureAnalysisStage).where(AgricultureAnalysisStage.run_id == run.id, AgricultureAnalysisStage.stage_name == 'quality'))
         if stage is None:
-            stage = AgricultureAnalysisStage(run_id=run.id, stage_name="quality")
+            stage = AgricultureAnalysisStage(run_id=run.id, stage_name='quality')
             db.add(stage)
-        stage.status = "running"; stage.attempt += 1; stage.started_at = datetime.now(UTC); stage.error = None
-        run.status = "running"; run.progress = 5.0
+        stage.status = 'running'
+        stage.attempt += 1
+        stage.started_at = datetime.now(UTC)
+        stage.error = None
+        run.status = 'running'
+        run.progress = 5.0
         await db.commit()
         try:
-            videos = await video_analysis_port.list_mission_sources(
-                db,
-                mission_id=flight.mission_id,
-                org_id=flight.org_id,
-                user_id=run.requested_by_user_id,
-            )
+            videos = await video_analysis_port.list_mission_sources(db, mission_id=flight.mission_id, org_id=flight.org_id, user_id=run.requested_by_user_id)
             telemetry_rows = await agriculture_repository.list_telemetry(db, flight_id=flight.id)
             await db.commit()
-            quality_rows, quality_summary, vision_summary = await run_blocking(self._sample_video_quality, videos, run.id, flight.id, boundary="media", operation="agriculture_quality", timeout_s=300.0)
+            quality_rows, quality_summary, vision_summary = await run_blocking(self._sample_video_quality, videos, run.id, flight.id, boundary='media', operation='agriculture_quality', timeout_s=300.0)
             telemetry_summary = telemetry_quality_summary(telemetry_rows)
             profile_snapshot = flight.profile_snapshot or {}
             gsd_values = list((await db.scalars(select(AgricultureFrameLineage.gsd_cm).where(AgricultureFrameLineage.flight_id == flight.id, AgricultureFrameLineage.gsd_cm.is_not(None)))).all())
             estimated_gsd = min((float(value) for value in gsd_values), default=None)
-            suitability = analysis_suitability(estimated_gsd_cm=estimated_gsd, target_gsd_cm=float(profile_snapshot.get("target_gsd_cm", 2.0)), requested_analyses=run.requested_analyses or [])
-            quality_summary = {**quality_summary, "telemetry": telemetry_summary, "video_count": len(videos), "suitability": suitability, "vision_fallback": vision_summary}
-            if suitability.get("status") == "blocked": quality_summary["status"] = "blocked"
+            suitability = analysis_suitability(estimated_gsd_cm=estimated_gsd, target_gsd_cm=float(profile_snapshot.get('target_gsd_cm', 2.0)), requested_analyses=run.requested_analyses or [])
+            quality_summary = {**quality_summary, 'telemetry': telemetry_summary, 'video_count': len(videos), 'suitability': suitability, 'vision_fallback': vision_summary}
+            if suitability.get('status') == 'blocked':
+                quality_summary['status'] = 'blocked'
             await db.execute(delete(AgricultureFrameQuality).where(AgricultureFrameQuality.run_id == run.id))
             db.add_all(quality_rows)
             lineage_rows = list((await db.scalars(select(AgricultureFrameLineage).where(AgricultureFrameLineage.flight_id == flight.id))).all())
@@ -473,241 +469,188 @@ class AgricultureService:
                 if lineage is None or not lineage.footprint_geojson:
                     continue
                 footprint = lineage.footprint_geojson
-                geometry = footprint.get("geometry") if footprint.get("type") == "Feature" else footprint if footprint.get("type") in {"Point", "Polygon", "MultiPolygon"} else None
+                geometry = footprint.get('geometry') if footprint.get('type') == 'Feature' else footprint if footprint.get('type') in {'Point', 'Polygon', 'MultiPolygon'} else None
                 if geometry is None:
                     continue
-                quality_features.append({"type": "Feature", "id": quality_row.id, "geometry": geometry, "properties": {"score": quality_row.score, "state": quality_row.state, "frame_index": quality_row.frame_index, "reasons": quality_row.metrics.get("reasons", [])}})
-            quality_summary["spatial_quality_frame_count"] = len(quality_features)
-            quality_summary["reflight_frame_count"] = sum(row.state == "blocked" for row in quality_rows)
-            stage.metrics = quality_summary; stage.output_checksum = hashlib.sha256(json.dumps(quality_summary, sort_keys=True, default=str).encode()).hexdigest()
-            stage.status = "completed"; stage.progress = 100.0; stage.finished_at = datetime.now(UTC)
+                quality_features.append({'type': 'Feature', 'id': quality_row.id, 'geometry': geometry, 'properties': {'score': quality_row.score, 'state': quality_row.state, 'frame_index': quality_row.frame_index, 'reasons': quality_row.metrics.get('reasons', [])}})
+            quality_summary['spatial_quality_frame_count'] = len(quality_features)
+            quality_summary['reflight_frame_count'] = sum((row.state == 'blocked' for row in quality_rows))
+            stage.metrics = quality_summary
+            stage.output_checksum = hashlib.sha256(json.dumps(quality_summary, sort_keys=True, default=str).encode()).hexdigest()
+            stage.status = 'completed'
+            stage.progress = 100.0
+            stage.finished_at = datetime.now(UTC)
+            if stage.started_at is not None:
+                from backend.observability.media_pipeline_metrics import PIPELINE_AGRICULTURE, record_media_pipeline_stage_ms
+                quality_duration_ms = (stage.finished_at - stage.started_at).total_seconds() * 1000.0
+                record_media_pipeline_stage_ms(quality_duration_ms, stage='quality', pipeline=PIPELINE_AGRICULTURE)
             run.quality_gate = quality_summary
             run.progress = 35.0
             await db.commit()
-            emit_agriculture_event("quality_completed", flight_id=flight.id, analysis_run_id=run.id, status=quality_summary.get("status"), score=quality_summary.get("score"))
-
-            if quality_summary.get("status") == "blocked":
-                run.status = "blocked_quality"
-                run.error = "Image-quality gate blocked agricultural inference"
+            emit_agriculture_event('quality_completed', flight_id=flight.id, analysis_run_id=run.id, status=quality_summary.get('status'), score=quality_summary.get('score'))
+            if quality_summary.get('status') == 'blocked':
+                run.status = 'blocked_quality'
+                run.error = 'Image-quality gate blocked agricultural inference'
                 flight.quality_summary = quality_summary
-                if flight.status == "processing":
-                    await self.transition_flight(db, flight=flight, target="review")
+                if flight.status == 'processing':
+                    await self.transition_flight(db, flight=flight, target='review')
                 await db.commit()
                 return run
-
-            if run.status == "cancelled":
+            if run.status == 'cancelled':
                 return run
-            inference_stage = await db.scalar(select(AgricultureAnalysisStage).where(AgricultureAnalysisStage.run_id == run.id, AgricultureAnalysisStage.stage_name == "observation_aggregation"))
+            inference_stage = await db.scalar(select(AgricultureAnalysisStage).where(AgricultureAnalysisStage.run_id == run.id, AgricultureAnalysisStage.stage_name == 'observation_aggregation'))
             if inference_stage is None:
-                inference_stage = AgricultureAnalysisStage(run_id=run.id, stage_name="observation_aggregation")
+                inference_stage = AgricultureAnalysisStage(run_id=run.id, stage_name='observation_aggregation')
                 db.add(inference_stage)
-            inference_stage.status = "running"; inference_stage.attempt += 1; inference_stage.started_at = datetime.now(UTC)
+            inference_stage.status = 'running'
+            inference_stage.attempt += 1
+            inference_stage.started_at = datetime.now(UTC)
             stage = inference_stage
             inference_started = perf_counter()
-            detections = await video_analysis_port.list_detections(
-                db, job_ids=linked_job_ids, org_id=flight.org_id
-            )
-            inference_links = list(
-                (
-                    await db.scalars(
-                        select(AgricultureAnalysisVideoJob).where(
-                            AgricultureAnalysisVideoJob.run_id == run.id
-                        )
-                    )
-                ).all()
-            )
-            inference_by_job = {
-                link.video_job_id: link for link in inference_links
-            }
+            detections = await video_analysis_port.list_detections(db, job_ids=linked_job_ids, org_id=flight.org_id)
+            inference_links = list((await db.scalars(select(AgricultureAnalysisVideoJob).where(AgricultureAnalysisVideoJob.run_id == run.id))).all())
+            inference_by_job = {link.video_job_id: link for link in inference_links}
             requested_rgb = list(run.requested_analyses or [])
-            rgb_products = evaluate_rgb_products(
-                segmentation=vision_summary,
-                row={"confidence": vision_summary.get("row_direction_confidence")},
-                quality=quality_summary,
-                detections=detections,
-                requested=requested_rgb,
-            )
-            rgb_gates = product_gate_summary(
-                rgb_products,
-                evaluated_models=self._rgb_model_evidence(run.model_versions or {}),
-            )
-            run.quality_gate = {**(run.quality_gate or {}), "rgb_products": rgb_gates, "claim_policy": "RGB products remain candidate-only until model evaluation and human review pass."}
-            observation_payloads = aggregate_detections(detections, cluster_radius_m=cluster_radius_m)
+            rgb_products = evaluate_rgb_products(segmentation=vision_summary, row={'confidence': vision_summary.get('row_direction_confidence')}, quality=quality_summary, detections=detections, requested=requested_rgb)
+            rgb_gates = product_gate_summary(rgb_products, evaluated_models=self._rgb_model_evidence(run.model_versions or {}))
+            run.quality_gate = {**(run.quality_gate or {}), 'rgb_products': rgb_gates, 'claim_policy': 'RGB products remain candidate-only until model evaluation and human review pass.'}
+            observation_payloads = aggregate_detections(detections, cluster_radius_m=cluster_radius_m, capability_by_job_id={str(job_id): link.capability_id for job_id, link in inference_by_job.items()})
             irrigation_zones = list((await db.scalars(select(AnomalyZone).where(AnomalyZone.mission_id == flight.mission_id).order_by(AnomalyZone.id.asc()))).all())
-            observation_payloads.extend(irrigation_zone_to_observation(zone) for zone in irrigation_zones)
+            observation_payloads.extend((irrigation_zone_to_observation(zone) for zone in irrigation_zones))
             for payload in observation_payloads:
-                payload["sensor_values"] = {"telemetry_quality": telemetry_summary.get("status"), "telemetry_gap_count": telemetry_summary.get("gap_count", 0)}
-            stand_summary = summarize_stands([row for row in detections if str(row.label).lower() in {"plant", "crop", "stand", "seedling"}], row_spacing_m=profile_snapshot.get("expected_row_spacing_m"), row_direction_deg=profile_snapshot.get("row_direction_deg"))
-            run.counters = {**(run.counters or {}), "stand_summary": stand_summary, "rgb_product_status": {name: item["status"] for name, item in rgb_gates.items()}}
-            current_features = {key: float(value) for key, value in (("canopy_pct", vision_summary.get("canopy_pct")), ("soil_pct", vision_summary.get("soil_pct")), ("visible_water_pct", vision_summary.get("visible_water_pct"))) if value is not None}
-            profile_key = hashlib.sha256(json.dumps({key: profile_snapshot.get(key) for key in ("crop_type", "season", "growth_stage", "preset", "sensor_inventory")}, sort_keys=True).encode()).hexdigest()[:64]
+                payload['sensor_values'] = {'telemetry_quality': telemetry_summary.get('status'), 'telemetry_gap_count': telemetry_summary.get('gap_count', 0)}
+            phase5_products = await agriculture_analytics_service.analyze(db, run=run, flight=flight, profile=profile_snapshot, detections=detections)
+            observation_payloads.extend(phase5_products.observation_payloads)
+            run.counters = {**(run.counters or {}), 'stand_summary': phase5_products.stand_summary, 'weed_density_summary': phase5_products.weed_density.get('summary', {}), 'rgb_product_status': {name: item['status'] for name, item in rgb_gates.items()}}
+            current_features = {key: float(value) for key, value in (('canopy_pct', vision_summary.get('canopy_pct')), ('soil_pct', vision_summary.get('soil_pct')), ('visible_water_pct', vision_summary.get('visible_water_pct'))) if value is not None}
+            profile_key = hashlib.sha256(json.dumps({key: profile_snapshot.get(key) for key in ('crop_type', 'season', 'growth_stage', 'preset', 'sensor_inventory')}, sort_keys=True).encode()).hexdigest()[:64]
             baseline = await db.scalar(select(AgricultureHealthBaseline).where(AgricultureHealthBaseline.field_id == flight.field_id, AgricultureHealthBaseline.profile_key == profile_key))
             anomaly = anomaly_signature(current=current_features, baseline=baseline.features if baseline and baseline.sample_count > 0 else None)
             if baseline is None:
                 baseline = AgricultureHealthBaseline(field_id=flight.field_id, org_id=flight.org_id, profile_key=profile_key, features=current_features, sample_count=1, confidence=0.25, source_run_id=run.id)
-                db.add(baseline); await db.flush()
-            elif current_features and anomaly.get("status") != "candidate":
+                db.add(baseline)
+                await db.flush()
+            elif current_features and anomaly.get('status') != 'candidate':
                 baseline.features = {key: (float(baseline.features.get(key, value)) * baseline.sample_count + value) / (baseline.sample_count + 1) for key, value in current_features.items()}
-                baseline.sample_count += 1; baseline.confidence = min(0.95, 0.25 + baseline.sample_count * 0.05); baseline.source_run_id = run.id
-            run.quality_gate = {**(run.quality_gate or {}), "health_baseline": {"id": baseline.id, "profile_key": profile_key, "sample_count": baseline.sample_count}, "anomaly_signature": anomaly}
-            if anomaly.get("status") == "candidate":
-                observation_payloads.append({"observation_type": "abnormal_crop_health_signature", "geometry_geojson": {}, "georef_status": "unresolved", "area_m2": None, "severity": float(anomaly.get("confidence", 0.0)), "confidence": float(anomaly.get("confidence", 0.0)), "uncertainty": {"baseline_id": baseline.id, "deltas": anomaly.get("deltas", {})}, "first_detected": None, "last_detected": None, "trend": "current", "evidence_ids": [], "sensor_values": current_features, "model_version": "rgb_heuristic_fallback"})
+                baseline.sample_count += 1
+                baseline.confidence = min(0.95, 0.25 + baseline.sample_count * 0.05)
+                baseline.source_run_id = run.id
+            run.quality_gate = {**(run.quality_gate or {}), 'health_baseline': {'id': baseline.id, 'profile_key': profile_key, 'sample_count': baseline.sample_count}, 'anomaly_signature': anomaly}
+            if anomaly.get('status') == 'candidate':
+                observation_payloads.append({'observation_type': 'abnormal_crop_health_signature', 'geometry_geojson': {}, 'georef_status': 'unresolved', 'area_m2': None, 'severity': float(anomaly.get('confidence', 0.0)), 'confidence': float(anomaly.get('confidence', 0.0)), 'uncertainty': {'baseline_id': baseline.id, 'deltas': anomaly.get('deltas', {})}, 'first_detected': None, 'last_detected': None, 'trend': 'current', 'evidence_ids': [], 'sensor_values': current_features, 'model_version': 'rgb_heuristic_fallback'})
             await db.execute(delete(AgricultureObservation).where(AgricultureObservation.run_id == run.id))
             await db.execute(delete(AgricultureAnalysisLayer).where(AgricultureAnalysisLayer.run_id == run.id))
             observations: list[AgricultureObservation] = []
             detections_by_id = {str(row.id): row for row in detections}
             for index, payload in enumerate(observation_payloads):
-                legacy_zone_id = payload.pop("legacy_anomaly_zone_id", None)
-                evidence_key = ",".join(sorted(str(item) for item in payload.get("evidence_ids", [])))
-                record_id = stable_record_id(run.id, payload["observation_type"], evidence_key, index)
-                evidence_detections = [
-                    detections_by_id[evidence_id]
-                    for evidence_id in (
-                        str(item) for item in payload.get("evidence_ids", [])
-                    )
-                    if evidence_id in detections_by_id
-                ]
-                finding_job_ids = sorted(
-                    {row.job_id for row in evidence_detections}
-                )
+                legacy_zone_id = payload.pop('legacy_anomaly_zone_id', None)
+                evidence_key = ','.join(sorted((str(item) for item in payload.get('evidence_ids', []))))
+                record_id = stable_record_id(run.id, payload['observation_type'], evidence_key, index)
+                evidence_detections = [detections_by_id[evidence_id] for evidence_id in (str(item) for item in payload.get('evidence_ids', [])) if evidence_id in detections_by_id]
+                finding_job_ids = sorted({row.job_id for row in evidence_detections})
                 inference_provenance = []
                 for finding_job_id in finding_job_ids:
                     link = inference_by_job.get(finding_job_id)
                     if link is None:
                         continue
                     snapshot = dict(link.inference_snapshot or {})
-                    inference_provenance.append(
-                        {
-                            "inference_job_id": finding_job_id,
-                            "capability_id": link.capability_id,
-                            "capability_release_id": link.capability_release_id,
-                            "source_video_id": link.video_id,
-                            "source_checksum": snapshot.get("source_checksum"),
-                            "vision_model_version_id": snapshot.get(
-                                "vision_model_version_id"
-                            ),
-                            "model_hash": snapshot.get("model_checksum"),
-                            "resolved_model_version": snapshot.get(
-                                "resolved_model_version"
-                            ),
-                            "inference_profile": snapshot.get(
-                                "inference_profile", {}
-                            ),
-                            "telemetry_match_version": snapshot.get(
-                                "telemetry_match_version"
-                            ),
-                            "capability_contract_version": snapshot.get(
-                                "capability_contract_version"
-                            ),
-                        }
-                    )
-                payload["provenance"] = {
-                    "aggregation_version": "agriculture-aggregation.v1",
-                    "analysis_run_id": run.id,
-                    "inference_jobs": inference_provenance,
-                }
-                observations.append(AgricultureObservation(
-                    id=record_id,
-                    run_id=run.id,
-                    flight_id=flight.id,
-                    field_id=flight.field_id,
-                    geometry=geometry_4326(payload.get("geometry_geojson", {})),
-                    **payload,
-                ))
+                    inference_provenance.append({'inference_job_id': finding_job_id, 'capability_id': link.capability_id, 'capability_release_id': link.capability_release_id, 'source_video_id': link.video_id, 'source_checksum': snapshot.get('source_checksum'), 'vision_model_version_id': snapshot.get('vision_model_version_id'), 'model_hash': snapshot.get('model_checksum'), 'resolved_model_version': snapshot.get('resolved_model_version'), 'inference_profile': snapshot.get('inference_profile', {}), 'telemetry_match_version': snapshot.get('telemetry_match_version'), 'capability_contract_version': snapshot.get('capability_contract_version')})
+                payload['provenance'] = {'aggregation_version': 'agriculture-aggregation.v1', 'analysis_run_id': run.id, 'inference_jobs': inference_provenance}
+                observations.append(AgricultureObservation(id=record_id, run_id=run.id, flight_id=flight.id, field_id=flight.field_id, geometry=geometry_4326(payload.get('geometry_geojson', {})), **payload))
                 if legacy_zone_id is not None:
                     legacy_zone = next((zone for zone in irrigation_zones if zone.id == legacy_zone_id), None)
                     if legacy_zone is not None:
                         legacy_zone.canonical_observation_id = record_id
-                for evidence_id in payload.get("evidence_ids", []):
+                for evidence_id in payload.get('evidence_ids', []):
                     detection = detections_by_id.get(str(evidence_id))
                     if detection is not None:
                         lineage = lineage_by_frame.get(detection.frame_index)
                         evidence_media_id = lineage.media_id if lineage else None
-                        db.add(AgricultureObservationEvidence(id=stable_record_id("observation-evidence", record_id, detection.id), observation_id=record_id, detection_id=detection.id, frame_lineage_id=lineage.id if lineage else None, media_id=evidence_media_id, source_video_id=detection.video_id, evidence_path=None, frame_index=detection.frame_index, timestamp_seconds=detection.timestamp_seconds))
+                        db.add(AgricultureObservationEvidence(id=stable_record_id('observation-evidence', record_id, detection.id), observation_id=record_id, detection_id=detection.id, frame_lineage_id=lineage.id if lineage else None, media_id=evidence_media_id, source_video_id=detection.video_id, evidence_path=None, frame_index=detection.frame_index, timestamp_seconds=detection.timestamp_seconds))
             db.add_all(observations)
             await db.flush()
-            # EPSG:6933 is an equal-area projected CRS. GeoJSON remains WGS84/4326,
-            # while hectares and square metres are never derived from degree units.
+            # EPSG:6933 is equal-area. GeoJSON stays WGS84/4326; area is never derived from degrees.
             for observation in observations:
                 if observation.geometry is not None:
-                    observation.area_m2 = float(await db.scalar(
-                        select(func.ST_Area(func.ST_Transform(AgricultureObservation.geometry, 6933)))
-                        .where(AgricultureObservation.id == observation.id)
-                    ) or 0.0)
+                    observation.area_m2 = float(await db.scalar(select(func.ST_Area(func.ST_Transform(AgricultureObservation.geometry, 6933))).where(AgricultureObservation.id == observation.id)) or 0.0)
             by_type: dict[str, list[AgricultureObservation]] = defaultdict(list)
-            for observation in observations: by_type[observation.observation_type].append(observation)
+            for observation in observations:
+                by_type[observation.observation_type].append(observation)
             output_size_bytes = 0
             for layer_name, layer_rows in by_type.items():
-                features = [{"type": "Feature", "id": row.id, "geometry": row.geometry_geojson or None, "properties": {"observation_id": row.id, "severity": row.severity, "confidence": row.confidence, "area_m2": row.area_m2, "georef_status": row.georef_status, "review_state": row.review_state}} for row in layer_rows]
-                geojson = {"type": "FeatureCollection", "features": features}
-                output_size_bytes += len(json.dumps(geojson, sort_keys=True, separators=(",", ":")))
-                checksum = hashlib.sha256(json.dumps(geojson, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-                db.add(AgricultureAnalysisLayer(run_id=run.id, layer_name=layer_name, geojson=geojson, summary={"count": len(features), "area_m2": sum(row.area_m2 or 0 for row in layer_rows)}, checksum=checksum))
+                if layer_name == 'stand_gap':
+                    continue
+                features = [{'type': 'Feature', 'id': row.id, 'geometry': row.geometry_geojson or None, 'properties': {'observation_id': row.id, 'severity': row.severity, 'confidence': row.confidence, 'area_m2': row.area_m2, 'georef_status': row.georef_status, 'review_state': row.review_state}} for row in layer_rows]
+                geojson = {'type': 'FeatureCollection', 'features': features}
+                output_size_bytes += len(json.dumps(geojson, sort_keys=True, separators=(',', ':')))
+                checksum = hashlib.sha256(json.dumps(geojson, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                db.add(AgricultureAnalysisLayer(run_id=run.id, layer_name=layer_name, geojson=geojson, summary={'count': len(features), 'area_m2': sum((row.area_m2 or 0 for row in layer_rows))}, checksum=checksum))
+            output_size_bytes += agriculture_analytics_service.persist_layers(db, run_id=run.id, products=phase5_products, observations_by_type=by_type)
             if quality_features:
-                quality_geojson = {"type": "FeatureCollection", "features": quality_features}
-                quality_checksum = hashlib.sha256(json.dumps(quality_geojson, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-                db.add(AgricultureAnalysisLayer(run_id=run.id, layer_name="quality", geojson=quality_geojson, summary={"count": len(quality_features), "reflight_count": sum(feature["properties"]["state"] == "blocked" for feature in quality_features)}, checksum=quality_checksum))
-            fallback_layers = {"canopy_cover": "canopy_pct", "soil": "soil_pct", "standing_water": "visible_water_pct", "row_detection": "row_direction_confidence"}
+                quality_geojson = {'type': 'FeatureCollection', 'features': quality_features}
+                quality_checksum = hashlib.sha256(json.dumps(quality_geojson, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                db.add(AgricultureAnalysisLayer(run_id=run.id, layer_name='quality', geojson=quality_geojson, summary={'count': len(quality_features), 'reflight_count': sum((feature['properties']['state'] == 'blocked' for feature in quality_features))}, checksum=quality_checksum))
+            fallback_layers = {'canopy_cover': 'canopy_pct', 'soil': 'soil_pct', 'standing_water': 'visible_water_pct', 'row_detection': 'row_direction_confidence'}
             for layer_name, metric_name in fallback_layers.items():
                 metric_value = vision_summary.get(metric_name)
                 if metric_value is None:
                     continue
-                features = [{"type": feature["type"], "id": feature["id"], "geometry": feature["geometry"], "properties": {**feature["properties"], metric_name: metric_value, "source": "rgb_heuristic_fallback"}} for feature in quality_features]
-                geojson = {"type": "FeatureCollection", "features": features}
-                output_size_bytes += len(json.dumps(geojson, sort_keys=True, separators=(",", ":")))
-                checksum = hashlib.sha256(json.dumps(geojson, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-                db.add(AgricultureAnalysisLayer(run_id=run.id, layer_name=layer_name, geojson=geojson, summary={metric_name: metric_value, "source": "rgb_heuristic_fallback", "count": len(features)}, checksum=checksum))
+                features = [{'type': feature['type'], 'id': feature['id'], 'geometry': feature['geometry'], 'properties': {**feature['properties'], metric_name: metric_value, 'source': 'rgb_heuristic_fallback'}} for feature in quality_features]
+                geojson = {'type': 'FeatureCollection', 'features': features}
+                output_size_bytes += len(json.dumps(geojson, sort_keys=True, separators=(',', ':')))
+                checksum = hashlib.sha256(json.dumps(geojson, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                db.add(AgricultureAnalysisLayer(run_id=run.id, layer_name=layer_name, geojson=geojson, summary={metric_name: metric_value, 'source': 'rgb_heuristic_fallback', 'count': len(features)}, checksum=checksum))
             inference_latency = perf_counter() - inference_started
-            inference_stage.metrics = {"detection_count": len(detections), "observation_count": len(observations), "unresolved_count": sum(row.georef_status == "unresolved" for row in observations), "latency_seconds": inference_latency}
-            inference_stage.status = "completed"; inference_stage.progress = 100.0; inference_stage.finished_at = datetime.now(UTC)
+            inference_stage.metrics = {'detection_count': len(detections), 'observation_count': len(observations), 'unresolved_count': sum((row.georef_status == 'unresolved' for row in observations)), 'latency_seconds': inference_latency}
+            inference_stage.status = 'completed'
+            inference_stage.progress = 100.0
+            inference_stage.finished_at = datetime.now(UTC)
             georef_total = len(observations)
-            georef_resolved = sum(row.georef_status == "resolved" for row in observations)
-            run.counters = {**(run.counters or {}), "frames_received": len(lineage_rows), "frames_processed": len(quality_rows), "frames_dropped": sum(row.state == "blocked" for row in quality_rows), "frames_failed": sum(row.state == "failed" for row in quality_rows), "quality_rejection_count": sum(row.state == "blocked" for row in quality_rows), "inference_latency_seconds": inference_latency, "detection_count": len(detections), "observation_count": georef_total, "observation_area_m2": sum(row.area_m2 or 0.0 for row in observations), "output_size_bytes": output_size_bytes, "unresolved_observation_count": georef_total - georef_resolved, "georeference_success_count": georef_resolved, "georeference_success_rate": georef_resolved / georef_total if georef_total else 0.0, "dedup_ratio": max(0.0, 1.0 - (georef_total / len(detections))) if detections else 0.0}
+            georef_resolved = sum((row.georef_status == 'resolved' for row in observations))
+            run.counters = {**(run.counters or {}), 'frames_received': len(lineage_rows), 'frames_processed': len(quality_rows), 'frames_dropped': sum((row.state == 'blocked' for row in quality_rows)), 'frames_failed': sum((row.state == 'failed' for row in quality_rows)), 'quality_rejection_count': sum((row.state == 'blocked' for row in quality_rows)), 'inference_latency_seconds': inference_latency, 'detection_count': len(detections), 'observation_count': georef_total, 'observation_area_m2': sum((row.area_m2 or 0.0 for row in observations)), 'output_size_bytes': output_size_bytes, 'unresolved_observation_count': georef_total - georef_resolved, 'georeference_success_count': georef_resolved, 'georeference_success_rate': georef_resolved / georef_total if georef_total else 0.0, 'dedup_ratio': max(0.0, 1.0 - georef_total / len(detections)) if detections else 0.0}
             from backend.observability import prometheus_metrics
-            prometheus_metrics.agriculture_georeference_rate.labels(stage="observation_aggregation").set(run.counters["georeference_success_rate"])
-            prometheus_metrics.agriculture_observations_total.labels(stage="observation_aggregation").set(georef_total)
-            prometheus_metrics.agriculture_inference_latency_seconds.labels(stage="observation_aggregation").observe(inference_latency)
-            for outcome, count in (("received", len(lineage_rows)), ("processed", len(quality_rows)), ("dropped", run.counters["frames_dropped"]), ("failed", run.counters["frames_failed"])):
-                prometheus_metrics.agriculture_frames_total.labels(stage="analysis", outcome=outcome).inc(count)
-            prometheus_metrics.agriculture_quality_rejections_total.labels(reason="quality_gate").inc(run.counters["quality_rejection_count"])
-            prometheus_metrics.agriculture_observation_area_m2.labels(stage="observation_aggregation").set(run.counters["observation_area_m2"])
-            prometheus_metrics.agriculture_dedup_ratio.labels(stage="observation_aggregation").set(run.counters["dedup_ratio"])
-            prometheus_metrics.agriculture_output_size_bytes.labels(stage="observation_aggregation").observe(output_size_bytes)
-            run.progress = 100.0; run.status = "review" if observations else "completed"; run.error = None
-            review_stage = await db.scalar(
-                select(AgricultureAnalysisStage).where(
-                    AgricultureAnalysisStage.run_id == run.id,
-                    AgricultureAnalysisStage.stage_name == "review_ready",
-                )
-            )
+            prometheus_metrics.agriculture_georeference_rate.labels(stage='observation_aggregation').set(run.counters['georeference_success_rate'])
+            prometheus_metrics.agriculture_observations_total.labels(stage='observation_aggregation').set(georef_total)
+            prometheus_metrics.agriculture_inference_latency_seconds.labels(stage='observation_aggregation').observe(inference_latency)
+            for outcome, count in (('received', len(lineage_rows)), ('processed', len(quality_rows)), ('dropped', run.counters['frames_dropped']), ('failed', run.counters['frames_failed'])):
+                prometheus_metrics.agriculture_frames_total.labels(stage='analysis', outcome=outcome).inc(count)
+            prometheus_metrics.agriculture_quality_rejections_total.labels(reason='quality_gate').inc(run.counters['quality_rejection_count'])
+            prometheus_metrics.agriculture_observation_area_m2.labels(stage='observation_aggregation').set(run.counters['observation_area_m2'])
+            prometheus_metrics.agriculture_dedup_ratio.labels(stage='observation_aggregation').set(run.counters['dedup_ratio'])
+            prometheus_metrics.agriculture_output_size_bytes.labels(stage='observation_aggregation').observe(output_size_bytes)
+            from backend.observability.media_pipeline_metrics import PIPELINE_AGRICULTURE, record_media_pipeline_stage_ms
+            record_media_pipeline_stage_ms(inference_latency * 1000.0, stage='observation_aggregation', pipeline=PIPELINE_AGRICULTURE)
+            run.progress = 100.0
+            run.status = 'review' if observations else 'completed'
+            run.error = None
+            review_stage = await db.scalar(select(AgricultureAnalysisStage).where(AgricultureAnalysisStage.run_id == run.id, AgricultureAnalysisStage.stage_name == 'review_ready'))
             if review_stage is None:
-                review_stage = AgricultureAnalysisStage(
-                    run_id=run.id, stage_name="review_ready"
-                )
+                review_stage = AgricultureAnalysisStage(run_id=run.id, stage_name='review_ready')
                 db.add(review_stage)
-            review_stage.status = "completed"
+            review_stage.status = 'completed'
             review_stage.progress = 100.0
             review_stage.started_at = review_stage.started_at or datetime.now(UTC)
             review_stage.finished_at = datetime.now(UTC)
-            review_stage.metrics = {
-                "observation_count": len(observations),
-                "requires_review": bool(observations),
-            }
+            review_stage.metrics = {'observation_count': len(observations), 'requires_review': bool(observations)}
             flight.quality_summary = quality_summary
-            flight.coverage_summary = {**(flight.coverage_summary or {}), "observation_count": len(observations), "resolved_observation_count": sum(row.georef_status == "resolved" for row in observations)}
-            if flight.status == "processing":
-                await self.transition_flight(db, flight=flight, target="review")
+            flight.coverage_summary = {**(flight.coverage_summary or {}), 'observation_count': len(observations), 'resolved_observation_count': sum((row.georef_status == 'resolved' for row in observations))}
+            if flight.status == 'processing':
+                await self.transition_flight(db, flight=flight, target='review')
             await db.commit()
             return run
         except Exception as exc:
-            stage.status = "failed"; stage.error = str(exc)[:4000]; stage.finished_at = datetime.now(UTC)
-            run.status = "failed"; run.error = str(exc)[:4000]; run.retry_count += 1
-            run.audit_json = {**(run.audit_json or {}), "last_failure_at": datetime.now(UTC).isoformat(), "last_error": str(exc)[:1000]}
+            stage.status = 'failed'
+            stage.error = str(exc)[:4000]
+            stage.finished_at = datetime.now(UTC)
+            run.status = 'failed'
+            run.error = str(exc)[:4000]
+            run.retry_count += 1
+            run.audit_json = {**(run.audit_json or {}), 'last_failure_at': datetime.now(UTC).isoformat(), 'last_error': str(exc)[:1000]}
             from backend.observability import prometheus_metrics
             prometheus_metrics.agriculture_stage_failures_total.labels(stage=stage.stage_name, error_type=type(exc).__name__).inc()
             prometheus_metrics.agriculture_repeated_failures.labels(run_id=run.id).set(run.retry_count)
-            if flight.status == "processing":
-                await self.transition_flight(db, flight=flight, target="failed")
+            if flight.status == 'processing':
+                await self.transition_flight(db, flight=flight, target='failed')
             await db.commit()
             raise
 

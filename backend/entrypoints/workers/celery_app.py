@@ -92,6 +92,8 @@ celery_app.conf.update(
             "queue": CELERY_VISION_TRAINING_QUEUE
         },
         "agriculture.process_run": {"queue": CELERY_AGRICULTURE_INFERENCE_QUEUE},
+        "agriculture.video_inference_completed": {"queue": CELERY_AGRICULTURE_INFERENCE_QUEUE},
+        "agriculture.reconcile_waiting_dependencies": {"queue": CELERY_AGRICULTURE_INFERENCE_QUEUE},
         "agriculture.stage.ingest": {"queue": CELERY_AGRICULTURE_QUEUES["ingest"]},
         "agriculture.stage.quality": {"queue": CELERY_AGRICULTURE_QUEUES["quality"]},
         "agriculture.stage.rgb_inference": {"queue": CELERY_AGRICULTURE_QUEUES["rgb_inference"]},
@@ -153,6 +155,10 @@ celery_app.conf.beat_schedule = {
         "task": "agriculture.retention_cleanup",
         "schedule": 3600.0,
     },
+    "reconcile-agriculture-waiting-dependencies": {
+        "task": "agriculture.reconcile_waiting_dependencies",
+        "schedule": 300.0,
+    },
     "reconcile-stale-video-analysis-jobs": {
         "task": "video_analysis.reconcile_stale_jobs",
         "schedule": 60.0,
@@ -181,6 +187,7 @@ instrument_celery(celery_app)
 # named task; relying on package ``__init__`` is not enough for this entrypoint.
 from backend.entrypoints.workers import (  # noqa: E402, F401
     agents_tasks,
+    agriculture_stage_tasks,
     agriculture_tasks,
     deliverable_tasks,
     export_tasks,

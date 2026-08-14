@@ -6,6 +6,13 @@ export { AgricultureLiveStatusPanel } from "./components/AgricultureLiveStatusPa
 export { AgriculturePlanPreviewCard } from "./components/AgriculturePlanPreviewCard";
 export { AgriculturePreflightPanel } from "./components/AgriculturePreflightPanel";
 export { AgricultureReviewWorkspace } from "./components/AgricultureReviewWorkspace";
+export { AgricultureAnalysisMap } from "./components/AgricultureAnalysisMap";
+export type {
+  AgricultureAnalysisMapProps,
+  AgricultureMapContextStatus,
+  AgricultureMapGeoJson,
+  AgricultureMapLayerVisibility,
+} from "./components/AgricultureAnalysisMap";
 export { AgricultureSensorFusionPanel } from "./components/AgricultureSensorFusionPanel";
 export { AgricultureCropInsightsPanel } from "./components/AgricultureCropInsightsPanel";
 export { AgricultureActionExportPanel } from "./components/AgricultureActionExportPanel";

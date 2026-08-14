@@ -61,7 +61,23 @@ export const agricultureKeys = {
     [...agricultureKeys.all, "field-outcomes", runId] as const,
   comparableFlights: (flightId: string | null) =>
     [...agricultureKeys.all, "comparable-flights", flightId] as const,
-  spatial: (runId: string | null, layer: string, zoom: number, minConfidence: number) => [...agricultureKeys.all, "spatial", runId, layer, zoom, minConfidence] as const,
+  spatial: (
+    runId: string | null,
+    layer: string,
+    zoom: number,
+    minConfidence: number,
+    minSeverity: number,
+    maxFeatures: number,
+  ) => [
+    ...agricultureKeys.all,
+    "spatial",
+    runId,
+    layer,
+    zoom,
+    minConfidence,
+    minSeverity,
+    maxFeatures,
+  ] as const,
   fieldContext: (fieldId: number | null) => [...agricultureKeys.all, "field-context", fieldId] as const,
 };
 

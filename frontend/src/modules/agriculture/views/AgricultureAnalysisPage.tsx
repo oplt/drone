@@ -4,6 +4,7 @@ import {
   AccordionSummary,
   Alert,
   Button,
+  Grid,
   Stack,
   Tab,
   Tabs,
@@ -14,12 +15,13 @@ import { useState } from "react";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { AgricultureActionExportPanel } from "../components/AgricultureActionExportPanel";
 import { AgricultureAccessibilityBoundary } from "../components/AgricultureAccessibilityBoundary";
-import { AgricultureCropInsightsPanel } from "../components/AgricultureCropInsightsPanel";
+import { AgricultureInsightsWorkspace } from "../components/AgricultureInsightsWorkspace";
 import { AgricultureGovernanceAssistantPanel } from "../components/AgricultureGovernanceAssistantPanel";
 import { AgricultureReviewWorkspace } from "../components/AgricultureReviewWorkspace";
 import { PrioritizedFindingsPanel } from "../components/PrioritizedFindingsPanel";
 import { AgricultureSensorFusionPanel } from "../components/AgricultureSensorFusionPanel";
 import { AnalysisRunProgress } from "../components/AnalysisRunProgress";
+import { AgricultureInferenceReuseNotice } from "../components/AgricultureInferenceReuseNotice";
 import {
   useAgricultureAnalysisQuality,
   useAgricultureAnalysisRun,
@@ -31,6 +33,7 @@ import { AgricultureMediaTimelinePanel } from "../components/AgricultureMediaTim
 import { AgricultureSensorCalibrationWizard } from "../components/AgricultureSensorCalibrationWizard";
 import { AgricultureModelRegistryPanel } from "../components/AgricultureModelRegistryPanel";
 import { AgricultureJourneyStepper } from "../components/AgricultureJourneyStepper";
+import { isAnalysisRunReplayable } from "../workflows/analysisRunStatusPresentation";
 import { FeatureState } from "../../../shared/ui/FeatureState";
 
 export default function AgricultureAnalysisPage() {
@@ -66,7 +69,7 @@ export default function AgricultureAnalysisPage() {
                   Agriculture analysis
                 </Typography>
                 <Typography color="text.secondary">
-                  Findings first. Specialist tools stay under Advanced.
+                  Map and evidence first. Specialist tools stay under Advanced.
                 </Typography>
               </div>
               <AgricultureJourneyStepper
@@ -79,13 +82,14 @@ export default function AgricultureAnalysisPage() {
                 progress={run.data.progress}
                 error={run.data.error}
                 stages={quality.data?.stages ?? []}
-                onReplay={[
-                  "failed",
-                  "cancelled",
-                  "blocked_quality",
-                ].includes(run.data.status)
-                  ? () => replay.mutate(runId)
-                  : undefined}
+                qualityGate={run.data.quality_gate}
+                retryCount={run.data.retry_count}
+                createdAt={run.data.created_at}
+                onReplay={
+                  isAnalysisRunReplayable(run.data.status)
+                    ? () => replay.mutate(runId)
+                    : undefined
+                }
                 replayPending={replay.isPending}
                 onRetryStage={(stageName) =>
                   retryStage.mutate({ runId, stageName })
@@ -94,6 +98,7 @@ export default function AgricultureAnalysisPage() {
                   retryStage.isPending ? retryStage.variables?.stageName : null
                 }
               />
+              <AgricultureInferenceReuseNotice reuse={run.data.inference_reuse} />
               <Tabs
                 value={tab}
                 onChange={(_event, value: number) => setTab(value)}
@@ -129,23 +134,26 @@ export default function AgricultureAnalysisPage() {
                 spacing={2}
               >
                 {tab === 0 ? (
-                  <>
-                    <PrioritizedFindingsPanel runId={runId} />
-                    <Accordion disableGutters>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="subtitle2">
-                          Full map review workspace
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <AgricultureReviewWorkspace runId={runId} />
-                      </AccordionDetails>
-                    </Accordion>
-                    <AgricultureReportPanel runId={runId} />
-                  </>
+                  <Grid container spacing={2} alignItems="flex-start">
+                    <Grid size={{ xs: 12, lg: 8 }}>
+                      <AgricultureReviewWorkspace runId={runId} />
+                    </Grid>
+                    <Grid
+                      size={{ xs: 12, lg: 4 }}
+                      sx={{
+                        maxHeight: { lg: "calc(100vh - 12rem)" },
+                        overflow: { lg: "auto" },
+                      }}
+                    >
+                      <PrioritizedFindingsPanel runId={runId} showHotspotMap={false} />
+                    </Grid>
+                    <Grid size={12}>
+                      <AgricultureReportPanel runId={runId} />
+                    </Grid>
+                  </Grid>
                 ) : null}
                 {tab === 1 ? (
-                  <AgricultureCropInsightsPanel runId={runId} />
+                  <AgricultureInsightsWorkspace run={run.data} />
                 ) : null}
                 {tab === 2 ? (
                   <AgricultureActionExportPanel runId={runId} />

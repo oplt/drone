@@ -23,7 +23,9 @@ export type CreateVisionProjectInput = {
     | "crop_health"
     | "canopy_cover"
     | "row_detection"
-    | "standing_water";
+    | "standing_water"
+    | "fruit_counting"
+    | "ripeness_classification";
   classes: Array<{ name: string }>;
 };
 

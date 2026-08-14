@@ -1,7 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type React from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { PrioritizedFindingsPanel } from "./PrioritizedFindingsPanel";
+
+const selectDetectionEvidence = vi.fn();
+
+vi.mock("../../video-analysis/evidenceSelection", () => ({
+  selectDetectionEvidence: (...args: unknown[]) => selectDetectionEvidence(...args),
+}));
 
 vi.mock("../hooks", () => ({
   useAgricultureFindings: () => ({
@@ -53,16 +62,51 @@ vi.mock("../hooks", () => ({
   useCreateAgricultureFieldOutcome: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+vi.mock("./ObservationReviewDrawer", () => ({
+  ObservationReviewDrawer: ({
+    focusEvidence,
+  }: {
+    focusEvidence?: boolean;
+  }) => (
+    <div>
+      Review drawer {focusEvidence ? "evidence-focused" : "default"}
+    </div>
+  ),
+}));
+
 describe("PrioritizedFindingsPanel", () => {
-  it("renders ranked findings and hotspot preview", () => {
+  const renderPanel = (ui: React.ReactElement) =>
     render(
-      <QueryClientProvider client={new QueryClient()}>
-        <PrioritizedFindingsPanel runId="run-1" />
-      </QueryClientProvider>,
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>
+      </MemoryRouter>,
     );
+
+  it("renders ranked findings and hotspot preview", () => {
+    renderPanel(<PrioritizedFindingsPanel runId="run-1" />);
     expect(screen.getByText(/Prioritized findings/i)).toBeInTheDocument();
     expect(screen.getByText(/weed detection/i)).toBeInTheDocument();
     expect(screen.getByText(/Score 0.810/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirm" })).toBeInTheDocument();
+  });
+
+  it("hides hotspot preview when showHotspotMap is false", () => {
+    renderPanel(<PrioritizedFindingsPanel runId="run-1" showHotspotMap={false} />);
+    expect(screen.getByText(/Prioritized findings/i)).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /Agriculture analysis map layer/i })).not.toBeInTheDocument();
+  });
+
+  it("jumps to evidence in one action and syncs URL state", async () => {
+    selectDetectionEvidence.mockClear();
+    const user = userEvent.setup();
+    renderPanel(<PrioritizedFindingsPanel runId="run-1" showHotspotMap={false} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Jump to evidence for finding 1" }),
+    );
+
+    expect(selectDetectionEvidence).toHaveBeenCalledWith("e1");
+    expect(screen.getByText("Review drawer evidence-focused")).toBeInTheDocument();
+    expect(screen.getByText(/Selected finding obs-1/i)).toBeInTheDocument();
   });
 });

@@ -122,7 +122,7 @@ export async function getAgricultureAnalysisLayer(
 
 export async function getAgricultureSpatialViewport(
   runId: string,
-  options: { layer?: string; bbox?: string; zoom?: number; minSeverity?: number; minConfidence?: number } = {},
+  options: { layer?: string; bbox?: string; zoom?: number; minSeverity?: number; minConfidence?: number; maxFeatures?: number } = {},
 ): Promise<AgricultureSpatialViewport> {
   const params = new URLSearchParams();
   if (options.layer) params.set("layer", options.layer);
@@ -130,6 +130,7 @@ export async function getAgricultureSpatialViewport(
   if (options.zoom != null) params.set("zoom", String(options.zoom));
   if (options.minSeverity != null) params.set("min_severity", String(options.minSeverity));
   if (options.minConfidence != null) params.set("min_confidence", String(options.minConfidence));
+  if (options.maxFeatures != null) params.set("max_features", String(options.maxFeatures));
   return httpRequest<AgricultureSpatialViewport>(`/agriculture/analysis-runs/${encodeURIComponent(runId)}/spatial/viewport?${params.toString()}`);
 }
 

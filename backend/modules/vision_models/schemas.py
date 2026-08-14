@@ -46,6 +46,8 @@ class VisionProjectCreate(BaseModel):
         "canopy_cover",
         "row_detection",
         "standing_water",
+        "fruit_counting",
+        "ripeness_classification",
     ] = "object_detection"
     classes: list[VisionClassIn] = Field(min_length=1, max_length=100)
 

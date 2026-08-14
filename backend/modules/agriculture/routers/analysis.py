@@ -1,19 +1,39 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import hashlib
 import json
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import FileResponse, RedirectResponse
-from backend.shared.json_responses import orjson_response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
 from backend.core.database.session import get_db
 from backend.core.pagination import decode_offset_cursor, encode_offset_cursor
+from backend.modules.agriculture.analysis_orchestration import (
+    AgricultureAnalysisReadinessError,
+    agriculture_analysis_orchestration,
+)
+from backend.modules.agriculture.crop_insight_service import agriculture_crop_insight_service
+from backend.modules.agriculture.events import emit_agriculture_event
+from backend.modules.agriculture.finding_ops import (
+    merge_observations,
+    record_field_outcome,
+    split_observation,
+)
+from backend.modules.agriculture.finding_ranking import (
+    DEFAULT_FINDING_LIMIT,
+    RANKING_POLICY_VERSION,
+    rank_findings,
+)
+from backend.modules.agriculture.fusion_service import agriculture_fusion_service
+from backend.modules.agriculture.governance import agriculture_governance_service
+from backend.modules.agriculture.governance_models import AgricultureAssistantRun
+from backend.modules.agriculture.inference_reuse import serialize_analysis_run
+from backend.modules.agriculture.lifecycle import append_analysis_status_event
 from backend.modules.agriculture.models import (
     AgricultureAnalysisLayer,
     AgricultureAnalysisRun,
@@ -21,19 +41,9 @@ from backend.modules.agriculture.models import (
     AgricultureAnalysisVideoJob,
     AgricultureFieldProfile,
     AgricultureFlight,
-    AgricultureFrameLineage,
     AgricultureMediaManifest,
     AgricultureObservation,
-    AgricultureObservationEvidence,
     new_id,
-)
-from backend.modules.video_analysis.contracts import video_analysis_port
-from backend.modules.agriculture.spatial import aggregate_features, web_mercator_tile_bounds
-from backend.modules.agriculture.sensor_models import (
-    AgricultureFusionResult,
-    AgricultureSensorCalibration,
-    AgricultureSensorReading,
-    AgricultureSpectralBand,
 )
 from backend.modules.agriculture.p4_models import (
     AgricultureCropRisk,
@@ -43,14 +53,107 @@ from backend.modules.agriculture.p4_models import (
 )
 from backend.modules.agriculture.p5_models import (
     AgricultureAgronomyRule,
-    AgricultureExportAccessAudit,
     AgricultureExportJob,
     AgricultureFieldOutcome,
     AgricultureInspectionAction,
     AgriculturePrescriptionDraft,
     AgricultureReportSnapshot,
 )
-from backend.modules.agriculture.governance_models import AgricultureAssistantRun
+from backend.modules.agriculture.p5_service import agriculture_safety_service
+from backend.modules.agriculture.queue import (
+    AgricultureAnalysisQueueError,
+    agriculture_analysis_queue,
+)
+from backend.modules.agriculture.report_service import (
+    DECISION_REPORT_TEMPLATE_VERSION,
+    REPORT_TEMPLATE_VERSION,
+    build_decision_report_snapshot,
+    build_report_snapshot,
+)
+from backend.modules.agriculture.repository import agriculture_repository
+from backend.modules.agriculture.routers import common as _common
+from backend.modules.agriculture.routers.common import (
+    AGRICULTURE_SCHEMA_VERSION,
+)
+from backend.modules.agriculture.schemas import (
+    AgricultureAnalysisReadinessOut,
+    AgricultureAssistantIn,
+    AgricultureAssistantOut,
+    AgricultureFlightOut,
+    AgricultureLayerOut,
+    AgricultureObservationOut,
+    AgricultureObservationPage,
+    AgricultureQualityOut,
+    AgronomyRuleIn,
+    AgronomyRuleOut,
+    AnalysisProcessIn,
+    AnalysisRunIn,
+    AnalysisRunOut,
+    AnalysisStageOut,
+    AnalysisStageRetryIn,
+    AnnotationIn,
+    AnnotationOut,
+    ApprovalIn,
+    CalibrationIn,
+    ComparableFlightOut,
+    CropRiskIn,
+    CropRiskOut,
+    DatasetExportIn,
+    DatasetExportOut,
+    DatasetImportIn,
+    FeedbackDecisionIn,
+    FieldComparisonIn,
+    FieldOutcomeIn,
+    FieldOutcomeOut,
+    FindingMergeIn,
+    FindingSplitIn,
+    FrameManifestIn,
+    FusionIn,
+    FusionResultOut,
+    GrowthMetricIn,
+    GrowthMetricOut,
+    GrowthStageCorrectionIn,
+    GrowthStageIn,
+    GrowthStageOut,
+    InspectionActionAssignmentIn,
+    InspectionActionOut,
+    InspectionPlanIn,
+    InspectionPlanOut,
+    InspectionRouteUpdateIn,
+    ModelQualityReportIn,
+    ModelVersionIn,
+    ObservationAlertIn,
+    ObservationAssignmentIn,
+    ObservationFeedbackIn,
+    ObservationFeedbackOut,
+    PrescriptionIn,
+    PrescriptionOut,
+    RankedFindingOut,
+    RankedFindingPage,
+    ReportSnapshotIn,
+    ReportSnapshotOut,
+    ReviewAuditOut,
+    ReviewIn,
+    SensorCalibrationIn,
+    SensorReadingBatchIn,
+    SpectralBandIn,
+    TemporalCompareIn,
+    YieldForecastIn,
+    YieldForecastOut,
+)
+from backend.modules.agriculture.segmentation_experiment import evaluate_segmentation_experiment
+from backend.modules.agriculture.segmentation_schemas import SegmentationExperimentIn
+from backend.modules.agriculture.sensor_models import (
+    AgricultureFusionResult,
+    AgricultureSensorCalibration,
+    AgricultureSensorReading,
+    AgricultureSpectralBand,
+)
+from backend.modules.agriculture.service import agriculture_service, utc
+from backend.modules.agriculture.spatial import aggregate_features, web_mercator_tile_bounds
+from backend.modules.agriculture.stage_operations import stage_input_checksum
+from backend.modules.agriculture.storage import agriculture_storage
+from backend.modules.agriculture.temporal import agriculture_temporal_service, summarize_changes
 from backend.modules.agriculture.temporal_models import (
     AgricultureDatasetExport,
     AgricultureDatasetItem,
@@ -59,106 +162,15 @@ from backend.modules.agriculture.temporal_models import (
     AgricultureObservationFeedback,
     AgricultureReviewAudit,
 )
-from backend.modules.alerts.models import OperationalAlert
-from backend.modules.agriculture.repository import agriculture_repository
-from backend.modules.agriculture.analysis_orchestration import (
-    AgricultureAnalysisReadinessError,
-    agriculture_analysis_orchestration,
-)
-from backend.modules.agriculture.finding_ops import merge_observations, record_field_outcome, split_observation
-from backend.modules.agriculture.finding_ranking import DEFAULT_FINDING_LIMIT, RANKING_POLICY_VERSION, rank_findings
-from backend.modules.agriculture.queue import AgricultureAnalysisQueueError, agriculture_analysis_queue
-from backend.modules.agriculture.schemas import (
-    AnalysisProcessIn,
-    AgricultureAnalysisReadinessOut,
+from backend.modules.agriculture.temporal_schemas import (
     AgricultureChangeOut,
     AgricultureComparisonOut,
-    AnnotationIn,
-    AnnotationOut,
-    AnalysisRunOut,
-    AnalysisStageOut,
-    AgricultureLayerOut,
-    FeedbackDecisionIn,
-    ObservationAlertIn,
-    ObservationAssignmentIn,
-    ObservationFeedbackIn,
-    ObservationFeedbackOut,
-    InspectionActionAssignmentIn,
-    AgricultureObservationOut,
-    AgricultureObservationPage,
-    AgricultureQualityOut,
-    AgricultureFlightOut,
-    AnalysisRunIn,
-    CalibrationIn,
-    ComparableFlightOut,
-    FieldOutcomeIn,
-    FieldOutcomeOut,
-    FieldComparisonIn,
-    FindingMergeIn,
-    FindingSplitIn,
-    FrameManifestIn,
-    InspectionRouteUpdateIn,
-    RankedFindingOut,
-    RankedFindingPage,
-    ReviewIn,
-    ReviewAuditOut,
-    TemporalCompareIn,
-    DatasetExportIn,
-    DatasetExportOut,
-    DatasetImportIn,
-    ModelQualityReportIn,
-    ModelVersionIn,
-    SensorCalibrationIn,
-    SensorReadingBatchIn,
-    SpectralBandIn,
-    FusionIn,
-    FusionResultOut,
-    CropRiskIn,
-    CropRiskOut,
-    GrowthMetricIn,
-    GrowthMetricOut,
-    GrowthStageCorrectionIn,
-    GrowthStageIn,
-    GrowthStageOut,
-    YieldForecastIn,
-    YieldForecastOut,
-    AgronomyRuleIn,
-    AgronomyRuleOut,
-    ApprovalIn,
-    AgricultureAssistantIn,
-    AgricultureAssistantOut,
-    ExportIn,
-    ExportOut,
-    ReportSnapshotIn,
-    ReportSnapshotOut,
-    InspectionActionOut,
-    InspectionPlanIn,
-    InspectionPlanOut,
-    PrescriptionIn,
-    PrescriptionOut,
-    AnalysisStageRetryIn,
 )
-from backend.modules.agriculture.events import emit_agriculture_event
-from backend.modules.agriculture.service import agriculture_service, utc
-from backend.modules.agriculture.fusion_service import agriculture_fusion_service
-from backend.modules.agriculture.crop_insight_service import agriculture_crop_insight_service
-from backend.modules.agriculture.p5_service import agriculture_safety_service
-from backend.modules.agriculture.report_service import (
-    DECISION_REPORT_TEMPLATE_VERSION,
-    REPORT_TEMPLATE_VERSION,
-    build_decision_report_snapshot,
-    build_report_snapshot,
-)
-from backend.modules.agriculture.governance import agriculture_governance_service
-from backend.modules.agriculture.temporal import agriculture_temporal_service
-from backend.modules.agriculture.storage import agriculture_storage
+from backend.modules.alerts.models import OperationalAlert
 from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
+from backend.modules.video_analysis.contracts import video_analysis_port
 from backend.observability.instruments import observed_span
-
-from backend.modules.agriculture.routers import common as _common
-from backend.modules.agriculture.routers.common import (
-    AGRICULTURE_SCHEMA_VERSION,
-)
+from backend.shared.json_responses import orjson_response
 
 router = APIRouter()
 
@@ -347,6 +359,7 @@ async def create_analysis_run(flight_id: str, payload: AnalysisRunIn, db: AsyncS
         )
     calibration_artifacts = list((await db.scalars(select(AgricultureSensorCalibration).where(AgricultureSensorCalibration.id.in_(calibration_ids), AgricultureSensorCalibration.org_id == flight.org_id))).all()) if calibration_ids else []
     run.audit_json = {**(run.audit_json or {}), "capability_releases": model_releases, "readiness": readiness, "calibration_artifacts": [{"id": row.id, "sensor_serial": row.sensor_serial, "sensor_type": row.sensor_type, "version": row.version, "checksum": row.checksum, "valid_from": row.valid_from, "valid_until": row.valid_until} for row in calibration_artifacts]}
+    await append_analysis_status_event(db, run, flight, "run.queued", "queued")
     await db.commit(); await db.refresh(run)
     try:
         await agriculture_analysis_orchestration.ensure_video_jobs(
@@ -388,7 +401,8 @@ async def get_analysis_readiness(
 
 @router.get("/flights/{flight_id}/analysis-runs", response_model=list[AnalysisRunOut])
 async def list_analysis_runs(flight_id: str, limit: int = Query(20, ge=1, le=100), db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
-    return await agriculture_repository.list_runs(db, flight_id=flight_id, user=org_user.user, limit=limit)
+    runs = await agriculture_repository.list_runs(db, flight_id=flight_id, user=org_user.user, limit=limit)
+    return [await serialize_analysis_run(db, run) for run in runs]
 
 
 @router.get("/analysis-runs/{run_id}", response_model=AnalysisRunOut)
@@ -396,7 +410,7 @@ async def get_analysis_run(run_id: str, db: AsyncSession = Depends(get_db), org_
     run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
     if run is None:
         raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
-    return run
+    return await serialize_analysis_run(db, run)
 
 
 @router.post("/analysis-runs/{run_id}/process", response_model=AnalysisRunOut, status_code=202)
@@ -439,6 +453,8 @@ async def process_analysis_run(run_id: str, payload: AnalysisProcessIn, db: Asyn
             },
         ) from exc
     try:
+        await append_analysis_status_event(db, run, flight, "run.queued", "process")
+        await db.commit()
         agriculture_analysis_queue.enqueue(run_id=run.id, force=payload.force, cluster_radius_m=payload.cluster_radius_m)
     except AgricultureAnalysisQueueError as exc:
         run.status = "failed"
@@ -469,6 +485,10 @@ async def cancel_analysis_run(run_id: str, db: AsyncSession = Depends(get_db), o
     )
     run.status = "cancelled"
     run.error = "Cancelled by user"
+    flight = await _common._owned_flight(run.flight_id, org_user, db)
+    await append_analysis_status_event(
+        db, run, flight, "run.cancelled", "cancelled", {"reason": run.error}
+    )
     await db.commit()
     _common.emit_audit_event(event_name="agriculture_analysis_cancelled", action="cancel", resource_type="agriculture_analysis_run", result="success", actor_type="user", actor_id=str(getattr(org_user.user, "id", "")), resource_id=run.id, extra={"flight_id": run.flight_id})
     return run
@@ -536,6 +556,41 @@ async def list_fusion_results(run_id: str, db: AsyncSession = Depends(get_db), o
     if run is None:
         raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
     return list((await db.scalars(select(AgricultureFusionResult).where(AgricultureFusionResult.run_id == run.id).order_by(AgricultureFusionResult.layer_name))).all())
+
+
+@router.post("/analysis-runs/{run_id}/analytics/segmentation-experiment")
+async def evaluate_crop_weed_segmentation(
+    run_id: str,
+    payload: SegmentationExperimentIn,
+    db: AsyncSession = Depends(get_db),
+    org_user: OrgUser = Depends(require_org_write),
+):
+    run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
+    result = evaluate_segmentation_experiment(payload.model_dump())
+    geojson = {"type": "FeatureCollection", "features": []}
+    checksum = hashlib.sha256(
+        json.dumps({"geojson": geojson, "summary": result}, sort_keys=True).encode()
+    ).hexdigest()
+    layer = await db.scalar(
+        select(AgricultureAnalysisLayer).where(
+            AgricultureAnalysisLayer.run_id == run.id,
+            AgricultureAnalysisLayer.layer_name == "crop_weed_segmentation_experiment",
+        )
+    )
+    if layer is None:
+        layer = AgricultureAnalysisLayer(
+            run_id=run.id,
+            layer_name="crop_weed_segmentation_experiment",
+        )
+        db.add(layer)
+    layer.status = "research_only"
+    layer.geojson = geojson
+    layer.summary = result
+    layer.checksum = checksum
+    await db.commit()
+    return result
 
 
 @router.post("/analysis-runs/{run_id}/crop-risks", response_model=list[CropRiskOut])
@@ -936,50 +991,6 @@ async def approve_prescription_draft(draft_id: str, payload: ApprovalIn, db: Asy
     return await agriculture_safety_service.review_prescription(db, draft=draft, status=payload.status, note=payload.note, user_id=getattr(org_user.user, "id", None), org_id=getattr(org_user.user, "org_id", None))
 
 
-@router.post("/analysis-runs/{run_id}/exports", response_model=ExportOut, status_code=201)
-async def create_agriculture_export(run_id: str, payload: ExportIn, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
-    run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
-    if run is None: raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
-    flight = await _common._owned_flight(run.flight_id, org_user, db)
-    day_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-    export_stmt = select(func.count()).select_from(AgricultureExportJob).where(AgricultureExportJob.created_at >= day_start)
-    export_stmt = export_stmt.where(AgricultureExportJob.org_id == flight.org_id) if flight.org_id is not None else export_stmt.where(AgricultureExportJob.org_id.is_(None))
-    if int(await db.scalar(export_stmt) or 0) >= settings.agriculture_max_exports_per_org_per_day:
-        raise HTTPException(status_code=429, detail={"code": "AGRICULTURE_EXPORT_QUOTA_EXCEEDED", "message": "Organization daily export quota exceeded"})
-    await _common.enforce_rate_limit(key=f"agriculture:exports:{org_user.user.id}:{run_id}", limit=settings.agriculture_rate_analysis_runs_per_window, window_seconds=settings.agriculture_rate_window_seconds)
-    try: return await agriculture_safety_service.create_export(db, run=run, flight=flight, request=payload.model_dump(), user_id=getattr(org_user.user, "id", None), org_id=getattr(org_user.user, "org_id", None))
-    except ValueError as exc: raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.get("/analysis-runs/{run_id}/exports", response_model=list[ExportOut])
-async def list_agriculture_exports(run_id: str, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
-    run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
-    if run is None: raise HTTPException(status_code=404, detail="Agriculture analysis run not found")
-    return list((await db.scalars(select(AgricultureExportJob).where(AgricultureExportJob.run_id == run.id).order_by(AgricultureExportJob.created_at.desc()))).all())
-
-
-@router.get("/exports/{export_id}", response_model=ExportOut)
-async def get_agriculture_export(export_id: str, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
-    export = await db.get(AgricultureExportJob, export_id)
-    if export is None or export.org_id != getattr(org_user.user, "org_id", None): raise HTTPException(status_code=404, detail="Agriculture export not found")
-    return export
-
-
-@router.get("/exports/{export_id}/download")
-async def download_agriculture_export(export_id: str, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
-    export = await db.get(AgricultureExportJob, export_id)
-    if export is None or export.org_id != getattr(org_user.user, "org_id", None): raise HTTPException(status_code=404, detail="Agriculture export not found")
-    try: return await agriculture_safety_service.access_export(db, job=export, user_id=getattr(org_user.user, "id", None), metadata={"user_agent": "agriculture-ui"})
-    except ValueError as exc: raise HTTPException(status_code=410 if str(exc) == "export_expired" else 422, detail=str(exc)) from exc
-
-
-@router.get("/exports/{export_id}/audit", response_model=list[dict[str, Any]])
-async def agriculture_export_audit(export_id: str, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
-    export = await db.get(AgricultureExportJob, export_id)
-    if export is None or export.org_id != getattr(org_user.user, "org_id", None): raise HTTPException(status_code=404, detail="Agriculture export not found")
-    return list((await db.scalars(select(AgricultureExportAccessAudit).where(AgricultureExportAccessAudit.export_id == export.id).order_by(AgricultureExportAccessAudit.created_at.asc()))).all())
-
-
 @router.get("/analysis-runs/{run_id}/quality", response_model=AgricultureQualityOut)
 async def get_analysis_quality(run_id: str, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
     run = await agriculture_repository.get_run(db, run_id=run_id, user=org_user.user)
@@ -1020,10 +1031,6 @@ async def retry_analysis_stage(run_id: str, payload: AnalysisStageRetryIn, stage
         return {**existing, "idempotent_replay": True}
     if stage.status not in {"failed", "dead_letter", "queued", "running"} and run.status not in {"failed", "queued"}:
         raise HTTPException(status_code=409, detail=f"Stage '{stage_name}' is not recoverable from status '{stage.status}'")
-    try:
-        task_id = agriculture_analysis_queue.enqueue(run_id=run.id, force=True)
-    except AgricultureAnalysisQueueError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
     now = datetime.now(UTC).isoformat()
     stage.status = "queued"
     stage.progress = 0.0
@@ -1031,10 +1038,36 @@ async def retry_analysis_stage(run_id: str, payload: AnalysisStageRetryIn, stage
     stage.retryable = True
     stage.dead_letter = False
     stage.dead_letter_at = None
-    stage.metrics = {**(stage.metrics or {}), "last_retry_reason": payload.reason, "last_retry_at": now, "recovery_task_id": task_id}
     run.status = "queued"
     run.error = None
     run.retry_count += 1
+    replay_checksum = stage_input_checksum(
+        run,
+        stage_name,
+        upstream_checksum=stage.output_checksum,
+        extra={"cluster_radius_m": float((run.counters or {}).get("cluster_radius_m", 8.0))},
+    )
+    stage.input_checksum = replay_checksum
+    stage.execution_key = None
+    await db.commit()
+    try:
+        task_id = agriculture_analysis_queue.enqueue_stage(
+            stage=stage_name,
+            run_id=run.id,
+            input_checksum=replay_checksum,
+            cluster_radius_m=float((run.counters or {}).get("cluster_radius_m", 8.0)),
+            export_id=(
+                str((stage.metrics or {}).get("export_id"))
+                if (stage.metrics or {}).get("export_id")
+                else None
+            ),
+        )
+    except AgricultureAnalysisQueueError as exc:
+        stage.status = "failed"
+        stage.error = str(exc)
+        await db.commit()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    stage.metrics = {**(stage.metrics or {}), "last_retry_reason": payload.reason, "last_retry_at": now, "recovery_task_id": task_id}
     response = {"run_id": run.id, "stage_name": stage_name, "status": "queued", "task_id": task_id, "reason": payload.reason}
     retry_keys[payload.idempotency_key] = response
     run.counters = {**(run.counters or {}), "stage_retry_keys": retry_keys, "last_recovery_at": now}
@@ -1390,67 +1423,6 @@ async def create_observation_annotation(observation_id: str, payload: Annotation
     return annotation
 
 
-@router.get("/observations/{observation_id}/evidence")
-async def observation_evidence(observation_id: str, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
-    observation = await agriculture_repository.get_observation(db, observation_id=observation_id, user=org_user.user)
-    if observation is None:
-        raise HTTPException(status_code=404, detail="Agriculture observation not found")
-    evidence_ids = [str(value) for value in (observation.evidence_ids or [])]
-    if not evidence_ids:
-        return {"observation_id": observation.id, "evidence_ids": [], "assets": [], "geometry": observation.geometry_geojson, "georef_status": observation.georef_status}
-
-    canonical_rows = list((await db.scalars(select(AgricultureObservationEvidence).where(
-        AgricultureObservationEvidence.observation_id == observation.id,
-    ))).all())
-    canonical_media_ids = {row.media_id for row in canonical_rows if row.media_id}
-    media_rows = list((await db.scalars(select(AgricultureMediaManifest).where(
-        AgricultureMediaManifest.flight_id == observation.flight_id,
-        AgricultureMediaManifest.id.in_([*evidence_ids, *canonical_media_ids]),
-        AgricultureMediaManifest.retention_status == "active",
-    ))).all())
-    frame_rows = list((await db.scalars(select(AgricultureFrameLineage).where(
-        AgricultureFrameLineage.flight_id == observation.flight_id,
-        AgricultureFrameLineage.id.in_(evidence_ids),
-    ))).all())
-    frame_media_ids = {row.media_id for row in frame_rows}
-    frame_media_rows = list((await db.scalars(select(AgricultureMediaManifest).where(
-        AgricultureMediaManifest.flight_id == observation.flight_id,
-        AgricultureMediaManifest.id.in_(frame_media_ids),
-        AgricultureMediaManifest.retention_status == "active",
-    ))).all()) if frame_media_ids else []
-    media_by_id = {row.id: row for row in [*media_rows, *frame_media_rows]}
-    frame_to_media = {row.id: row.media_id for row in frame_rows}
-    canonical_by_id = {str(row.detection_id): row for row in canonical_rows if row.detection_id}
-    assets = []
-    for evidence_id in evidence_ids:
-        media = media_by_id.get(evidence_id) or media_by_id.get(frame_to_media.get(evidence_id, ""))
-        canonical = canonical_by_id.get(evidence_id)
-        if media is None and canonical is not None and canonical.media_id:
-            media = media_by_id.get(canonical.media_id)
-        if media is None or media.retention_status != "active":
-            continue
-        assets.append({
-            "evidence_id": evidence_id,
-            "media_id": media.id,
-            "source_kind": media.source_kind,
-            "checksum": media.checksum,
-            "signed_url": agriculture_storage.sign(media.storage_key),
-            "frame_index": canonical.frame_index if canonical else None,
-            "timestamp_seconds": canonical.timestamp_seconds if canonical else None,
-        })
-    _common.emit_audit_event(
-        event_name="agriculture_evidence_accessed",
-        action="read_evidence",
-        resource_type="agriculture_observation",
-        result="success",
-        actor_type="user",
-        actor_id=str(getattr(org_user.user, "id", "")),
-        resource_id=observation.id,
-        extra={"flight_id": observation.flight_id, "asset_count": len(assets)},
-    )
-    return {"observation_id": observation.id, "evidence_ids": evidence_ids, "assets": assets, "geometry": observation.geometry_geojson, "georef_status": observation.georef_status}
-
-
 @router.post("/flights/{flight_id}/compare", response_model=AgricultureComparisonOut, status_code=202)
 async def compare_flight(flight_id: str, payload: TemporalCompareIn, db: AsyncSession = Depends(get_db), org_user: OrgUser = Depends(require_org_user)):
     flight = await _common._owned_flight(flight_id, org_user, db)
@@ -1460,7 +1432,7 @@ async def compare_flight(flight_id: str, payload: TemporalCompareIn, db: AsyncSe
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     changes = await agriculture_repository.list_changes(db, current_flight_id=flight.id, user=org_user.user)
     alignment = await db.scalar(select(AgricultureFlightAlignment).where(AgricultureFlightAlignment.current_flight_id == flight.id, AgricultureFlightAlignment.reference_flight_id == result.get("reference_flight_id")))
-    return AgricultureComparisonOut(id=alignment.id if alignment else None, status=result["status"], current_flight_id=flight.id, reference_flight_id=result.get("reference_flight_id"), alignment=result.get("alignment", {}), summary=result.get("summary", {}), changes=changes, comparability=result.get("comparability", {}))
+    return AgricultureComparisonOut(id=alignment.id if alignment else None, status=result["status"], current_flight_id=flight.id, reference_flight_id=result.get("reference_flight_id"), alignment=result.get("alignment", {}), summary=result.get("summary", {}), changes=changes, comparability=result.get("comparability", {}), source_runs=result.get("source_runs", {}), methodology=result.get("methodology", {}))
 
 
 @router.post("/fields/{field_id}/comparisons", response_model=AgricultureComparisonOut, status_code=202)
@@ -1480,7 +1452,7 @@ async def create_field_comparison(field_id: int, payload: FieldComparisonIn, db:
     reference_id = result.get("reference_flight_id")
     alignment = await db.scalar(select(AgricultureFlightAlignment).where(AgricultureFlightAlignment.current_flight_id == current.id, AgricultureFlightAlignment.reference_flight_id == reference_id))
     changes = await agriculture_repository.list_changes(db, current_flight_id=current.id, user=org_user.user)
-    return AgricultureComparisonOut(id=alignment.id if alignment else None, status=result["status"], current_flight_id=current.id, reference_flight_id=reference_id, alignment=result.get("alignment", {}), summary=result.get("summary", {}), changes=changes, comparability=result.get("comparability", {}))
+    return AgricultureComparisonOut(id=alignment.id if alignment else None, status=result["status"], current_flight_id=current.id, reference_flight_id=reference_id, alignment=result.get("alignment", {}), summary=result.get("summary", {}), changes=changes, comparability=result.get("comparability", {}), source_runs=result.get("source_runs", {}), methodology=result.get("methodology", {}))
 
 
 @router.get("/comparisons/{comparison_id}", response_model=AgricultureComparisonOut)
@@ -1491,8 +1463,17 @@ async def get_comparison(comparison_id: str, db: AsyncSession = Depends(get_db),
     await _common._owned_flight(alignment.current_flight_id, org_user, db)
     changes = await agriculture_repository.list_changes(db, current_flight_id=alignment.current_flight_id, user=org_user.user)
     pair_changes = [row for row in changes if row.reference_flight_id == alignment.reference_flight_id]
-    summary = {state: sum(row.state == state for row in pair_changes) for state in ("new", "expanding", "stable", "improving", "resolved")}
-    return AgricultureComparisonOut(id=alignment.id, status=alignment.status, current_flight_id=alignment.current_flight_id, reference_flight_id=alignment.reference_flight_id, alignment={"status": alignment.status, "method": alignment.method, "alignment_score": alignment.alignment_score, "overlap_pct": alignment.overlap_pct, "transform": alignment.transform, "failure_reasons": alignment.failure_reasons, "metrics": alignment.metrics}, summary=summary, changes=pair_changes, comparability=alignment.comparability or {})
+    summary = summarize_changes(pair_changes)
+    metrics = dict(alignment.metrics or {})
+    source_runs = {
+        key: str(value)
+        for key, value in {
+            "current": metrics.get("current_run_id"),
+            "reference": metrics.get("reference_run_id"),
+        }.items()
+        if value
+    }
+    return AgricultureComparisonOut(id=alignment.id, status=metrics.get("comparison_status", alignment.status), current_flight_id=alignment.current_flight_id, reference_flight_id=alignment.reference_flight_id, alignment={"status": metrics.get("alignment_status", alignment.status), "method": alignment.method, "alignment_score": alignment.alignment_score, "overlap_pct": alignment.overlap_pct, "transform": alignment.transform, "failure_reasons": alignment.failure_reasons, "metrics": metrics}, summary=summary, changes=pair_changes, comparability=alignment.comparability or {}, source_runs=source_runs, methodology={"version": metrics.get("methodology_version", "observation_change.v1"), "alignment": alignment.method, "matching": metrics.get("matching_policy", "same_type_geometric_overlap")})
 
 
 @router.get("/comparisons/{comparison_id}/layers/{layer}")
@@ -1501,8 +1482,9 @@ async def get_comparison_layers(comparison_id: str, layer: str, response: Respon
     if alignment is None:
         raise HTTPException(status_code=404, detail="Agriculture comparison not found")
     await _common._owned_flight(alignment.current_flight_id, org_user, db)
-    current_run = await db.scalar(select(AgricultureAnalysisRun).where(AgricultureAnalysisRun.flight_id == alignment.current_flight_id).order_by(AgricultureAnalysisRun.created_at.desc()).limit(1))
-    reference_run = await db.scalar(select(AgricultureAnalysisRun).where(AgricultureAnalysisRun.flight_id == alignment.reference_flight_id).order_by(AgricultureAnalysisRun.created_at.desc()).limit(1))
+    metrics = dict(alignment.metrics or {})
+    current_run = await db.get(AgricultureAnalysisRun, metrics.get("current_run_id")) if metrics.get("current_run_id") else await db.scalar(select(AgricultureAnalysisRun).where(AgricultureAnalysisRun.flight_id == alignment.current_flight_id).order_by(AgricultureAnalysisRun.created_at.desc()).limit(1))
+    reference_run = await db.get(AgricultureAnalysisRun, metrics.get("reference_run_id")) if metrics.get("reference_run_id") else await db.scalar(select(AgricultureAnalysisRun).where(AgricultureAnalysisRun.flight_id == alignment.reference_flight_id).order_by(AgricultureAnalysisRun.created_at.desc()).limit(1))
     current_layer = await agriculture_repository.get_layer(db, run_id=current_run.id, layer_name=layer, user=org_user.user) if current_run else None
     reference_layer = await agriculture_repository.get_layer(db, run_id=reference_run.id, layer_name=layer, user=org_user.user) if reference_run else None
     if current_layer is None and reference_layer is None:
@@ -1669,4 +1651,3 @@ async def get_asset(key: str, expires: int, signature: str, db: AsyncSession = D
             "X-Agriculture-Schema-Version": AGRICULTURE_SCHEMA_VERSION,
         },
     )
-

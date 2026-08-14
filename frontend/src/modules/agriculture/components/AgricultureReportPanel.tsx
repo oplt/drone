@@ -1,5 +1,6 @@
 import { Alert, Button, Chip, Divider, Paper, Stack, Typography } from "@mui/material";
 import { useAgricultureReport, useAgricultureReportSnapshots, useCreateAgricultureReportSnapshot } from "../hooks";
+import { buildQualityGatePresentation } from "../workflows/analysisRunStatusPresentation";
 
 export function AgricultureReportPanel({ runId }: { runId: string }) {
   const report = useAgricultureReport(runId);
@@ -8,7 +9,10 @@ export function AgricultureReportPanel({ runId }: { runId: string }) {
   if (report.isLoading) return <Typography variant="caption" role="status">Loading report summary…</Typography>;
   if (report.isError) return <Alert severity="warning">Report summary unavailable. Raw observations and exports remain available.</Alert>;
   if (!report.data) return null;
-  const quality = report.data.quality_gate;
+  const qualityPresentation = buildQualityGatePresentation({
+    qualityGate: report.data.quality_gate,
+    fallbackStatus: report.data.status,
+  });
   return (
     <Paper component="section" aria-labelledby="agriculture-report-heading" variant="outlined" sx={{ p: 1.5 }}>
       <Stack spacing={1}>
@@ -17,7 +21,11 @@ export function AgricultureReportPanel({ runId }: { runId: string }) {
           <Chip size="small" label={`${report.data.summary.observation_count} observations`} />
           <Chip size="small" label={`${report.data.summary.confirmed_count} confirmed`} color="success" />
           <Chip size="small" label={`${report.data.summary.unreviewed_count} awaiting review`} color="warning" />
-          <Chip size="small" label={`Quality ${String(quality.status ?? report.data.status)}`} />
+          <Chip
+            size="small"
+            label={`Quality ${qualityPresentation.label}`}
+            color={qualityPresentation.chipColor}
+          />
         </Stack>
         <Typography variant="caption">Layers: {report.data.summary.layer_names.join(", ") || "none"}</Typography>
         <Divider />

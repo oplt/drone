@@ -23,6 +23,7 @@ from backend.modules.vision_models.application_base import (
     VisionWorkerUnavailable,
 )
 from backend.modules.vision_models.config import vision_settings
+from backend.modules.vision_models.lifecycle import append_training_status_event
 from backend.modules.vision_models.models import (
     DatasetVersion,
     ModelVersion,
@@ -130,11 +131,17 @@ class TrainingOperations:
                     "fliplr": 0.5,
                     "flipud": 0.1,
                 },
+                "dataloader_workers": vision_settings.vision_training_dataloader_workers,
             },
             created_by_user_id=user.id,
         )
         db.add(run)
         try:
+            if not run.id:
+                await db.flush()
+            await append_training_status_event(
+                db, run, "training.queued", "queued", project=project
+            )
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
@@ -148,6 +155,14 @@ class TrainingOperations:
             run.status = "failed"
             run.error = str(exc)
             run.finished_at = datetime.now(UTC)
+            await append_training_status_event(
+                db,
+                run,
+                "training.failed",
+                "queue-failed",
+                {"error": run.error},
+                project=project,
+            )
             await db.commit()
             raise VisionWorkerUnavailable(str(exc)) from exc
         await db.refresh(run, attribute_names=["model_version"])
@@ -179,7 +194,8 @@ class TrainingOperations:
     async def cancel_training_run(
         self, db: AsyncSession, run_id: str, user: User
     ) -> TrainingRunOut:
-        run = await VisionRepository(db).get_training_run(run_id, user)
+        repo = VisionRepository(db)
+        run = await repo.get_training_run(run_id, user)
         if run is None:
             raise VisionNotFound("Training run not found")
         if run.status not in {"queued", "running"}:
@@ -192,6 +208,11 @@ class TrainingOperations:
             run.terminal_stage = "queued"
         if was_queued and run.queue_task_id:
             self.queue.revoke(run.queue_task_id)
+        event_type = "training.cancelled" if was_queued else "training.cancelling"
+        project = await repo.get_project(run.project_id, user)
+        await append_training_status_event(
+            db, run, event_type, run.status, project=project
+        )
         await db.commit()
         return self.training_output(run)
 

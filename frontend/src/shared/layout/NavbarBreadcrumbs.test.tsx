@@ -6,29 +6,29 @@ import {
 } from "./breadcrumbTrail";
 
 describe("NavbarBreadcrumbs trail", () => {
-  it("labels Operations hub overview", () => {
+  it("labels workspace overview", () => {
     expect(buildBreadcrumbTrail("/dashboard")).toEqual([
-      { label: "Operations Hub", to: "/dashboard", current: true },
+      { label: "Overview", to: "/dashboard", current: true },
     ]);
   });
 
   it("maps primary IA destinations", () => {
     const cases: Array<[string, string[]]> = [
-      ["/dashboard/field", ["Operations Hub", "Field Survey"]],
-      ["/dashboard/agriculture/fields", ["Operations Hub", "Agriculture", "Fields"]],
-      ["/dashboard/agriculture/vision-models", ["Operations Hub", "Agriculture", "Vision Models"]],
-      ["/dashboard/property-patrol", ["Operations Hub", "Property Patrol"]],
-      ["/dashboard/warehouse", ["Operations Hub", "Warehouse"]],
-      ["/dashboard/photogrammetry", ["Operations Hub", "Photogrammetry"]],
-      ["/dashboard/animalfarm", ["Operations Hub", "Animal Farm"]],
-      ["/dashboard/controlled", ["Operations Hub", "Controlled Flight"]],
-      ["/dashboard/video-analysis", ["Operations Hub", "Video Analysis"]],
-      ["/dashboard/insights", ["Operations Hub", "Insights"]],
-      ["/dashboard/observability", ["Operations Hub", "Observability"]],
-      ["/dashboard/fleet", ["Operations Hub", "Fleet"]],
-      ["/dashboard/templates", ["Operations Hub", "Templates"]],
-      ["/dashboard/account", ["Operations Hub", "Account"]],
-      ["/dashboard/settings", ["Operations Hub", "Settings"]],
+      ["/dashboard/field", ["Overview", "Missions"]],
+      ["/dashboard/agriculture/fields", ["Overview", "Agriculture", "Fields"]],
+      ["/dashboard/agriculture/vision-models", ["Overview", "Agriculture", "Datasets & Training"]],
+      ["/dashboard/property-patrol", ["Overview", "Property Inspection"]],
+      ["/dashboard/warehouse", ["Overview", "Warehouse"]],
+      ["/dashboard/photogrammetry", ["Overview", "Photogrammetry"]],
+      ["/dashboard/animalfarm", ["Overview", "Animal Farm"]],
+      ["/dashboard/controlled", ["Overview", "Live Operations"]],
+      ["/dashboard/video-analysis", ["Overview", "Video Analysis"]],
+      ["/dashboard/insights", ["Overview", "History"]],
+      ["/dashboard/observability", ["Overview", "Observability"]],
+      ["/dashboard/fleet", ["Overview", "Fleet"]],
+      ["/dashboard/templates", ["Overview", "Automations"]],
+      ["/dashboard/account", ["Overview", "Account"]],
+      ["/dashboard/settings", ["Overview", "Settings"]],
     ];
 
     for (const [path, labels] of cases) {
@@ -41,7 +41,7 @@ describe("NavbarBreadcrumbs trail", () => {
       "/dashboard/agriculture/fields/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/extra",
     );
     expect(trail.map((c) => c.label)).toEqual([
-      "Operations Hub",
+      "Overview",
       "Agriculture",
       "Fields",
       "aaaaaaaa…",
@@ -51,13 +51,13 @@ describe("NavbarBreadcrumbs trail", () => {
 
   it("handles legacy observability alias", () => {
     expect(buildBreadcrumbTrail("/observability").map((c) => c.label)).toEqual([
-      "Operations Hub",
+      "Overview",
       "Observability",
     ]);
   });
 
   it("truncates long ids in toBreadcrumbLabel", () => {
-    expect(toBreadcrumbLabel("field")).toBe("Field Survey");
+    expect(toBreadcrumbLabel("field")).toBe("Missions");
     expect(truncateIdLabel("1234567890abcdef")).toBe("12345678…");
   });
 });

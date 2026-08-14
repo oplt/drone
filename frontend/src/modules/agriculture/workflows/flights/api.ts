@@ -44,8 +44,8 @@ export async function getAgricultureMediaTimeline(flightId: string): Promise<Agr
   return httpRequest<AgricultureMediaTimeline>(`/agriculture/flights/${encodeURIComponent(flightId)}/media-timeline`);
 }
 
-export async function getAgricultureTelemetryWindow(flightId: string, timestampUtc: string | null, windowSeconds = 15): Promise<AgricultureTelemetryWindow> {
-  const params = new URLSearchParams({ window_seconds: String(windowSeconds) });
+export async function getAgricultureTelemetryWindow(flightId: string, timestampUtc: string | null, windowSeconds = 15, limit = 200): Promise<AgricultureTelemetryWindow> {
+  const params = new URLSearchParams({ window_seconds: String(windowSeconds), limit: String(limit) });
   if (timestampUtc) params.set("timestamp_utc", timestampUtc);
   return httpRequest<AgricultureTelemetryWindow>(`/agriculture/flights/${encodeURIComponent(flightId)}/telemetry-window?${params.toString()}`);
 }

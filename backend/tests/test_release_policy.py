@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from backend.modules.identity.models import UserRole
 from backend.modules.agriculture.capabilities import (
     AgricultureCapabilityReleaseService,
     default_inference_profile,
 )
+from backend.modules.identity.models import UserRole
 from backend.modules.vision_models import training_operations
 from backend.modules.vision_models.application import VisionApplication
 from backend.modules.vision_models.contracts import VisionModelRelease
@@ -56,6 +56,13 @@ def test_evaluate_release_success_freezes_inference_contract():
     assert result.inference_contract["small_object_mode"] is False
     assert result.inference_contract["tracking_enabled"] is False
     assert result.inference_contract["tracker_type"] == "bytetrack"
+    assert result.inference_contract["image_size"] == 640
+    assert result.inference_contract["batch_size"] >= 1
+    assert result.inference_contract["precision_mode"] == "fp32"
+    assert result.inference_contract["profile_version"] == (
+        "agriculture-inference-profile.v1"
+    )
+    assert len(result.inference_contract["profile_digest"]) == 64
 
 
 def test_evaluate_release_freezes_explicit_inference_profile():
@@ -129,7 +136,15 @@ async def test_capability_activation_prefers_frozen_profile():
     release = await AgricultureCapabilityReleaseService().activate_for_model_version(
         db, version=version, org_id=7, user_id=9
     )
-    assert release.inference_profile == frozen_profile
+    assert release.inference_profile["confidence_threshold"] == 0.6
+    assert release.inference_profile["sample_fps"] == 2.0
+    assert release.inference_profile["sahi_enabled"] is True
+    assert release.inference_profile["tracking_enabled"] is True
+    assert release.inference_profile["tracker_type"] == "botsort"
+    assert release.inference_profile["profile_version"] == (
+        "agriculture-inference-profile.v1"
+    )
+    assert release.inference_profile["profile_digest"]
     assert release.inference_profile != default_inference_profile("object_detection")
 
 

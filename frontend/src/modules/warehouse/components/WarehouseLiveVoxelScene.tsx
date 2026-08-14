@@ -1,16 +1,16 @@
 import { useMemo } from "react";
 import Box from "@mui/material/Box";
 import { Canvas } from "@react-three/fiber";
-import type { CachedLiveMapChunk } from "../../hooks/useLiveMapChunkCache";
-import type { WarehouseMapPlacementViewerProps } from "../../hooks/useWarehouseMapPlacement";
-import type { WarehouseLiveVoxelMapState } from "../../hooks/useWarehouseLiveVoxelMap";
-import type { WarehouseStructureSummary } from "../../api/warehouseInspectionApi";
-import { inferLayerKey } from "../../utils/liveMapLayerUtils";
-import { chunkStateKey } from "../../utils/liveMapChunkRetention";
-import { LiveVoxelMapContent } from "./scene/LiveVoxelMapContent";
-import type { LiveVoxelLayers, LiveVoxelRenderOptions } from "./scene/liveVoxelSceneTypes";
+import type { CachedLiveMapChunk } from "../hooks/useLiveMapChunkCache";
+import type { WarehouseMapPlacementViewerProps } from "../hooks/useWarehouseMapPlacement";
+import type { WarehouseLiveVoxelMapState } from "../hooks/useWarehouseLiveVoxelMap";
+import type { WarehouseStructureSummary } from "../api/warehouseInspectionApi";
+import { inferLayerKey } from "../utils/liveMapLayerUtils";
+import { chunkStateKey } from "../utils/liveMapChunkRetention";
+import { LiveVoxelMapContent } from "./liveVoxel/scene/LiveVoxelMapContent";
+import type { LiveVoxelLayers, LiveVoxelRenderOptions } from "./liveVoxel/scene/liveVoxelSceneTypes";
 
-export type { LiveVoxelLayers, LiveVoxelRenderOptions } from "./scene/liveVoxelSceneTypes";
+export type { LiveVoxelLayers, LiveVoxelRenderOptions } from "./liveVoxel/scene/liveVoxelSceneTypes";
 
 export function WarehouseLiveVoxelScene({
   state,

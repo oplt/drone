@@ -169,6 +169,9 @@ export type MetricSummary = {
   map50?: number | null;
   map75?: number | null;
   map50_95?: number | null;
+  inference_fps?: number | null;
+  inference_latency_ms?: number | null;
+  model_size_mb?: number | null;
 };
 
 export type PerClassMetric = MetricSummary & {

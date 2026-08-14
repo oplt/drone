@@ -38,6 +38,7 @@ describe("AgricultureAnalysisPage", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("Prioritized findings queue")).toBeInTheDocument();
+    expect(screen.getByText("Review queue")).toBeInTheDocument();
     expect(screen.getByText("Findings map")).toBeInTheDocument();
     expect(screen.queryByText("Calibration")).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Advanced" }));

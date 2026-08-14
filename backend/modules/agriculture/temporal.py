@@ -50,7 +50,7 @@ def alignment_metrics(current_layer: AgricultureAnalysisLayer | None, reference_
 
 def _comparison_state(current: AgricultureObservation, previous: AgricultureObservation | None, intersection_ratio: float) -> tuple[str, float | None, float | None, float]:
     if previous is None:
-        return "new", current.area_m2, None, float(current.confidence * 0.8)
+        return "new", current.area_m2, current.area_m2, float(current.confidence * 0.8)
     delta_area = (current.area_m2 - previous.area_m2) if current.area_m2 is not None and previous.area_m2 is not None else None
     delta_intensity = float(current.severity - previous.severity)
     area_ratio = (delta_area / max(abs(previous.area_m2), 1.0)) if delta_area is not None else 0.0
@@ -82,14 +82,30 @@ def build_changes(current: Iterable[AgricultureObservation], previous: Iterable[
                 union_area = current_geometry.union(previous_geometry).area
                 ratio = current_geometry.intersection(previous_geometry).area / union_area if union_area else 0.0
             if ratio > best[0]: best = (ratio, candidate)
-        state, area, delta_area, confidence = _comparison_state(row, best[1], best[0])
-        if best[1] is not None: matched_previous.add(best[1].id)
-        evidence = [*row.evidence_ids, *(best[1].evidence_ids if best[1] else [])]
-        output.append({"id": stable_temporal_id(current_flight_id, reference_flight_id, row.id, best[1].id if best[1] else "new"), "field_id": field_id, "current_flight_id": current_flight_id, "reference_flight_id": reference_flight_id, "current_observation_id": row.id, "previous_observation_id": best[1].id if best[1] else None, "observation_type": row.observation_type, "state": state, "geometry_geojson": row.geometry_geojson, "reference_geometry_geojson": best[1].geometry_geojson if best[1] else {}, "area_m2": area, "delta_area_m2": delta_area, "delta_intensity": float(row.severity - best[1].severity) if best[1] else None, "confidence": confidence, "evidence_ids": evidence, "uncertainty": {"intersection_ratio": best[0], "excluded_rejected": True, "comparison_policy": "same_type_geometric_overlap"}})
+        matched = best[1] if best[0] >= 0.05 else None
+        state, area, delta_area, confidence = _comparison_state(row, matched, best[0])
+        if matched is not None: matched_previous.add(matched.id)
+        evidence = [*row.evidence_ids, *(matched.evidence_ids if matched else [])]
+        output.append({"id": stable_temporal_id(current_flight_id, reference_flight_id, row.id, matched.id if matched else "new"), "field_id": field_id, "current_flight_id": current_flight_id, "reference_flight_id": reference_flight_id, "current_observation_id": row.id, "previous_observation_id": matched.id if matched else None, "observation_type": row.observation_type, "state": state, "geometry_geojson": row.geometry_geojson, "reference_geometry_geojson": matched.geometry_geojson if matched else {}, "area_m2": area, "delta_area_m2": delta_area, "delta_intensity": float(row.severity - matched.severity) if matched else None, "confidence": confidence, "evidence_ids": evidence, "uncertainty": {"intersection_ratio": best[0], "excluded_rejected": True, "comparison_policy": "same_type_geometric_overlap", "minimum_match_overlap": 0.05}})
     for row in previous_rows:
         if row.id in matched_previous: continue
         output.append({"id": stable_temporal_id(current_flight_id, reference_flight_id, "resolved", row.id), "field_id": field_id, "current_flight_id": current_flight_id, "reference_flight_id": reference_flight_id, "current_observation_id": None, "previous_observation_id": row.id, "observation_type": row.observation_type, "state": "resolved", "geometry_geojson": {}, "reference_geometry_geojson": row.geometry_geojson, "area_m2": None, "delta_area_m2": -(row.area_m2 or 0.0), "delta_intensity": -row.severity, "confidence": float(row.confidence * 0.7), "evidence_ids": list(row.evidence_ids), "uncertainty": {"intersection_ratio": 0.0, "excluded_rejected": True, "comparison_policy": "unmatched_previous_observation"}})
     return output
+
+
+def summarize_changes(changes: Iterable[Any]) -> dict[str, float | int]:
+    rows = list(changes)
+    value = lambda row, key, default=None: row.get(key, default) if isinstance(row, dict) else getattr(row, key, default)
+    summary: dict[str, float | int] = {
+        state: sum(value(row, "state") == state for row in rows)
+        for state in ("new", "expanding", "stable", "improving", "resolved")
+    }
+    summary["persistent"] = sum(value(row, "state") in {"expanding", "stable", "improving"} for row in rows)
+    summary["count_change"] = int(summary["new"]) - int(summary["resolved"])
+    summary["area_change_m2"] = float(sum(float(value(row, "delta_area_m2", 0) or 0) for row in rows))
+    summary["current_area_m2"] = float(sum(float(value(row, "area_m2", 0) or 0) for row in rows))
+    summary["reference_area_m2"] = max(0.0, float(summary["current_area_m2"]) - float(summary["area_change_m2"]))
+    return summary
 
 
 class AgricultureTemporalService:
@@ -185,6 +201,14 @@ class AgricultureTemporalService:
         current_layer = await db.scalar(select(AgricultureAnalysisLayer).where(AgricultureAnalysisLayer.run_id == current_run.id, AgricultureAnalysisLayer.layer_name == "quality"))
         reference_layer = await db.scalar(select(AgricultureAnalysisLayer).where(AgricultureAnalysisLayer.run_id == reference_run.id, AgricultureAnalysisLayer.layer_name == "quality"))
         alignment = alignment_metrics(current_layer, reference_layer)
+        alignment["metrics"] = {
+            **dict(alignment.get("metrics") or {}),
+            "current_run_id": current_run.id,
+            "reference_run_id": reference_run.id,
+            "methodology_version": "observation_change.v1",
+            "matching_policy": "same_type_geometric_overlap",
+            "alignment_status": alignment.get("status"),
+        }
         comparability = score_comparability(
             current=current,
             reference=reference,
@@ -193,6 +217,14 @@ class AgricultureTemporalService:
             alignment=alignment,
             min_quality_score=min_quality_score,
         )
+        comparison_status = (
+            "failed"
+            if alignment.get("status") == "failed"
+            else "incompatible"
+            if not comparability.get("eligible")
+            else "completed"
+        )
+        alignment["metrics"]["comparison_status"] = comparison_status
         alignment_row = await db.scalar(select(AgricultureFlightAlignment).where(AgricultureFlightAlignment.current_flight_id == current.id, AgricultureFlightAlignment.reference_flight_id == reference.id))
         if alignment_row is None:
             alignment_row = AgricultureFlightAlignment(field_id=current.field_id, current_flight_id=current.id, reference_flight_id=reference.id)
@@ -209,15 +241,20 @@ class AgricultureTemporalService:
                 )
             )
             await db.commit()
-            status = "failed" if alignment.get("status") == "failed" else "incompatible"
             return {
-                "status": status,
+                "status": comparison_status,
                 "current_flight_id": current.id,
                 "reference_flight_id": reference.id,
                 "alignment": alignment,
                 "comparability": comparability,
                 "changes": [],
                 "summary": {},
+                "source_runs": {"current": current_run.id, "reference": reference_run.id},
+                "methodology": {
+                    "version": "observation_change.v1",
+                    "alignment": alignment.get("method"),
+                    "matching": "same_type_geometric_overlap",
+                },
             }
         current_rows = list((await db.scalars(select(AgricultureObservation).where(AgricultureObservation.run_id == current_run.id))).all())
         previous_rows = list((await db.scalars(select(AgricultureObservation).where(AgricultureObservation.run_id == reference_run.id))).all())
@@ -231,13 +268,19 @@ class AgricultureTemporalService:
         db.add_all(AgricultureObservationChange(**payload) for payload in payloads)
         await db.commit()
         return {
-            "status": "completed",
+            "status": comparison_status,
             "current_flight_id": current.id,
             "reference_flight_id": reference.id,
             "alignment": alignment,
             "comparability": comparability,
             "changes": payloads,
-            "summary": {state: sum(row["state"] == state for row in payloads) for state in ("new", "expanding", "stable", "improving", "resolved")},
+            "summary": summarize_changes(payloads),
+            "source_runs": {"current": current_run.id, "reference": reference_run.id},
+            "methodology": {
+                "version": "observation_change.v1",
+                "alignment": alignment.get("method"),
+                "matching": "same_type_geometric_overlap",
+            },
         }
 
     async def _latest_run(self, db: AsyncSession, flight_id: str) -> AgricultureAnalysisRun | None:

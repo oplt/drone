@@ -1,0 +1,388 @@
+{
+  "captured_at": "2026-08-14T13:23:55.077980+00:00",
+  "manual_capture_required": {
+    "agriculture_queue": {
+      "command_hint": "curl -s http://127.0.0.1:9090/api/v1/query?query=agriculture_queue_age_seconds_bucket",
+      "metrics": [
+        "queue_wait_p95_seconds",
+        "time_to_first_finding_seconds"
+      ]
+    },
+    "api_latency": {
+      "command_hint": "Use hey or vegeta against /agriculture read endpoints while analysis page is open.",
+      "metrics": [
+        "p50_ms",
+        "p95_ms",
+        "requests_per_minute_with_page_open"
+      ],
+      "targets": [
+        "GET /agriculture/analysis-runs/{id}",
+        "GET /agriculture/analysis-runs/{id}/findings",
+        "GET /agriculture/analysis-runs/{id}/fusion"
+      ]
+    },
+    "gpu_utilization": {
+      "command_hint": "nvidia-smi dmon -s u -d 5 during inference/training jobs",
+      "metrics": [
+        "inference_gpu_util_avg",
+        "training_gpu_util_avg"
+      ]
+    },
+    "training_epoch_duration": {
+      "command_hint": "Record vision training run metadata epoch_duration_seconds from run detail API.",
+      "metrics": [
+        "epoch_duration_seconds",
+        "dataloader_workers"
+      ]
+    }
+  },
+  "notes": [
+    "Fixture video timings are synthetic until live GPU/video harness is wired.",
+    "Replace placeholder API and queue metrics after running against a live stack."
+  ],
+  "version": 1,
+  "video_analysis": {
+    "representative_clip_fixture": {
+      "comparison": {
+        "detection_count_delta": 0,
+        "frames_per_second_delta": 0.17999999999999994,
+        "improvement_percent": 12.594,
+        "stage_seconds_delta": {
+          "crop": 0.0,
+          "decode": 8.0,
+          "inference": 2.0,
+          "persist": 0.0,
+          "queue_wait": 0.0,
+          "summary": 0.0,
+          "telemetry": 0.0,
+          "total": 10.0,
+          "tracking": 0.0
+        },
+        "total_seconds_baseline": 79.4,
+        "total_seconds_delta": 10.0,
+        "total_seconds_experiment": 69.4
+      },
+      "gates": {
+        "note": "Do not enable VIDEO_ANALYSIS_DECODE_STRIDE_ENABLED, VIDEO_ANALYSIS_INFERENCE_BATCH_SIZE>1, or related gates until a measured GO is recorded in docs/perf-002-experiment-gates.md.",
+        "optimization_defaults_remain_off": true
+      },
+      "labels": {
+        "baseline": "baseline",
+        "experiment": "baseline"
+      },
+      "manifest": {
+        "confidence_threshold": 0.35,
+        "frame_stride_seconds": 1.0,
+        "hardware": {
+          "device": "cpu",
+          "gpu_name": null,
+          "worker_label": "local-dev"
+        },
+        "model_hash": "sha256:replace-with-artifact-checksum",
+        "model_name": "yolo26n.pt",
+        "name": "representative-offline-video",
+        "sahi_enabled": false,
+        "tracking_enabled": true
+      },
+      "mode": "fixture",
+      "parity": {
+        "checks": {
+          "box_tolerance": {
+            "compared": 2,
+            "max_delta": 0.0,
+            "passed": true,
+            "required": true,
+            "tolerance": 1e-05
+          },
+          "class_counts": {
+            "passed": true,
+            "required": true
+          },
+          "classes": {
+            "passed": true,
+            "required": true
+          },
+          "confidence_tolerance": {
+            "compared": 2,
+            "max_delta": 0.0,
+            "passed": true,
+            "required": true,
+            "tolerance": 1e-05
+          },
+          "detection_count": {
+            "passed": true,
+            "required": true
+          },
+          "frames": {
+            "passed": true,
+            "required": true
+          }
+        },
+        "failed_required": [],
+        "passed": true
+      },
+      "runs": {
+        "baseline": {
+          "class_counts": {
+            "crop": 140,
+            "weed": 280
+          },
+          "classes": [
+            "weed",
+            "crop"
+          ],
+          "detection_count": 420,
+          "detections": [
+            {
+              "confidence": 0.91,
+              "x1": 10,
+              "x2": 40,
+              "y1": 20,
+              "y2": 60
+            },
+            {
+              "confidence": 0.77,
+              "x1": 100,
+              "x2": 160,
+              "y1": 120,
+              "y2": 180
+            }
+          ],
+          "frames_per_second": 1.26,
+          "inference_batch_throughput": 1.0,
+          "label": "baseline",
+          "missing_stages": [],
+          "peak_memory_mb": 1800,
+          "selected_frames": [
+            0,
+            30,
+            60,
+            90
+          ],
+          "stages_seconds": {
+            "crop": 8.0,
+            "decode": 12.0,
+            "inference": 48.0,
+            "persist": 3.5,
+            "queue_wait": 0.4,
+            "summary": 0.3,
+            "telemetry": 1.2,
+            "total": 79.4,
+            "tracking": 6.0
+          }
+        },
+        "experiment": {
+          "class_counts": {
+            "crop": 140,
+            "weed": 280
+          },
+          "classes": [
+            "weed",
+            "crop"
+          ],
+          "detection_count": 420,
+          "detections": [
+            {
+              "confidence": 0.91,
+              "x1": 10,
+              "x2": 40,
+              "y1": 20,
+              "y2": 60
+            },
+            {
+              "confidence": 0.77,
+              "x1": 100,
+              "x2": 160,
+              "y1": 120,
+              "y2": 180
+            }
+          ],
+          "frames_per_second": 1.44,
+          "inference_batch_throughput": 1.0,
+          "label": "baseline",
+          "missing_stages": [],
+          "peak_memory_mb": 1750,
+          "selected_frames": [
+            0,
+            30,
+            60,
+            90
+          ],
+          "stages_seconds": {
+            "crop": 8.0,
+            "decode": 4.0,
+            "inference": 46.0,
+            "persist": 3.5,
+            "queue_wait": 0.4,
+            "summary": 0.3,
+            "telemetry": 1.2,
+            "total": 69.4,
+            "tracking": 6.0
+          }
+        }
+      },
+      "version": 1
+    },
+    "small_clip_fixture": {
+      "comparison": {
+        "detection_count_delta": 0,
+        "frames_per_second_delta": 0.0,
+        "improvement_percent": 0.0,
+        "stage_seconds_delta": {
+          "crop": 0.0,
+          "decode": 0.0,
+          "inference": 0.0,
+          "persist": 0.0,
+          "queue_wait": 0.0,
+          "summary": 0.0,
+          "telemetry": 0.0,
+          "total": 0.0,
+          "tracking": 0.0
+        },
+        "total_seconds_baseline": 12.1,
+        "total_seconds_delta": 0.0,
+        "total_seconds_experiment": 12.1
+      },
+      "gates": {
+        "note": "Do not enable VIDEO_ANALYSIS_DECODE_STRIDE_ENABLED, VIDEO_ANALYSIS_INFERENCE_BATCH_SIZE>1, or related gates until a measured GO is recorded in docs/perf-002-experiment-gates.md.",
+        "optimization_defaults_remain_off": true
+      },
+      "labels": {
+        "baseline": "baseline",
+        "experiment": "baseline"
+      },
+      "manifest": {
+        "confidence_threshold": 0.35,
+        "frame_stride_seconds": 1.0,
+        "hardware": {
+          "device": "cpu",
+          "gpu_name": null,
+          "worker_label": "local-dev"
+        },
+        "model_hash": "sha256:replace-with-artifact-checksum",
+        "model_name": "yolo26n.pt",
+        "name": "small-offline-video",
+        "sahi_enabled": false,
+        "tracking_enabled": true
+      },
+      "mode": "fixture",
+      "parity": {
+        "checks": {
+          "box_tolerance": {
+            "compared": 1,
+            "max_delta": 0.0,
+            "passed": true,
+            "required": true,
+            "tolerance": 1e-05
+          },
+          "class_counts": {
+            "passed": true,
+            "required": true
+          },
+          "classes": {
+            "passed": true,
+            "required": true
+          },
+          "confidence_tolerance": {
+            "compared": 1,
+            "max_delta": 0.0,
+            "passed": true,
+            "required": true,
+            "tolerance": 1e-05
+          },
+          "detection_count": {
+            "passed": true,
+            "required": true
+          },
+          "frames": {
+            "passed": true,
+            "required": true
+          }
+        },
+        "failed_required": [],
+        "passed": true
+      },
+      "runs": {
+        "baseline": {
+          "class_counts": {
+            "weed": 42
+          },
+          "classes": [
+            "weed"
+          ],
+          "detection_count": 42,
+          "detections": [
+            {
+              "confidence": 0.88,
+              "x1": 5,
+              "x2": 20,
+              "y1": 10,
+              "y2": 30
+            }
+          ],
+          "frames_per_second": 4.2,
+          "inference_batch_throughput": 1.0,
+          "label": "baseline",
+          "missing_stages": [],
+          "peak_memory_mb": 640,
+          "selected_frames": [
+            0,
+            15,
+            30
+          ],
+          "stages_seconds": {
+            "crop": 1.1,
+            "decode": 2.4,
+            "inference": 6.5,
+            "persist": 0.7,
+            "queue_wait": 0.2,
+            "summary": 0.1,
+            "telemetry": 0.3,
+            "total": 12.1,
+            "tracking": 0.8
+          }
+        },
+        "experiment": {
+          "class_counts": {
+            "weed": 42
+          },
+          "classes": [
+            "weed"
+          ],
+          "detection_count": 42,
+          "detections": [
+            {
+              "confidence": 0.88,
+              "x1": 5,
+              "x2": 20,
+              "y1": 10,
+              "y2": 30
+            }
+          ],
+          "frames_per_second": 4.2,
+          "inference_batch_throughput": 1.0,
+          "label": "baseline",
+          "missing_stages": [],
+          "peak_memory_mb": 640,
+          "selected_frames": [
+            0,
+            15,
+            30
+          ],
+          "stages_seconds": {
+            "crop": 1.1,
+            "decode": 2.4,
+            "inference": 6.5,
+            "persist": 0.7,
+            "queue_wait": 0.2,
+            "summary": 0.1,
+            "telemetry": 0.3,
+            "total": 12.1,
+            "tracking": 0.8
+          }
+        }
+      },
+      "version": 1
+    }
+  }
+}

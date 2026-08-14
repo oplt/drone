@@ -108,6 +108,7 @@ class VideoAnalysisJob(Base):
     source_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
     frame_stride_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     confidence_threshold: Mapped[float] = mapped_column(Float, nullable=False, default=0.35)
+    inference_profile: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     frames_received: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     frames_decoded: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     frames_attempted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

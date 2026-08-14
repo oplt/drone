@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  createAgricultureRunRefetchInterval,
+  isAgricultureRunTerminal,
+} from "../analysisLifecycle";
+import {
   approveAgricultureAssistantRun,
   approveAgricultureInspectionAction,
   approveAgriculturePrescription,
@@ -26,6 +30,7 @@ import {
   getAgricultureAnalysisReadiness,
 } from "../../api";
 import { agricultureKeys, agriculturePollInterval } from "../queryKeys";
+import { useAgricultureAnalysisEvents } from "../../hooks/useLifecycleEvents";
 
 export function useAgricultureReportSnapshots(runId: string | null) {
   return useQuery({
@@ -47,16 +52,15 @@ export function useCreateAgricultureReportSnapshot() {
 }
 
 export function useAgricultureAnalysisRun(runId: string | null) {
+  const eventConnection = useAgricultureAnalysisEvents(runId);
   return useQuery({
     queryKey: agricultureKeys.analysisRun(runId),
     queryFn: () => getAgricultureAnalysisRun(runId as string),
     enabled: Boolean(runId),
     refetchInterval: (query) =>
-      ["completed", "failed", "blocked", "review"].includes(
-        query.state.data?.status ?? "",
-      )
+      isAgricultureRunTerminal(query.state.data?.status)
         ? false
-        : agriculturePollInterval(3000),
+        : agriculturePollInterval(eventConnection === "open" ? 30_000 : 3000),
   });
 }
 
@@ -76,38 +80,42 @@ export function useAgricultureModelGovernanceActions() {
 }
 
 export function useAgricultureGrowthMetrics(runId: string | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: agricultureKeys.growth(runId),
     queryFn: () => listAgricultureGrowthMetrics(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
 export function useAgricultureYieldForecast(runId: string | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: agricultureKeys.yield(runId),
     queryFn: () => getAgricultureYieldForecast(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
 export function useAgriculturePrescriptions(runId: string | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: agricultureKeys.prescriptions(runId),
     queryFn: () => listAgriculturePrescriptions(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
 export function useAgricultureAssistantRuns(runId: string | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: agricultureKeys.assistant(runId),
     queryFn: () => listAgricultureAssistantRuns(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
@@ -132,12 +140,21 @@ export function useApproveAgricultureAssistantRun() {
   });
 }
 
-export function useAgricultureSpatialViewport(runId: string | null, options: { layer?: string; zoom?: number; minSeverity?: number; minConfidence?: number } = {}) {
+export function useAgricultureSpatialViewport(runId: string | null, options: { layer?: string; zoom?: number; minSeverity?: number; minConfidence?: number; maxFeatures?: number } = {}) {
   const layer = options.layer ?? "all";
   const zoom = options.zoom ?? 12;
   const minConfidence = options.minConfidence ?? 0;
+  const minSeverity = options.minSeverity ?? 0;
+  const maxFeatures = options.maxFeatures ?? 2000;
   return useQuery({
-    queryKey: agricultureKeys.spatial(runId, layer, zoom, minConfidence),
+    queryKey: agricultureKeys.spatial(
+      runId,
+      layer,
+      zoom,
+      minConfidence,
+      minSeverity,
+      maxFeatures,
+    ),
     queryFn: () => getAgricultureSpatialViewport(runId as string, { ...options, layer, zoom, minConfidence }),
     enabled: Boolean(runId),
     staleTime: 15_000,

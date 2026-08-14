@@ -13,7 +13,7 @@ export default defineConfig({
           if (id.includes("react-konva") || id.includes("/konva/")) {
             return "vendor-annotation";
           }
-          if (id.includes("cesium") || id.includes("resium")) return "vendor-cesium";
+          if (id.includes("cesium")) return "vendor-cesium";
           if (id.includes("three") || id.includes("@react-three")) return "vendor-3d";
           if (id.includes("maplibre") || id.includes("leaflet")) return "vendor-maps";
           if (id.includes("@mui") || id.includes("@emotion")) return "vendor-mui";

@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "video-precision-representative",
+  "model_name": "yolo26n.pt",
+  "validation_data": null,
+  "device": "cuda:0",
+  "image_size": 640,
+  "source_width": 1920,
+  "source_height": 1080,
+  "confidence_threshold": 0.35,
+  "batch_size": 8,
+  "warmup_batches": 2,
+  "timed_batches": 10,
+  "fixture_model_checksum": "sha256:replace-with-production-model-checksum",
+  "gates": {
+    "min_throughput_improvement_percent": 15.0,
+    "max_map50_regression": 0.01,
+    "max_recall_regression": 0.01
+  },
+  "fixture_rows": [
+    {
+      "precision_mode": "fp32",
+      "supported": true,
+      "stable": true,
+      "map50": 0.7,
+      "recall": 0.72,
+      "images_per_second": 40.0,
+      "batch_latency_ms": 200.0
+    },
+    {
+      "precision_mode": "fp16",
+      "supported": true,
+      "stable": true,
+      "map50": 0.698,
+      "recall": 0.718,
+      "images_per_second": 54.0,
+      "batch_latency_ms": 148.1
+    }
+  ]
+}

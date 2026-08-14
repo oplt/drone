@@ -1,26 +1,27 @@
 /** Explicit IA labels for registered route segments. */
 export const BREADCRUMB_LABELS: Record<string, string> = {
-  insights: "Insights",
+  insights: "History",
   fleet: "Fleet",
   settings: "Settings",
   account: "Account",
   photogrammetry: "Photogrammetry",
   animalfarm: "Animal Farm",
-  privatepatrol: "Property Patrol",
-  "property-patrol": "Property Patrol",
-  field: "Field Survey",
+  privatepatrol: "Property Inspection",
+  "property-patrol": "Property Inspection",
+  field: "Missions",
   agriculture: "Agriculture",
   fields: "Fields",
   flights: "Flights",
   analysis: "Analysis",
-  "vision-models": "Vision Models",
+  "vision-models": "Datasets & Training",
+  "training-runs": "Training run",
   datasets: "Datasets",
   label: "Labeling",
   warehouse: "Warehouse",
   "video-analysis": "Video Analysis",
   observability: "Observability",
-  controlled: "Controlled Flight",
-  templates: "Templates",
+  controlled: "Live Operations",
+  templates: "Automations",
   admin: "Admin",
   missions: "Missions",
   timeline: "Timeline",
@@ -61,20 +62,20 @@ export function buildBreadcrumbTrail(pathname: string): BreadcrumbCrumb[] {
 
   if (segments[0] === "observability") {
     return [
-      { label: "Operations Hub", to: "/dashboard", current: false },
+      { label: "Overview", to: "/dashboard", current: false },
       { label: "Observability", to: "/dashboard/observability", current: true },
     ];
   }
 
   const dashboardIndex = segments.indexOf("dashboard");
   if (dashboardIndex < 0) {
-    return [{ label: "Operations Hub", to: "/dashboard", current: true }];
+    return [{ label: "Overview", to: "/dashboard", current: true }];
   }
 
   const subSegments = segments.slice(dashboardIndex + 1);
   const crumbs: BreadcrumbCrumb[] = [
     {
-      label: "Operations Hub",
+      label: "Overview",
       to: "/dashboard",
       current: subSegments.length === 0,
     },

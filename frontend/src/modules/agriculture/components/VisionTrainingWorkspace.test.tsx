@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { visionKeys } from "../hooks/useVisionModels";
 import type { VisionDataset, VisionTrainingRun } from "../visionTypes";
@@ -30,7 +31,7 @@ const dataset: VisionDataset = {
 };
 
 describe("vision training workspace", () => {
-  it("surfaces persisted training and evaluation failures", () => {
+  it("keeps the list compact and links to run details", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { staleTime: Infinity } },
     });
@@ -60,13 +61,19 @@ describe("vision training workspace", () => {
 
     render(
       <QueryClientProvider client={client}>
-        <VisionTrainingWorkspace projectId="project-1" dataset={dataset} />
+        <MemoryRouter>
+          <VisionTrainingWorkspace projectId="project-1" dataset={dataset} />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("Model evaluation failed.")).toBeVisible();
-    expect(screen.getByText("failed")).toBeVisible();
-    expect(screen.getByRole("button", { name: /retry same snapshot/i })).toBeEnabled();
+    expect(screen.getByText("Failed")).toBeVisible();
+    expect(screen.getByRole("link", { name: /yolo26s\.pt · Balanced/i })).toHaveAttribute(
+      "href",
+      "/dashboard/agriculture/vision-models/training-runs/run-1",
+    );
+    expect(screen.getByRole("button", { name: /retry/i })).toBeEnabled();
+    expect(screen.queryByText("Model evaluation failed.")).not.toBeInTheDocument();
     expect(screen.getByText(/quality flags block training/i)).toBeVisible();
     expect(screen.getByText(/training is blocked while split leakage remains/i)).toBeVisible();
     expect(screen.getByRole("button", { name: /start training/i })).toBeDisabled();

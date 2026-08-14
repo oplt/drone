@@ -61,8 +61,13 @@ export type AgricultureObservationEvidence = {
     evidence_id: string;
     media_id: string;
     source_kind: string;
+    content_type: string | null;
     checksum: string;
     signed_url: string;
+    frame_index: number | null;
+    timestamp_seconds: number | null;
+    timestamp_source: string | null;
+    source_video_id: string | null;
   }>;
   geometry: Record<string, unknown>;
   georef_status: string;

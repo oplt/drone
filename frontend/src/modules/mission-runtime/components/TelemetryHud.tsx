@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Box } from "@mui/material";
-import { TelemetryHudDetectionPanel } from "./TelemetryHudDetectionPanel";
-import { TelemetryHudDetailsDrawer } from "./TelemetryHudDetailsDrawer";
-import { TelemetryHudMissionPanel } from "./TelemetryHudMissionPanel";
-import { TelemetryHudTopBar } from "./TelemetryHudTopBar";
-import type { TelemetryHudProps } from "./telemetryHudTypes";
-import { useTelemetryHudModel } from "./useTelemetryHudModel";
+import { TelemetryHudDetectionPanel } from "./telemetryHud/TelemetryHudDetectionPanel";
+import { TelemetryHudDetailsDrawer } from "./telemetryHud/TelemetryHudDetailsDrawer";
+import { TelemetryHudMissionPanel } from "./telemetryHud/TelemetryHudMissionPanel";
+import { TelemetryHudTopBar } from "./telemetryHud/TelemetryHudTopBar";
+import type { TelemetryHudProps } from "./telemetryHud/telemetryHudTypes";
+import { useTelemetryHudModel } from "./telemetryHud/useTelemetryHudModel";
 
-export type { DetectionHudInfo, TelemetryHudProps } from "./telemetryHudTypes";
+export type { DetectionHudInfo, TelemetryHudProps } from "./telemetryHud/telemetryHudTypes";
 
 export function TelemetryHud({
   telemetry,

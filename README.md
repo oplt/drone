@@ -299,6 +299,9 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml --profi
 
 See `docs/local-observability.md` and `docs/observability.md` for details.
 
+Before merging media, agriculture polling, training, or bundle changes, use
+`docs/performance-regression-checklist.md`.
+
 ## Configuration
 
 Use placeholders for local development and real secret values only in private environment files or a secrets manager.

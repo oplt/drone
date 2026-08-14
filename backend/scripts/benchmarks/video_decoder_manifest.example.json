@@ -1,0 +1,753 @@
+{
+  "version": 1,
+  "name": "video-decoder-representative",
+  "modes": [
+    "opencv_sequential",
+    "opencv_seek",
+    "pyav_sequential",
+    "ffmpeg_pipe"
+  ],
+  "sample_rates_fps": [
+    0.5,
+    1,
+    2,
+    5
+  ],
+  "clips": [
+    {
+      "id": "1080p_h264_short",
+      "label": "1080p H.264 short",
+      "codec": "h264",
+      "resolution": "1080p",
+      "duration_seconds": 30,
+      "fps": 30,
+      "frame_count": 900,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "1080p_h264_long",
+      "label": "1080p H.264 long",
+      "codec": "h264",
+      "resolution": "1080p",
+      "duration_seconds": 600,
+      "fps": 30,
+      "frame_count": 18000,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "4k_h264_short",
+      "label": "4K H.264 short",
+      "codec": "h264",
+      "resolution": "4k",
+      "duration_seconds": 45,
+      "fps": 30,
+      "frame_count": 1350,
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "id": "4k_h265_short",
+      "label": "4K H.265 short",
+      "codec": "h265",
+      "resolution": "4k",
+      "duration_seconds": 45,
+      "fps": 30,
+      "frame_count": 1350,
+      "width": 3840,
+      "height": 2160
+    }
+  ],
+  "hardware": {
+    "device_label": "example-workstation",
+    "cpu_model": "replace-with-live-cpu-model",
+    "ram_gb": 32
+  },
+  "baseline_mode": "opencv_sequential",
+  "adoption_cpu_threshold_percent": 30,
+  "adoption_wall_threshold_percent": 25,
+  "adoption_timestamp_error_max_seconds": 0.1,
+  "fixture": {
+    "1080p_h264_short": {
+      "0.5": {
+        "opencv_sequential": {
+          "wall_time_seconds": 32.4,
+          "cpu_time_seconds": 32.4,
+          "decoded_frames": 900,
+          "selected_frames": 15,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 0.926,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 0.775,
+          "cpu_time_seconds": 0.388,
+          "decoded_frames": 15,
+          "selected_frames": 15,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 38.71,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 1.325,
+          "cpu_time_seconds": 1.166,
+          "decoded_frames": 900,
+          "selected_frames": 15,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 22.642,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 0.5,
+          "cpu_time_seconds": 0.21,
+          "decoded_frames": 15,
+          "selected_frames": 15,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 60.0,
+          "available": true
+        }
+      },
+      "1": {
+        "opencv_sequential": {
+          "wall_time_seconds": 16.2,
+          "cpu_time_seconds": 16.2,
+          "decoded_frames": 900,
+          "selected_frames": 30,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 1.852,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 1.025,
+          "cpu_time_seconds": 0.512,
+          "decoded_frames": 30,
+          "selected_frames": 30,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 29.268,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 1.375,
+          "cpu_time_seconds": 1.21,
+          "decoded_frames": 900,
+          "selected_frames": 30,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 21.818,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 0.625,
+          "cpu_time_seconds": 0.263,
+          "decoded_frames": 30,
+          "selected_frames": 30,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 48.0,
+          "available": true
+        }
+      },
+      "2": {
+        "opencv_sequential": {
+          "wall_time_seconds": 8.1,
+          "cpu_time_seconds": 8.1,
+          "decoded_frames": 900,
+          "selected_frames": 60,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 3.704,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 1.525,
+          "cpu_time_seconds": 0.762,
+          "decoded_frames": 60,
+          "selected_frames": 60,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 19.672,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 1.475,
+          "cpu_time_seconds": 1.298,
+          "decoded_frames": 900,
+          "selected_frames": 60,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 20.339,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 0.875,
+          "cpu_time_seconds": 0.367,
+          "decoded_frames": 60,
+          "selected_frames": 60,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 34.286,
+          "available": true
+        }
+      },
+      "5": {
+        "opencv_sequential": {
+          "wall_time_seconds": 5.4,
+          "cpu_time_seconds": 5.4,
+          "decoded_frames": 900,
+          "selected_frames": 150,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 5.556,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 2.025,
+          "cpu_time_seconds": 1.012,
+          "decoded_frames": 150,
+          "selected_frames": 150,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 14.815,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 1.575,
+          "cpu_time_seconds": 1.386,
+          "decoded_frames": 900,
+          "selected_frames": 150,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 19.048,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 1.125,
+          "cpu_time_seconds": 0.472,
+          "decoded_frames": 150,
+          "selected_frames": 150,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 26.667,
+          "available": true
+        }
+      }
+    },
+    "1080p_h264_long": {
+      "0.5": {
+        "opencv_sequential": {
+          "wall_time_seconds": 648.0,
+          "cpu_time_seconds": 648.0,
+          "decoded_frames": 18000,
+          "selected_frames": 300,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 0.926,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 15.5,
+          "cpu_time_seconds": 7.75,
+          "decoded_frames": 300,
+          "selected_frames": 300,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 38.71,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 26.5,
+          "cpu_time_seconds": 23.32,
+          "decoded_frames": 18000,
+          "selected_frames": 300,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 22.642,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 10.0,
+          "cpu_time_seconds": 4.2,
+          "decoded_frames": 300,
+          "selected_frames": 300,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 60.0,
+          "available": true
+        }
+      },
+      "1": {
+        "opencv_sequential": {
+          "wall_time_seconds": 324.0,
+          "cpu_time_seconds": 324.0,
+          "decoded_frames": 18000,
+          "selected_frames": 600,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 1.852,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 20.5,
+          "cpu_time_seconds": 10.25,
+          "decoded_frames": 600,
+          "selected_frames": 600,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 29.268,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 27.5,
+          "cpu_time_seconds": 24.2,
+          "decoded_frames": 18000,
+          "selected_frames": 600,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 21.818,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 12.5,
+          "cpu_time_seconds": 5.25,
+          "decoded_frames": 600,
+          "selected_frames": 600,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 48.0,
+          "available": true
+        }
+      },
+      "2": {
+        "opencv_sequential": {
+          "wall_time_seconds": 162.0,
+          "cpu_time_seconds": 162.0,
+          "decoded_frames": 18000,
+          "selected_frames": 1200,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 3.704,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 30.5,
+          "cpu_time_seconds": 15.25,
+          "decoded_frames": 1200,
+          "selected_frames": 1200,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 19.672,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 29.5,
+          "cpu_time_seconds": 25.96,
+          "decoded_frames": 18000,
+          "selected_frames": 1200,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 20.339,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 17.5,
+          "cpu_time_seconds": 7.35,
+          "decoded_frames": 1200,
+          "selected_frames": 1200,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 34.286,
+          "available": true
+        }
+      },
+      "5": {
+        "opencv_sequential": {
+          "wall_time_seconds": 108.0,
+          "cpu_time_seconds": 108.0,
+          "decoded_frames": 18000,
+          "selected_frames": 3000,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 5.556,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 40.5,
+          "cpu_time_seconds": 20.25,
+          "decoded_frames": 3000,
+          "selected_frames": 3000,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 14.815,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 31.5,
+          "cpu_time_seconds": 27.72,
+          "decoded_frames": 18000,
+          "selected_frames": 3000,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 19.048,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 22.5,
+          "cpu_time_seconds": 9.45,
+          "decoded_frames": 3000,
+          "selected_frames": 3000,
+          "ram_peak_mb": 380,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 26.667,
+          "available": true
+        }
+      }
+    },
+    "4k_h264_short": {
+      "0.5": {
+        "opencv_sequential": {
+          "wall_time_seconds": 106.92,
+          "cpu_time_seconds": 106.92,
+          "decoded_frames": 1350,
+          "selected_frames": 23,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 0.421,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 2.557,
+          "cpu_time_seconds": 1.278,
+          "decoded_frames": 23,
+          "selected_frames": 23,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 17.599,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 4.372,
+          "cpu_time_seconds": 3.847,
+          "decoded_frames": 1350,
+          "selected_frames": 23,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 10.293,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 1.65,
+          "cpu_time_seconds": 0.693,
+          "decoded_frames": 23,
+          "selected_frames": 23,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 27.273,
+          "available": true
+        }
+      },
+      "1": {
+        "opencv_sequential": {
+          "wall_time_seconds": 53.46,
+          "cpu_time_seconds": 53.46,
+          "decoded_frames": 1350,
+          "selected_frames": 45,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 0.842,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 3.383,
+          "cpu_time_seconds": 1.692,
+          "decoded_frames": 45,
+          "selected_frames": 45,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 13.302,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 4.537,
+          "cpu_time_seconds": 3.993,
+          "decoded_frames": 1350,
+          "selected_frames": 45,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 9.918,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 2.062,
+          "cpu_time_seconds": 0.866,
+          "decoded_frames": 45,
+          "selected_frames": 45,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 21.823,
+          "available": true
+        }
+      },
+      "2": {
+        "opencv_sequential": {
+          "wall_time_seconds": 26.73,
+          "cpu_time_seconds": 26.73,
+          "decoded_frames": 1350,
+          "selected_frames": 90,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 1.684,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 5.032,
+          "cpu_time_seconds": 2.516,
+          "decoded_frames": 90,
+          "selected_frames": 90,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 8.943,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 4.867,
+          "cpu_time_seconds": 4.283,
+          "decoded_frames": 1350,
+          "selected_frames": 90,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 9.246,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 2.887,
+          "cpu_time_seconds": 1.213,
+          "decoded_frames": 90,
+          "selected_frames": 90,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 15.587,
+          "available": true
+        }
+      },
+      "5": {
+        "opencv_sequential": {
+          "wall_time_seconds": 17.82,
+          "cpu_time_seconds": 17.82,
+          "decoded_frames": 1350,
+          "selected_frames": 225,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 2.525,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 6.683,
+          "cpu_time_seconds": 3.341,
+          "decoded_frames": 225,
+          "selected_frames": 225,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 6.734,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 5.198,
+          "cpu_time_seconds": 4.574,
+          "decoded_frames": 1350,
+          "selected_frames": 225,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 8.657,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 3.713,
+          "cpu_time_seconds": 1.559,
+          "decoded_frames": 225,
+          "selected_frames": 225,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 12.12,
+          "available": true
+        }
+      }
+    },
+    "4k_h265_short": {
+      "0.5": {
+        "opencv_sequential": {
+          "wall_time_seconds": 122.958,
+          "cpu_time_seconds": 122.958,
+          "decoded_frames": 1350,
+          "selected_frames": 23,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 0.366,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 2.941,
+          "cpu_time_seconds": 1.47,
+          "decoded_frames": 23,
+          "selected_frames": 23,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 15.301,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 5.028,
+          "cpu_time_seconds": 4.425,
+          "decoded_frames": 1350,
+          "selected_frames": 23,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 8.95,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 1.897,
+          "cpu_time_seconds": 0.797,
+          "decoded_frames": 23,
+          "selected_frames": 23,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 23.722,
+          "available": true
+        }
+      },
+      "1": {
+        "opencv_sequential": {
+          "wall_time_seconds": 61.479,
+          "cpu_time_seconds": 61.479,
+          "decoded_frames": 1350,
+          "selected_frames": 45,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 0.732,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 3.89,
+          "cpu_time_seconds": 1.945,
+          "decoded_frames": 45,
+          "selected_frames": 45,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 11.568,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 5.218,
+          "cpu_time_seconds": 4.592,
+          "decoded_frames": 1350,
+          "selected_frames": 45,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 8.624,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 2.372,
+          "cpu_time_seconds": 0.996,
+          "decoded_frames": 45,
+          "selected_frames": 45,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 18.971,
+          "available": true
+        }
+      },
+      "2": {
+        "opencv_sequential": {
+          "wall_time_seconds": 30.739,
+          "cpu_time_seconds": 30.739,
+          "decoded_frames": 1350,
+          "selected_frames": 90,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 1.464,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 5.787,
+          "cpu_time_seconds": 2.893,
+          "decoded_frames": 90,
+          "selected_frames": 90,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 7.776,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 5.598,
+          "cpu_time_seconds": 4.926,
+          "decoded_frames": 1350,
+          "selected_frames": 90,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 8.039,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 3.321,
+          "cpu_time_seconds": 1.395,
+          "decoded_frames": 90,
+          "selected_frames": 90,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 13.55,
+          "available": true
+        }
+      },
+      "5": {
+        "opencv_sequential": {
+          "wall_time_seconds": 20.493,
+          "cpu_time_seconds": 20.493,
+          "decoded_frames": 1350,
+          "selected_frames": 225,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 2.196,
+          "available": true
+        },
+        "opencv_seek": {
+          "wall_time_seconds": 7.685,
+          "cpu_time_seconds": 3.842,
+          "decoded_frames": 225,
+          "selected_frames": 225,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.04,
+          "source_video_minutes_per_wall_minute": 5.856,
+          "available": true
+        },
+        "pyav_sequential": {
+          "wall_time_seconds": 5.977,
+          "cpu_time_seconds": 5.26,
+          "decoded_frames": 1350,
+          "selected_frames": 225,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.01,
+          "source_video_minutes_per_wall_minute": 7.529,
+          "available": true
+        },
+        "ffmpeg_pipe": {
+          "wall_time_seconds": 4.269,
+          "cpu_time_seconds": 1.793,
+          "decoded_frames": 225,
+          "selected_frames": 225,
+          "ram_peak_mb": 1180,
+          "timestamp_error_max_seconds": 0.0,
+          "source_video_minutes_per_wall_minute": 10.541,
+          "available": true
+        }
+      }
+    }
+  }
+}

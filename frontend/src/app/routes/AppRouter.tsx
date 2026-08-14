@@ -49,6 +49,9 @@ const AgricultureAnalysisPage = lazyWithStaleChunkReload(
 const AgricultureVisionModelsPage = lazyWithStaleChunkReload(
   () => import("../../modules/agriculture/views/AgricultureVisionModelsPage"),
 );
+const VisionTrainingRunPage = lazyWithStaleChunkReload(
+  () => import("../../modules/agriculture/views/VisionTrainingRunPage"),
+);
 const AgricultureLabelingWorkspace = lazyWithStaleChunkReload(
   () => import("../../modules/agriculture/views/LabelingWorkspace"),
 );
@@ -138,6 +141,18 @@ export function AppRouter() {
           }
         >
           <Route index element={renderLazyRoute(<DashboardHome />)} />
+          <Route
+            path="missions"
+            element={<Navigate to="/dashboard/field" replace />}
+          />
+          <Route
+            path="live"
+            element={<Navigate to="/dashboard/controlled" replace />}
+          />
+          <Route
+            path="history"
+            element={<Navigate to="/dashboard/insights" replace />}
+          />
           <Route path="insights" element={renderLazyRoute(<InsightsPage />)} />
           <Route path="fleet" element={renderLazyRoute(<FleetPage />)} />
           <Route
@@ -185,6 +200,10 @@ export function AppRouter() {
           <Route
             path="agriculture/vision-models"
             element={renderLazyRoute(<AgricultureVisionModelsPage />)}
+          />
+          <Route
+            path="agriculture/vision-models/training-runs/:runId"
+            element={renderLazyRoute(<VisionTrainingRunPage />)}
           />
           <Route
             path="agriculture/vision-models/datasets/:datasetId/label"

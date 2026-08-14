@@ -286,6 +286,11 @@ def default_video_analysis_inference_batch_size() -> int:
         return 1
 
 
+def default_video_analysis_inference_prefetch_size(batch_size: int) -> int:
+    """Bound decode-ahead buffering without unbounded RAM growth."""
+    return max(2, min(max(1, batch_size) * 2, 8))
+
+
 class RuntimeSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
@@ -737,14 +742,15 @@ class RuntimeSettings(BaseSettings):
     video_analysis_crop_min_confidence: float = Field(default=0.75, ge=0.0, le=1.0)
     video_analysis_staged_object_max_age_minutes: int = Field(default=30, ge=1)
     video_analysis_decode_stride_enabled: bool = False
+    video_analysis_decoder: str = "opencv_sequential"
     video_analysis_inference_batch_size: int | None = Field(default=None, ge=1, le=32)
+    video_analysis_inference_prefetch_size: int | None = Field(default=None, ge=1, le=32)
     video_analysis_defer_low_confidence_crops: bool = True
     api_rate_window_seconds: int = 60
     video_analysis_rate_uploads_per_window: int = 30
     video_analysis_rate_analyze_starts_per_window: int = 15
     vision_rate_training_starts_per_window: int = 5
     agents_rate_runs_per_window: int = 20
-    agriculture_inference_poll_seconds: int = 15
     agriculture_inference_wait_timeout_seconds: int = 6 * 60 * 60
     agriculture_max_media_bytes: int = 1024 * 1024 * 1024
     agriculture_org_storage_quota_bytes: int = 20 * 1024 * 1024 * 1024
@@ -756,6 +762,7 @@ class RuntimeSettings(BaseSettings):
     agriculture_max_active_analysis_runs_per_org: int = 3
     agriculture_max_exports_per_org_per_day: int = 100
     agriculture_media_retention_days: int = 30
+    workflow_event_retention_days: int = 30
     agriculture_upload_session_ttl_seconds: int = 86_400
     agriculture_upload_chunk_bytes: int = 16 * 1024 * 1024
     agriculture_storage_sse_algorithm: str = "AES256"
@@ -788,6 +795,22 @@ class RuntimeSettings(BaseSettings):
             self.video_analysis_inference_batch_size = (
                 default_video_analysis_inference_batch_size()
             )
+        if self.video_analysis_inference_prefetch_size is None:
+            self.video_analysis_inference_prefetch_size = (
+                default_video_analysis_inference_prefetch_size(
+                    int(self.video_analysis_inference_batch_size)
+                )
+            )
+        decoder = self.video_analysis_decoder.strip().lower()
+        if decoder not in {
+            "opencv_sequential",
+            "opencv_seek",
+            "pyav_sequential",
+            "ffmpeg_pipe",
+        }:
+            self.video_analysis_decoder = "opencv_sequential"
+        else:
+            self.video_analysis_decoder = decoder
         return self
 
 

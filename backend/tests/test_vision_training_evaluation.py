@@ -362,6 +362,7 @@ async def test_locked_dataset_can_start_a_new_attempt_and_running_attempt_cancel
     now = datetime.now(UTC)
     project = SimpleNamespace(
         id="project-1",
+        org_id=7,
         classes=[SimpleNamespace(name="ripe")],
     )
     dataset = SimpleNamespace(
@@ -427,6 +428,9 @@ async def test_locked_dataset_can_start_a_new_attempt_and_running_attempt_cancel
                 created_runs.append(value)
 
         async def commit(self):
+            return None
+
+        async def flush(self):
             return None
 
         async def refresh(self, _value, **_kwargs):

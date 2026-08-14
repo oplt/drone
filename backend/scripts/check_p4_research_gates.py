@@ -33,12 +33,21 @@ def main() -> int:
         if availability != "research_blocked":
             raise SystemExit(f"{priority} must be research_blocked, found {availability!r}")
 
-    if not re.search(r'"small_object_mode":\s*False', capabilities_src):
-        raise SystemExit("default_inference_profile must keep small_object_mode False (EXP-002 baseline A)")
-    if not re.search(r'"tracking_enabled":\s*False', capabilities_src):
-        raise SystemExit("default_inference_profile must keep tracking_enabled False (EXP-002 baseline A)")
-    if "exp002_baseline_A" not in capabilities_src:
-        raise SystemExit("default_inference_profile must declare exp002_baseline_A policy")
+    sys.path.insert(0, str(ROOT))
+    from backend.modules.agriculture.inference_profiles import (  # noqa: PLC0415
+        CAPABILITY_PROFILE_IDS,
+        PROFILE_SCHEMA_VERSION,
+        default_inference_profile,
+    )
+
+    for capability_id in CAPABILITY_PROFILE_IDS:
+        profile = default_inference_profile(capability_id)
+        if profile["profile_version"] != PROFILE_SCHEMA_VERSION:
+            raise SystemExit(f"{capability_id} must use the current profile schema")
+        if profile["sahi_enabled"] or profile["tracking_enabled"]:
+            raise SystemExit(
+                f"{capability_id} must retain the standard EXP-002 baseline"
+            )
 
     print("P4 research gates passed.")
     return 0

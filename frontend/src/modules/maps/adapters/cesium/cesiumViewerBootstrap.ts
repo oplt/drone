@@ -147,7 +147,7 @@ export async function bootstrapCesiumViewer(
           .createWorldTerrain === "function"
       ) {
         viewer.terrainProvider = (
-          CesiumModule as typeof Cesium & {
+          CesiumModule as unknown as typeof Cesium & {
             createWorldTerrain: () => Cesium.TerrainProvider;
           }
         ).createWorldTerrain();

@@ -93,7 +93,13 @@ export function ExportApprovalDialog({
           <Stack spacing={1.5} sx={{ pt: 1 }}>
             <Select
               value={artifactKind}
-              onChange={(event) => setArtifactKind(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setArtifactKind(next);
+                if (next === "intervention_zones" && !["geojson", "shapefile"].includes(format)) {
+                  setFormat("geojson");
+                }
+              }}
               inputProps={{ "aria-label": "Export artifact kind" }}
             >
               <MenuItem value="report">Report</MenuItem>
@@ -102,6 +108,9 @@ export function ExportApprovalDialog({
                 Approved inspection actions
               </MenuItem>
               <MenuItem value="prescription">Approved prescription</MenuItem>
+              <MenuItem value="intervention_zones">
+                Approved intervention zones
+              </MenuItem>
             </Select>
             <Select
               value={format}
@@ -110,8 +119,8 @@ export function ExportApprovalDialog({
             >
               <MenuItem value="geojson">GeoJSON</MenuItem>
               <MenuItem value="shapefile">Shapefile</MenuItem>
-              <MenuItem value="csv">CSV</MenuItem>
-              <MenuItem value="pdf">PDF</MenuItem>
+              {artifactKind !== "intervention_zones" ? <MenuItem value="csv">CSV</MenuItem> : null}
+              {artifactKind !== "intervention_zones" ? <MenuItem value="pdf">PDF</MenuItem> : null}
             </Select>
             <Alert severity="info">
               Generation is audited and does not execute field treatment.

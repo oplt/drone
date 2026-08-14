@@ -20,6 +20,23 @@ type MissionDetail = {
   last_error?: string;
 };
 
+type PreflightData = {
+  overall_status?: string;
+  summary?: { passed?: number; warned?: number; failed?: number };
+  started_at?: number;
+  completed_at?: number;
+  base_checks?: Array<Record<string, unknown>>;
+  mission_checks?: Array<Record<string, unknown>>;
+};
+
+type ComplianceData = {
+  remote_id_status?: string;
+  laanc_auth_number?: string;
+  preflight_ack_at?: string;
+  laanc_auth_expires?: string;
+  notes?: string;
+};
+
 type TimelineQuery = {
   isError: boolean;
   isFetching: boolean;
@@ -37,28 +54,28 @@ export function useMissionTimelineData(flightId: string | undefined) {
       },
       {
         queryKey: ["mission-preflight", flightId],
-        queryFn: () => fetchMissionPreflight(flightId!),
+        queryFn: () => fetchMissionPreflight<PreflightData>(flightId!),
         enabled: Boolean(flightId),
         retry: false,
       },
       {
         queryKey: ["mission-transitions", flightId],
-        queryFn: () => fetchMissionTransitions<Array<Record<string, unknown>>>(flightId!),
+        queryFn: () => fetchMissionTransitions<Record<string, unknown>>(flightId!),
         enabled: Boolean(flightId),
       },
       {
         queryKey: ["mission-commands", flightId],
-        queryFn: () => fetchMissionCommands<Array<Record<string, unknown>>>(flightId!),
+        queryFn: () => fetchMissionCommands<Record<string, unknown>>(flightId!),
         enabled: Boolean(flightId),
       },
       {
         queryKey: ["mission-events", flightId],
-        queryFn: () => fetchMissionEvents<Array<Record<string, unknown>>>(flightId!),
+        queryFn: () => fetchMissionEvents<Record<string, unknown>>(flightId!),
         enabled: Boolean(flightId),
       },
       {
         queryKey: ["mission-compliance", flightId],
-        queryFn: () => fetchMissionCompliance(flightId!),
+        queryFn: () => fetchMissionCompliance<ComplianceData>(flightId!),
         enabled: Boolean(flightId),
         retry: false,
       },

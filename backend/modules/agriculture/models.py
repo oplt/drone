@@ -4,19 +4,19 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
+from sqlalchemy import JSON, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, event, func, inspect, text
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import event, inspect
 from geoalchemy2 import Geometry
 
 from backend.core.database.base import Base
+from backend.modules.agriculture.analytics_models import AgricultureAnalyticsProfileColumns
 
 
 def new_id() -> str:
     return str(uuid.uuid4())
 
 
-class AgricultureFieldProfile(Base):
+class AgricultureFieldProfile(AgricultureAnalyticsProfileColumns, Base):
     __tablename__ = "agriculture_field_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

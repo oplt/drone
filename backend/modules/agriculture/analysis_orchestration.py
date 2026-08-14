@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -14,6 +12,7 @@ from backend.modules.agriculture.capabilities import (
     agriculture_capability_release_service,
     validate_capability_ids,
 )
+from backend.modules.agriculture.inference_profiles import video_request_for_profile
 from backend.modules.agriculture.models import (
     AgricultureAnalysisRun,
     AgricultureAnalysisStage,
@@ -22,7 +21,6 @@ from backend.modules.agriculture.models import (
 )
 from backend.modules.identity.models import User
 from backend.modules.video_analysis.contracts import VideoJobRef, video_analysis_port
-from backend.modules.video_analysis.schemas import AnalyzeVideoRequest
 
 
 class AgricultureAnalysisReadinessError(ValueError):
@@ -98,7 +96,10 @@ class AgricultureAnalysisOrchestration:
                 "message": (
                     f"Target ground sampling distance: {profile['target_gsd_cm']} cm."
                     if profile.get("target_gsd_cm") is not None
-                    else "No target ground sampling distance was recorded; quality will be reported with reduced context."
+                    else (
+                        "No target ground sampling distance was recorded; "
+                        "quality will be reported with reduced context."
+                    )
                 ),
             },
         ]
@@ -120,6 +121,25 @@ class AgricultureAnalysisOrchestration:
                     reasons.append(
                         f"Released model is for {', '.join(sorted(supported))}, not {crop}."
                     )
+            conditions = dict(capability.capture_conditions or {})
+            if capability.crop_specific and not crop:
+                reasons.append("A named crop is required for this crop-specific capability.")
+            maximum_gsd = conditions.get("maximum_target_gsd_cm")
+            if maximum_gsd is not None and (
+                profile.get("target_gsd_cm") is None
+                or float(profile["target_gsd_cm"]) > float(maximum_gsd)
+            ):
+                reasons.append(f"Requires target GSD at or below {maximum_gsd:g} cm/px.")
+            allowed_orientations = set(conditions.get("allowed_camera_orientations") or [])
+            if (
+                allowed_orientations
+                and profile.get("camera_orientation") not in allowed_orientations
+            ):
+                reasons.append("Camera orientation is outside the released capture contract.")
+            if conditions.get("camera_calibration_required") and not profile.get("calibration_ids"):
+                reasons.append("A registered camera calibration is required.")
+            if conditions.get("growth_stage_required") and not profile.get("growth_stage"):
+                reasons.append("Growth stage is required for this crop-specific classification.")
             available = not reasons
             capabilities.append(
                 {
@@ -134,16 +154,18 @@ class AgricultureAnalysisOrchestration:
                     "requires_model": capability.requires_model,
                     "output_type": capability.output_type,
                     "action_relevance": capability.action_relevance,
+                    "crop_specific": capability.crop_specific,
+                    "capture_conditions": conditions,
+                    "evaluation_thresholds": dict(capability.evaluation_thresholds or {}),
+                    "limitations": list(capability.limitations),
                     "advanced_defaults": (
-                        dict(release.get("inference_profile") or {})
-                        if release is not None
-                        else {}
+                        dict(release.get("inference_profile") or {}) if release is not None else {}
                     ),
                     "release": release,
                 }
             )
         return {
-            "catalog_version": "agriculture-capabilities.v1",
+            "catalog_version": "agriculture-capabilities.v2",
             "flight_id": flight.id,
             "mission_id": flight.mission_id,
             "ready": any(item["available"] for item in capabilities),
@@ -220,17 +242,10 @@ class AgricultureAnalysisOrchestration:
             )
             await db.flush()
             existing = []
-        existing_by_key = {
-            (item.capability_id, item.video_id): item for item in existing
-        }
-        reusable_by_key: dict[
-            tuple[str, str], tuple[VideoJobRef, AgricultureAnalysisVideoJob]
-        ] = {}
+        existing_by_key = {(item.capability_id, item.video_id): item for item in existing}
+        reusable_by_key: dict[tuple[str, str], tuple[VideoJobRef, AgricultureAnalysisVideoJob]] = {}
         if not force and sources and model_snapshots:
-            release_ids = {
-                str(snapshot["release_id"])
-                for snapshot in model_snapshots.values()
-            }
+            release_ids = {str(snapshot["release_id"]) for snapshot in model_snapshots.values()}
             candidates = list(
                 (
                     await db.scalars(
@@ -240,12 +255,8 @@ class AgricultureAnalysisOrchestration:
                             AgricultureAnalysisVideoJob.video_id.in_(
                                 [source.id for source in sources]
                             ),
-                            AgricultureAnalysisVideoJob.capability_id.in_(
-                                list(model_snapshots)
-                            ),
-                            AgricultureAnalysisVideoJob.capability_release_id.in_(
-                                release_ids
-                            ),
+                            AgricultureAnalysisVideoJob.capability_id.in_(list(model_snapshots)),
+                            AgricultureAnalysisVideoJob.capability_release_id.in_(release_ids),
                         )
                         .order_by(AgricultureAnalysisVideoJob.created_at.desc())
                         .limit(500)
@@ -267,42 +278,33 @@ class AgricultureAnalysisOrchestration:
                 frozen = dict(candidate.inference_snapshot or {})
                 job = jobs_by_id.get(candidate.video_job_id)
                 expected_model = (
-                    f"registered:{expected['vision_model_version_id']}:"
-                    f"{expected['model_checksum']}"
+                    f"registered:{expected['vision_model_version_id']}:{expected['model_checksum']}"
                 )
                 if (
                     job is not None
                     and job.status == "completed"
                     and bool(job.source_checksum)
                     and job.source_checksum == frozen.get("source_checksum")
-                    and job.model_version_id
-                    == expected["vision_model_version_id"]
+                    and job.model_version_id == expected["vision_model_version_id"]
                     and job.model_version == expected_model
-                    and frozen.get("vision_model_version_id")
-                    == expected["vision_model_version_id"]
+                    and frozen.get("vision_model_version_id") == expected["vision_model_version_id"]
                     and frozen.get("model_checksum") == expected["model_checksum"]
-                    and frozen.get("inference_profile", {})
-                    == expected.get("inference_profile", {})
-                    and frozen.get("telemetry_match_version")
-                    == "nearest-telemetry.v1"
-                    and frozen.get("capability_contract_version")
-                    == "agriculture-capabilities.v1"
+                    and dict(job.inference_profile or {}) == expected.get("inference_profile", {})
+                    and frozen.get("inference_profile", {}) == expected.get("inference_profile", {})
+                    and frozen.get("telemetry_match_version") == "nearest-telemetry.v1"
+                    and frozen.get("capability_contract_version") == "agriculture-capabilities.v1"
                 ):
                     reusable_by_key[key] = (job, candidate)
         for capability_id, snapshot in model_snapshots.items():
             profile = dict(snapshot.get("inference_profile") or {})
-            request = AnalyzeVideoRequest(
-                model_name="yolo26s.pt",
+            request = video_request_for_profile(
+                capability_id=capability_id,
                 model_version_id=snapshot["vision_model_version_id"],
-                frame_stride_seconds=float(profile.get("frame_stride_seconds", 1.0)),
-                confidence_threshold=float(profile.get("confidence_threshold", 0.35)),
-                small_object_mode=bool(profile.get("small_object_mode", False)),
-                tracking_enabled=bool(profile.get("tracking_enabled", False)),
-                tracker_type=str(profile.get("tracker_type", "bytetrack")),
+                profile=profile,
             )
-            profile_hash = hashlib.sha256(
-                json.dumps(request.model_dump(), sort_keys=True).encode()
-            ).hexdigest()[:20]
+            assert request.inference_profile is not None
+            profile = request.inference_profile.model_dump()
+            profile_hash = profile["profile_digest"][:20]
             for source in sources:
                 key = (capability_id, source.id)
                 if key in existing_by_key:
@@ -331,6 +333,7 @@ class AgricultureAnalysisOrchestration:
                     video_job_id=job.id,
                     inference_snapshot={
                         **snapshot,
+                        "inference_profile": profile,
                         "source_video_id": source.id,
                         "source_status_at_submission": source.status,
                         "video_job_id": job.id,
@@ -397,16 +400,12 @@ class AgricultureAnalysisOrchestration:
         if missing or failed:
             stage.status = "failed"
             stage.finished_at = datetime.now(UTC)
-            stage.error = (
-                "Required video inference failed or became unavailable."
-            )
+            stage.error = "Required video inference failed or became unavailable."
             stage.metrics = {
                 "job_count": len(job_ids),
                 "failed_job_ids": [job.id for job in failed],
                 "missing_job_ids": missing,
-                "terminal_reasons": {
-                    job.id: job.terminal_reason_code for job in failed
-                },
+                "terminal_reasons": {job.id: job.terminal_reason_code for job in failed},
             }
             run.status = "failed"
             run.error = stage.error
@@ -446,9 +445,7 @@ class AgricultureAnalysisOrchestration:
                 return "failed", job_ids
             stage.status = "running"
             stage.started_at = stage.started_at or now
-            stage.progress = (
-                len(completed) / len(job_ids) * 100.0 if job_ids else 100.0
-            )
+            stage.progress = len(completed) / len(job_ids) * 100.0 if job_ids else 100.0
             stage.metrics = {
                 "job_count": len(job_ids),
                 "completed_job_count": len(completed),
@@ -467,9 +464,7 @@ class AgricultureAnalysisOrchestration:
         stage.metrics = {
             "job_count": len(job_ids),
             "completed_job_count": len(completed),
-            "source_checksums": {
-                job.id: job.source_checksum for job in completed
-            },
+            "source_checksums": {job.id: job.source_checksum for job in completed},
             "model_versions": {job.id: job.model_version for job in completed},
         }
         for link in links:
@@ -484,9 +479,7 @@ class AgricultureAnalysisOrchestration:
         return "completed", job_ids
 
     @staticmethod
-    async def _video_stage(
-        db: AsyncSession, run_id: str
-    ) -> AgricultureAnalysisStage:
+    async def _video_stage(db: AsyncSession, run_id: str) -> AgricultureAnalysisStage:
         stage = await db.scalar(
             select(AgricultureAnalysisStage).where(
                 AgricultureAnalysisStage.run_id == run_id,
@@ -494,9 +487,7 @@ class AgricultureAnalysisOrchestration:
             )
         )
         if stage is None:
-            stage = AgricultureAnalysisStage(
-                run_id=run_id, stage_name="video_inference"
-            )
+            stage = AgricultureAnalysisStage(run_id=run_id, stage_name="video_inference")
             db.add(stage)
             await db.flush()
         return stage

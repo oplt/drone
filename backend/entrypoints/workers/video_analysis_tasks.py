@@ -30,10 +30,22 @@ def process_video_analysis_job(self, job_id: str) -> dict[str, str]:
     logger.info("Starting video analysis task job_id=%s", job_id)
     try:
         result = _worker_loop.run(run_video_analysis_job(job_id))
+        if result.get("status") in {"completed", "failed", "cancelled"}:
+            celery_app.send_task(
+                "agriculture.video_inference_completed",
+                kwargs={"job_id": job_id, "status": result["status"]},
+                queue=settings.celery_agriculture_inference_queue,
+            )
         logger.info("Completed video analysis task job_id=%s", job_id)
         return result
     except Exception as exc:
         logger.exception("Video analysis task failed job_id=%s", job_id)
+        if self.request.retries >= self.max_retries:
+            celery_app.send_task(
+                "agriculture.video_inference_completed",
+                kwargs={"job_id": job_id, "status": "failed"},
+                queue=settings.celery_agriculture_inference_queue,
+            )
         raise self.retry(
             exc=exc,
             countdown=retry_delay_seconds(attempt=self.request.retries),

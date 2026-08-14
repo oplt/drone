@@ -1,12 +1,9 @@
-import { ModelTraining, RocketLaunch } from "@mui/icons-material";
+import { ModelTraining } from "@mui/icons-material";
 import {
   Alert,
-  Box,
   Button,
   Card,
   CardContent,
-  Chip,
-  LinearProgress,
   MenuItem,
   Stack,
   TextField,
@@ -20,6 +17,7 @@ import {
 } from "../hooks/useVisionModels";
 import type { VisionDataset } from "../visionTypes";
 import { VisionCurationQualityAlerts } from "./VisionCurationQualityAlerts";
+import { VisionTrainingRunListCard } from "./VisionTrainingRunListCard";
 
 export function VisionTrainingWorkspace({
   projectId,
@@ -49,6 +47,7 @@ export function VisionTrainingWorkspace({
   const hasActiveRun = Boolean(
     runs.data?.some((run) => ["queued", "running", "cancelling"].includes(run.status)),
   );
+
   return (
     <Stack spacing={3}>
       <Card variant="outlined">
@@ -116,68 +115,32 @@ export function VisionTrainingWorkspace({
         </CardContent>
       </Card>
       <Stack spacing={1.5}>
-        {runs.data?.map((run) => (
-          <Card key={run.id} variant="outlined">
-            <CardContent>
-              <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
-                <Box flex={1}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography fontWeight={600}>{run.base_model} · {run.preset}</Typography>
-                    <Chip
-                      size="small"
-                      label={run.status}
-                      color={run.status === "completed" ? "success" : run.status === "failed" ? "error" : "default"}
-                    />
-                  </Stack>
-                  <Typography variant="body2" color="text.secondary">
-                    Epoch {run.current_epoch}/{run.total_epochs} · {run.device}
-                  </Typography>
-                  {["queued", "running", "cancelling"].includes(run.status) ? (
-                    <LinearProgress variant={run.progress > 0 ? "determinate" : "indeterminate"} value={run.progress} sx={{ mt: 1 }} />
-                  ) : null}
-                  {run.status === "cancelling" ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Cancellation requested. The worker is finishing its bounded current step.
-                    </Typography>
-                  ) : null}
-                  {run.error ? <Alert severity="error" sx={{ mt: 1 }}>{run.error}</Alert> : null}
-                </Box>
-                <Stack spacing={1} alignItems={{ md: "flex-end" }}>
-                  {run.model_version_id ? (
-                    <Chip icon={<RocketLaunch />} label="Evaluation completed" color="success" variant="outlined" />
-                  ) : null}
-                  {["queued", "running"].includes(run.status) ? (
-                    <Button
-                      size="small"
-                      color="warning"
-                      disabled={cancel.isPending}
-                      onClick={() => cancel.mutate(run.id)}
-                    >
-                      {cancel.isPending && cancel.variables === run.id ? "Cancelling…" : "Cancel run"}
-                    </Button>
-                  ) : null}
-                  {["failed", "cancelled"].includes(run.status) ? (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      disabled={start.isPending || hasActiveRun}
-                      onClick={() => start.mutate({
-                        projectId,
-                        payload: {
-                          dataset_id: run.dataset_id,
-                          base_model: run.base_model as "yolo26n.pt" | "yolo26s.pt",
-                          preset: run.preset as "fast" | "balanced" | "high_accuracy",
-                        },
-                      })}
-                    >
-                      Retry same snapshot
-                    </Button>
-                  ) : null}
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))}
+        <Typography variant="subtitle2">Training runs</Typography>
+        {runs.data?.length ? (
+          runs.data.map((run) => (
+            <VisionTrainingRunListCard
+              key={run.id}
+              run={run}
+              detailHref={`/dashboard/agriculture/vision-models/training-runs/${run.id}`}
+              onCancel={() => cancel.mutate(run.id)}
+              cancelPending={cancel.isPending && cancel.variables === run.id}
+              onRetry={() =>
+                start.mutate({
+                  projectId,
+                  payload: {
+                    dataset_id: run.dataset_id,
+                    base_model: run.base_model as "yolo26n.pt" | "yolo26s.pt",
+                    preset: run.preset as "fast" | "balanced" | "high_accuracy",
+                  },
+                })
+              }
+              retryDisabled={hasActiveRun}
+              retryPending={start.isPending}
+            />
+          ))
+        ) : (
+          <Alert severity="info">No training runs yet. Start one when the dataset is ready.</Alert>
+        )}
       </Stack>
       {cancel.error ? <Alert severity="error">{cancel.error.message}</Alert> : null}
     </Stack>

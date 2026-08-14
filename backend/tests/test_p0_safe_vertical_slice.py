@@ -12,25 +12,27 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from backend.core.database.base import Base
 from backend.modules.agriculture import analysis_orchestration as orchestration_module
 from backend.modules.agriculture import api as agriculture_api
-from backend.modules.agriculture import field_context
-from backend.modules.agriculture import governance_api
+from backend.modules.agriculture import field_context, governance_api
 from backend.modules.agriculture.analysis_orchestration import (
     AgricultureAnalysisOrchestration,
 )
 from backend.modules.agriculture.api import _parse_spatial_bbox
-from backend.modules.agriculture.routers import common as agriculture_api_common
 from backend.modules.agriculture.capabilities import (
     CAPABILITIES,
     AgricultureCapabilityReleaseService,
     scope_key,
     validate_capability_ids,
 )
+from backend.modules.agriculture.inference_profiles import resolve_inference_profile
 from backend.modules.agriculture.models import (
     AgricultureAnalysisVideoJob,
     AgricultureCapabilityRelease,
 )
+from backend.modules.agriculture.p5_models import AgricultureExportJob
 from backend.modules.agriculture.quality import telemetry_quality_summary
 from backend.modules.agriculture.repository import agriculture_repository
+from backend.modules.agriculture.routers import common as agriculture_api_common
+from backend.modules.agriculture.routers import exports as agriculture_exports_api
 from backend.modules.agriculture.schemas import (
     AnalysisRunIn,
     ExportIn,
@@ -312,9 +314,11 @@ async def test_active_capability_release_lookup_executes_against_database():
             assert snapshots["weed_detection"]["release_id"] == release.id
             assert snapshots["weed_detection"]["vision_model_version_id"] == version.id
             assert snapshots["weed_detection"]["model_checksum"] == "a" * 64
-            assert snapshots["weed_detection"]["inference_profile"] == {
-                "confidence_threshold": 0.35
-            }
+            profile = snapshots["weed_detection"]["inference_profile"]
+            assert profile["capability_id"] == "weed_detection"
+            assert profile["confidence_threshold"] == 0.35
+            assert profile["profile_version"] == "agriculture-inference-profile.v1"
+            assert len(profile["profile_digest"]) == 64
             assert all(
                 snapshot["vision_model_version_id"] != other_version.id
                 for snapshot in snapshots.values()
@@ -331,13 +335,7 @@ async def test_orchestration_reuses_only_an_exact_completed_inference_contract(
         "release_id": "release-1",
         "vision_model_version_id": "version-1",
         "model_checksum": "a" * 64,
-        "inference_profile": {
-            "frame_stride_seconds": 1.0,
-            "confidence_threshold": 0.35,
-            "small_object_mode": False,
-            "tracking_enabled": False,
-            "tracker_type": "bytetrack",
-        },
+        "inference_profile": resolve_inference_profile("weed_detection"),
     }
     candidate = AgricultureAnalysisVideoJob(
         id="link-old",
@@ -365,6 +363,7 @@ async def test_orchestration_reuses_only_an_exact_completed_inference_contract(
         progress=100.0,
         error=None,
         terminal_reason_code="COMPLETED",
+        inference_profile=snapshot["inference_profile"],
     )
     source = VideoSourceRef(
         id="video-1",
@@ -909,6 +908,12 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
         audit_json={},
         status="queued",
         input_checksum="b" * 64,
+        progress=0.0,
+        retry_count=0,
+        model_versions={},
+        analysis_profile={},
+        baseline_flight_id=None,
+        requested_by_user_id=user.id,
         error=None,
         finished_at=None,
     )
@@ -932,6 +937,10 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
         return {"ready_for_processing": True}
 
     class RouteDatabase:
+        def add(self, value):
+            if isinstance(value, AgricultureExportJob):
+                value.id = value.id or "export-1"
+
         async def scalar(self, _statement):
             return 0
 
@@ -939,6 +948,9 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
             return _Rows([])
 
         async def commit(self):
+            return None
+
+        async def flush(self):
             return None
 
         async def refresh(self, _value):
@@ -975,19 +987,14 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
     assert created.id == run.id
     assert run.audit_json["readiness"]["catalog_version"].endswith(".v1")
 
-    export_result = SimpleNamespace(id="export-1")
-
     async def get_run(*_args, **_kwargs):
         return run
 
-    async def create_export(*_args, **_kwargs):
-        return export_result
-
     monkeypatch.setattr(agriculture_api.agriculture_repository, "get_run", get_run)
     monkeypatch.setattr(
-        agriculture_api.agriculture_safety_service,
-        "create_export",
-        create_export,
+        agriculture_exports_api.agriculture_analysis_queue,
+        "enqueue_stage",
+        lambda **_kwargs: "task-export-1",
     )
     exported = await agriculture_api.create_agriculture_export(
         run.id,
@@ -996,6 +1003,7 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
         org_user,
     )
     assert exported.id == "export-1"
+    assert exported.status == "queued"
 
 
 @pytest.mark.asyncio

@@ -10,6 +10,11 @@ import {
   Typography,
 } from "@mui/material";
 import { selectDetectionEvidence } from "../../video-analysis/evidenceSelection";
+import {
+  ANALYSIS_REVIEW_OPEN,
+  readAnalysisReviewState,
+  writeObservationSelection,
+} from "../workflows/analysisReviewState";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -19,9 +24,8 @@ import {
   useAgricultureSpatialViewport,
   useAgricultureSpatialLayers,
 } from "../hooks";
-import { CoverageMapLayer } from "./CoverageMapLayer";
+import { AgricultureReviewMapPanel } from "./AgricultureReviewMapPanel";
 import { HealthLayerSwitcher } from "./HealthLayerSwitcher";
-import { ObservationMap } from "./ObservationMap";
 import { ObservationReviewDrawer } from "./ObservationReviewDrawer";
 import { RGBProductPanel } from "./RGBProductPanel";
 
@@ -41,16 +45,17 @@ export function AgricultureReviewWorkspace({
   runId: string | null;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    observationId: linkedObservationId,
+    reviewOpen,
+    focusEvidence,
+  } = readAnalysisReviewState(searchParams);
   const layer = searchParams.get("layer") || "all";
   const parsedConfidence = Number(searchParams.get("confidence") ?? "0.35");
   const threshold = Number.isFinite(parsedConfidence) ? parsedConfidence : 0.35;
   const [minSeverity, setMinSeverity] = useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const quality = useAgricultureAnalysisQuality(runId);
-  const [pageCursors, setPageCursors] = useState<Array<string | undefined>>([
-    undefined,
-  ]);
+  const [pageCursors, setPageCursors] = useState<Array<string | undefined>>([undefined]);
   const pageCursor = pageCursors[pageCursors.length - 1];
   const observations = useAgricultureObservationPage(runId, {
     minConfidence: threshold,
@@ -60,9 +65,10 @@ export function AgricultureReviewWorkspace({
   const layerData = useAgricultureLayer(runId, layer === "all" ? null : layer);
   const spatial = useAgricultureSpatialViewport(runId, {
     layer,
-    zoom: 12,
+    zoom: 15,
     minSeverity,
     minConfidence: threshold,
+    maxFeatures: 5000,
   });
   const spatialLayers = useAgricultureSpatialLayers(runId);
   const rows = useMemo(
@@ -74,20 +80,26 @@ export function AgricultureReviewWorkspace({
       ),
     [layer, minSeverity, observations.data?.items],
   );
-  const selected = rows.find((row) => row.id === selectedId) ?? rows[0] ?? null;
+  const selected = rows.find((row) => row.id === linkedObservationId) ?? null;
   const virtualized = rows.length > 100;
   const visibleRows = virtualized ? rows.slice(0, 100) : rows;
 
-  const setLayer = (next: string) => {
+  const setFilter = (key: "layer" | "confidence", value: string) => {
     const params = new URLSearchParams(searchParams);
-    params.set("layer", next);
+    params.set(key, value);
     setSearchParams(params, { replace: true });
   };
-  const setThreshold = (next: number) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("confidence", String(next));
-    setSearchParams(params, { replace: true });
+  const setLayer = (next: string) => setFilter("layer", next);
+  const setThreshold = (next: number) => setFilter("confidence", String(next));
+
+  const linkObservation = (id: string) => {
+    setSearchParams(
+      writeObservationSelection(searchParams, id, { review: ANALYSIS_REVIEW_OPEN }),
+      { replace: true },
+    );
   };
+  const closeReview = () => setSearchParams(
+    writeObservationSelection(searchParams, linkedObservationId, { review: false }), { replace: true });
 
   useEffect(() => {
     // Reset pagination whenever the confidence filter changes.
@@ -99,15 +111,6 @@ export function AgricultureReviewWorkspace({
     if (selected?.evidence_ids.length)
       selectDetectionEvidence(selected.evidence_ids[0]);
   }, [selected]);
-
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setDrawerOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [drawerOpen]);
 
   if (!runId)
     return (
@@ -255,15 +258,13 @@ export function AgricultureReviewWorkspace({
             )}
           </Typography>
         ) : null}
-        {layer === "quality" ? (
-          <CoverageMapLayer geojson={mapGeojson} />
-        ) : (
-          <ObservationMap
-            geojson={mapGeojson}
-            selectedId={selected?.id}
-            onSelect={setSelectedId}
-          />
-        )}
+        <AgricultureReviewMapPanel
+          runId={runId}
+          geojson={mapGeojson}
+          layerKind={layer === "quality" ? "quality" : "observations"}
+          selectedId={linkedObservationId}
+          onSelect={linkObservation}
+        />
         {layerData.isError ? (
           <Alert severity="info">
             This layer has no persisted GeoJSON yet; unresolved issues remain in
@@ -311,17 +312,14 @@ export function AgricultureReviewWorkspace({
                       <Button
                         fullWidth
                         variant={
-                          selected?.id === row.id ? "contained" : "outlined"
+                          linkedObservationId === row.id ? "contained" : "outlined"
                         }
                         color={
                           row.review_state === "confirmed"
                             ? "success"
                             : "primary"
                         }
-                        onClick={() => {
-                          setSelectedId(row.id);
-                          setDrawerOpen(true);
-                        }}
+                        onClick={() => linkObservation(row.id)}
                         aria-label={`Review ${row.observation_type.replaceAll("_", " ")}`}
                         sx={{
                           justifyContent: "space-between",
@@ -352,13 +350,14 @@ export function AgricultureReviewWorkspace({
               ) : null}
               <Drawer
                 anchor="right"
-                open={drawerOpen && Boolean(selected)}
-                onClose={() => setDrawerOpen(false)}
+                open={reviewOpen && Boolean(selected)}
+                onClose={closeReview}
                 PaperProps={{ sx: { width: { xs: "100%", sm: 420 }, p: 2 } }}
               >
                 <ObservationReviewDrawer
                   observation={selected}
-                  onClose={() => setDrawerOpen(false)}
+                  focusEvidence={focusEvidence}
+                  onClose={closeReview}
                 />
               </Drawer>
             </Stack>

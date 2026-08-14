@@ -179,6 +179,7 @@ class VideoAnalysisApplication:
                 "Custom model is not installed. Add the selected .pt file under "
                 "backend/storage/ml_models/ or select a built-in YOLO26 model."
             )
+        profile = request.inference_profile
         try:
             job = await repo.create_job(
                 video=video,
@@ -189,15 +190,14 @@ class VideoAnalysisApplication:
                 tracker_type=request.tracker_type,
                 frame_stride_seconds=request.frame_stride_seconds,
                 confidence_threshold=request.confidence_threshold,
+                inference_profile=profile.model_dump() if profile else {},
                 orchestration_key=orchestration_key,
             )
         except IntegrityError:
             await db.rollback()
-            existing = (
-                await repo.get_job_by_orchestration_key(orchestration_key)
-                if orchestration_key
-                else None
-            )
+            if not orchestration_key:
+                raise
+            existing = await repo.get_job_by_orchestration_key(orchestration_key)
             if existing is None or existing.video_id != video.id:
                 raise
             return existing

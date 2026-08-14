@@ -1,0 +1,91 @@
+{
+  "adoption": {
+    "baseline_workers": 0,
+    "best_improvement_percent": 16.71,
+    "best_workers": 4,
+    "comparisons": [
+      {
+        "epoch_duration_seconds": 42.5,
+        "gpu_util_avg_pct": 62.0,
+        "improvement_vs_baseline_percent": 0.0,
+        "stable": true,
+        "workers": 0
+      },
+      {
+        "epoch_duration_seconds": 36.1,
+        "gpu_util_avg_pct": 74.0,
+        "improvement_vs_baseline_percent": 15.06,
+        "stable": true,
+        "workers": 2
+      },
+      {
+        "epoch_duration_seconds": 35.4,
+        "gpu_util_avg_pct": 76.0,
+        "improvement_vs_baseline_percent": 16.71,
+        "stable": true,
+        "workers": 4
+      }
+    ],
+    "reason": "Smallest worker count meeting adoption threshold on this host",
+    "recommend_default_change": true,
+    "recommended_workers": 2,
+    "threshold_percent": 15.0
+  },
+  "gates": {
+    "change_default_only_if": "recommended_workers != 0 AND recommend_default_change is true on target GPU hardware",
+    "production_default_workers": 0
+  },
+  "manifest": {
+    "base_model": "yolo26n.pt",
+    "benchmark_epochs": 1,
+    "hardware": {
+      "cpu_cores": 16,
+      "device_label": "example-gpu-workstation",
+      "gpu_name": "replace-with-live-nvidia-smi-name",
+      "ram_gb": 32
+    },
+    "name": "vision-training-dataloader-representative",
+    "worker_counts": [
+      0,
+      2,
+      4
+    ]
+  },
+  "mode": "fixture",
+  "runs": {
+    "0": {
+      "cpu_util_avg_pct": 28.0,
+      "epoch_duration_seconds": 42.5,
+      "gpu_util_avg_pct": 62.0,
+      "mode": "fixture",
+      "notes": "Baseline single-process loading; lowest RAM.",
+      "ram_peak_mb": 6800,
+      "stable": true,
+      "total_duration_seconds": 42.5,
+      "workers": 0
+    },
+    "2": {
+      "cpu_util_avg_pct": 41.0,
+      "epoch_duration_seconds": 36.1,
+      "gpu_util_avg_pct": 74.0,
+      "mode": "fixture",
+      "notes": "~15% faster epoch vs workers=0 with higher GPU occupancy.",
+      "ram_peak_mb": 7100,
+      "stable": true,
+      "total_duration_seconds": 36.1,
+      "workers": 2
+    },
+    "4": {
+      "cpu_util_avg_pct": 48.0,
+      "epoch_duration_seconds": 35.4,
+      "gpu_util_avg_pct": 76.0,
+      "mode": "fixture",
+      "notes": "Marginal gain vs workers=2; more CPU/RAM pressure.",
+      "ram_peak_mb": 7600,
+      "stable": true,
+      "total_duration_seconds": 35.4,
+      "workers": 4
+    }
+  },
+  "version": 1
+}

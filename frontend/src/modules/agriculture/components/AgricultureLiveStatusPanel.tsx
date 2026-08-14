@@ -282,6 +282,9 @@ export function AgricultureLiveStatusPanel({
                 progress={runs.data[0].progress}
                 error={runs.data[0].error}
                 stages={analysisQuality.data?.stages ?? []}
+                qualityGate={runs.data[0].quality_gate}
+                retryCount={runs.data[0].retry_count}
+                createdAt={runs.data[0].created_at}
               />
             ) : null}
           </Stack>

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "name": "one-production-model-tensorrt-feasibility",
+  "model_name": "yolo26n.pt",
+  "model_checksum": "replace-with-production-model-checksum",
+  "validation_data": null,
+  "device": "cuda:0",
+  "image_size": 640,
+  "source_width": 1920,
+  "source_height": 1080,
+  "batch_size": 8,
+  "workspace_gib": 4.0,
+  "warmup_batches": 2,
+  "timed_batches": 10,
+  "performance_report": "docs/benchmarks/performance-baseline-record.json",
+  "precision_report": "docs/benchmarks/video-precision-report.json",
+  "gates": {
+    "minimum_inference_fraction": 0.5,
+    "minimum_throughput_improvement_percent": 20.0,
+    "max_map50_regression": 0.01,
+    "max_recall_regression": 0.01
+  }
+}

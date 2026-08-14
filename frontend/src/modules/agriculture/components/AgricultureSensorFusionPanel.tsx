@@ -57,7 +57,12 @@ export function AgricultureSensorFusionPanel({
           <Button
             size="small"
             variant="outlined"
-            onClick={() => process.mutate({ runId })}
+            onClick={() =>
+              process.mutate({
+                runId,
+                payload: { requested_indices: ["ndvi", "ndre", "gndvi"] },
+              })
+            }
             disabled={process.isPending}
           >
             {process.isPending ? "Evaluating…" : "Evaluate fusion"}
@@ -80,7 +85,7 @@ export function AgricultureSensorFusionPanel({
         ) : rows.length === 0 ? (
           <Alert severity="info">
             No fusion result yet. RGB-only flights expose RGB-derived metrics
-            only; NDVI and thermal remain not measured.
+            only; NDVI, NDRE, GNDVI, and thermal remain not measured.
           </Alert>
         ) : (
           <>
@@ -135,6 +140,12 @@ export function AgricultureSensorFusionPanel({
                   <Alert severity="info">
                     Risk is a suspected issue signature for inspection, not a
                     confirmed disease diagnosis.
+                  </Alert>
+                ) : null}
+                {current.layer === "thermal" ? (
+                  <Alert severity="info">
+                    Thermal output is a canopy-temperature stress candidate
+                    relative to ambient conditions, never a disease diagnosis.
                   </Alert>
                 ) : null}
               </Stack>

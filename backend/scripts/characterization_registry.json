@@ -338,6 +338,16 @@
         "backend/tests/test_analytics_api_contracts.py",
         "backend/tests/test_phase1_quick_wins.py"
       ]
+    },
+    {
+      "source": "backend/entrypoints/workers/agriculture_tasks.py",
+      "phase": 6,
+      "tests": [
+        "backend/tests/test_agriculture_phase6_workflow.py",
+        "backend/tests/test_agriculture_integration.py",
+        "backend/tests/test_agriculture_foundation.py",
+        "backend/tests/test_reliability_contracts.py"
+      ]
     }
   ]
 }

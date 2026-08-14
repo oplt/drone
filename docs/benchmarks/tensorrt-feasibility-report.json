@@ -1,0 +1,45 @@
+{
+  "artifact": null,
+  "captured_at": "2026-08-14T15:12:57Z",
+  "comparison": {
+    "adopt_tensorrt": false,
+    "reason": "Experiment deferred until prerequisite profiling is live."
+  },
+  "decision": "deferred",
+  "operational_comparison": [
+    {
+      "criterion": "deployment_complexity",
+      "pytorch": "Existing pinned worker image and portable .pt artifact.",
+      "tensorrt": "Adds TensorRT/CUDA compatibility and engine build operations."
+    },
+    {
+      "criterion": "model_management_burden",
+      "pytorch": "One checksum-addressed production artifact.",
+      "tensorrt": "Engine artifact must be tied to model, precision, batch, GPU, and runtime versions."
+    },
+    {
+      "criterion": "rollback",
+      "pytorch": "Current supported path.",
+      "tensorrt": "Keep PyTorch authoritative; an engine can only be an optional derivative."
+    }
+  ],
+  "prerequisites": {
+    "dominance": {
+      "inference_fraction": 0.6045340050377833,
+      "inference_seconds": 48.0,
+      "mode": "fixture",
+      "total_seconds": 79.4
+    },
+    "eligible": false,
+    "minimum_inference_fraction": 0.5,
+    "precision_mode": "fixture",
+    "reasons": [
+      "Dominant-stage evidence is fixture-only, not a live target-worker run.",
+      "FP16 accuracy/performance evidence is not from a live CUDA worker."
+    ]
+  },
+  "production_runtime_changed": false,
+  "prototype_executed": false,
+  "rows": [],
+  "version": 1
+}

@@ -13,6 +13,10 @@ export type AgricultureMissionProfile = {
   growth_stage: string;
   row_direction_deg: number | null;
   expected_row_spacing_m: number | null;
+  expected_plant_spacing_m?: number | null;
+  stand_gap_multiplier?: number;
+  weed_density_cell_m?: number;
+  weed_hotspot_percentile?: number;
   target_gsd_cm: number;
   speed_mps: number;
   front_overlap_pct: number;
@@ -153,6 +157,7 @@ export type AgricultureTelemetryWindow = {
   flight_id: string;
   center_timestamp_utc: string | null;
   window_seconds: number;
+  truncated: boolean;
   samples: Array<{
     id: number;
     timestamp_utc: string;
@@ -237,6 +242,10 @@ export type AgricultureCapabilityReadiness = {
   requires_model: boolean;
   output_type: string;
   action_relevance: string;
+  crop_specific?: boolean;
+  capture_conditions?: Record<string, unknown>;
+  evaluation_thresholds?: Record<string, number>;
+  limitations?: string[];
   advanced_defaults: Record<string, unknown>;
   release: Record<string, unknown> | null;
 };

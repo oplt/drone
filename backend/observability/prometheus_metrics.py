@@ -194,6 +194,12 @@ agriculture_observations_total = Gauge(
 agriculture_inference_latency_seconds = Histogram(
     "agriculture_inference_latency_seconds", "Agriculture inference stage latency", ["stage"]
 )
+media_pipeline_stage_duration_seconds = Histogram(
+    "media_pipeline_stage_duration_seconds",
+    "Media pipeline stage duration in seconds",
+    ["pipeline", "stage"],
+    buckets=(0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600, 1800),
+)
 agriculture_queue_age_seconds = Histogram(
     "agriculture_queue_age_seconds", "Agriculture queue age at worker start", ["queue"]
 )

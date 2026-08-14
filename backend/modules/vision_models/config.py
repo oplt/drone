@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +20,7 @@ class VisionRuntimeSettings(BaseSettings):
     vision_max_active_training_runs_per_org: int = 1
     vision_training_lease_seconds: int = 180
     vision_training_heartbeat_interval_seconds: int = 30
+    vision_training_dataloader_workers: int = Field(default=0, ge=0, le=32)
     vision_staged_object_max_age_minutes: int = 30
     vision_release_min_map50: float = 0.25
     vision_max_map50_regression: float = 0.05

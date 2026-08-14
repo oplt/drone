@@ -1,23 +1,18 @@
 import { useMemo } from "react";
-import type { WarehouseLiveVoxelMapState } from "../../hooks/useWarehouseLiveVoxelMap";
+import { isChunkLayerVisible } from "../../config/liveMapConfig";
+import type { CachedLiveMapChunk } from "../../hooks/useLiveMapChunkCache";
 import { chunkCacheKey } from "../../hooks/useLiveMapChunkCache";
-import { isChunkLayerVisible, type LiveMapLayerKey } from "../../utils/liveMapLayerUtils";
+import type { WarehouseLiveVoxelMapState } from "../../hooks/useWarehouseLiveVoxelMap";
+import type { LiveMapLayerKey } from "../../utils/liveMapLayerUtils";
 import type { LiveVoxelLayers } from "./scene/liveVoxelSceneTypes";
 
 export function useLiveVoxelViewerChunkStats(
   state: WarehouseLiveVoxelMapState,
   resolvedFlightId: string | null,
   layers: LiveVoxelLayers,
-  cachedChunks: {
-    bytes: number;
-    point_count?: number;
-    url?: string | null;
-    layer?: string | null;
-    source?: string | null;
-    id: string;
-  }[],
-  downloadedChunkIds: Set<string>,
-  inFlightChunkIds: Set<string>,
+  cachedChunks: CachedLiveMapChunk[],
+  downloadedChunkIds: ReadonlySet<string>,
+  inFlightChunkIds: ReadonlySet<string>,
   layerPointBudget: Record<LiveMapLayerKey, number>,
   pointsByLayer: Record<LiveMapLayerKey, number>,
   droppedChunkCount: number,

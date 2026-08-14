@@ -1,5 +1,5 @@
 import type { DerivedTelemetry } from "../../utils/deriveTelemetry";
-import { DetailRow, GlassPanel, HudDivider, HudMetric } from "./telemetryHudPrimitives";
+import { GlassPanel, HudDivider, HudMetric } from "./telemetryHudPrimitives";
 
 type TelemetryHudTopBarProps = {
   derived: DerivedTelemetry;

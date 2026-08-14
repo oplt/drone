@@ -14,6 +14,10 @@ from backend.modules.video_analysis.model_storage import (
     ensure_model_file,
     resolve_model_artifact,
 )
+from backend.modules.video_analysis.service.inference_profile_runtime import (
+    precision_predict_options,
+    resolve_precision_mode,
+)
 from backend.modules.vision_models.config import vision_settings
 from backend.observability import prometheus_metrics
 
@@ -150,6 +154,7 @@ def _detections_from_result(
     *,
     model_name: str,
     artifact_hash: str,
+    precision_mode: str,
 ) -> list[FrameDetection]:
     names = result.names or {}
     detections: list[FrameDetection] = []
@@ -172,6 +177,7 @@ def _detections_from_result(
                     "model": model_name,
                     "model_version": artifact_hash,
                     "loaded_model_hash": artifact_hash,
+                    "precision_mode": precision_mode,
                     "class_id": class_id,
                     "xyxy": coordinates,
                 },
@@ -191,6 +197,8 @@ class YoloFrameDetector:
         model_path: str | Path | None = None,
         expected_checksum: str | None = None,
         device: str | None = None,
+        image_size: int = 640,
+        precision_mode: str = "fp32",
     ) -> None:
         self.model_name = model_name
         self.confidence_threshold = confidence_threshold
@@ -203,6 +211,10 @@ class YoloFrameDetector:
         self.loaded_model_hash = artifact.artifact_hash
         self.model_version = artifact.artifact_hash
         self.device = device or _device_name()
+        self.image_size = image_size
+        self.precision_mode = resolve_precision_mode(
+            precision_mode, device=self.device
+        )
         self.model = load_yolo_model(
             str(self.model_path),
             artifact_hash=self.loaded_model_hash,
@@ -220,14 +232,17 @@ class YoloFrameDetector:
         results = self.model.predict(
             source=images_bgr,
             conf=self.confidence_threshold,
+            imgsz=self.image_size,
             device=self.device,
             verbose=False,
+            **precision_predict_options(self.precision_mode),
         )
         return [
             _detections_from_result(
                 result,
                 model_name=self.model_name,
                 artifact_hash=self.loaded_model_hash,
+                precision_mode=self.precision_mode,
             )
             for result in results
         ]
@@ -249,7 +264,11 @@ class SahiYoloFrameDetector:
         postprocess_match_threshold: float | None = None,
         expected_checksum: str | None = None,
         device: str | None = None,
+        image_size: int = 640,
+        precision_mode: str = "fp32",
     ) -> None:
+        if precision_mode != "fp32":
+            raise RuntimeError("FP16 with SAHI requires a separately validated runtime")
         try:
             import torch
             from sahi import AutoDetectionModel
@@ -270,6 +289,8 @@ class SahiYoloFrameDetector:
         self.loaded_model_hash = artifact.artifact_hash
         self.model_version = artifact.artifact_hash
         self.device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.image_size = image_size
+        self.precision_mode = "fp32"
         self.slice_height = slice_height or vision_settings.video_sahi_slice_height
         self.slice_width = slice_width or vision_settings.video_sahi_slice_width
         self.overlap_height_ratio = (
@@ -290,6 +311,7 @@ class SahiYoloFrameDetector:
         load_options = (
             ("confidence_threshold", confidence_threshold),
             ("small_object_mode", True),
+            ("image_size", image_size),
         )
         cache_key = (self.loaded_model_hash, self.device, load_options)
         model_path = self.model_path
@@ -300,6 +322,7 @@ class SahiYoloFrameDetector:
                 model_path=str(model_path),
                 confidence_threshold=confidence_threshold,
                 device=self.device,
+                image_size=image_size,
             )
 
         self.model = _get_or_load_model_cache(cache_key, _loader)
@@ -344,6 +367,7 @@ class SahiYoloFrameDetector:
                         "loaded_model_hash": getattr(
                             self, "loaded_model_hash", self.model_version
                         ),
+                        "precision_mode": getattr(self, "precision_mode", "fp32"),
                         "class_id": category_id,
                         "xyxy": coordinates,
                         "sahi": {
@@ -367,12 +391,35 @@ def create_frame_detector(
     small_object_mode: bool = False,
     expected_checksum: str | None = None,
     device: str | None = None,
+    image_size: int = 640,
+    slice_height: int | None = None,
+    slice_width: int | None = None,
+    overlap_height_ratio: float | None = None,
+    overlap_width_ratio: float | None = None,
+    postprocess_match_threshold: float | None = None,
+    precision_mode: str = "fp32",
 ) -> FrameDetector:
-    detector_type = SahiYoloFrameDetector if small_object_mode else YoloFrameDetector
-    return detector_type(
+    if small_object_mode:
+        return SahiYoloFrameDetector(
+            model_name=model_name,
+            confidence_threshold=confidence_threshold,
+            model_path=model_path,
+            expected_checksum=expected_checksum,
+            device=device,
+            image_size=image_size,
+            precision_mode=precision_mode,
+            slice_height=slice_height,
+            slice_width=slice_width,
+            overlap_height_ratio=overlap_height_ratio,
+            overlap_width_ratio=overlap_width_ratio,
+            postprocess_match_threshold=postprocess_match_threshold,
+        )
+    return YoloFrameDetector(
         model_name=model_name,
         confidence_threshold=confidence_threshold,
         model_path=model_path,
         expected_checksum=expected_checksum,
         device=device,
+        image_size=image_size,
+        precision_mode=precision_mode,
     )

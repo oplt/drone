@@ -7,10 +7,15 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from geoalchemy2.shape import to_shape
+from shapely.geometry import mapping
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from shapely.geometry import mapping
 
+from backend.modules.agriculture.intervention_exports import (
+    build_intervention_zone_export,
+    filter_intervention_zones_by_current_sources,
+)
+from backend.modules.agriculture.intervention_models import AgricultureInterventionZone
 from backend.modules.agriculture.models import AgricultureAnalysisRun, AgricultureFlight, AgricultureObservation
 from backend.modules.agriculture.p4_models import AgricultureCropRisk
 from backend.modules.agriculture.p5_models import AgricultureAgronomyRule, AgricultureExportAccessAudit, AgricultureExportJob, AgricultureGovernanceAudit, AgricultureInspectionAction, AgriculturePrescriptionDraft, AgricultureReportSnapshot
@@ -135,9 +140,10 @@ class AgricultureSafetyService:
     async def review_prescription(self, db: AsyncSession, *, draft: AgriculturePrescriptionDraft, status: str, note: str | None, user_id: int | None, org_id: int | None) -> AgriculturePrescriptionDraft:
         previous=draft.status; draft.status=status; draft.review_note=note; draft.reviewed_by_user_id=user_id; draft.reviewed_at=datetime.now(UTC); await self._audit(db, org_id=org_id, entity_type="prescription", entity_id=draft.id, user_id=user_id, action="review", from_status=previous, to_status=status, reason=note); await db.commit(); await db.refresh(draft); return draft
 
-    async def create_export(self, db: AsyncSession, *, run: AgricultureAnalysisRun, flight: AgricultureFlight, request: dict[str, Any], user_id: int | None, org_id: int | None) -> AgricultureExportJob:
+    async def create_export(self, db: AsyncSession, *, run: AgricultureAnalysisRun, flight: AgricultureFlight, request: dict[str, Any], user_id: int | None, org_id: int | None, job: AgricultureExportJob | None = None) -> AgricultureExportJob:
         artifact_kind=request["artifact_kind"]; fmt=request["format"]
         if fmt not in {"geojson", "csv", "shapefile", "pdf"}: raise ValueError("unsupported_export_format")
+        if artifact_kind == "intervention_zones" and fmt not in {"geojson", "shapefile"}: raise ValueError("intervention_zones_require_geospatial_format")
         features=[]; source_ids=[]; approved_source_id=request.get("source_id"); report_metadata: dict[str, Any] = {}
         if artifact_kind == "inspection_actions":
             actions=list((await db.scalars(select(AgricultureInspectionAction).where(AgricultureInspectionAction.run_id == run.id, AgricultureInspectionAction.status == "approved"))).all()); source_ids=[row.id for row in actions]; features=[{"type":"Feature", "geometry": row.waypoint_geojson, "properties": {"id": row.id, "issue_type": row.issue_type, "severity": row.severity, "confidence": row.confidence, "status": row.status, "source_ids": row.source_ids}} for row in actions]
@@ -146,6 +152,36 @@ class AgricultureSafetyService:
             draft=await db.get(AgriculturePrescriptionDraft, approved_source_id) if approved_source_id else None
             if draft is None or draft.status != "approved": raise ValueError("approved_prescription_required")
             source_ids=[draft.id, *draft.source_ids]; features=draft.zones
+        elif artifact_kind == "intervention_zones":
+            zone_stmt = select(AgricultureInterventionZone).where(
+                AgricultureInterventionZone.run_id == run.id,
+                AgricultureInterventionZone.status == "approved",
+            )
+            if approved_source_id:
+                zone_stmt = zone_stmt.where(AgricultureInterventionZone.id == approved_source_id)
+            zones = list((await db.scalars(zone_stmt.order_by(AgricultureInterventionZone.created_at))).all())
+            if not zones:
+                raise ValueError("approved_intervention_zone_required")
+            candidate_source_ids = {
+                str(value) for zone in zones for value in zone.source_observation_ids
+            }
+            source_observations = list(
+                (
+                    await db.scalars(
+                        select(AgricultureObservation).where(
+                            AgricultureObservation.run_id == run.id,
+                            AgricultureObservation.id.in_(candidate_source_ids),
+                        )
+                    )
+                ).all()
+            )
+            zones, excluded_zone_ids = filter_intervention_zones_by_current_sources(
+                zones, source_observations, run_id=run.id
+            )
+            if not zones:
+                raise ValueError("approved_intervention_zone_with_confirmed_sources_required")
+            source_ids, features, report_metadata = build_intervention_zone_export(zones)
+            report_metadata["excluded_intervention_zone_ids"] = excluded_zone_ids
         elif artifact_kind == "report":
             snapshot = await db.get(AgricultureReportSnapshot, approved_source_id) if approved_source_id else None
             if snapshot is None or snapshot.run_id != run.id or snapshot.org_id != org_id:
@@ -196,7 +232,11 @@ class AgricultureSafetyService:
             risks=list((await db.scalars(select(AgricultureCropRisk).where(AgricultureCropRisk.run_id == run.id, AgricultureCropRisk.review_state == "confirmed"))).all()); observations=list((await db.scalars(select(AgricultureObservation).where(AgricultureObservation.run_id == run.id, AgricultureObservation.review_state == "confirmed"))).all()); source_ids=[row.id for row in risks]+[row.id for row in observations]; features=[{"type":"Feature", "geometry": row.geometry_geojson, "properties": {"id": row.id, "issue_type": getattr(row, "issue_type", getattr(row, "observation_type", "observation")), "severity": row.severity, "confidence": row.confidence, "status": "confirmed", "source_ids": [row.id]}} for row in [*risks,*observations]]
             if not features: raise ValueError("confirmed_observation_required")
         payload={"type":"FeatureCollection", "features":features, "metadata":{"field_id":flight.field_id, "flight_id":flight.id, "run_id":run.id, "source_ids":source_ids, "quality":run.quality_gate or {}, "input_manifest":flight.input_manifest or {}, "report_snapshot_id": approved_source_id if artifact_kind == "report" else None, "generated_at":datetime.now(UTC).isoformat(), "uncertainty":"Source observations retain their recorded uncertainty; no new certainty is introduced.", **report_metadata}}
-        job=AgricultureExportJob(org_id=org_id, field_id=flight.field_id, flight_id=flight.id, run_id=run.id, artifact_kind=artifact_kind, format=fmt, status="running", source_manifest=payload["metadata"], requested_by_user_id=user_id, expires_at=datetime.now(UTC)+timedelta(hours=24)); db.add(job); await db.flush()
+        if job is None:
+            job=AgricultureExportJob(org_id=org_id, field_id=flight.field_id, flight_id=flight.id, run_id=run.id, artifact_kind=artifact_kind, format=fmt, status="running", source_manifest=payload["metadata"], requested_by_user_id=user_id, approved_by_user_id=user_id, approved_at=datetime.now(UTC), expires_at=datetime.now(UTC)+timedelta(hours=24)); db.add(job)
+        else:
+            job.status="running"; job.error=None; job.artifact_kind=artifact_kind; job.format=fmt; job.source_manifest={"request": request, "artifact_metadata": payload["metadata"], "stage_version": "agriculture-export.v2"}; job.approved_by_user_id=user_id; job.approved_at=datetime.now(UTC); job.expires_at=datetime.now(UTC)+timedelta(hours=24)
+        await db.flush()
         data=build_geojson(payload) if fmt=="geojson" else build_csv(payload) if fmt=="csv" else build_shapefile_zip(payload) if fmt=="shapefile" else build_pdf(payload); extension="zip" if fmt=="shapefile" else fmt; key=f"org/{org_id if org_id is not None else 'public'}/exports/{job.id}.{extension}"; agriculture_storage.validate_tenant_key(key, org_id=org_id, resource="exports"); job.checksum=hashlib.sha256(data).hexdigest(); agriculture_storage.write_object(key, data, expected_checksum=job.checksum); job.storage_key=key; job.content_type={"geojson":"application/geo+json","csv":"text/csv","shapefile":"application/zip","pdf":"application/pdf"}[fmt]; job.status="ready"; await self._audit(db, org_id=org_id, entity_type="export", entity_id=job.id, user_id=user_id, action="created", from_status="running", to_status="ready", payload={"format":fmt,"artifact_kind":artifact_kind}); await db.commit(); await db.refresh(job); return job
 
     async def access_export(self, db: AsyncSession, *, job: AgricultureExportJob, user_id: int | None, metadata: dict[str, Any] | None = None) -> dict[str, Any]:

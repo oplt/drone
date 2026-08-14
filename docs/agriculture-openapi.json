@@ -759,9 +759,26 @@
             "title": "Available",
             "type": "boolean"
           },
+          "capture_conditions": {
+            "additionalProperties": true,
+            "title": "Capture Conditions",
+            "type": "object"
+          },
+          "crop_specific": {
+            "default": false,
+            "title": "Crop Specific",
+            "type": "boolean"
+          },
           "description": {
             "title": "Description",
             "type": "string"
+          },
+          "evaluation_thresholds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Evaluation Thresholds",
+            "type": "object"
           },
           "id": {
             "title": "Id",
@@ -770,6 +787,13 @@
           "label": {
             "title": "Label",
             "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
           },
           "output_type": {
             "title": "Output Type",
@@ -968,6 +992,11 @@
             "title": "Changes",
             "type": "array"
           },
+          "comparability": {
+            "additionalProperties": true,
+            "title": "Comparability",
+            "type": "object"
+          },
           "current_flight_id": {
             "title": "Current Flight Id",
             "type": "string"
@@ -983,6 +1012,11 @@
             ],
             "title": "Id"
           },
+          "methodology": {
+            "additionalProperties": true,
+            "title": "Methodology",
+            "type": "object"
+          },
           "reference_flight_id": {
             "anyOf": [
               {
@@ -993,6 +1027,13 @@
               }
             ],
             "title": "Reference Flight Id"
+          },
+          "source_runs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Source Runs",
+            "type": "object"
           },
           "status": {
             "title": "Status",
@@ -1023,6 +1064,19 @@
               }
             ],
             "title": "Crop Type"
+          },
+          "expected_plant_spacing_m": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Plant Spacing M"
           },
           "expected_row_spacing_m": {
             "anyOf": [
@@ -1136,6 +1190,13 @@
             ],
             "title": "Soil Type"
           },
+          "stand_gap_multiplier": {
+            "default": 1.75,
+            "exclusiveMinimum": 1.0,
+            "maximum": 10.0,
+            "title": "Stand Gap Multiplier",
+            "type": "number"
+          },
           "timezone": {
             "title": "Timezone",
             "type": "string"
@@ -1150,6 +1211,20 @@
               }
             ],
             "title": "Variety"
+          },
+          "weed_density_cell_m": {
+            "default": 10.0,
+            "maximum": 100.0,
+            "minimum": 2.0,
+            "title": "Weed Density Cell M",
+            "type": "number"
+          },
+          "weed_hotspot_percentile": {
+            "default": 0.8,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Weed Hotspot Percentile",
+            "type": "number"
           }
         },
         "required": [
@@ -1396,6 +1471,19 @@
             ],
             "title": "Crop Type"
           },
+          "expected_plant_spacing_m": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Plant Spacing M"
+          },
           "expected_row_spacing_m": {
             "anyOf": [
               {
@@ -1584,6 +1672,13 @@
             "title": "Speed Mps",
             "type": "number"
           },
+          "stand_gap_multiplier": {
+            "default": 1.75,
+            "exclusiveMinimum": 1.0,
+            "maximum": 10.0,
+            "title": "Stand Gap Multiplier",
+            "type": "number"
+          },
           "target_gsd_cm": {
             "default": 2.0,
             "exclusiveMinimum": 0.0,
@@ -1602,6 +1697,20 @@
               }
             ],
             "title": "Variety"
+          },
+          "weed_density_cell_m": {
+            "default": 10.0,
+            "maximum": 100.0,
+            "minimum": 2.0,
+            "title": "Weed Density Cell M",
+            "type": "number"
+          },
+          "weed_hotspot_percentile": {
+            "default": 0.8,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Weed Hotspot Percentile",
+            "type": "number"
           }
         },
         "title": "AgricultureMissionProfile",
@@ -1685,6 +1794,22 @@
             ],
             "title": "Last Detected"
           },
+          "member_observation_ids": {
+            "items": {},
+            "title": "Member Observation Ids",
+            "type": "array"
+          },
+          "merged_into_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merged Into Id"
+          },
           "model_version": {
             "anyOf": [
               {
@@ -1767,6 +1892,17 @@
           "severity": {
             "title": "Severity",
             "type": "number"
+          },
+          "split_from_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split From Id"
           },
           "trend": {
             "title": "Trend",
@@ -2941,6 +3077,16 @@
             "title": "Id",
             "type": "string"
           },
+          "inference_reuse": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InferenceReuseSummaryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "input_checksum": {
             "anyOf": [
               {
@@ -3499,6 +3645,16 @@
             "minimum": 0.1,
             "title": "Frame Stride Seconds",
             "type": "number"
+          },
+          "inference_profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VideoInferenceProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "model_name": {
             "default": "yolo26s.pt",
@@ -5048,6 +5204,51 @@
         "title": "CheckStatus",
         "type": "string"
       },
+      "ComparableFlightOut": {
+        "properties": {
+          "alignment": {
+            "additionalProperties": true,
+            "title": "Alignment",
+            "type": "object"
+          },
+          "comparability": {
+            "additionalProperties": true,
+            "title": "Comparability",
+            "type": "object"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "flight_id": {
+            "title": "Flight Id",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "flight_id"
+        ],
+        "title": "ComparableFlightOut",
+        "type": "object"
+      },
       "ComplianceOut": {
         "properties": {
           "created_at": {
@@ -6377,6 +6578,11 @@
             "title": "Created At",
             "type": "string"
           },
+          "curation_summary": {
+            "additionalProperties": true,
+            "title": "Curation Summary",
+            "type": "object"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -6473,6 +6679,32 @@
           "updated_at"
         ],
         "title": "DatasetOut",
+        "type": "object"
+      },
+      "DetectionAggregateBucket": {
+        "properties": {
+          "class_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Class Counts",
+            "type": "object"
+          },
+          "end_seconds": {
+            "title": "End Seconds",
+            "type": "number"
+          },
+          "start_seconds": {
+            "title": "Start Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "start_seconds",
+          "end_seconds",
+          "class_counts"
+        ],
+        "title": "DetectionAggregateBucket",
         "type": "object"
       },
       "DetectionListResponse": {
@@ -6665,6 +6897,121 @@
         "title": "DriftMonitorIn",
         "type": "object"
       },
+      "EvidenceRef": {
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "missing",
+              "deleted"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "checksum": {
+            "title": "Checksum",
+            "type": "string"
+          },
+          "frame_index": {
+            "title": "Frame Index",
+            "type": "integer"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
+          "source_entity_id": {
+            "title": "Source Entity Id",
+            "type": "string"
+          },
+          "spatial": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spatial"
+          },
+          "storage_object_id": {
+            "title": "Storage Object Id",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "number"
+          },
+          "type": {
+            "const": "detection_crop",
+            "default": "detection_crop",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_entity_id",
+          "frame_index",
+          "timestamp",
+          "storage_object_id",
+          "checksum",
+          "availability",
+          "provenance"
+        ],
+        "title": "EvidenceRef",
+        "type": "object"
+      },
+      "EvidenceResolverOut": {
+        "properties": {
+          "detection_id": {
+            "title": "Detection Id",
+            "type": "string"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_path": {
+            "title": "Evidence Path",
+            "type": "null"
+          },
+          "evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Url"
+          },
+          "resolved_at": {
+            "format": "date-time",
+            "title": "Resolved At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "detection_id",
+          "evidence",
+          "evidence_url",
+          "resolved_at"
+        ],
+        "title": "EvidenceResolverOut",
+        "type": "object"
+      },
       "ExportIn": {
         "examples": [
           {
@@ -6682,7 +7029,8 @@
               "observations",
               "report",
               "inspection_actions",
-              "prescription"
+              "prescription",
+              "intervention_zones"
             ],
             "title": "Artifact Kind",
             "type": "string"
@@ -6846,8 +7194,18 @@
             "title": "Candidate Frames",
             "type": "integer"
           },
+          "comparison_count": {
+            "default": 0,
+            "title": "Comparison Count",
+            "type": "integer"
+          },
           "dataset": {
             "$ref": "#/components/schemas/DatasetOut"
+          },
+          "duplicate_cluster_count": {
+            "default": 0,
+            "title": "Duplicate Cluster Count",
+            "type": "integer"
           },
           "effective_interval_seconds": {
             "title": "Effective Interval Seconds",
@@ -7204,6 +7562,168 @@
         "title": "FieldOut",
         "type": "object"
       },
+      "FieldOutcomeIn": {
+        "properties": {
+          "capability_release_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Release Id"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "observation_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "outcome_status": {
+            "enum": [
+              "confirmed_present",
+              "false_positive",
+              "treated",
+              "unresolved",
+              "other"
+            ],
+            "title": "Outcome Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "observation_id",
+          "outcome_status"
+        ],
+        "title": "FieldOutcomeIn",
+        "type": "object"
+      },
+      "FieldOutcomeOut": {
+        "properties": {
+          "capability_release_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Release Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By User Id"
+          },
+          "field_id": {
+            "title": "Field Id",
+            "type": "integer"
+          },
+          "flight_id": {
+            "title": "Flight Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "observation_id": {
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "org_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Id"
+          },
+          "outcome_status": {
+            "title": "Outcome Status",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "field_id",
+          "flight_id",
+          "run_id",
+          "observation_id",
+          "outcome_status",
+          "created_at"
+        ],
+        "title": "FieldOutcomeOut",
+        "type": "object"
+      },
       "FieldProfilePatch": {
         "properties": {
           "crop_type": {
@@ -7217,6 +7737,19 @@
               }
             ],
             "title": "Crop Type"
+          },
+          "expected_plant_spacing_m": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Plant Spacing M"
           },
           "expected_row_spacing_m": {
             "anyOf": [
@@ -7333,6 +7866,13 @@
             ],
             "title": "Soil Type"
           },
+          "stand_gap_multiplier": {
+            "default": 1.75,
+            "exclusiveMinimum": 1.0,
+            "maximum": 10.0,
+            "title": "Stand Gap Multiplier",
+            "type": "number"
+          },
           "timezone": {
             "default": "UTC",
             "maxLength": 64,
@@ -7350,6 +7890,20 @@
               }
             ],
             "title": "Variety"
+          },
+          "weed_density_cell_m": {
+            "default": 10.0,
+            "maximum": 100.0,
+            "minimum": 2.0,
+            "title": "Weed Density Cell M",
+            "type": "number"
+          },
+          "weed_hotspot_percentile": {
+            "default": 0.8,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Weed Hotspot Percentile",
+            "type": "number"
           }
         },
         "title": "FieldProfilePatch",
@@ -7439,6 +7993,143 @@
         "title": "FieldUpdate",
         "type": "object"
       },
+      "FindingMergeIn": {
+        "properties": {
+          "member_observation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Member Observation Ids",
+            "type": "array"
+          },
+          "primary_observation_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Primary Observation Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "primary_observation_id",
+          "member_observation_ids"
+        ],
+        "title": "FindingMergeIn",
+        "type": "object"
+      },
+      "FindingSplitIn": {
+        "properties": {
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/FindingSplitPartIn"
+            },
+            "maxItems": 20,
+            "minItems": 2,
+            "title": "Parts",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "parts"
+        ],
+        "title": "FindingSplitIn",
+        "type": "object"
+      },
+      "FindingSplitPartIn": {
+        "properties": {
+          "area_m2": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area M2"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "evidence_ids": {
+            "items": {},
+            "maxItems": 500,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "geometry_geojson": {
+            "additionalProperties": true,
+            "title": "Geometry Geojson",
+            "type": "object"
+          },
+          "observation_type": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Type"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          }
+        },
+        "required": [
+          "geometry_geojson"
+        ],
+        "title": "FindingSplitPartIn",
+        "type": "object"
+      },
       "FlightEnvironment": {
         "enum": [
           "outdoor_global",
@@ -7448,7 +8139,6 @@
         "type": "string"
       },
       "FlightEventOut": {
-        "description": "Single flight event for the audit timeline.",
         "properties": {
           "created_at": {
             "title": "Created At",
@@ -7730,6 +8420,13 @@
             "title": "Crop Context",
             "type": "object"
           },
+          "environmental_context": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Environmental Context",
+            "type": "object"
+          },
           "geometries": {
             "items": {
               "additionalProperties": true,
@@ -7750,7 +8447,8 @@
             "items": {
               "enum": [
                 "ndvi",
-                "gndvi"
+                "gndvi",
+                "ndre"
               ],
               "type": "string"
             },
@@ -9679,6 +10377,136 @@
         "title": "IncidentUpdate",
         "type": "object"
       },
+      "InferenceReuseDetailOut": {
+        "properties": {
+          "capability_id": {
+            "title": "Capability Id",
+            "type": "string"
+          },
+          "inference_profile": {
+            "additionalProperties": true,
+            "title": "Inference Profile",
+            "type": "object"
+          },
+          "model_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Checksum"
+          },
+          "original_completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Completed At"
+          },
+          "reused": {
+            "title": "Reused",
+            "type": "boolean"
+          },
+          "reused_from_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reused From Run Id"
+          },
+          "source_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Checksum"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          },
+          "video_job_id": {
+            "title": "Video Job Id",
+            "type": "string"
+          },
+          "vision_model_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vision Model Version Id"
+          }
+        },
+        "required": [
+          "capability_id",
+          "video_id",
+          "video_job_id",
+          "reused"
+        ],
+        "title": "InferenceReuseDetailOut",
+        "type": "object"
+      },
+      "InferenceReuseSummaryOut": {
+        "properties": {
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/InferenceReuseDetailOut"
+            },
+            "title": "Details",
+            "type": "array"
+          },
+          "fully_reused": {
+            "title": "Fully Reused",
+            "type": "boolean"
+          },
+          "reused_job_count": {
+            "title": "Reused Job Count",
+            "type": "integer"
+          },
+          "run_input_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Input Checksum"
+          },
+          "total_job_count": {
+            "title": "Total Job Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reused_job_count",
+          "total_job_count",
+          "fully_reused"
+        ],
+        "title": "InferenceReuseSummaryOut",
+        "type": "object"
+      },
       "InspectionActionAssignmentIn": {
         "properties": {
           "assigned_to_user_id": {
@@ -10013,6 +10841,299 @@
           "priority"
         ],
         "title": "InspectionPointOut",
+        "type": "object"
+      },
+      "InspectionRouteUpdateIn": {
+        "properties": {
+          "ordered_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Ordered Action Ids",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "removed_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Removed Action Ids",
+            "type": "array"
+          }
+        },
+        "title": "InspectionRouteUpdateIn",
+        "type": "object"
+      },
+      "InterventionZoneApprovalIn": {
+        "properties": {
+          "expected_revision": {
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "note",
+          "expected_revision"
+        ],
+        "title": "InterventionZoneApprovalIn",
+        "type": "object"
+      },
+      "InterventionZoneCreateIn": {
+        "properties": {
+          "category": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_observation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Source Observation Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "source_observation_ids"
+        ],
+        "title": "InterventionZoneCreateIn",
+        "type": "object"
+      },
+      "InterventionZoneOut": {
+        "properties": {
+          "area_m2": {
+            "title": "Area M2",
+            "type": "number"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By User Id"
+          },
+          "evidence_ids": {
+            "items": {},
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "field_id": {
+            "title": "Field Id",
+            "type": "integer"
+          },
+          "flight_id": {
+            "title": "Flight Id",
+            "type": "string"
+          },
+          "geometry_geojson": {
+            "additionalProperties": true,
+            "title": "Geometry Geojson",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "model_versions": {
+            "items": {},
+            "title": "Model Versions",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "org_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Id"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By User Id"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "source_observation_ids": {
+            "items": {},
+            "title": "Source Observation Ids",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "field_id",
+          "flight_id",
+          "run_id",
+          "name",
+          "category",
+          "geometry_geojson",
+          "area_m2",
+          "source_observation_ids",
+          "evidence_ids",
+          "model_versions",
+          "status",
+          "revision",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "InterventionZoneOut",
+        "type": "object"
+      },
+      "InterventionZoneUpdateIn": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "expected_revision": {
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "geometry_geojson": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geometry Geojson"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "expected_revision"
+        ],
+        "title": "InterventionZoneUpdateIn",
         "type": "object"
       },
       "IrrigationMissionSummaryOut": {
@@ -11672,6 +12793,73 @@
         "title": "LayoutVersionCreate",
         "type": "object"
       },
+      "LiveAdvisoryOut": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "dropped_frames": {
+            "title": "Dropped Frames",
+            "type": "integer"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "number"
+          },
+          "frame_index": {
+            "title": "Frame Index",
+            "type": "integer"
+          },
+          "geolocation": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geolocation"
+          },
+          "sampler_hz": {
+            "title": "Sampler Hz",
+            "type": "number"
+          },
+          "source_of_truth": {
+            "const": "provisional_live",
+            "default": "provisional_live",
+            "description": "Heuristic live RGB advisory only. Post-flight analysis runs remain the authoritative source for operator decisions.",
+            "title": "Source Of Truth",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "timestamp_seconds": {
+            "title": "Timestamp Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "frame_index",
+          "timestamp_seconds",
+          "state",
+          "alerts",
+          "expires_at",
+          "sampler_hz",
+          "dropped_frames"
+        ],
+        "title": "LiveAdvisoryOut",
+        "type": "object"
+      },
       "LiveDetectionOut": {
         "properties": {
           "bbox_xyxy": {
@@ -13147,7 +14335,6 @@
         "type": "object"
       },
       "MissionPreflightOut": {
-        "description": "Preflight detail for the audit timeline.",
         "properties": {
           "base_checks": {
             "items": {
@@ -20247,6 +21434,223 @@
         "title": "RackTemplateVersionCreateIn",
         "type": "object"
       },
+      "RankedFindingOut": {
+        "properties": {
+          "area_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area M2"
+          },
+          "assigned_to_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To User Id"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "display_status": {
+            "enum": [
+              "shown",
+              "labeled_low_confidence",
+              "withheld"
+            ],
+            "title": "Display Status",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {},
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "factors": {
+            "additionalProperties": true,
+            "title": "Factors",
+            "type": "object"
+          },
+          "finding_id": {
+            "title": "Finding Id",
+            "type": "string"
+          },
+          "geometry_geojson": {
+            "additionalProperties": true,
+            "title": "Geometry Geojson",
+            "type": "object"
+          },
+          "georef_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Georef Status"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "member_observation_ids": {
+            "items": {},
+            "title": "Member Observation Ids",
+            "type": "array"
+          },
+          "merged_into_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merged Into Id"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "observation_id": {
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "observation_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Type"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "review_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review State"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "number"
+          },
+          "withhold_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Withhold Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rank",
+          "finding_id",
+          "observation_id",
+          "severity",
+          "confidence",
+          "score",
+          "display_status",
+          "policy_version"
+        ],
+        "title": "RankedFindingOut",
+        "type": "object"
+      },
+      "RankedFindingPage": {
+        "properties": {
+          "hotspots": {
+            "additionalProperties": true,
+            "title": "Hotspots",
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RankedFindingOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "agriculture.v1",
+            "default": "agriculture.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "total_candidates": {
+            "title": "Total Candidates",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "policy_version",
+          "run_id",
+          "limit",
+          "total_candidates",
+          "items",
+          "hotspots"
+        ],
+        "title": "RankedFindingPage",
+        "type": "object"
+      },
       "RaspberrySettings": {
         "properties": {
           "raspberry_host": {
@@ -20289,14 +21693,51 @@
         "title": "RaspberrySettings",
         "type": "object"
       },
+      "ReleaseActionRequest": {
+        "properties": {
+          "override": {
+            "default": false,
+            "title": "Override",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "ReleaseActionRequest",
+        "type": "object"
+      },
       "ReportSnapshotIn": {
         "properties": {
+          "comparison_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparison Id"
+          },
           "template_key": {
             "default": "standard",
             "enum": [
               "standard",
               "executive",
-              "field_visit"
+              "field_visit",
+              "decision"
             ],
             "title": "Template Key",
             "type": "string"
@@ -20372,7 +21813,6 @@
         "type": "object"
       },
       "ResumableMissionOut": {
-        "description": "Terminal mission that has checkpointed progress and can be re-launched.",
         "properties": {
           "ended_at": {
             "anyOf": [
@@ -20831,6 +22271,100 @@
           "floor_plane"
         ],
         "title": "ScanOdomAlignIn",
+        "type": "object"
+      },
+      "SegmentationExperimentDatasetIn": {
+        "properties": {
+          "annotated_instances": {
+            "minimum": 0.0,
+            "title": "Annotated Instances",
+            "type": "integer"
+          },
+          "crop_type": {
+            "maxLength": 96,
+            "minLength": 1,
+            "title": "Crop Type",
+            "type": "string"
+          },
+          "independent_fields": {
+            "minimum": 0.0,
+            "title": "Independent Fields",
+            "type": "integer"
+          },
+          "labeled_images": {
+            "minimum": 0.0,
+            "title": "Labeled Images",
+            "type": "integer"
+          },
+          "source_checksum": {
+            "maxLength": 128,
+            "minLength": 16,
+            "title": "Source Checksum",
+            "type": "string"
+          },
+          "split": {
+            "enum": [
+              "train",
+              "validation",
+              "test",
+              "shadow",
+              "holdout"
+            ],
+            "title": "Split",
+            "type": "string"
+          }
+        },
+        "required": [
+          "crop_type",
+          "labeled_images",
+          "annotated_instances",
+          "independent_fields",
+          "split",
+          "source_checksum"
+        ],
+        "title": "SegmentationExperimentDatasetIn",
+        "type": "object"
+      },
+      "SegmentationExperimentIn": {
+        "properties": {
+          "dataset": {
+            "$ref": "#/components/schemas/SegmentationExperimentDatasetIn"
+          },
+          "detection_baseline": {
+            "$ref": "#/components/schemas/SegmentationExperimentMetricsIn"
+          },
+          "segmentation_candidate": {
+            "$ref": "#/components/schemas/SegmentationExperimentMetricsIn"
+          }
+        },
+        "required": [
+          "dataset",
+          "detection_baseline",
+          "segmentation_candidate"
+        ],
+        "title": "SegmentationExperimentIn",
+        "type": "object"
+      },
+      "SegmentationExperimentMetricsIn": {
+        "properties": {
+          "area_mae_pct": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Area Mae Pct",
+            "type": "number"
+          },
+          "weed_zone_iou": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weed Zone Iou",
+            "type": "number"
+          }
+        },
+        "required": [
+          "weed_zone_iou",
+          "area_mae_pct"
+        ],
+        "title": "SegmentationExperimentMetricsIn",
         "type": "object"
       },
       "SensorCalibrationIn": {
@@ -21652,7 +23186,6 @@
         "type": "object"
       },
       "StateTransitionOut": {
-        "description": "Single entry in a mission's reconstructed state timeline.",
         "properties": {
           "command": {
             "anyOf": [
@@ -22207,6 +23740,11 @@
       },
       "TrainingRunOut": {
         "properties": {
+          "attempt": {
+            "default": 0,
+            "title": "Attempt",
+            "type": "integer"
+          },
           "base_model": {
             "title": "Base Model",
             "type": "string"
@@ -22310,6 +23848,28 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "terminal_reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Reason Code"
+          },
+          "terminal_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Stage"
           },
           "total_epochs": {
             "title": "Total Epochs",
@@ -22611,6 +24171,11 @@
             "title": "Attempt",
             "type": "integer"
           },
+          "capture_metadata_revision": {
+            "default": 0,
+            "title": "Capture Metadata Revision",
+            "type": "integer"
+          },
           "confidence_threshold": {
             "title": "Confidence Threshold",
             "type": "number"
@@ -22698,6 +24263,11 @@
             "title": "Id",
             "type": "string"
           },
+          "inference_profile": {
+            "additionalProperties": true,
+            "title": "Inference Profile",
+            "type": "object"
+          },
           "lease_expires_at": {
             "anyOf": [
               {
@@ -22709,6 +24279,17 @@
               }
             ],
             "title": "Lease Expires At"
+          },
+          "loaded_model_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loaded Model Hash"
           },
           "mission_id": {
             "anyOf": [
@@ -22770,6 +24351,13 @@
               }
             ],
             "title": "Source Checksum"
+          },
+          "stage_timings": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Stage Timings",
+            "type": "object"
           },
           "started_at": {
             "anyOf": [
@@ -22943,6 +24531,50 @@
       },
       "VideoAssetOut": {
         "properties": {
+          "capture_metadata_revision": {
+            "default": 0,
+            "title": "Capture Metadata Revision",
+            "type": "integer"
+          },
+          "capture_time_source": {
+            "default": "unknown",
+            "title": "Capture Time Source",
+            "type": "string"
+          },
+          "capture_time_uncertainty_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Time Uncertainty Seconds"
+          },
+          "capture_timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Timezone"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -23011,9 +24643,19 @@
             "title": "Original Filename",
             "type": "string"
           },
+          "reanalysis_required": {
+            "default": false,
+            "title": "Reanalysis Required",
+            "type": "boolean"
+          },
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "sync_offset_seconds": {
+            "default": 0.0,
+            "title": "Sync Offset Seconds",
+            "type": "number"
           },
           "width": {
             "anyOf": [
@@ -23036,6 +24678,75 @@
         "title": "VideoAssetOut",
         "type": "object"
       },
+      "VideoCaptureMetadataPatch": {
+        "properties": {
+          "capture_timezone": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Timezone"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "sync_offset_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": -3600.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Offset Seconds"
+          }
+        },
+        "title": "VideoCaptureMetadataPatch",
+        "type": "object"
+      },
+      "VideoDetectionAggregateOut": {
+        "properties": {
+          "bucket_seconds": {
+            "title": "Bucket Seconds",
+            "type": "number"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/DetectionAggregateBucket"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "bucket_seconds",
+          "buckets"
+        ],
+        "title": "VideoDetectionAggregateOut",
+        "type": "object"
+      },
       "VideoDetectionOut": {
         "properties": {
           "altitude_m": {
@@ -23049,11 +24760,7 @@
             ],
             "title": "Altitude M"
           },
-          "confidence": {
-            "title": "Confidence",
-            "type": "number"
-          },
-          "evidence_path": {
+          "capture_time_source": {
             "anyOf": [
               {
                 "type": "string"
@@ -23062,7 +24769,47 @@
                 "type": "null"
               }
             ],
-            "title": "Evidence Path"
+            "title": "Capture Time Source"
+          },
+          "capture_time_uncertainty_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Time Uncertainty Seconds"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_path": {
+            "title": "Evidence Path",
+            "type": "null"
+          },
+          "evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Url"
           },
           "frame_index": {
             "title": "Frame Index",
@@ -23124,6 +24871,82 @@
             ],
             "title": "Mission Id"
           },
+          "sync_offset_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Offset Seconds"
+          },
+          "telemetry_match_delta_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Match Delta Ms"
+          },
+          "telemetry_match_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Match Method"
+          },
+          "telemetry_match_quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Match Quality"
+          },
+          "telemetry_match_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Match Version"
+          },
+          "telemetry_sample_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Sample Ids"
+          },
           "timestamp_seconds": {
             "title": "Timestamp Seconds",
             "type": "number"
@@ -23176,6 +24999,186 @@
         "title": "VideoDetectionOut",
         "type": "object"
       },
+      "VideoDetectionPageOut": {
+        "description": "Cursor page; fetch next_cursor while has_more is true.",
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VideoDetectionOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "job_version": {
+            "title": "Job Version",
+            "type": "integer"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_estimate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Estimate"
+          }
+        },
+        "required": [
+          "items",
+          "has_more",
+          "job_version",
+          "status"
+        ],
+        "title": "VideoDetectionPageOut",
+        "type": "object"
+      },
+      "VideoInferenceProfile": {
+        "additionalProperties": false,
+        "description": "Immutable execution settings supplied by a versioned caller profile.",
+        "properties": {
+          "batch_size": {
+            "maximum": 32.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "type": "integer"
+          },
+          "capability_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Capability Id",
+            "type": "string"
+          },
+          "confidence_threshold": {
+            "maximum": 0.99,
+            "minimum": 0.01,
+            "title": "Confidence Threshold",
+            "type": "number"
+          },
+          "image_size": {
+            "maximum": 4096.0,
+            "minimum": 32.0,
+            "title": "Image Size",
+            "type": "integer"
+          },
+          "precision_mode": {
+            "enum": [
+              "fp32",
+              "fp16"
+            ],
+            "title": "Precision Mode",
+            "type": "string"
+          },
+          "profile_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Profile Digest",
+            "type": "string"
+          },
+          "profile_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "profile_version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Profile Version",
+            "type": "string"
+          },
+          "sahi_enabled": {
+            "title": "Sahi Enabled",
+            "type": "boolean"
+          },
+          "sahi_overlap_height_ratio": {
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "Sahi Overlap Height Ratio",
+            "type": "number"
+          },
+          "sahi_overlap_width_ratio": {
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "Sahi Overlap Width Ratio",
+            "type": "number"
+          },
+          "sahi_postprocess_match_threshold": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Sahi Postprocess Match Threshold",
+            "type": "number"
+          },
+          "sahi_slice_height": {
+            "maximum": 4096.0,
+            "minimum": 32.0,
+            "title": "Sahi Slice Height",
+            "type": "integer"
+          },
+          "sahi_slice_width": {
+            "maximum": 4096.0,
+            "minimum": 32.0,
+            "title": "Sahi Slice Width",
+            "type": "integer"
+          },
+          "sample_fps": {
+            "maximum": 10.0,
+            "minimum": 0.03333333333333333,
+            "title": "Sample Fps",
+            "type": "number"
+          },
+          "tracker_type": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Tracker Type",
+            "type": "string"
+          },
+          "tracking_enabled": {
+            "title": "Tracking Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile_id",
+          "profile_version",
+          "profile_digest",
+          "capability_id",
+          "sample_fps",
+          "image_size",
+          "confidence_threshold",
+          "batch_size",
+          "precision_mode",
+          "sahi_enabled",
+          "sahi_slice_height",
+          "sahi_slice_width",
+          "sahi_overlap_height_ratio",
+          "sahi_overlap_width_ratio",
+          "sahi_postprocess_match_threshold",
+          "tracking_enabled",
+          "tracker_type"
+        ],
+        "title": "VideoInferenceProfile",
+        "type": "object"
+      },
       "VisionClassIn": {
         "properties": {
           "name": {
@@ -23225,7 +25228,9 @@
               "crop_health",
               "canopy_cover",
               "row_detection",
-              "standing_water"
+              "standing_water",
+              "fruit_counting",
+              "ripeness_classification"
             ],
             "title": "Capability Id",
             "type": "string"
@@ -25272,6 +27277,11 @@
               }
             ]
           },
+          "snapshot_truncated": {
+            "default": false,
+            "title": "Snapshot Truncated",
+            "type": "boolean"
+          },
           "status": {
             "default": "empty",
             "enum": [
@@ -25282,6 +27292,11 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "total_buffered_updates": {
+            "default": 0,
+            "title": "Total Buffered Updates",
+            "type": "integer"
           },
           "type": {
             "const": "live_map_snapshot",
@@ -30348,6 +32363,88 @@
         ]
       }
     },
+    "/agriculture/analysis-runs/{run_id}/analytics/segmentation-experiment": {
+      "post": {
+        "operationId": "evaluate_crop_weed_segmentation_agriculture_analysis_runs__run_id__analytics_segmentation_experiment_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentationExperimentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evaluate Crop Weed Segmentation",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
     "/agriculture/analysis-runs/{run_id}/assistant": {
       "get": {
         "operationId": "list_agriculture_assistant_runs_agriculture_analysis_runs__run_id__assistant_get",
@@ -30842,6 +32939,105 @@
         ]
       }
     },
+    "/agriculture/analysis-runs/{run_id}/events": {
+      "get": {
+        "operationId": "stream_analysis_run_events_agriculture_analysis_runs__run_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_id",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "After Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Analysis Run Events",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
     "/agriculture/analysis-runs/{run_id}/exports": {
       "get": {
         "operationId": "list_agriculture_exports_agriculture_analysis_runs__run_id__exports_get",
@@ -30975,7 +33171,7 @@
           "required": true
         },
         "responses": {
-          "201": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
@@ -30997,6 +33193,346 @@
           }
         },
         "summary": "Create Agriculture Export",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/analysis-runs/{run_id}/field-outcomes": {
+      "get": {
+        "operationId": "list_field_outcomes_agriculture_analysis_runs__run_id__field_outcomes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FieldOutcomeOut"
+                  },
+                  "title": "Response List Field Outcomes Agriculture Analysis Runs  Run Id  Field Outcomes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Field Outcomes",
+        "tags": [
+          "agriculture"
+        ]
+      },
+      "post": {
+        "operationId": "create_field_outcome_agriculture_analysis_runs__run_id__field_outcomes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldOutcomeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldOutcomeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Field Outcome",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/analysis-runs/{run_id}/findings": {
+      "get": {
+        "operationId": "list_ranked_findings_agriculture_analysis_runs__run_id__findings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_withheld",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Withheld",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankedFindingPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Ranked Findings",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/analysis-runs/{run_id}/findings/merge": {
+      "post": {
+        "operationId": "merge_findings_agriculture_analysis_runs__run_id__findings_merge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FindingMergeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgricultureObservationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Merge Findings",
         "tags": [
           "agriculture"
         ]
@@ -31639,6 +34175,254 @@
           }
         },
         "summary": "Create Inspection Plan",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/analysis-runs/{run_id}/inspection-actions/route": {
+      "put": {
+        "operationId": "update_inspection_route_agriculture_analysis_runs__run_id__inspection_actions_route_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectionRouteUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InspectionActionOut"
+                  },
+                  "title": "Response Update Inspection Route Agriculture Analysis Runs  Run Id  Inspection Actions Route Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Inspection Route",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/analysis-runs/{run_id}/intervention-zones": {
+      "get": {
+        "operationId": "list_intervention_zones_agriculture_analysis_runs__run_id__intervention_zones_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InterventionZoneOut"
+                  },
+                  "title": "Response List Intervention Zones Agriculture Analysis Runs  Run Id  Intervention Zones Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Intervention Zones",
+        "tags": [
+          "agriculture"
+        ]
+      },
+      "post": {
+        "operationId": "create_intervention_zone_agriculture_analysis_runs__run_id__intervention_zones_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterventionZoneCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterventionZoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Intervention Zone",
         "tags": [
           "agriculture"
         ]
@@ -35162,6 +37946,96 @@
         ]
       }
     },
+    "/agriculture/fields/{field_id}/plans": {
+      "get": {
+        "operationId": "list_field_plans_agriculture_fields__field_id__plans_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "field_id",
+            "required": true,
+            "schema": {
+              "title": "Field Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgriculturePlanOut"
+                  },
+                  "title": "Response List Field Plans Agriculture Fields  Field Id  Plans Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Field Plans",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
     "/agriculture/fields/{field_id}/profile": {
       "get": {
         "operationId": "get_field_profile_agriculture_fields__field_id__profile_get",
@@ -36830,6 +39704,108 @@
         ]
       }
     },
+    "/agriculture/flights/{flight_id}/comparable-flights": {
+      "get": {
+        "operationId": "list_comparable_flights_agriculture_flights__flight_id__comparable_flights_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flight_id",
+            "required": true,
+            "schema": {
+              "title": "Flight Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_quality_score",
+            "required": false,
+            "schema": {
+              "default": 0.6,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Min Quality Score",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ComparableFlightOut"
+                  },
+                  "title": "Response List Comparable Flights Agriculture Flights  Flight Id  Comparable Flights Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Comparable Flights",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
     "/agriculture/flights/{flight_id}/compare": {
       "post": {
         "operationId": "compare_flight_agriculture_flights__flight_id__compare_post",
@@ -37343,7 +40319,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LiveAdvisoryOut"
+                }
               }
             },
             "description": "Successful Response"
@@ -39546,6 +42524,253 @@
         ]
       }
     },
+    "/agriculture/intervention-zones/{zone_id}": {
+      "put": {
+        "operationId": "update_intervention_zone_agriculture_intervention_zones__zone_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "zone_id",
+            "required": true,
+            "schema": {
+              "title": "Zone Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterventionZoneUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterventionZoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Intervention Zone",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/intervention-zones/{zone_id}/approval": {
+      "post": {
+        "operationId": "review_intervention_zone_agriculture_intervention_zones__zone_id__approval_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "zone_id",
+            "required": true,
+            "schema": {
+              "title": "Zone Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterventionZoneApprovalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterventionZoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Intervention Zone",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/intervention-zones/{zone_id}/audit": {
+      "get": {
+        "operationId": "intervention_zone_audit_agriculture_intervention_zones__zone_id__audit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "zone_id",
+            "required": true,
+            "schema": {
+              "title": "Zone Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Intervention Zone Audit Agriculture Intervention Zones  Zone Id  Audit Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Intervention Zone Audit",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
     "/agriculture/media/{media_id}/backup": {
       "post": {
         "operationId": "backup_media_agriculture_media__media_id__backup_post",
@@ -41428,6 +44653,94 @@
           }
         },
         "summary": "Review Observation",
+        "tags": [
+          "agriculture"
+        ]
+      }
+    },
+    "/agriculture/observations/{observation_id}/split": {
+      "post": {
+        "operationId": "split_finding_agriculture_observations__observation_id__split_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "observation_id",
+            "required": true,
+            "schema": {
+              "title": "Observation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "access_token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FindingSplitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgricultureObservationOut"
+                  },
+                  "title": "Response Split Finding Agriculture Observations  Observation Id  Split Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Split Finding",
         "tags": [
           "agriculture"
         ]

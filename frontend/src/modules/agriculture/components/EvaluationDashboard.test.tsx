@@ -105,6 +105,9 @@ describe("vision evaluation dashboard", () => {
         />
       </QueryClientProvider>,
     );
+    expect(screen.getByText(/deploy candidate/i)).toBeVisible();
+    expect(screen.getByText(/\+2\.9 pp vs production v3/i)).toBeVisible();
+    expect(screen.getByText(/Production: v3/i)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /deploy candidate/i }));
     expect(screen.getByText(/replaces production v3/i)).toBeVisible();
     expect(screen.getByText(/Current production mAP50/i)).toBeVisible();

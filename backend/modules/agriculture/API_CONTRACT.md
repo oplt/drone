@@ -17,3 +17,20 @@ to field-scoped comparisons and `/comparisons/{id}` resources.
 Request examples are published in the OpenAPI component schemas for telemetry,
 media, manifests, comparison, review and export payloads. Mission-start payloads reuse
 the documented `MissionCreateIn` schema.
+
+Phase 5 analytics add a research-only crop/weed segmentation evaluation endpoint
+at `/analysis-runs/{run_id}/analytics/segmentation-experiment`. Operational
+stand-gap, plant-spacing, and weed-density outputs use the existing immutable
+layer and observation contracts. Calibrated fusion accepts `ndvi`, `gndvi`, and
+`ndre`; thermal results require ambient environmental context. The full safety
+and applicability rules are documented in `docs/agriculture-analytics-phase5.md`.
+
+Phase 6 lifecycle streams are available at
+`GET /agriculture/analysis-runs/{run_id}/events` and
+`GET /vision/projects/{project_id}/training-events`. They use `text/event-stream`,
+durable numeric event IDs, browser `Last-Event-ID` replay, and organization scope
+(or creator scope for non-organization resources). Clients must retain polling as
+a fallback. Analysis execution uses versioned, independently replayable Celery
+stages; export creation returns HTTP 202 with a queued `ExportOut`, and clients
+observe it until `ready` or `failed`. Queue and worker guidance is documented in
+`docs/agriculture-stage-scaling.md`.

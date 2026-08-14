@@ -43,6 +43,7 @@ class VideoJobRef:
     error: str | None
     terminal_reason_code: str | None
     loaded_model_hash: str | None = None
+    inference_profile: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +95,7 @@ def _job_ref(value: VideoAnalysisJob) -> VideoJobRef:
         progress=value.progress,
         error=value.error,
         terminal_reason_code=value.terminal_reason_code,
+        inference_profile=dict(value.inference_profile or {}),
     )
 
 

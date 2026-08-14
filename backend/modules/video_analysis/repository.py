@@ -11,7 +11,6 @@ from sqlalchemy.sql.selectable import Select
 
 from backend.core.authz.visibility import org_or_owner_visibility, org_scoped_visibility
 from backend.core.config.runtime import settings
-from backend.shared.storage_objects import reconcile_staged_storage_objects
 from backend.modules.identity.models import User
 from backend.modules.video_analysis.models import (
     StorageObject,
@@ -19,6 +18,7 @@ from backend.modules.video_analysis.models import (
     VideoAsset,
     VideoDetection,
 )
+from backend.shared.storage_objects import reconcile_staged_storage_objects
 
 
 class VideoAnalysisRepository:
@@ -209,6 +209,7 @@ class VideoAnalysisRepository:
         small_object_mode: bool = False,
         tracking_enabled: bool = False,
         tracker_type: str = "bytetrack",
+        inference_profile: dict | None = None,
         orchestration_key: str | None = None,
     ) -> VideoAnalysisJob:
         job = VideoAnalysisJob(
@@ -223,6 +224,7 @@ class VideoAnalysisRepository:
             orchestration_key=orchestration_key,
             frame_stride_seconds=frame_stride_seconds,
             confidence_threshold=confidence_threshold,
+            inference_profile=dict(inference_profile or {}),
             capture_metadata_revision=video.capture_metadata_revision,
             status="queued",
         )
@@ -231,9 +233,7 @@ class VideoAnalysisRepository:
         await self.db.refresh(job)
         return job
 
-    async def get_job_by_orchestration_key(
-        self, orchestration_key: str
-    ) -> VideoAnalysisJob | None:
+    async def get_job_by_orchestration_key(self, orchestration_key: str) -> VideoAnalysisJob | None:
         return await self.db.scalar(
             select(VideoAnalysisJob).where(
                 VideoAnalysisJob.orchestration_key == orchestration_key

@@ -72,6 +72,16 @@ export function useAgricultureTelemetryWindow(flightId: string | null, timestamp
   });
 }
 
+export function useAgricultureTelemetryTrack(flightId: string | null) {
+  return useQuery({
+    queryKey: [...agricultureKeys.mediaTimeline(flightId), "telemetry-track"],
+    queryFn: () =>
+      getAgricultureTelemetryWindow(flightId as string, null, 15, 1000),
+    enabled: Boolean(flightId),
+    staleTime: 30_000,
+  });
+}
+
 export function useAgricultureRuntimeEvents(
   flightId: string | null,
   enabled = true,

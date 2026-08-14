@@ -18,6 +18,7 @@ class TrainerRequest:
     batch_size: int
     requested_device: str
     class_names: list[str]
+    dataloader_workers: int = 0
 
 
 @dataclass(frozen=True)

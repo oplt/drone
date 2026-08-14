@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Add } from "@mui/icons-material";
 import {
   Alert,
@@ -35,13 +36,24 @@ import type { VisionModelVersion } from "../visionTypes";
 
 type WorkspaceTab = "dataset" | "train" | "evaluation" | "models";
 
+function parseWorkspaceTab(value: string | null): WorkspaceTab {
+  if (value === "train" || value === "evaluation" || value === "models") {
+    return value;
+  }
+  return "dataset";
+}
+
 export default function AgricultureVisionModelsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const projects = useVisionProjects();
   const models = useVisionModels();
   const [createOpen, setCreateOpen] = useState(false);
-  const [requestedProjectId, setRequestedProjectId] = useState<string | null>(null);
+  const requestedProjectId = searchParams.get("project");
+  const requestedVersionId = searchParams.get("version");
   const [datasetId, setDatasetId] = useState<string | null>(null);
-  const [tab, setTab] = useState<WorkspaceTab>("dataset");
+  const [tab, setTab] = useState<WorkspaceTab>(
+    () => parseWorkspaceTab(searchParams.get("tab")),
+  );
   const [evaluationVersion, setEvaluationVersion] =
     useState<VisionModelVersion | null>(null);
   const projectId = projects.data?.some((item) => item.id === requestedProjectId)
@@ -56,12 +68,51 @@ export default function AgricultureVisionModelsPage() {
       null,
     [datasetId, datasets.data],
   );
-  const projectModels =
-    models.data?.filter((item) => item.project_id === projectId) ?? [];
+  const projectModels = useMemo(() => models.data?.filter((item) => item.project_id === projectId) ?? [], [models.data, projectId]);
+  const resolvedEvaluationVersion = useMemo(() => {
+    if (evaluationVersion) {
+      return evaluationVersion;
+    }
+    if (!requestedVersionId) {
+      return null;
+    }
+    return projectModels.find((item) => item.id === requestedVersionId) ?? null;
+  }, [evaluationVersion, projectModels, requestedVersionId]);
+
+  const syncWorkspaceParams = (
+    next: Partial<{ project: string | null; tab: WorkspaceTab; version: string | null }>,
+  ) => {
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      if ("project" in next) {
+        if (next.project) {
+          params.set("project", next.project);
+        } else {
+          params.delete("project");
+        }
+      }
+      if ("tab" in next && next.tab) {
+        params.set("tab", next.tab);
+      }
+      if ("version" in next) {
+        if (next.version) {
+          params.set("version", next.version);
+        } else {
+          params.delete("version");
+        }
+      }
+      return params;
+    });
+  };
 
   const chooseEvaluation = (version: VisionModelVersion) => {
     setEvaluationVersion(version);
     setTab("evaluation");
+    syncWorkspaceParams({
+      project: projectId,
+      tab: "evaluation",
+      version: version.id,
+    });
   };
   if (projects.isLoading)
     return <CircularProgress aria-label="Loading vision projects" />;
@@ -97,10 +148,14 @@ export default function AgricultureVisionModelsPage() {
               {projects.data.map((item) => (
                 <Card key={item.id} variant={item.id === projectId ? "elevation" : "outlined"}>
                   <CardActionArea onClick={() => {
-                    setRequestedProjectId(item.id);
                     setDatasetId(null);
                     setEvaluationVersion(null);
                     setTab("dataset");
+                    syncWorkspaceParams({
+                      project: item.id,
+                      tab: "dataset",
+                      version: null,
+                    });
                   }}>
                     <CardContent>
                       <Typography fontWeight={600}>{item.name}</Typography>
@@ -141,7 +196,18 @@ export default function AgricultureVisionModelsPage() {
                   ) : null}
                 </Stack>
                 <Divider />
-                <Tabs value={tab} onChange={(_, value: WorkspaceTab) => setTab(value)} variant="scrollable">
+                <Tabs
+                  value={tab}
+                  onChange={(_, value: WorkspaceTab) => {
+                    setTab(value);
+                    syncWorkspaceParams({
+                      project: projectId,
+                      tab: value,
+                      version: value === "evaluation" ? requestedVersionId : null,
+                    });
+                  }}
+                  variant="scrollable"
+                >
                   <Tab value="dataset" label="Dataset & labels" />
                   <Tab value="train" label="Train" />
                   <Tab value="evaluation" label="Evaluation" />
@@ -151,11 +217,11 @@ export default function AgricultureVisionModelsPage() {
                   {tab === "dataset" ? <VisionDatasetWorkspace projectId={project.id} dataset={latestDataset} /> : null}
                   {tab === "train" ? <VisionTrainingWorkspace projectId={project.id} dataset={latestDataset} /> : null}
                   {tab === "models" ? <VisionModelRegistry versions={projectModels} onEvaluate={chooseEvaluation} /> : null}
-                  {tab === "evaluation" && evaluationVersion ? (
-                    <EvaluationDashboard version={evaluationVersion} allVersions={projectModels} />
+                  {tab === "evaluation" && resolvedEvaluationVersion ? (
+                    <EvaluationDashboard version={resolvedEvaluationVersion} allVersions={projectModels} />
                   ) : null}
-                  {tab === "evaluation" && !evaluationVersion && projectModels.length ? (
-                    <VisionModelRegistry versions={projectModels} onEvaluate={setEvaluationVersion} />
+                  {tab === "evaluation" && !resolvedEvaluationVersion && projectModels.length ? (
+                    <VisionModelRegistry versions={projectModels} onEvaluate={chooseEvaluation} />
                   ) : null}
                   {tab === "evaluation" && !projectModels.length ? (
                     <Alert severity="info">Complete training to generate real test-set metrics.</Alert>

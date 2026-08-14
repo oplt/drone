@@ -90,7 +90,7 @@ DEV_PROCS += browser
 WAREHOUSE_PROCS += browser
 endif
 
-.PHONY: local-dev warehouse local-dev-with-backend-env local-dev-no-observability observability-status start-observability-stack stop-observability-stack check-local-tools kill-dev kill-ports kill-workers reset-frontend-cache reset-dev start-maple stop-maple
+.PHONY: local-dev warehouse local-dev-with-backend-env local-dev-no-observability observability-status start-observability-stack stop-observability-stack check-local-tools kill-dev kill-docker-publishers kill-ports kill-workers reset-frontend-cache reset-dev start-maple stop-maple
 
 check-local-tools:
 	@$(PYTHON) -c 'import honcho.command' >/dev/null 2>&1 || { echo "honcho is not installed for $(PYTHON). Install with: $(PYTHON) -m pip install honcho"; exit 1; }
@@ -117,14 +117,26 @@ kill-ports:
 	@sleep 0.3
 	@pgrep -f '[f]fplay' | xargs -r kill -9 2>/dev/null || true
 
+kill-docker-publishers:
+	@if command -v docker >/dev/null 2>&1; then \
+		for port in $(REDIS_PORT); do \
+			cids="$$(docker ps -q --filter "publish=$$port" 2>/dev/null || true)"; \
+			if [ -n "$$cids" ]; then \
+				echo "[kill-dev] stopping docker container(s) publishing tcp:$$port: $$cids"; \
+				docker stop $$cids >/dev/null 2>&1 || true; \
+			fi; \
+		done; \
+	fi
+
 kill-dev:
 	-pgrep -f "[h]oncho .*Procfile.dev start" | xargs -r kill
 	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill
-	-pgrep -f "[r]edis-server --port $(REDIS_PORT)" | xargs -r kill
+	-pgrep -f "[r]edis-server.*--port $(REDIS_PORT)" | xargs -r kill
+	-$(MAKE) -f Makefile.local kill-docker-publishers
 	-sleep 1
 	-pgrep -f "[h]oncho .*Procfile.dev start" | xargs -r kill -9
 	-pgrep -f "[u]vicorn backend.entrypoints.api.app:app" | xargs -r kill -9
-	-pgrep -f "[r]edis-server --port $(REDIS_PORT)" | xargs -r kill -9
+	-pgrep -f "[r]edis-server.*--port $(REDIS_PORT)" | xargs -r kill -9
 	-$(MAKE) -f Makefile.local kill-ports
 
 kill-workers:

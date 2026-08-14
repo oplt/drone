@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  createAgricultureRunRefetchInterval,
+  isAgricultureQualityTerminal,
+} from "../analysisLifecycle";
+import {
   assignAgricultureInspectionAction,
   cancelAgricultureAnalysisRun,
   createAgricultureAnalysisRun,
@@ -46,15 +50,7 @@ export function useAgricultureAnalysisQuality(runId: string | null) {
     queryFn: () => getAgricultureAnalysisQuality(runId as string),
     enabled: Boolean(runId),
     refetchInterval: (query) =>
-      [
-        "pass",
-        "warning",
-        "blocked",
-        "completed",
-        "review",
-        "failed",
-        "blocked_quality",
-      ].includes(query.state.data?.status ?? "")
+      isAgricultureQualityTerminal(query.state.data?.status)
         ? false
         : agriculturePollInterval(3000),
   });
@@ -69,47 +65,52 @@ export function useAgricultureModelReleaseGate(modelId: string | null) {
 }
 
 export function useAgricultureFusionResults(runId: string | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: agricultureKeys.fusion(runId),
     queryFn: () => listAgricultureFusionResults(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
 export function useAgricultureCropRisks(runId: string | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: agricultureKeys.cropRisks(runId),
     queryFn: () => listAgricultureCropRisks(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
 export function useAgricultureGrowthStage(runId: string | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: agricultureKeys.stage(runId),
     queryFn: () => getAgricultureGrowthStage(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
 export function useAgricultureInspectionActions(runId: string | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: agricultureKeys.actions(runId),
     queryFn: () => listAgricultureInspectionActions(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
 export function useAgricultureFindings(runId: string | null, limit = 25) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: [...agricultureKeys.findings(runId), limit],
     queryFn: () => listAgricultureFindings(runId as string, { limit }),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: createAgricultureRunRefetchInterval(queryClient, runId, 5000),
   });
 }
 
@@ -193,7 +194,10 @@ export function useAgricultureExports(runId: string | null) {
     queryKey: agricultureKeys.exports(runId),
     queryFn: () => listAgricultureExports(runId as string),
     enabled: Boolean(runId),
-    refetchInterval: () => agriculturePollInterval(5000),
+    refetchInterval: (query) =>
+      query.state.data?.some((item) => ["queued", "running"].includes(item.status))
+        ? agriculturePollInterval(2000)
+        : false,
   });
 }
 

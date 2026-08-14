@@ -26,6 +26,27 @@ export type AgricultureReportSnapshot = {
   created_at: string;
 };
 
+export type InferenceReuseDetail = {
+  capability_id: string;
+  video_id: string;
+  video_job_id: string;
+  reused: boolean;
+  reused_from_run_id: string | null;
+  source_checksum: string | null;
+  model_checksum: string | null;
+  vision_model_version_id: string | null;
+  inference_profile: Record<string, unknown>;
+  original_completed_at: string | null;
+};
+
+export type InferenceReuseSummary = {
+  run_input_checksum: string | null;
+  reused_job_count: number;
+  total_job_count: number;
+  fully_reused: boolean;
+  details: InferenceReuseDetail[];
+};
+
 export type AgricultureAnalysisRun = {
   id: string;
   flight_id: string;
@@ -46,6 +67,7 @@ export type AgricultureAnalysisRun = {
   quality_gate: Record<string, unknown>;
   counters: Record<string, unknown>;
   created_at: string;
+  inference_reuse?: InferenceReuseSummary | null;
 };
 
 export type AgricultureAnalysisReadiness = {
@@ -130,6 +152,8 @@ export type AgricultureComparison = {
   summary: Record<string, number>;
   changes: AgricultureChange[];
   comparability?: Comparability;
+  source_runs: { current?: string; reference?: string };
+  methodology: Record<string, unknown>;
 };
 
 export type Comparability = {
