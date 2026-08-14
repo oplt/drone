@@ -15,6 +15,7 @@ import {
   MapDrawToolsOverlay,
   MapEngineSelectionOverlay,
   MissionMapBoundaryPrompt,
+  MissionMapLegend,
   MissionSurveyCameraSection,
 } from "../../mission-workflow";
 import type { usePhotogrammetryPage } from "../hooks/usePhotogrammetryPage";
@@ -43,6 +44,7 @@ export function PhotogrammetryMapColumn({
 
   return (
     <MissionSurveyCameraSection
+      layoutStorageKey="mission-layout:photogrammetry"
       setupSubtitle="Field boundary, grid parameters, and photogrammetry profile"
       video={
         <MissionVideoPanel
@@ -101,6 +103,9 @@ export function PhotogrammetryMapColumn({
               exclusionZones,
               fieldTilesetUrl: vm.fieldTilesetUrl,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               headingDeg: typeof map.heading === "number" ? map.heading : null,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -121,6 +126,9 @@ export function PhotogrammetryMapColumn({
               plannedRoute: mission.cesiumPlannedRoute,
               exclusionZones,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               userCenter: map.userCenter,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -142,6 +150,9 @@ export function PhotogrammetryMapColumn({
               plannedRoute: mission.cesiumPlannedRoute,
               exclusionZones,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               userCenter: map.userCenter,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -164,6 +175,7 @@ export function PhotogrammetryMapColumn({
                   terraDrawMode={map.terraDrawMode}
                   terraDrawReady={map.terraDrawReady}
                   drawMode={mission.drawMode}
+                  tools={["polygon", "rectangle", "select"]}
                   deleteDisabled={
                     map.mapEngine !== "google"
                       ? mission.drawMode === "none" &&
@@ -192,7 +204,11 @@ export function PhotogrammetryMapColumn({
                     );
                   }}
                 />
-                <MapEngineSelectionOverlay>
+                <MissionMapLegend />
+                <MapEngineSelectionOverlay
+                  followEnabled={map.followEnabled}
+                  onFollowEnabledChange={map.setFollowEnabled}
+                >
                   <CesiumViewControls
                     useCesium={map.useCesium}
                     onUseCesiumChange={(next) =>

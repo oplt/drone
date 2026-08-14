@@ -343,7 +343,7 @@ export function WarehouseLiveVoxelOverlay({
         pointerEvents: "none",
       }}
     >
-      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+      <Typography variant="body2" sx={{ fontWeight: 600 }}>
         {title}
       </Typography>
       <Typography variant="caption" sx={{ opacity: 0.72 }}>

@@ -5,39 +5,38 @@ import logging
 import math
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import pairwise
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from backend.core.config.runtime import env_truthy, settings
 from backend.core.errors.public import public_error
-from backend.core.events import (
-    FlightEventEnvelopeV1,
-    FlightEventPayloadV1,
-    FlightEventSeverityV1,
-    MissionLifecycleEnvelopeV1,
-    MissionLifecyclePayloadV1,
-    mission_context_from_runtime,
-    next_runtime_sequence,
-    utc_now,
-)
 from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.infrastructure.jobs import enqueue_task
-from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.deliverables.service import mission_export_service
 from backend.modules.identity.dependencies import require_user
 from backend.modules.missions.api.preview_routes import router as preview_router
+from backend.modules.missions.api.runtime_dto import (
+    MissionCommandAuditOut,
+    MissionCommandAuditRecord,
+    MissionRuntimeRecord,
+    get_runtime_for_user,
+    resolve_idempotency_key,
+)
+from backend.modules.missions.api.routes_commands import router as commands_router
+from backend.modules.missions.service.command_applicator import (
+    _sync_runtime_flight_id_from_orchestrator,
+    apply_mission_command as _apply_mission_command,
+)
 from backend.modules.missions.api.runtime_routes import router as runtime_router
 from backend.modules.missions.application import mission_application
 from backend.modules.missions.domain.state_machine import (
     TERMINAL_STATES as _SM_TERMINAL_STATES,
-)
-from backend.modules.missions.domain.state_machine import (
-    allowed_command_target,
+    MissionLifecycleState,
 )
 from backend.modules.missions.domain.state_machine import (
     is_terminal as _sm_is_terminal,
@@ -83,6 +82,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 router.include_router(preview_router)
 router.include_router(runtime_router)
+router.include_router(commands_router)
+
+_MissionRuntimeRecord = MissionRuntimeRecord
+_MissionCommandAudit = MissionCommandAuditRecord
+_get_runtime_for_user = get_runtime_for_user
+_resolve_idempotency_key = resolve_idempotency_key
 
 PREFLIGHT_RUN_TTL_SECONDS = max(60, settings.preflight_run_ttl_seconds)
 REQUIRE_PREFLIGHT_RUN_BEFORE_MISSION = env_truthy(settings.require_preflight_run_before_mission)
@@ -144,41 +149,6 @@ class ResumableMissionOut(BaseModel):
     failure_reason: str | None = None
     resume_metadata: dict
     mission_params: dict
-
-
-class MissionCommandIn(BaseModel):
-    idempotency_key: str | None = Field(
-        default=None,
-        min_length=8,
-        max_length=128,
-        description="Idempotency key. Can also be provided via Idempotency-Key header.",
-    )
-    reason: str | None = Field(default=None, max_length=240)
-
-
-class MissionCommandOut(BaseModel):
-    flight_id: str
-    command_id: str
-    command: str
-    idempotency_key: str
-    state_before: str
-    state_after: str
-    accepted: bool
-    message: str
-    requested_at: float
-
-
-class MissionCommandAuditOut(BaseModel):
-    command_id: str
-    command: str
-    idempotency_key: str
-    requested_by_user_id: int
-    requested_at: float
-    state_before: str
-    state_after: str
-    accepted: bool
-    message: str
-    reason: str | None = None
 
 
 class PreflightRunOut(BaseModel):
@@ -258,101 +228,7 @@ class _PreflightRunRecord:
         )
 
 
-MissionLifecycleState = Literal[
-    "planned",
-    "preflight",
-    "queued",
-    "arming",
-    "airborne",
-    "running",  # legacy alias for airborne
-    "paused",
-    "resumed",
-    "aborting",
-    "aborted",
-    "completed",
-    "failed",
-]
-MissionCommand = Literal["pause", "resume", "abort", "rth", "land"]
 TERMINAL_MISSION_STATES = _SM_TERMINAL_STATES
-
-
-@dataclass
-class _MissionCommandAudit:
-    command_id: str
-    command: MissionCommand
-    idempotency_key: str
-    requested_by_user_id: int
-    requested_at: float
-    state_before: MissionLifecycleState
-    state_after: MissionLifecycleState
-    accepted: bool
-    message: str
-    reason: str | None = None
-
-
-@dataclass
-class _MissionRuntimeRecord:
-    client_flight_id: str
-    user_id: int
-    mission_name: str
-    mission_type: str
-    mission_task_type: str | None
-    private_patrol_task_type: str | None
-    preflight_run_id: str | None
-    state: MissionLifecycleState
-    created_at: float
-    updated_at: float
-    db_flight_id: int | None = None
-    last_error: str | None = None
-    private_patrol_trigger_type: str | None = None
-    private_patrol_target_label: str | None = None
-    command_audit: list[_MissionCommandAudit] = field(default_factory=list)
-    idempotency_results: dict[str, dict] = field(default_factory=dict)
-    private_patrol_ai_tasks: list[str] = field(default_factory=list)
-
-    @classmethod
-    def from_db(cls, row: Any) -> _MissionRuntimeRecord:
-        """Build a value-object DTO from a MissionRuntime ORM row."""
-        created_ts = (
-            row.created_at.timestamp()
-            if isinstance(row.created_at, datetime)
-            else float(row.created_at or 0)
-        )
-        updated_ts = (
-            row.updated_at.timestamp() if isinstance(row.updated_at, datetime) else created_ts
-        )
-        audit_records = [
-            _MissionCommandAudit(
-                command_id=e.get("command_id", ""),
-                command=e.get("command", ""),
-                idempotency_key=e.get("idempotency_key", ""),
-                requested_by_user_id=int(e.get("requested_by_user_id", 0)),
-                requested_at=float(e.get("requested_at", 0)),
-                state_before=e.get("state_before", ""),
-                state_after=e.get("state_after", ""),
-                accepted=bool(e.get("accepted", False)),
-                message=e.get("message", ""),
-                reason=e.get("reason"),
-            )
-            for e in (row.command_audit or [])
-        ]
-        return cls(
-            client_flight_id=row.client_flight_id,
-            user_id=row.user_id or 0,
-            mission_name=row.mission_name,
-            mission_type=row.mission_type,
-            mission_task_type=row.mission_task_type,
-            private_patrol_task_type=row.private_patrol_task_type,
-            preflight_run_id=row.preflight_run_uuid,
-            state=row.state,
-            created_at=created_ts,
-            updated_at=updated_ts,
-            db_flight_id=row.flight_id,
-            last_error=row.failure_reason,
-            command_audit=audit_records,
-            idempotency_results=dict(row.idempotency_results or {}),
-            private_patrol_ai_tasks=list(row.ai_tasks or []),
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -420,38 +296,6 @@ def _audit_to_out(audit: _MissionCommandAudit) -> MissionCommandAuditOut:
 
 
 # Stale in-memory cleanup is no longer needed — DB is the store.
-
-
-def _allowed_command_transition(
-    current: MissionLifecycleState,
-    command: MissionCommand,
-) -> MissionLifecycleState | None:
-    return allowed_command_target(current, command)
-
-
-async def _sync_runtime_flight_id_from_orchestrator(
-    runtime: _MissionRuntimeRecord,
-    orch: Any,
-) -> None:
-    """If the orch has a DB flight_id the DTO doesn't know about yet, persist it."""
-    if runtime.db_flight_id is not None:
-        return
-    raw = getattr(orch, "_flight_id", None)
-    if raw is None:
-        return
-    try:
-        fid = int(raw)
-    except Exception:
-        return
-    runtime.db_flight_id = fid
-    try:
-        await mission_application.set_flight_id(runtime.client_flight_id, flight_id=fid)
-    except Exception:
-        logger.exception(
-            "Failed persisting flight_id=%s for runtime %s",
-            fid,
-            runtime.client_flight_id,
-        )
 
 
 async def _set_runtime_state(
@@ -637,340 +481,6 @@ async def execute_mission(
             orch.current_preflight_run_id = None
 
 
-async def _get_runtime_for_user(
-    flight_id: str,
-    *,
-    user_id: int,
-) -> _MissionRuntimeRecord:
-    db_row = await mission_application.get_by_client_id_for_user(flight_id, user_id)
-    if db_row is None:
-        raise HTTPException(status_code=404, detail="Mission not found")
-    return _MissionRuntimeRecord.from_db(db_row)
-
-
-def _resolve_idempotency_key(
-    payload_key: str | None,
-    header_key: str | None,
-) -> str:
-    payload = (payload_key or "").strip()
-    header = (header_key or "").strip()
-    if payload and header and payload != header:
-        raise HTTPException(
-            status_code=409,
-            detail="Idempotency key mismatch between body and Idempotency-Key header.",
-        )
-
-    key = payload or header
-    if not key:
-        raise HTTPException(
-            status_code=400,
-            detail="Idempotency key required (body.idempotency_key or Idempotency-Key header).",
-        )
-    if len(key) < 8 or len(key) > 128:
-        raise HTTPException(status_code=400, detail="Invalid idempotency key length")
-    return key
-
-
-def _runtime_db_flight_id(runtime: _MissionRuntimeRecord) -> int | None:
-    try:
-        return int(runtime.db_flight_id) if runtime.db_flight_id is not None else None
-    except (TypeError, ValueError):
-        return None
-
-
-async def _persist_state_change_event(
-    orch: Any,
-    runtime: _MissionRuntimeRecord,
-    *,
-    event_type: str,
-    data: dict | BaseModel,
-) -> None:
-    if runtime.db_flight_id is None:
-        return
-    try:
-        await orch.record_persisted_event(
-            event_type,
-            data=data,
-            flight_id=int(runtime.db_flight_id),
-            source="tasks.mission_control",
-        )
-    except Exception:
-        logger.exception(
-            "Failed to persist mission event %s for db_flight_id=%s",
-            event_type,
-            runtime.db_flight_id,
-        )
-
-
-async def _apply_mission_command(
-    *,
-    orch: Any,
-    runtime: _MissionRuntimeRecord,
-    command: MissionCommand,
-    idempotency_key: str,
-    requested_by_user_id: int,
-    reason: str | None,
-) -> MissionCommandOut:
-    now = time.time()
-    normalized_reason = (reason or "").strip() or None
-
-    existing = await mission_application.get_idempotency_result(
-        runtime.client_flight_id, idempotency_key
-    )
-    if existing is not None:
-        if str(existing.get("command")) != command:
-            raise HTTPException(
-                status_code=409,
-                detail="Idempotency key already used for a different command.",
-            )
-        return MissionCommandOut.model_validate(existing)
-
-    await _sync_runtime_flight_id_from_orchestrator(runtime, orch)
-    state_before = runtime.state
-    state_after = state_before
-    accepted = False
-    message = ""
-
-    target_state = _allowed_command_transition(state_before, command)
-    if target_state is None:
-        if _is_terminal_state(state_before):
-            message = f"Mission already terminal ({state_before}); command ignored."
-        else:
-            message = f"Command '{command}' is invalid while mission is '{state_before}'."
-    else:
-        success = False
-        if command == "pause":
-            success = await run_blocking(
-                orch.drone.pause_mission,
-                boundary="mavlink",
-                operation="pause_mission",
-                timeout_s=10.0,
-            )
-            message = (
-                "Mission paused."
-                if success
-                else "Pause command could not be applied on current drone connection."
-            )
-        elif command == "resume":
-            success = await run_blocking(
-                orch.drone.resume_mission,
-                boundary="mavlink",
-                operation="resume_mission",
-                timeout_s=10.0,
-            )
-            message = (
-                "Mission resumed."
-                if success
-                else "Resume command could not be applied on current drone connection."
-            )
-        elif command == "abort":
-            success = await run_blocking(
-                orch.drone.abort_mission,
-                boundary="mavlink",
-                operation="abort_mission",
-                timeout_s=10.0,
-            )
-            # Abort is stateful even if transport call fails; mission task checks abort flag.
-            # The adapter sets the abort flag before mode-switch attempts.
-            if not success:
-                logger.warning(
-                    "Abort mode switch failed for mission %s; marking mission aborted anyway",
-                    runtime.client_flight_id,
-                )
-            message = "Mission aborted by operator."
-        elif command == "rth":
-            try:
-                await run_blocking(
-                    orch.drone.set_mode,
-                    "RTL",
-                    boundary="mavlink",
-                    operation="set_mode_rtl",
-                    timeout_s=10.0,
-                )
-                success = True
-                message = "Return-to-home initiated."
-            except Exception as exc:
-                logger.warning(
-                    "RTL mode switch failed for mission %s: %s",
-                    runtime.client_flight_id,
-                    exc,
-                )
-                message = f"RTH command failed: {exc}"
-        elif command == "land":
-            try:
-                await run_blocking(
-                    orch.drone.land,
-                    boundary="mavlink",
-                    operation="land",
-                    timeout_s=10.0,
-                )
-                success = True
-                message = "Land-in-place initiated."
-            except Exception as exc:
-                logger.warning(
-                    "Land command failed for mission %s: %s",
-                    runtime.client_flight_id,
-                    exc,
-                )
-                message = f"Land command failed: {exc}"
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported command '{command}'")
-
-        if success or command == "abort":
-            accepted = True
-            state_after = target_state
-
-    command_id = f"cmd_{int(now)}_{uuid.uuid4().hex[:10]}"
-    response_payload = {
-        "flight_id": runtime.client_flight_id,
-        "command_id": command_id,
-        "command": command,
-        "idempotency_key": idempotency_key,
-        "state_before": state_before,
-        "state_after": state_after,
-        "accepted": accepted,
-        "message": message,
-        "requested_at": now,
-    }
-
-    audit_entry = {
-        "command_id": command_id,
-        "command": command,
-        "idempotency_key": idempotency_key,
-        "requested_by_user_id": int(requested_by_user_id),
-        "requested_at": now,
-        "state_before": state_before,
-        "state_after": state_after,
-        "accepted": accepted,
-        "message": message,
-        "reason": normalized_reason,
-    }
-    updated_row = await mission_application.apply_command(
-        runtime.client_flight_id,
-        new_state=state_after,
-        audit_entry=audit_entry,
-        idempotency_key=idempotency_key,
-        idempotency_response=response_payload,
-    )
-    runtime.state = state_after
-
-    # Persist to dedicated operator_commands table (async, non-blocking failure).
-    try:
-        requested_at_dt = datetime.fromtimestamp(now, tz=UTC)
-        await mission_application.record_command(
-            command_id=command_id,
-            client_flight_id=runtime.client_flight_id,
-            mission_runtime_id=updated_row.id if updated_row is not None else None,
-            command=command,
-            idempotency_key=idempotency_key,
-            requested_by_user_id=int(requested_by_user_id),
-            state_before=state_before,
-            state_after=state_after,
-            accepted=accepted,
-            message=message,
-            reason=normalized_reason,
-            requested_at=requested_at_dt,
-        )
-    except Exception:
-        logger.exception(
-            "Failed persisting operator command record for %s / %s",
-            runtime.client_flight_id,
-            command_id,
-        )
-
-    if accepted:
-        mission_context = mission_context_from_runtime(runtime)
-        runtime_db_flight_id = _runtime_db_flight_id(runtime)
-        flight_event_envelope = FlightEventEnvelopeV1(
-            mission_runtime_id=runtime.client_flight_id,
-            db_flight_id=runtime_db_flight_id,
-            sequence=next_runtime_sequence(
-                runtime.client_flight_id,
-                "tasks.mission_control",
-            ),
-            emitted_at=utc_now(),
-            source="tasks.mission_control",
-            mission=mission_context,
-            payload=FlightEventPayloadV1(
-                event_name="mission_command",
-                category="mission_control",
-                severity=FlightEventSeverityV1.INFO,
-                attributes={
-                    "command_id": command_id,
-                    "command": command,
-                    "idempotency_key": idempotency_key,
-                    "state_before": state_before,
-                    "state_after": state_after,
-                    "reason": normalized_reason,
-                    "requested_by_user_id": int(requested_by_user_id),
-                },
-            ),
-        )
-        await _persist_state_change_event(
-            orch,
-            runtime,
-            event_type="mission_command",
-            data=flight_event_envelope.payload,
-        )
-        lifecycle_envelope = MissionLifecycleEnvelopeV1(
-            mission_runtime_id=runtime.client_flight_id,
-            db_flight_id=runtime_db_flight_id,
-            sequence=next_runtime_sequence(
-                runtime.client_flight_id,
-                "tasks.mission_control",
-            ),
-            emitted_at=utc_now(),
-            source="tasks.mission_control",
-            mission=mission_context,
-            payload=MissionLifecyclePayloadV1(
-                state=state_after,
-                previous_state=state_before,
-                trigger=f"command:{command}",
-                reason=normalized_reason,
-                command_id=command_id,
-                requested_by_user_id=int(requested_by_user_id),
-            ),
-        )
-        await _persist_state_change_event(
-            orch,
-            runtime,
-            event_type="mission_state_changed",
-            data=lifecycle_envelope.payload,
-        )
-        if runtime.db_flight_id is not None:
-            if state_after in {"airborne", "running", "paused", "resumed"}:
-                try:
-                    db_status = _db_status_for_runtime_state(state_after)
-                    await mission_application.set_operational_flight_status(
-                        orch.repo,
-                        runtime.db_flight_id,
-                        status=db_status,
-                        note=message,
-                    )
-                except Exception:
-                    logger.exception(
-                        "Failed updating flight status to %s for db_flight_id=%s",
-                        db_status.value,
-                        runtime.db_flight_id,
-                    )
-            elif state_after in {"aborting", "aborted"}:
-                try:
-                    await mission_application.finish_operational_flight(
-                        orch.repo,
-                        runtime.db_flight_id,
-                        status=FlightStatus.INTERRUPTED,
-                        note=message,
-                    )
-                except Exception:
-                    logger.exception(
-                        "Failed updating flight status to interrupted for db_flight_id=%s",
-                        runtime.db_flight_id,
-                    )
-
-    return MissionCommandOut.model_validate(response_payload)
-
-
-# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -1238,75 +748,6 @@ async def get_mission_state_transitions(
         limit=page_limit,
         offset=page_offset,
     )
-
-
-@router.get("/missions/{flight_id}/commands", response_model=Page[MissionCommandAuditOut])
-async def get_mission_command_audit(
-    flight_id: str,
-    limit: int = Query(default=100, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    cursor: str | None = Query(default=None),
-    user=Depends(require_user),
-):
-    # Ownership check — raises 404 if not found or wrong user.
-    await _get_runtime_for_user(flight_id, user_id=int(user.id))
-    page_limit = clamp_page_limit(limit)
-    page_offset = decode_offset_cursor(cursor) if cursor else offset
-    rows = await mission_application.list_commands(
-        flight_id, limit=page_limit + 1, offset=page_offset
-    )
-    items = [
-        MissionCommandAuditOut(
-            command_id=row.command_id,
-            command=row.command,
-            idempotency_key=row.idempotency_key,
-            requested_by_user_id=row.requested_by_user_id or 0,
-            requested_at=row.requested_at.timestamp() if row.requested_at else 0.0,
-            state_before=row.state_before,
-            state_after=row.state_after,
-            accepted=row.accepted,
-            message=row.message,
-            reason=row.reason,
-        )
-        for row in rows
-    ]
-    return page_from_offset(items, limit=page_limit, offset=page_offset)
-
-
-@router.post(
-    "/missions/{flight_id}/commands/{command}",
-    response_model=MissionCommandOut,
-)
-async def issue_mission_command(
-    flight_id: str,
-    command: MissionCommand,
-    payload: MissionCommandIn,
-    idempotency_key_header: str | None = Header(default=None, alias="Idempotency-Key"),
-    user=Depends(require_user),
-):
-    runtime = await _get_runtime_for_user(flight_id, user_id=int(user.id))
-    orch = await get_orchestrator()
-    idempotency_key = _resolve_idempotency_key(
-        payload.idempotency_key,
-        idempotency_key_header,
-    )
-
-    result = await _apply_mission_command(
-        orch=orch,
-        runtime=runtime,
-        command=command,
-        idempotency_key=idempotency_key,
-        requested_by_user_id=int(user.id),
-        reason=payload.reason,
-    )
-
-    if result.accepted and command in {"abort", "rth", "land"} and result.state_before == "queued":
-        active_task = getattr(orch, "_active_mission_task", None)
-        if active_task is not None and not active_task.done():
-            active_task.cancel()
-            logger.info("Cancelled queued mission task for %s after abort command", flight_id)
-
-    return result
 
 
 class PrivatePatrolTaskTemplateOut(BaseModel):

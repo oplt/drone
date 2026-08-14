@@ -32,7 +32,6 @@ import {
   type TwoFactorVerifyPayload,
 } from "../../../modules/session/api/accountApi";
 import InfoLabel from "../../../shared/ui/InfoLabel";
-import Header from "../../../shared/layout/WorkflowHeader";
 import PageLayout, { PageSection } from "../../../shared/layout/PageLayout";
 
 function PasswordField({
@@ -421,7 +420,6 @@ export default function AccountPage() {
 
   return (
     <>
-      <Header />
       <PageLayout
         eyebrow="Account"
         title="Security and access controls"

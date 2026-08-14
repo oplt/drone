@@ -17,6 +17,14 @@ def _engine_kwargs(database_url: str) -> dict[str, Any]:
 
     Keep this small and portable: SQLite/aiosqlite does not accept all queue-pool
     parameters, while PostgreSQL/MySQL benefit from pre-ping and connection recycle.
+
+    Pool sizing (PostgreSQL/MySQL): set ``DATABASE_POOL_SIZE`` and
+    ``DATABASE_MAX_OVERFLOW`` on ``BootstrapSettings`` so that
+
+        pool_size + max_overflow >= (uvicorn_workers * concurrent_db_routes) + worker_margin
+
+    where ``concurrent_db_routes`` is the typical number of in-flight HTTP handlers
+    holding a session, and ``worker_margin`` covers Celery tasks in the same process.
     """
     kwargs: dict[str, Any] = {
         "pool_pre_ping": True,
@@ -31,6 +39,8 @@ def _engine_kwargs(database_url: str) -> dict[str, Any]:
             {
                 "pool_recycle": 1800,
                 "pool_timeout": 30,
+                "pool_size": int(getattr(bootstrap, "database_pool_size", 10) or 10),
+                "max_overflow": int(getattr(bootstrap, "database_max_overflow", 20) or 20),
             }
         )
     return kwargs

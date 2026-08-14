@@ -14,4 +14,5 @@ export type AnalysisControlsProps = {
   onUpload: () => void;
   onAnalyze: () => void;
   onVideoUpdated?: (video: VideoAsset) => void;
+  analyzeDisabled?: boolean;
 };

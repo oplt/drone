@@ -40,6 +40,14 @@ export default defineConfig({
         target: "http://localhost:8000",
         changeOrigin: true,
       },
+      "/admin": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/agriculture": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
       "/tasks": {
         target: "http://localhost:8000",
         changeOrigin: true,
@@ -82,6 +90,14 @@ export default defineConfig({
         changeOrigin: true,
       },
       "/analytics": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/livestock": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/vision": {
         target: "http://localhost:8000",
         changeOrigin: true,
       },

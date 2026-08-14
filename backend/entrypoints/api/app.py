@@ -72,6 +72,23 @@ from backend.observability.tracing import setup_tracing
 
 logger = logging.getLogger(__name__)
 
+_CORS_ALLOW_HEADERS = [
+    "Accept",
+    "Authorization",
+    "Content-Type",
+    "Idempotency-Key",
+    "If-Match",
+    "Upload-Offset",
+    "X-Request-ID",
+]
+_CORS_EXPOSE_HEADERS = [
+    "Content-Disposition",
+    "ETag",
+    "Location",
+    "X-Agriculture-Schema-Version",
+    "X-Request-ID",
+]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -92,6 +109,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await alert_engine.start()
     logger.info("Operational alert engine started")
 
+    from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
+    from backend.modules.warehouse.service.live_map_stream import warehouse_live_map_stream
+
+    await telemetry_manager.initialize()
+    await warehouse_live_map_stream.initialize()
+
     await patrol_event_trigger_mqtt.start()
 
     yield
@@ -109,6 +132,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     await patrol_event_trigger_mqtt.stop()
     logger.info("Patrol event-trigger MQTT subscriber stopped")
+
+    from backend.infrastructure.messaging.websocket_publisher import telemetry_manager
+    from backend.modules.warehouse.service.live_map_stream import warehouse_live_map_stream
+
+    await telemetry_manager.shutdown()
+    await warehouse_live_map_stream.shutdown()
 
     await ai_gateway.close()
     await close_redis_client()
@@ -175,8 +204,8 @@ app.add_middleware(
         "OPTIONS",
         "HEAD",
     ],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_headers=_CORS_ALLOW_HEADERS,
+    expose_headers=_CORS_EXPOSE_HEADERS,
     max_age=600,
 )
 

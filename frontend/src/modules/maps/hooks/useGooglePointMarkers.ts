@@ -7,6 +7,7 @@ export type GooglePointMarker = {
   };
   title: string;
   color: string;
+  onClick?: () => void;
 };
 
 type AdvancedMarkerCtor = new (opts: unknown) => unknown;
@@ -74,13 +75,24 @@ export function useGooglePointMarkers({
 
     if (!enabled || markers.length === 0) return;
 
-    markers.forEach(({ point, title, color }) => {
+    markers.forEach(({ point, title, color, onClick }) => {
       const marker = new AdvancedMarkerElement({
         map: mapRef.current,
         position: { lat: point.lat, lng: point.lon },
         content: createMarkerContent(color),
         title,
       });
+      if (onClick) {
+        (marker as { addListener?: (event: string, handler: () => void) => void }).addListener?.(
+          "click",
+          onClick,
+        );
+        const el = (marker as { element?: HTMLElement }).element;
+        if (el) {
+          el.style.cursor = "pointer";
+          el.addEventListener("click", onClick);
+        }
+      }
 
       markersRef.current.push(marker);
     });

@@ -42,18 +42,24 @@ export type LeafletMapProps = {
   height?: number | string;
   focusRing?: LonLat[] | null;
   focusRequestToken?: number;
+  followEnabled?: boolean;
+  selectedWaypointIndex?: number | null;
+  onSelectWaypoint?: (index: number) => void;
 };
 
 function toLatLng(p: LatLng): LatLngExpression {
   return [p.lat, p.lng];
 }
 
-function makeWaypointIcon(label: string) {
+function makeWaypointIcon(label: string, selected = false) {
+  const border = selected ? "#ff6d00" : "#1976d2";
+  const color = selected ? "#ff6d00" : "#1976d2";
+  const size = selected ? 30 : 26;
   return L.divIcon({
     className: "",
-    html: `<div style="width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #1976d2;color:#1976d2;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.24)">${label}</div>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#fff;border:2px solid ${border};color:${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.24)">${label}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
 }
 
@@ -88,6 +94,9 @@ export default function LeafletMap({
   height = 400,
   focusRing = null,
   focusRequestToken,
+  followEnabled = true,
+  selectedWaypointIndex = null,
+  onSelectWaypoint,
 }: LeafletMapProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMapInstance | null>(null);
@@ -305,8 +314,13 @@ export default function LeafletMap({
 
     waypoints.forEach((point, index) => {
       L.marker([point.lat, point.lon], {
-        icon: makeWaypointIcon(String(index + 1)),
-      }).addTo(layers);
+        icon: makeWaypointIcon(String(index + 1), selectedWaypointIndex === index),
+      })
+        .on("click", (event) => {
+          event.originalEvent.stopPropagation();
+          onSelectWaypoint?.(index);
+        })
+        .addTo(layers);
     });
 
     if (route.length >= 2) {
@@ -323,11 +337,25 @@ export default function LeafletMap({
     savedFields,
     selectedFieldId,
     waypoints,
+    selectedWaypointIndex,
+    onSelectWaypoint,
     onSavedFieldClick,
     onFieldBoundaryClick,
     drawnBoundarySelected,
     drawMode,
   ]);
+
+  useEffect(() => {
+    if (!followEnabled || !droneCenter || !mapRef.current) return;
+    mapRef.current.panTo(toLatLng(droneCenter));
+  }, [droneCenter, followEnabled]);
+
+  useEffect(() => {
+    if (selectedWaypointIndex == null || !mapRef.current) return;
+    const wp = waypoints[selectedWaypointIndex];
+    if (!wp) return;
+    mapRef.current.panTo([wp.lat, wp.lon]);
+  }, [selectedWaypointIndex, waypoints]);
 
   useEffect(() => {
     const liveLayers = liveLayerRef.current;

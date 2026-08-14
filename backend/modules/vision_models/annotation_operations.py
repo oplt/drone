@@ -55,10 +55,18 @@ class AnnotationOperations:
         if image is None:
             raise VisionNotFound("Dataset image not found")
         uri = image.thumbnail_uri if thumbnail else image.storage_uri
-        if not uri:
+        storage_object = (
+            image.thumbnail_storage_object if thumbnail else image.storage_object
+        )
+        if not uri and storage_object is None:
             raise VisionNotFound("Image artifact is unavailable")
         try:
-            path = self.storage.resolve_uri(uri)
+            path = self.storage.resolve_registered(
+                backend_key=(
+                    storage_object.backend_key if storage_object is not None else None
+                ),
+                legacy_uri=uri,
+            )
         except VisionStorageError as exc:
             raise VisionNotFound("Image artifact is unavailable") from exc
         if not path.is_file():

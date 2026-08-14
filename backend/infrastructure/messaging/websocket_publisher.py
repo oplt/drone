@@ -12,6 +12,7 @@ from starlette.websockets import WebSocketState
 
 from backend.observability.instruments import observed_span
 from backend.observability.metrics import add as metric_add
+from backend.observability import prometheus_metrics
 from backend.core.events import (
     MissionLifecycleEnvelopeV1,
     TelemetryEnvelopeV1,
@@ -25,6 +26,18 @@ REDIS_LAST_TELEMETRY_KEY = "telemetry:last_envelope"
 REDIS_LAST_LIFECYCLE_KEY = "telemetry:last_lifecycle_envelope"
 
 
+def _record_telemetry_redis_fallback(reason: str) -> None:
+    prometheus_metrics.telemetry_redis_fallback_total.labels(reason=reason).inc()
+
+
+def _envelope_org_id(envelope: TelemetryEnvelopeV1 | MissionLifecycleEnvelopeV1) -> int | None:
+    mission = getattr(envelope, "mission", None)
+    if mission is None:
+        return None
+    org_id = getattr(mission, "org_id", None)
+    return int(org_id) if org_id is not None else None
+
+
 @dataclass
 class Client:
     ws: WebSocket
@@ -34,10 +47,24 @@ class Client:
     client_host: str | None = None
     client_port: int | None = None
     user_agent: str | None = None
+    user_id: int | None = None
+    org_id: int | None = None
+    mission_runtime_id: str | None = None
+    wire_protocol: str = "legacy"
 
 
 class TelemetryWebSocketManager:
-    """Manages WebSocket connections for real-time telemetry broadcasting"""
+    """Manages WebSocket connections for real-time telemetry broadcasting.
+
+    Concurrency invariants:
+    - ``_lock`` (threading.Lock) protects ``_clients`` and ``active_connections``.
+      It may be taken from async coroutines and from writer-task ``finally`` blocks;
+      critical sections must stay short (map lookups / insert / delete only).
+    - ``_running`` / ``_source_connected`` are updated from the sync MAVLink worker
+      thread via ``set_runtime_active``; treat them as best-effort runtime flags.
+    - Fan-out filtering uses per-client ``org_id`` and optional ``mission_runtime_id``
+      subscription set via the telemetry WebSocket ``subscribe`` control message.
+    """
 
     def __init__(self):
         self.active_connections: set[WebSocket] = set()
@@ -84,16 +111,40 @@ class TelemetryWebSocketManager:
 
             self._redis = await aioredis.from_url(settings.redis_url, decode_responses=False)
             await self._redis.ping()
-            self._subscriber_task = asyncio.create_task(self._redis_subscriber())
+            self._subscriber_task = asyncio.create_task(self._run_redis_subscriber())
             logger.info(
                 "WebSocket manager: Redis pub/sub fan-out enabled (channel=%s)", REDIS_CHANNEL
             )
         except Exception as exc:
+            _record_telemetry_redis_fallback("init_unavailable")
             logger.warning(
                 "WebSocket manager: Redis unavailable, falling back to in-process broadcast: %s",
                 exc,
             )
             self._redis = None
+
+    async def _run_redis_subscriber(self) -> None:
+        """Run the pub/sub listener with reconnect until shutdown."""
+        backoff_s = 1.0
+        while not self._shutting_down:
+            try:
+                await self._redis_subscriber()
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                if self._shutting_down:
+                    break
+                _record_telemetry_redis_fallback("subscriber_error")
+                logger.error("Redis subscriber crashed: %s", exc)
+            if self._shutting_down:
+                break
+            _record_telemetry_redis_fallback("subscriber_reconnect")
+            logger.warning(
+                "Redis subscriber exited unexpectedly; reconnecting in %.1fs",
+                backoff_s,
+            )
+            await asyncio.sleep(backoff_s)
+            backoff_s = min(backoff_s * 2, 30.0)
 
     async def _redis_subscriber(self):
         from backend.core.config.runtime import settings
@@ -108,7 +159,33 @@ class TelemetryWebSocketManager:
             await pubsub.subscribe(REDIS_CHANNEL)
             async for message in pubsub.listen():
                 if message["type"] == "message":
-                    await self._local_broadcast(message["data"])
+                    raw = message["data"]
+                    mission_runtime_id = None
+                    org_id = None
+                    payload = raw
+                    try:
+                        parsed = orjson.loads(raw)
+                        if (
+                            isinstance(parsed, dict)
+                            and parsed.get("v") == 1
+                            and "d" in parsed
+                        ):
+                            filt = parsed.get("f") or {}
+                            mission_runtime_id = filt.get("m")
+                            org_id = filt.get("o")
+                            body = parsed["d"]
+                            payload = (
+                                body
+                                if isinstance(body, (bytes, bytearray))
+                                else orjson.dumps(body)
+                            )
+                    except Exception:
+                        payload = raw
+                    await self._local_broadcast(
+                        payload,
+                        mission_runtime_id=mission_runtime_id,
+                        org_id=org_id,
+                    )
         except asyncio.CancelledError:
             pass
         except Exception as exc:
@@ -116,6 +193,7 @@ class TelemetryWebSocketManager:
             if self._shutting_down or "connection closed" in message:
                 logger.info("Redis subscriber closed during shutdown: %s", exc)
             else:
+                _record_telemetry_redis_fallback("subscriber_error")
                 logger.error("Redis subscriber error: %s", exc)
         finally:
             if pubsub is not None:
@@ -209,11 +287,15 @@ class TelemetryWebSocketManager:
             self.last_telemetry = envelope.payload.to_legacy_snapshot(
                 timestamp_s=envelope.emitted_at.timestamp(),
             )
-            payload = orjson.dumps(envelope.to_legacy_websocket_message())
+            legacy_payload = orjson.dumps(envelope.to_legacy_websocket_message())
             if self._redis is not None:
                 with suppress(Exception):
-                    await self._redis.set(REDIS_LAST_TELEMETRY_KEY, payload, ex=300)
-            await self.broadcast_bytes(payload)
+                    await self._redis.set(REDIS_LAST_TELEMETRY_KEY, legacy_payload, ex=300)
+            await self._broadcast_telemetry_envelope(
+                envelope,
+                mission_runtime_id=envelope.mission_runtime_id,
+                org_id=_envelope_org_id(envelope),
+            )
             metric_add("api_websocket_messages", attrs={"message_type": "telemetry"})
 
     async def ingest_mission_lifecycle_envelope(self, envelope: MissionLifecycleEnvelopeV1) -> None:
@@ -228,11 +310,20 @@ class TelemetryWebSocketManager:
             if self._redis is not None:
                 with suppress(Exception):
                     await self._redis.set(REDIS_LAST_LIFECYCLE_KEY, payload, ex=300)
-            await self.broadcast_bytes(payload)
+            await self.broadcast_bytes(
+                payload,
+                mission_runtime_id=envelope.mission_runtime_id,
+                org_id=_envelope_org_id(envelope),
+            )
             metric_add("api_websocket_messages", attrs={"message_type": str(envelope.kind)})
 
-    # websocket.py (update the connect method)
-    async def connect(self, websocket: WebSocket):
+    async def connect(
+        self,
+        websocket: WebSocket,
+        *,
+        user_id: int | None = None,
+        org_id: int | None = None,
+    ):
         """Accept and manage a new WebSocket connection"""
         try:
             # IMPORTANT: Don't call websocket.accept() here!
@@ -294,6 +385,8 @@ class TelemetryWebSocketManager:
                     client_host=client_host,
                     client_port=client_port,
                     user_agent=user_agent,
+                    user_id=user_id,
+                    org_id=org_id,
                 )
 
             logger.info(
@@ -304,11 +397,22 @@ class TelemetryWebSocketManager:
                 user_agent,
             )
 
-            # Send initial telemetry data if available
+            # Send initial telemetry only when it belongs to this client's org.
             if self.last_telemetry["timestamp"] > 0:
-                payload = orjson.dumps({"type": "telemetry", "data": self.last_telemetry})
-                await q.put(payload)
-                metric_add("api_websocket_messages", attrs={"message_type": "initial_telemetry"})
+                envelope_org = _envelope_org_id(self.last_telemetry_envelope) if (
+                    self.last_telemetry_envelope is not None
+                ) else None
+                if (
+                    org_id is None
+                    or envelope_org is None
+                    or envelope_org == org_id
+                ):
+                    payload = orjson.dumps({"type": "telemetry", "data": self.last_telemetry})
+                    await q.put(payload)
+                    metric_add(
+                        "api_websocket_messages",
+                        attrs={"message_type": "initial_telemetry"},
+                    )
 
             # Return the writer task so the route can monitor it
             return task
@@ -399,17 +503,143 @@ class TelemetryWebSocketManager:
             # Queue still full, skip this message
             pass
 
-    async def broadcast_bytes(self, payload: bytes):
-        """Broadcast message to all connected clients via Redis (or local fallback)."""
+    def set_client_subscription(
+        self,
+        websocket: WebSocket,
+        *,
+        mission_runtime_id: str | None,
+        wire_protocol: str | None = None,
+    ) -> None:
+        with self._lock:
+            client = self._clients.get(websocket)
+            if client is None:
+                return
+            client.mission_runtime_id = mission_runtime_id
+            if wire_protocol in {"legacy", "v1"}:
+                client.wire_protocol = wire_protocol
+
+    async def _broadcast_telemetry_envelope(
+        self,
+        envelope: TelemetryEnvelopeV1,
+        *,
+        mission_runtime_id: str | None = None,
+        org_id: int | None = None,
+    ) -> None:
+        legacy_payload = orjson.dumps(envelope.to_legacy_websocket_message())
         if self._redis is not None:
             try:
-                await self._redis.publish(REDIS_CHANNEL, payload)
+                redis_envelope = orjson.dumps(
+                    {
+                        "v": 1,
+                        "f": {"m": mission_runtime_id, "o": org_id},
+                        "d": orjson.loads(legacy_payload),
+                    }
+                )
+                await self._redis.publish(REDIS_CHANNEL, redis_envelope)
                 return
             except Exception as exc:
+                _record_telemetry_redis_fallback("publish_failed")
                 logger.warning("Redis publish failed, falling back to local broadcast: %s", exc)
-        await self._local_broadcast(payload)
+        await self._local_broadcast_telemetry(
+            envelope,
+            mission_runtime_id=mission_runtime_id,
+            org_id=org_id,
+        )
 
-    async def _local_broadcast(self, payload: bytes):
+    async def _local_broadcast_telemetry(
+        self,
+        envelope: TelemetryEnvelopeV1,
+        *,
+        mission_runtime_id: str | None = None,
+        org_id: int | None = None,
+    ) -> None:
+        if not self._clients:
+            return
+
+        with self._lock:
+            clients = list(self._clients.values())
+
+        disconnected_clients = []
+
+        for client in clients:
+            try:
+                if not self._client_allows(
+                    client,
+                    mission_runtime_id=mission_runtime_id,
+                    org_id=org_id,
+                ):
+                    continue
+                if client.ws.client_state == WebSocketState.CONNECTED:
+                    wire_protocol = client.wire_protocol if client.wire_protocol in {
+                        "legacy",
+                        "v1",
+                    } else "legacy"
+                    payload = orjson.dumps(
+                        envelope.to_websocket_message(wire_protocol=wire_protocol)  # type: ignore[arg-type]
+                    )
+                    self._enqueue_latest(client.q, payload)
+                else:
+                    disconnected_clients.append(client.ws)
+            except Exception as e:
+                logger.error(f"Failed to broadcast telemetry to client: {e}")
+                disconnected_clients.append(client.ws)
+
+        if disconnected_clients:
+            for ws in disconnected_clients:
+                self.disconnect(ws)
+
+    @staticmethod
+    def _client_allows(
+        client: Client,
+        *,
+        mission_runtime_id: str | None,
+        org_id: int | None,
+    ) -> bool:
+        if org_id is not None and client.org_id is not None and client.org_id != org_id:
+            return False
+        if (
+            mission_runtime_id
+            and client.mission_runtime_id
+            and client.mission_runtime_id != mission_runtime_id
+        ):
+            return False
+        return True
+
+    async def broadcast_bytes(
+        self,
+        payload: bytes,
+        *,
+        mission_runtime_id: str | None = None,
+        org_id: int | None = None,
+    ):
+        """Broadcast message to connected clients via Redis (or local fallback)."""
+        if self._redis is not None:
+            try:
+                envelope = orjson.dumps(
+                    {
+                        "v": 1,
+                        "f": {"m": mission_runtime_id, "o": org_id},
+                        "d": orjson.loads(payload),
+                    }
+                )
+                await self._redis.publish(REDIS_CHANNEL, envelope)
+                return
+            except Exception as exc:
+                _record_telemetry_redis_fallback("publish_failed")
+                logger.warning("Redis publish failed, falling back to local broadcast: %s", exc)
+        await self._local_broadcast(
+            payload,
+            mission_runtime_id=mission_runtime_id,
+            org_id=org_id,
+        )
+
+    async def _local_broadcast(
+        self,
+        payload: bytes,
+        *,
+        mission_runtime_id: str | None = None,
+        org_id: int | None = None,
+    ):
         """Fan-out payload to this process's connected clients only."""
         if not self._clients:
             return
@@ -421,6 +651,12 @@ class TelemetryWebSocketManager:
 
         for client in clients:
             try:
+                if not self._client_allows(
+                    client,
+                    mission_runtime_id=mission_runtime_id,
+                    org_id=org_id,
+                ):
+                    continue
                 if client.ws.client_state == WebSocketState.CONNECTED:
                     self._enqueue_latest(client.q, payload)
                 else:

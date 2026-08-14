@@ -9,11 +9,9 @@ API event loop or the in-flight scan path.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import socket
-from collections.abc import Coroutine
 from typing import Any
 
 from celery.signals import heartbeat_sent, worker_ready, worker_shutdown
@@ -27,8 +25,15 @@ from backend.modules.warehouse.service.structure_jobs import (
     extract_and_persist_structure,
     record_extraction_failed,
     clear_mapping_worker_heartbeat,
+    get_extraction_state,
     params_from_payload,
     record_mapping_worker_heartbeat,
+)
+from backend.shared.worker_idempotency import (
+    WorkerTaskClaim,
+    claim_worker_task,
+    complete_worker_task,
+    release_worker_task,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,6 +42,27 @@ setup_logging()
 WAREHOUSE_MAPPING_QUEUE = settings.celery_warehouse_mapping_queue
 _worker_loop = WorkerLoopState()
 _TASK_NAME = EXTRACTION_TASK_NAME
+
+
+def _extraction_idempotency_key(
+    *,
+    warehouse_map_id: int,
+    model_id: int,
+    extraction_job_id: int | None,
+) -> str:
+    if extraction_job_id is not None:
+        return f"job:{int(extraction_job_id)}"
+    return f"map:{int(warehouse_map_id)}:model:{int(model_id)}"
+
+
+def _cached_extraction_result(existing_state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": "ready",
+        "warehouse_map_id": existing_state.get("warehouse_map_id"),
+        "model_id": existing_state.get("model_id"),
+        "target_count": existing_state.get("target_count"),
+        "duplicate": True,
+    }
 
 
 @worker_ready.connect
@@ -74,23 +100,13 @@ def _warehouse_mapping_worker_shutdown(sender: Any = None, **_kwargs: Any) -> No
     clear_mapping_worker_heartbeat(name)
 
 
-def _get_worker_loop() -> asyncio.AbstractEventLoop:
-    return _worker_loop.get_loop()
-
-
-def _run_on_worker_loop(coro: Coroutine[Any, Any, dict[str, Any]]) -> dict[str, Any]:
-    loop = _get_worker_loop()
-    if loop.is_running():
-        raise RuntimeError("Warehouse mapping worker event loop is already running.")
-    asyncio.set_event_loop(loop)
-    return loop.run_until_complete(coro)
-
-
 @celery_app.task(
     bind=True,
     max_retries=1,
     name=EXTRACTION_TASK_NAME,
     queue=WAREHOUSE_MAPPING_QUEUE,
+    time_limit=3600,
+    soft_time_limit=3300,
 )
 def extract_warehouse_structure(
     self,
@@ -106,8 +122,27 @@ def extract_warehouse_structure(
         model_id,
         client_flight_id,
     )
+    idempotency_key = _extraction_idempotency_key(
+        warehouse_map_id=int(warehouse_map_id),
+        model_id=int(model_id),
+        extraction_job_id=extraction_job_id,
+    )
+    claim, cached = claim_worker_task("warehouse_extract", idempotency_key, ttl_s=7200)
+    if claim == WorkerTaskClaim.SKIP_COMPLETED and cached is not None:
+        return cached
+    if claim == WorkerTaskClaim.SKIP_IN_FLIGHT:
+        return {
+            "status": "duplicate",
+            "warehouse_map_id": int(warehouse_map_id),
+            "model_id": int(model_id),
+        }
+    existing_state = get_extraction_state(int(warehouse_map_id)) or {}
+    if existing_state.get("status") == "ready":
+        cached_result = _cached_extraction_result(existing_state)
+        complete_worker_task("warehouse_extract", idempotency_key, cached_result, ttl_s=7200)
+        return cached_result
     try:
-        result = _run_on_worker_loop(
+        result = _worker_loop.run(
             extract_and_persist_structure(
                 warehouse_map_id=int(warehouse_map_id),
                 model_id=int(model_id),
@@ -116,6 +151,7 @@ def extract_warehouse_structure(
                 extraction_job_id=extraction_job_id,
             )
         )
+        complete_worker_task("warehouse_extract", idempotency_key, result, ttl_s=7200)
         logger.info(
             "Completed warehouse structure extraction map_id=%s targets=%s",
             warehouse_map_id,
@@ -129,15 +165,15 @@ def extract_warehouse_structure(
             client_flight_id,
         )
         if self.request.retries >= self.max_retries:
-            from backend.modules.warehouse.service.structure_jobs import get_extraction_state
-
-            existing_state = get_extraction_state(int(warehouse_map_id)) or {}
             record_extraction_failed(
                 warehouse_map_id=int(warehouse_map_id),
                 error_message=str(exc),
                 failure_reason_codes=list(existing_state.get("failure_reason_codes") or []),
                 debug_artifact_url=existing_state.get("debug_artifact_url"),
             )
+            release_worker_task("warehouse_extract", idempotency_key)
+        else:
+            release_worker_task("warehouse_extract", idempotency_key)
         raise self.retry(
             exc=exc,
             countdown=retry_delay_seconds(attempt=self.request.retries),

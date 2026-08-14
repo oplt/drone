@@ -25,6 +25,7 @@ export default function FieldPage() {
       subtitle="Configure field routes, stream telemetry, and monitor imagery in real time."
       droneConnected={vm.droneConnected}
       wsConnected={vm.wsConnected}
+      telemetry={telemetry}
       errors={vm.errors}
       onDismissError={vm.dismissError}
       onClearErrors={vm.clearErrors}
@@ -34,6 +35,7 @@ export default function FieldPage() {
         apiKey={map.apiKey}
         loadError={map.loadError}
         mapId={map.mapId}
+        onSwitchEngine={map.handleMapEngineChange}
       />
 
       {vm.googleMapsReady ? (
@@ -102,6 +104,8 @@ export default function FieldPage() {
             wsConnected={vm.wsConnected}
             agricultureEvent={vm.agricultureEvent}
             agricultureEventSequenceGap={vm.agricultureEventSequenceGap}
+            selectedWaypointIndex={map.selectedWaypointIndex}
+            onSelectWaypoint={map.setSelectedWaypointIndex}
           />
         </>
       ) : null}

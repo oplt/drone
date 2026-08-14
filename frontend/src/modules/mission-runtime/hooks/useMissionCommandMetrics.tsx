@@ -5,15 +5,6 @@ function formatMaybeNumber(v: unknown, digits = 1) {
   return typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : "--";
 }
 
-function toFiniteNumber(v: unknown): number | null {
-  if (typeof v === "number") return Number.isFinite(v) ? v : null;
-  if (typeof v === "string" && v.trim() !== "") {
-    const parsed = Number(v);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
 function formatMaybePercent(v: unknown) {
   return typeof v === "number" && Number.isFinite(v) ? `${Math.round(v)}%` : "--";
 }
@@ -27,7 +18,6 @@ export function useMissionCommandMetrics(telemetry: unknown) {
     const rc = t.rc as Record<string, unknown> | undefined;
     const lte = t.lte as Record<string, unknown> | undefined;
     const telemetryBlock = t.telemetry as Record<string, unknown> | undefined;
-    const wind = t.wind as Record<string, unknown> | undefined;
     const status = t.status as Record<string, unknown> | undefined;
 
     const batteryCellsRaw =
@@ -42,16 +32,6 @@ export function useMissionCommandMetrics(telemetry: unknown) {
     const linkLte = link?.lte ?? lte?.quality ?? t.lte_quality ?? null;
     const linkTelemetry =
       link?.telemetry ?? telemetryBlock?.quality ?? t.telemetry_quality ?? null;
-
-    let windSpeed =
-      toFiniteNumber(wind?.speed) ?? toFiniteNumber(t.wind_speed) ?? toFiniteNumber(t.windSpeed);
-    if (windSpeed === null) {
-      const windX = toFiniteNumber(wind?.wind_x_ned_m_s) ?? toFiniteNumber(t.wind_x_ned_m_s);
-      const windY = toFiniteNumber(wind?.wind_y_ned_m_s) ?? toFiniteNumber(t.wind_y_ned_m_s);
-      if (windX !== null || windY !== null) {
-        windSpeed = Math.hypot(windX ?? 0, windY ?? 0);
-      }
-    }
 
     const failsafeRaw =
       (t.failsafe as Record<string, unknown> | undefined)?.state ??
@@ -82,9 +62,6 @@ export function useMissionCommandMetrics(telemetry: unknown) {
           ? !["none", "ok", "inactive"].includes(failsafeRaw.toLowerCase())
           : false;
 
-    const windDisplay =
-      windSpeed === null ? telemetrySummary.wind : `${formatMaybeNumber(windSpeed, 1)} m/s`;
-
     return {
       flightStatus: telemetrySummary.flightStatus,
       gpsStrength: telemetrySummary.gpsStrength,
@@ -93,7 +70,7 @@ export function useMissionCommandMetrics(telemetry: unknown) {
       altitudeDisplay: telemetrySummary.alt,
       batteryCellDisplay,
       linkQuality,
-      windDisplay,
+      windDisplay: telemetrySummary.wind,
       failsafeActive,
       heading: status?.heading ?? t.heading ?? t.yaw ?? null,
       armed: Boolean(t.armed ?? status?.armed),

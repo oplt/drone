@@ -22,10 +22,13 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
 import FlightTakeoffRoundedIcon from '@mui/icons-material/FlightTakeoffRounded';
-import Header from "../../../shared/layout/WorkflowHeader";
 import PageLayout, { PageSection } from "../../../shared/layout/PageLayout";
 import useAnalyticsOverview from "../../../modules/dashboard";
-import useTelemetryWebSocket from "../../../modules/mission-runtime";
+import useTelemetryWebSocket, { deriveTelemetry } from "../../../modules/mission-runtime";
+import {
+  TelemetryReadout,
+  TelemetryReadoutRow,
+} from "../../mission-runtime/components/TelemetryReadout";
 import {
   createCertification,
   createDevice,
@@ -509,22 +512,14 @@ export default function FleetPage() {
     });
   }, [data?.recent_flights]);
 
+  const derived = deriveTelemetry(telemetry);
   const linkQualityRaw = telemetry?.link?.telemetry ?? telemetry?.link?.rc ?? null;
-  const windSpeedRaw = telemetry?.wind?.speed ?? null;
-  const batteryPctRaw = telemetry?.battery?.remaining ?? null;
   const linkQuality =
     typeof linkQualityRaw === 'number' ? linkQualityRaw : Number(linkQualityRaw);
-  const windSpeed = typeof windSpeedRaw === 'number' ? windSpeedRaw : Number(windSpeedRaw);
-  const batteryPctCandidate =
-    typeof batteryPctRaw === 'number' ? batteryPctRaw : Number(batteryPctRaw);
-  const batteryPct =
-    Number.isFinite(batteryPctCandidate) && batteryPctCandidate >= 0
-      ? batteryPctCandidate
-      : null;
+  const batteryPct = derived.batteryPct;
 
   return (
     <>
-      <Header />
       <PageLayout
         eyebrow="Fleet"
         title="Fleet connectivity and mission readiness"
@@ -571,6 +566,17 @@ export default function FleetPage() {
                 sx={{ height: '100%' }}
               >
                 <Stack spacing={2}>
+                  <TelemetryReadoutRow>
+                    <TelemetryReadout
+                      label="Battery"
+                      value={derived.batteryShort}
+                      warn={batteryPct !== null && batteryPct < 30}
+                      error={batteryPct !== null && batteryPct < 15}
+                    />
+                    <TelemetryReadout label="GPS" value={derived.gpsShort} />
+                    <TelemetryReadout label="Wind" value={derived.wind} />
+                    <TelemetryReadout label="Mode" value={derived.modeShort} />
+                  </TelemetryReadoutRow>
                   <Box>
                     <Stack direction="row" justifyContent="space-between">
                       <Typography variant="caption" color="text.secondary">
@@ -586,21 +592,10 @@ export default function FleetPage() {
                       sx={{ height: 8, borderRadius: 999 }}
                     />
                   </Box>
-                  <Box>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography variant="caption" color="text.secondary">
-                        Wind @ altitude
-                      </Typography>
-                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                        {Number.isFinite(windSpeed) ? `${windSpeed.toFixed(1)} m/s` : '--'}
-                      </Typography>
-                    </Stack>
-                    <LinearProgress
-                      variant="determinate"
-                      value={Number.isFinite(windSpeed) ? Math.min(100, windSpeed * 8) : 0}
-                      sx={{ height: 8, borderRadius: 999 }}
-                    />
-                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Wind {derived.wind} (reported speed, not a quality meter) ·{" "}
+                    {derived.gpsStrength}
+                  </Typography>
                   <Box>
                     <Stack direction="row" justifyContent="space-between">
                       <Typography variant="caption" color="text.secondary">

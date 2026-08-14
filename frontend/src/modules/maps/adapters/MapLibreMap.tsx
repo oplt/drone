@@ -44,6 +44,9 @@ export type MapLibreMapProps = {
   height?: number | string;
   focusRing?: LonLat[] | null;
   focusRequestToken?: number;
+  followEnabled?: boolean;
+  selectedWaypointIndex?: number | null;
+  onSelectWaypoint?: (index: number) => void;
 };
 
 const routeSourceId = "mission-route";
@@ -117,6 +120,9 @@ export default function MapLibreMap({
   height = 400,
   focusRing = null,
   focusRequestToken,
+  followEnabled = true,
+  selectedWaypointIndex = null,
+  onSelectWaypoint,
 }: MapLibreMapProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMapInstance | null>(null);
@@ -354,13 +360,21 @@ export default function MapLibreMap({
     waypointMarkersRef.current = [];
 
     waypoints.forEach((point, index) => {
-      waypointMarkersRef.current.push(
-        new maplibregl.Marker({
-          element: makeMarkerElement(String(index + 1), "#1976d2"),
-        })
-          .setLngLat([point.lon, point.lat])
-          .addTo(map),
-      );
+      const selected = selectedWaypointIndex === index;
+      const marker = new maplibregl.Marker({
+        element: makeMarkerElement(
+          String(index + 1),
+          selected ? "#ff6d00" : "#1976d2",
+        ),
+      })
+        .setLngLat([point.lon, point.lat])
+        .addTo(map);
+      marker.getElement().style.cursor = "pointer";
+      marker.getElement().addEventListener("click", (event) => {
+        event.stopPropagation();
+        onSelectWaypoint?.(index);
+      });
+      waypointMarkersRef.current.push(marker);
     });
 
     const updateRoute = () => {
@@ -405,7 +419,25 @@ export default function MapLibreMap({
     } else {
       map.once("load", updateRoute);
     }
-  }, [routeCoordinates, waypoints]);
+  }, [routeCoordinates, waypoints, selectedWaypointIndex, onSelectWaypoint]);
+
+  useEffect(() => {
+    if (!followEnabled || !droneCenter || !mapRef.current) return;
+    mapRef.current.easeTo({
+      center: [droneCenter.lng, droneCenter.lat],
+      duration: 400,
+    });
+  }, [droneCenter, followEnabled]);
+
+  useEffect(() => {
+    if (selectedWaypointIndex == null || !mapRef.current) return;
+    const wp = waypoints[selectedWaypointIndex];
+    if (!wp) return;
+    mapRef.current.easeTo({
+      center: [wp.lon, wp.lat],
+      duration: 400,
+    });
+  }, [selectedWaypointIndex, waypoints]);
 
   useEffect(() => {
     const map = mapRef.current;

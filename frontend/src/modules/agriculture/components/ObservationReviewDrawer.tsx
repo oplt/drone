@@ -1,5 +1,5 @@
 import { Alert, Button, Chip, Stack, TextField, Typography } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useAgricultureObservationAudits, useAgricultureObservationFeedback, useAssignAgricultureObservation, useCreateAgricultureObservationAlert, useDecideAgricultureObservationFeedback, useReviewAgricultureObservation, useSubmitAgricultureObservationFeedback } from "../hooks";
 import type { AgricultureObservation } from "../types";
 import { EvidenceFrameCarousel } from "./EvidenceFrameCarousel";
@@ -7,13 +7,17 @@ import { AssignReviewerDialog } from "./AssignReviewerDialog";
 
 export function ObservationReviewDrawer({
   observation,
+  onClose,
 }: {
   observation: AgricultureObservation | null;
+  onClose?: () => void;
 }) {
   const [note, setNote] = useState("");
   const [correctionLabel, setCorrectionLabel] = useState("");
   const [correctionSeverity, setCorrectionSeverity] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const headingId = useId();
   const review = useReviewAgricultureObservation();
   const assign = useAssignAgricultureObservation();
   const feedback = useAgricultureObservationFeedback(observation?.id ?? null);
@@ -21,17 +25,51 @@ export function ObservationReviewDrawer({
   const decideFeedback = useDecideAgricultureObservationFeedback();
   const createAlert = useCreateAgricultureObservationAlert();
   const audit = useAgricultureObservationAudits(observation?.id ?? null);
+
+  useEffect(() => {
+    if (!observation) return;
+    const node = panelRef.current;
+    if (!node) return;
+    const focusable = node.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    focusable?.focus();
+  }, [observation]);
+
+  useEffect(() => {
+    if (!observation || !onClose) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (assignOpen) return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [assignOpen, observation, onClose]);
+
   if (!observation) return null;
   return (
     <Stack
+      ref={panelRef}
       component="aside"
-      aria-labelledby="observation-review-drawer-heading"
+      role="dialog"
+      aria-modal={Boolean(onClose)}
+      aria-labelledby={headingId}
+      tabIndex={-1}
       spacing={1}
-      sx={{ flex: 1 }}
+      sx={{ flex: 1, outline: "none" }}
     >
-      <Typography id="observation-review-drawer-heading" variant="subtitle2">
-        Observation review
-      </Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography id={headingId} variant="subtitle2">
+          Observation review
+        </Typography>
+        {onClose ? (
+          <Button size="small" onClick={onClose} aria-label="Close review drawer">
+            Close
+          </Button>
+        ) : null}
+      </Stack>
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
         <Chip
           size="small"

@@ -9,6 +9,9 @@ from backend.observability import prometheus_metrics
 
 logger = logging.getLogger(__name__)
 
+# Alert budget: sustained lag above this suggests blocking work on the API loop.
+EVENT_LOOP_LAG_WARN_SECONDS = 0.25
+
 
 class EventLoopLagMonitor:
     def __init__(self, interval_s: float = 1.0) -> None:

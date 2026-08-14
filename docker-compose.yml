@@ -69,6 +69,24 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    env_file:
+      - path: ${BACKEND_ENV_FILE:-./backend/.env}
+        required: false
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        INSTALL_ML: "0"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *backend-environment
+      DB_AUTO_CREATE: "0"
+    command: alembic -c backend/alembic.ini upgrade head
+    restart: "no"
+
   api:
     env_file:
       - path: ${BACKEND_ENV_FILE:-./backend/.env}
@@ -76,7 +94,11 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        INSTALL_ML: "0"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -95,9 +117,7 @@ services:
       OTEL_SERVICE_NAME: drone-api
       PROMETHEUS_METRICS_ENABLED: "true"
       PROMETHEUS_METRICS_PATH: /metrics
-    command: >
-      sh -c "alembic -c backend/alembic.ini upgrade head &&
-      uvicorn backend.entrypoints.api.app:app --host 0.0.0.0 --port 8000"
+    command: uvicorn backend.entrypoints.api.app:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     volumes:
@@ -116,7 +136,11 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        INSTALL_ML: "1"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -206,6 +230,24 @@ services:
       celery -A backend.entrypoints.workers.celery_app:celery_app worker
       --loglevel=INFO --concurrency=2 --queues=scheduling --hostname=scheduling@%h
 
+  worker-agriculture-ingest:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=2
+      --queues=agriculture-ingest,agriculture-quality,agriculture-geospatial,agriculture-temporal,agriculture-fusion,agriculture-exports,agriculture-dead-letter
+      --hostname=agriculture-ingest@%h
+
+  worker-agriculture-inference:
+    extends:
+      service: worker
+    command: >
+      celery -A backend.entrypoints.workers.celery_app:celery_app worker
+      --loglevel=INFO --concurrency=1
+      --queues=agriculture-rgb-inference,agriculture-segmentation
+      --hostname=agriculture-inference@%h
+
   beat:
     env_file:
       - path: ${BACKEND_ENV_FILE:-./backend/.env}
@@ -213,7 +255,11 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        INSTALL_ML: "0"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

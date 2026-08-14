@@ -16,8 +16,12 @@ from backend.modules.warehouse.service.gazebo_landmark_consistency import (
     evaluate_landmark_consistency,
 )
 from backend.modules.warehouse.service.provisional_mapping import (
+    _EPOCHS,
+    _EPOCH_TTL_S,
     begin_provisional_epoch,
     block_executable_mission,
+    clear_provisional_epochs,
+    end_provisional_epoch,
     map_candidate_status,
     note_provisional_update,
     provisional_epoch_snapshot,
@@ -72,12 +76,29 @@ def test_landmark_consistency_within_tolerance() -> None:
 
 
 def test_provisional_epoch_revisioning() -> None:
+    clear_provisional_epochs()
     begin_provisional_epoch(warehouse_map_id=99, epoch_id="scan-1")
     note_provisional_update(warehouse_map_id=99, confidence=0.8)
     snapshot = provisional_epoch_snapshot(99)
     assert snapshot is not None
     assert snapshot["revision"] == 1
     assert snapshot["confidence"] == 0.8
+    clear_provisional_epochs()
+
+
+def test_provisional_epoch_ttl_and_cleanup(monkeypatch) -> None:
+    import time
+
+    clear_provisional_epochs()
+    begin_provisional_epoch(warehouse_map_id=1, epoch_id="a")
+    begin_provisional_epoch(warehouse_map_id=2, epoch_id="b")
+    _EPOCHS[1].last_update_monotonic = time.monotonic() - _EPOCH_TTL_S - 1
+    assert provisional_epoch_snapshot(2) is not None
+    assert provisional_epoch_snapshot(1) is None
+    end_provisional_epoch(warehouse_map_id=2)
+    assert provisional_epoch_snapshot(2) is None
+    clear_provisional_epochs()
+    assert _EPOCHS == {}
 
 
 def test_block_executable_mission_for_provisional_slam() -> None:

@@ -9,7 +9,6 @@ import {
   Typography,
 } from "@mui/material";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
-import Header from "../../../shared/layout/WorkflowHeader";
 import SvgIcon from "@mui/material/SvgIcon";
 import DroneSvg from "../../../assets/Drone.svg?react";
 import RoomIcon from "@mui/icons-material/Room";
@@ -413,7 +412,7 @@ export function ControlledFlightView() {
       notify(`Controlled flight "${data.mission_name ?? name.trim()}" started.`, {
         severity: "success",
         autoHideDuration: 9000,
-        auditHref: data.flight_id ? `/missions/${data.flight_id}/timeline` : undefined,
+        auditHref: data.flight_id ? `/dashboard/missions/${data.flight_id}/timeline` : undefined,
       });
     } catch (err: unknown) {
       const message =
@@ -446,7 +445,6 @@ export function ControlledFlightView() {
 
   return (
       <>
-        <Header />
         <Paper
             sx={{
               width: "100%",

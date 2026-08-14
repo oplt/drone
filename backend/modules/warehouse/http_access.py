@@ -17,6 +17,24 @@ MISSION_DEFAULTS_KEY = "mission_defaults"
 EXPLORATION_PROFILE_KEY = "exploration_profile"
 
 
+async def assert_map_or_404(
+    db: AsyncSession,
+    *,
+    warehouse_map_id: int,
+    user: Any,
+) -> None:
+    """Lightweight ownership gate without eager-loading map relationships."""
+    allowed = await repo.assert_owned_warehouse_map(
+        db,
+        warehouse_map_id=warehouse_map_id,
+        owner_id=int(user.id),
+        org_id=user.org_id,
+        allow_org_access=can_access_org_scope(user),
+    )
+    if not allowed:
+        raise HTTPException(status_code=404, detail="Warehouse map not found")
+
+
 async def get_map_or_404(
     db: AsyncSession,
     *,

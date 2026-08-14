@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from backend.modules.agriculture.capabilities import default_inference_profile
+
 POLICY_VERSION = "vision-release-policy.v2"
 KNOWN_CAPABILITIES = {
     "object_detection",
@@ -14,11 +16,16 @@ KNOWN_CAPABILITIES = {
     "standing_water",
 }
 
-# Optional metric floors are capability overrides only — defaults require map50 alone.
+# Capability-specific evidence floors for production-backed inference.
 DEFAULT_MAX_MAP50_REGRESSION = 0.05
 CAPABILITY_METRIC_OVERRIDES: dict[str, dict[str, float]] = {
-    # Example: tighten weed_detection when product policy requires it.
-    # "weed_detection": {"min_map50": 0.35, "min_recall": 0.4},
+    "stand_count": {"min_map50": 0.30, "min_recall": 0.50},
+    "weed_detection": {"min_map50": 0.35, "min_recall": 0.45},
+    "object_detection": {"min_map50": 0.30},
+    "crop_health": {"min_map50": 0.28},
+    "canopy_cover": {"min_map50": 0.28},
+    "row_detection": {"min_map50": 0.28},
+    "standing_water": {"min_map50": 0.28},
 }
 
 
@@ -89,7 +96,13 @@ def build_inference_contract(
     dataset_checksum: str | None,
     metrics_snapshot: dict[str, Any],
     policy_version: str = POLICY_VERSION,
+    confidence_threshold: float | None = None,
+    frame_stride_seconds: float | None = None,
+    small_object_mode: bool | None = None,
+    tracking_enabled: bool | None = None,
+    tracker_type: str | None = None,
 ) -> dict[str, Any]:
+    profile = default_inference_profile(capability_id)
     return {
         "capability_id": capability_id,
         "task_type": task_type or "detection",
@@ -98,6 +111,27 @@ def build_inference_contract(
         "dataset_checksum": dataset_checksum,
         "evaluation_metrics": dict(metrics_snapshot),
         "policy_version": policy_version,
+        "confidence_threshold": (
+            float(confidence_threshold)
+            if confidence_threshold is not None
+            else profile["confidence_threshold"]
+        ),
+        "frame_stride_seconds": (
+            float(frame_stride_seconds)
+            if frame_stride_seconds is not None
+            else profile["frame_stride_seconds"]
+        ),
+        "small_object_mode": (
+            bool(small_object_mode)
+            if small_object_mode is not None
+            else profile["small_object_mode"]
+        ),
+        "tracking_enabled": (
+            bool(tracking_enabled)
+            if tracking_enabled is not None
+            else profile["tracking_enabled"]
+        ),
+        "tracker_type": tracker_type or profile["tracker_type"],
     }
 
 
@@ -119,6 +153,11 @@ def evaluate_release(
     max_map50_regression: float | None = None,
     task_type: str | None = None,
     classes: list[str] | tuple[str, ...] | None = None,
+    confidence_threshold: float | None = None,
+    frame_stride_seconds: float | None = None,
+    small_object_mode: bool | None = None,
+    tracking_enabled: bool | None = None,
+    tracker_type: str | None = None,
 ) -> ReleasePolicyResult:
     """Evaluate the bounded, server-owned policy used by every promotion."""
     reasons: list[str] = []
@@ -200,6 +239,11 @@ def evaluate_release(
         dataset_checksum=dataset_manifest_checksum,
         metrics_snapshot=snapshot,
         policy_version=POLICY_VERSION,
+        confidence_threshold=confidence_threshold,
+        frame_stride_seconds=frame_stride_seconds,
+        small_object_mode=small_object_mode,
+        tracking_enabled=tracking_enabled,
+        tracker_type=tracker_type,
     )
     return ReleasePolicyResult(
         eligible=not reasons,

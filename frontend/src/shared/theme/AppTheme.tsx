@@ -6,7 +6,7 @@ import { dataDisplayCustomizations } from './customizations/dataDisplay';
 import { feedbackCustomizations } from './customizations/feedback';
 import { navigationCustomizations } from './customizations/navigation';
 import { surfacesCustomizations } from './customizations/surfaces';
-import { colorSchemes, typography, shadows, shape, tesla } from './themePrimitives';
+import { colorSchemes, typography, shadows, shape } from './themePrimitives';
 
 interface AppThemeProps {
   children: React.ReactNode;
@@ -37,12 +37,12 @@ export default function AppTheme(props: AppThemeProps) {
                 },
                 body: {
                   minHeight: '100dvh',
-                  backgroundColor: tesla.white,
+                  // Prefer CSS vars so light/dark scheme resolves without FOUC/hardcoded greys
+                  backgroundColor: 'var(--template-palette-background-default)',
+                  color: 'var(--template-palette-text-primary)',
+                  fontFamily: typography.fontFamily,
                   textRendering: 'optimizeLegibility',
                   WebkitFontSmoothing: 'antialiased',
-                },
-                '[data-mui-color-scheme="dark"] body': {
-                  backgroundColor: tesla.carbonDark,
                 },
                 '#root': {
                   minHeight: '100dvh',
@@ -61,12 +61,23 @@ export default function AppTheme(props: AppThemeProps) {
                 '*::-webkit-scrollbar-track': {
                   background: 'transparent',
                 },
+                /* Short stage/drawer motion when motion is allowed (≤200ms). */
+                '.ops-motion-enter': {
+                  transition: 'opacity 160ms ease, transform 200ms ease',
+                },
                 '@media (prefers-reduced-motion: reduce)': {
                   '*, *::before, *::after': {
                     animationDuration: '0.01ms !important',
                     animationIterationCount: '1 !important',
                     transitionDuration: '0.01ms !important',
                     scrollBehavior: 'auto !important',
+                  },
+                  '.ops-motion-blink': {
+                    animation: 'none !important',
+                  },
+                  '.ops-motion-enter': {
+                    transition: 'opacity 0.01ms linear',
+                    transform: 'none !important',
                   },
                 },
               },
@@ -84,7 +95,12 @@ export default function AppTheme(props: AppThemeProps) {
     return <React.Fragment>{children}</React.Fragment>;
   }
   return (
-    <ThemeProvider theme={theme} disableTransitionOnChange>
+    <ThemeProvider
+      theme={theme}
+      defaultMode="system"
+      modeStorageKey="drone-ops-color-scheme"
+      disableTransitionOnChange
+    >
       {children}
     </ThemeProvider>
   );

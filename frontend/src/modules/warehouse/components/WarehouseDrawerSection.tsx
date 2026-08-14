@@ -26,7 +26,7 @@ export function WarehouseDrawerSection({
         spacing={1}
         sx={{ mb: 1 }}
       >
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
           <InfoLabel label={title} info={info} />
         </Typography>
         {action}

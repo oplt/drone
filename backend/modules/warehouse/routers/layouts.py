@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
@@ -11,7 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.database.session import get_db
 from backend.core.pagination import Page, clamp_page_limit, decode_offset_cursor, page_from_offset
 from backend.modules.identity.dependencies import OrgUser, require_org_user, require_org_write
-from backend.modules.warehouse.http_access import get_map_or_404
+from backend.shared.json_responses import orjson_response
+from backend.modules.warehouse.http_access import assert_map_or_404
 from backend.modules.warehouse.models import (
     WarehouseAisle,
     WarehouseBin,
@@ -131,8 +133,9 @@ class LayoutValidationOut(BaseModel):
 async def _validation(layout: WarehouseLayoutVersion, db: AsyncSession) -> LayoutValidationOut:
     issues = []
     entity_count = 0
+    entities = await _all_entities(db, layout.id)
     for kind in ("aisles", "racks", "shelves", "bins", "zones"):
-        rows = await _entities(db, layout.id, kind)
+        rows = entities[kind]
         entity_count += len(rows)
         for row in rows:
             issues.extend(
@@ -255,7 +258,7 @@ async def list_layout_versions(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     page_limit = clamp_page_limit(limit)
     page_offset = decode_offset_cursor(cursor) if cursor else offset
     rows = (
@@ -292,7 +295,7 @@ async def get_layout_version(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     row = await _layout(db, warehouse_map_id, version)
     response.headers["ETag"] = f'"{row.revision}"'
     return {
@@ -312,7 +315,7 @@ async def create_layout_version(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     frame = (
         await db.execute(
             select(WarehouseCoordinateFrame).where(
@@ -366,7 +369,7 @@ async def validate_layout_version(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> LayoutValidationOut:
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     return await _validation(await _layout(db, warehouse_map_id, version), db)
 
 
@@ -378,7 +381,7 @@ async def publish_layout_version(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = await _mutating_layout(db, warehouse_map_id, version, if_match, None)
     report = await _validation(layout, db)
     if not report.valid:
@@ -513,17 +516,19 @@ async def export_layout_version(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = await _layout(db, warehouse_map_id, version)
     entities = {
-        kind: [_entity_dict(row) for row in await _entities(db, layout.id, kind)]
-        for kind in ("aisles", "racks", "shelves", "bins", "zones")
+        kind: [_entity_dict(row) for row in rows]
+        for kind, rows in (await _all_entities(db, layout.id)).items()
     }
-    return export_envelope(
-        warehouse_map_id=warehouse_map_id,
-        layout_version=version,
-        revision=layout.revision,
-        entities=entities,
+    return orjson_response(
+        export_envelope(
+            warehouse_map_id=warehouse_map_id,
+            layout_version=version,
+            revision=layout.revision,
+            entities=entities,
+        )
     )
 
 
@@ -537,7 +542,7 @@ async def import_layout_version(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     try:
         validate_envelope(payload)
     except ValueError as exc:
@@ -669,6 +674,12 @@ async def _create_entities(db, layout, kind: str, payloads):
     return rows
 
 
+async def _all_entities(db: AsyncSession, layout_id: int) -> dict[str, list]:
+    kinds = ("aisles", "racks", "shelves", "bins", "zones")
+    rows = await asyncio.gather(*(_entities(db, layout_id, kind) for kind in kinds))
+    return dict(zip(kinds, rows, strict=True))
+
+
 async def _entities(
     db: AsyncSession,
     layout_id: int,
@@ -726,7 +737,7 @@ async def list_layout_entities(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = await _layout(db, warehouse_map_id, version)
     page_limit = clamp_page_limit(limit)
     page_offset = decode_offset_cursor(cursor) if cursor else offset
@@ -757,7 +768,7 @@ async def create_layout_entity(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     if kind not in {"aisles", "racks", "shelves", "bins", "zones"}:
         raise HTTPException(404, "Unknown layout entity")
     layout = await _mutating_layout(db, warehouse_map_id, version, if_match, payload.revision)
@@ -779,7 +790,7 @@ async def create_layout_entity_batch(
 ):
     if kind not in {"shelves", "bins"}:
         raise HTTPException(404, "Batch supported for shelves/bins")
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = await _mutating_layout(db, warehouse_map_id, version, if_match, payload.revision)
     return await _commit_mutation(
         db, layout, await _create_entities(db, layout, kind, payload.items)
@@ -800,7 +811,7 @@ async def patch_layout_entity(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = await _mutating_layout(db, warehouse_map_id, version, if_match, payload.revision)
     rows = await _entities(db, layout.id, kind)
     row = next((r for r in rows if int(r.id) == entity_id), None)
@@ -832,7 +843,7 @@ async def delete_layout_entity(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = await _mutating_layout(db, warehouse_map_id, version, if_match, revision)
     row = next((r for r in await _entities(db, layout.id, kind) if int(r.id) == entity_id), None)
     if row is None:
@@ -887,7 +898,7 @@ async def get_active_warehouse_layout(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseLayoutOut:
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = (
         await db.execute(
             select(WarehouseLayoutVersion).where(
@@ -971,7 +982,7 @@ async def confirm_warehouse_layout(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ):
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     layout = await db.get(WarehouseLayoutVersion, layout_id)
     if layout is None or layout.warehouse_map_id != warehouse_map_id:
         raise HTTPException(404, "Warehouse layout not found")

@@ -1,5 +1,5 @@
 import { Suspense, lazy, type ReactNode } from "react";
-import { PageLoader } from "../../shared/ui";
+import { PageLoader, RouteErrorBoundary } from "../../shared/ui";
 
 const STALE_CHUNK_RELOAD_KEY = "drone-app:stale-chunk-reload";
 
@@ -33,8 +33,10 @@ if (typeof window !== "undefined") {
 
 export function renderLazyRoute(node: ReactNode, fullScreen = false) {
   return (
-    <Suspense fallback={<PageLoader fullScreen={fullScreen} />}>
-      {node}
-    </Suspense>
+    <RouteErrorBoundary>
+      <Suspense fallback={<PageLoader fullScreen={fullScreen} />}>
+        {node}
+      </Suspense>
+    </RouteErrorBoundary>
   );
 }

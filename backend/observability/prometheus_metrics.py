@@ -68,6 +68,12 @@ job_dead_letter_total = Counter(
     ["job_name", "queue"],
 )
 
+celery_soft_time_limit_total = Counter(
+    "celery_soft_time_limit_total",
+    "Celery tasks that hit the soft time limit",
+    ["job_name", "queue"],
+)
+
 blocking_boundary_duration_seconds = Histogram(
     "blocking_boundary_duration_seconds",
     "Duration of process, filesystem, and CPU adapter calls",
@@ -157,6 +163,16 @@ video_inference_queue_depth = Gauge(
     ["job_id"],
 )
 
+video_yolo_cache_entries = Gauge(
+    "video_yolo_cache_entries",
+    "YOLO / SAHI model instances cached in the current worker process",
+)
+
+video_yolo_cache_evictions_total = Counter(
+    "video_yolo_cache_evictions_total",
+    "LRU evictions from the worker-local YOLO model cache",
+)
+
 agriculture_runs_started_total = Counter(
     "agriculture_runs_started_total", "Agriculture analysis runs started", ["queue"]
 )
@@ -232,6 +248,10 @@ agriculture_model_drift_score = Gauge(
 agriculture_worker_saturation = Gauge(
     "agriculture_worker_saturation", "Agriculture worker saturation ratio", ["queue", "resource"]
 )
+agriculture_live_processors = Gauge(
+    "agriculture_live_processors",
+    "Active agriculture live advisory processors in this API process",
+)
 
 event_loop_lag_seconds = Gauge(
     "event_loop_lag_seconds",
@@ -273,6 +293,13 @@ db_pool_active_connections = Gauge(
 db_pool_idle_connections = Gauge(
     "db_pool_idle_connections",
     "Idle database pool connections",
+)
+
+db_session_hold_duration_seconds = Histogram(
+    "db_session_hold_duration_seconds",
+    "Time an async DB session remained checked out for a scoped operation",
+    ["scope"],
+    buckets=(0.05, 0.1, 0.5, 1.0, 5.0, 15.0, 30.0, 60.0, 120.0, 300.0, 600.0, 1800.0, 3600.0),
 )
 
 # --- External APIs ---
@@ -397,6 +424,18 @@ telemetry_envelopes_total = Counter(
 websocket_connections_active = Gauge(
     "websocket_connections_active",
     "Number of currently active WebSocket connections",
+)
+
+websocket_auth_failures_total = Counter(
+    "websocket_auth_failures_total",
+    "Telemetry WebSocket authentication failures",
+    ["reason"],
+)
+
+telemetry_redis_fallback_total = Counter(
+    "telemetry_redis_fallback_total",
+    "Telemetry fan-out degraded to in-process broadcast or subscriber reconnect",
+    ["reason"],
 )
 
 orchestrator_queue_depth = Gauge(
@@ -556,4 +595,13 @@ KNOWN_QUEUES = (
     "webhooks",
     "scheduling",
     "notifications",
+    "agriculture-ingest",
+    "agriculture-quality",
+    "agriculture-rgb-inference",
+    "agriculture-segmentation",
+    "agriculture-geospatial",
+    "agriculture-temporal",
+    "agriculture-fusion",
+    "agriculture-exports",
+    "agriculture-dead-letter",
 )

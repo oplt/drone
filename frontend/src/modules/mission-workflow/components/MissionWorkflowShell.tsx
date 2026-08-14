@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 import { Paper, Stack, Typography } from "@mui/material";
-import Header from "../../../shared/layout/WorkflowHeader";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
 import { MissionStatusChips } from "../../mission-runtime";
+import { radius } from "../../../shared/theme/themePrimitives";
 
 export function MissionWorkflowShell({
   title,
   subtitle,
   droneConnected,
   wsConnected,
+  telemetry,
   errors,
   onDismissError,
   onClearErrors,
@@ -18,51 +19,48 @@ export function MissionWorkflowShell({
   subtitle: string;
   droneConnected: boolean;
   wsConnected: boolean;
+  telemetry?: unknown;
   errors: string[];
   onDismissError: (index: number) => void;
   onClearErrors: () => void;
   children: ReactNode;
 }) {
   return (
-    <>
-      <Header />
-      <Paper
-        sx={{
-          width: "100%",
-          p: 3,
-          borderRadius: 3,
-          backgroundColor: "background.paper",
-          border: "1px solid",
-          borderColor: "divider",
-        }}
+    <Paper
+      variant="opsPanel"
+      sx={{
+        width: "100%",
+        p: 3,
+        borderRadius: radius.md,
+      }}
+    >
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        alignItems={{ xs: "flex-start", md: "center" }}
+        justifyContent="space-between"
+        sx={{ mb: 2 }}
+        spacing={2}
       >
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          alignItems={{ xs: "flex-start", md: "center" }}
-          justifyContent="space-between"
-          sx={{ mb: 2 }}
-          spacing={2}
-        >
-          <div>
-            <Typography variant="h5">{title}</Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {subtitle}
-            </Typography>
-          </div>
-          <MissionStatusChips
-            droneConnected={droneConnected}
-            wsConnected={wsConnected}
-          />
-        </Stack>
-
-        <ErrorAlerts
-          errors={errors}
-          onDismiss={onDismissError}
-          onClearAll={onClearErrors}
+        <div>
+          <Typography variant="h5">{title}</Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            {subtitle}
+          </Typography>
+        </div>
+        <MissionStatusChips
+          droneConnected={droneConnected}
+          wsConnected={wsConnected}
+          telemetry={telemetry}
         />
+      </Stack>
 
-        {children}
-      </Paper>
-    </>
+      <ErrorAlerts
+        errors={errors}
+        onDismiss={onDismissError}
+        onClearAll={onClearErrors}
+      />
+
+      {children}
+    </Paper>
   );
 }

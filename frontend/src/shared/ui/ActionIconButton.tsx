@@ -23,6 +23,7 @@ import UndoIcon from "@mui/icons-material/Undo";
 import LinkIcon from "@mui/icons-material/Link";
 import FlightTakeoffIcon from "@mui/icons-material/FlightTakeoff";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import MapOutlinedIcon from "@mui/icons-material/MapOutlined";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
@@ -32,6 +33,7 @@ export type ActionIconVariant =
   | "add"
   | "refresh"
   | "check"
+  | "done"
   | "upgrade"
   | "delete"
   | "play"
@@ -62,6 +64,7 @@ const ACTION_ICONS: Record<ActionIconVariant, ReactNode> = {
   add: <AddIcon fontSize="small" />,
   refresh: <RefreshIcon fontSize="small" />,
   check: <CheckIcon fontSize="small" />,
+  done: <DoneAllIcon fontSize="small" />,
   upgrade: <UpgradeIcon fontSize="small" />,
   delete: <DeleteIcon fontSize="small" />,
   play: <PlayArrowIcon fontSize="small" />,

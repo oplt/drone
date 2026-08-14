@@ -1,4 +1,7 @@
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Chip,
@@ -11,6 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import InfoLabel from "../../../shared/ui/InfoLabel";
 import {
   INFO_INPUT_LABEL_PROPS,
@@ -43,6 +47,49 @@ export const PHOTOGRAMMETRY_GRID_COPY: GridMissionParamsCopy = {
     `Coverage preview is too dense (${count}/${max} waypoints). Increase row spacing or row stride before starting the mission.`,
 };
 
+type GridPreset = {
+  label: string;
+  patch: Partial<GridParams>;
+};
+
+const GRID_PRESETS: GridPreset[] = [
+  {
+    label: "Standard survey",
+    patch: {
+      row_spacing_m: 10,
+      row_stride: 1,
+      safety_inset_m: 2,
+      pattern_mode: "boustrophedon",
+      lane_strategy: "serpentine",
+      terrain_follow: false,
+    },
+  },
+  {
+    label: "Dense mapping",
+    patch: {
+      row_spacing_m: 5,
+      row_stride: 1,
+      safety_inset_m: 3,
+      pattern_mode: "crosshatch",
+      crosshatch_angle_offset_deg: 90,
+      lane_strategy: "serpentine",
+      terrain_follow: true,
+      agl_m: 40,
+    },
+  },
+  {
+    label: "Quick scout",
+    patch: {
+      row_spacing_m: 20,
+      row_stride: 2,
+      safety_inset_m: 1,
+      pattern_mode: "boustrophedon",
+      lane_strategy: "serpentine",
+      terrain_follow: false,
+    },
+  },
+];
+
 export function GridMissionParamsSection({
   copy,
   gridParams,
@@ -66,12 +113,28 @@ export function GridMissionParamsSection({
   gridPreviewError: string | null | undefined;
   previewLoading: boolean;
 }) {
+  const applyPreset = (patch: Partial<GridParams>) => {
+    setGridParams((current) => ({ ...current, ...patch }));
+  };
+
   return (
     <Box sx={{ mt: 3 }}>
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
         {copy.title}
       </Typography>
       <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+          {GRID_PRESETS.map((preset) => (
+            <Chip
+              key={preset.label}
+              clickable
+              size="small"
+              label={preset.label}
+              onClick={() => applyPreset(preset.patch)}
+              sx={{ minHeight: 36 }}
+            />
+          ))}
+        </Stack>
         <Box
           sx={{
             display: "grid",
@@ -132,32 +195,6 @@ export function GridMissionParamsSection({
           </TextField>
           <TextField
             variant="filled"
-            select
-            label={
-              <InfoLabel
-                label="Start corner"
-                info="Choose where lane sequencing starts. Auto keeps the default planner behavior."
-              />
-            }
-            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-            size="small"
-            fullWidth
-            value={gridParams.start_corner}
-            onChange={(e) =>
-              setGridParams((p) => ({
-                ...p,
-                start_corner: e.target.value as GridParams["start_corner"],
-              }))
-            }
-          >
-            <MenuItem value="auto">Auto</MenuItem>
-            <MenuItem value="sw">South-West</MenuItem>
-            <MenuItem value="se">South-East</MenuItem>
-            <MenuItem value="nw">North-West</MenuItem>
-            <MenuItem value="ne">North-East</MenuItem>
-          </TextField>
-          <TextField
-            variant="filled"
             label="Row spacing (m)"
             type="number"
             size="small"
@@ -175,99 +212,6 @@ export function GridMissionParamsSection({
           />
           <TextField
             variant="filled"
-            label={
-              <InfoLabel
-                label="Row stride (every Nth line)"
-                info="1 uses every line. 2 flies every second line (wider effective spacing)."
-              />
-            }
-            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-            type="number"
-            size="small"
-            fullWidth
-            value={gridParams.row_stride}
-            onChange={(e) => {
-              const value = Number(e.target.value);
-              if (!Number.isFinite(value)) return;
-              setGridParams((p) => ({
-                ...p,
-                row_stride: Math.min(20, Math.max(1, Math.round(value))),
-              }));
-            }}
-            inputProps={{ min: 1, max: 20, step: 1 }}
-          />
-          <TextField
-            variant="filled"
-            label={
-              <InfoLabel
-                label="Row phase offset (m)"
-                info="Shifts line placement to align passes with crop rows."
-              />
-            }
-            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-            type="number"
-            size="small"
-            fullWidth
-            value={gridParams.row_phase_m}
-            onChange={(e) => {
-              const value = Number(e.target.value);
-              if (!Number.isFinite(value)) return;
-              setGridParams((p) => ({
-                ...p,
-                row_phase_m: Math.max(0, value),
-              }));
-            }}
-            inputProps={{ min: 0, max: 500, step: 0.5 }}
-          />
-          <TextField
-            variant="filled"
-            label={
-              <InfoLabel
-                label="Grid angle (°, blank = auto)"
-                info="Leave blank to auto-align with terrain."
-              />
-            }
-            InputLabelProps={INFO_INPUT_LABEL_PROPS}
-            type="number"
-            size="small"
-            fullWidth
-            value={gridParams.grid_angle_deg ?? ""}
-            onChange={(e) =>
-              setGridParams((p) => ({
-                ...p,
-                grid_angle_deg:
-                  e.target.value === "" ? null : Number(e.target.value),
-              }))
-            }
-            inputProps={{ min: 0, max: 179, step: 1 }}
-          />
-          {gridParams.pattern_mode === "crosshatch" && (
-            <TextField
-              variant="filled"
-              label={
-                <InfoLabel
-                  label="Crosshatch angle offset (°)"
-                  info="90° gives an orthogonal second pass."
-                />
-              }
-              InputLabelProps={INFO_INPUT_LABEL_PROPS}
-              type="number"
-              size="small"
-              fullWidth
-              value={gridParams.crosshatch_angle_offset_deg}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                if (!Number.isFinite(value)) return;
-                setGridParams((p) => ({
-                  ...p,
-                  crosshatch_angle_offset_deg: Math.min(179, Math.max(1, value)),
-                }));
-              }}
-              inputProps={{ min: 1, max: 179, step: 1 }}
-            />
-          )}
-          <TextField
-            variant="filled"
             label="Safety inset (m)"
             type="number"
             size="small"
@@ -281,55 +225,199 @@ export function GridMissionParamsSection({
             }
             inputProps={{ min: 0, max: 20, step: 0.5 }}
           />
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={gridParams.slope_aware}
-                onChange={(e) =>
-                  setGridParams((p) => ({
-                    ...p,
-                    slope_aware: e.target.checked,
-                  }))
-                }
-              />
-            }
-            label={<Typography variant="caption">Slope-aware angle</Typography>}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={gridParams.terrain_follow}
-                onChange={(e) =>
-                  setGridParams((p) => ({
-                    ...p,
-                    terrain_follow: e.target.checked,
-                  }))
-                }
-              />
-            }
-            label={
-              <Typography variant="caption">Terrain following (AGL)</Typography>
-            }
-          />
-          {gridParams.terrain_follow && (
-            <TextField
-              variant="filled"
-              label="AGL height (m)"
-              type="number"
-              size="small"
-              fullWidth
-              value={gridParams.agl_m}
-              onChange={(e) =>
-                setGridParams((p) => ({
-                  ...p,
-                  agl_m: Math.max(1, Number(e.target.value)),
-                }))
-              }
-              inputProps={{ min: 1, max: 200, step: 1 }}
-            />
-          )}
+
+          <Accordion
+            disableGutters
+            elevation={0}
+            sx={{ gridColumn: "1 / -1", border: "1px solid", borderColor: "divider", borderRadius: 1, "&:before": { display: "none" } }}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="body2">Advanced parameters</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "repeat(2, minmax(0, 1fr))",
+                    xl: "repeat(3, minmax(0, 1fr))",
+                  },
+                  gap: 1.5,
+                }}
+              >
+                <TextField
+                  variant="filled"
+                  select
+                  label={
+                    <InfoLabel
+                      label="Start corner"
+                      info="Choose where lane sequencing starts. Auto keeps the default planner behavior."
+                    />
+                  }
+                  InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                  size="small"
+                  fullWidth
+                  value={gridParams.start_corner}
+                  onChange={(e) =>
+                    setGridParams((p) => ({
+                      ...p,
+                      start_corner: e.target.value as GridParams["start_corner"],
+                    }))
+                  }
+                >
+                  <MenuItem value="auto">Auto</MenuItem>
+                  <MenuItem value="sw">South-West</MenuItem>
+                  <MenuItem value="se">South-East</MenuItem>
+                  <MenuItem value="nw">North-West</MenuItem>
+                  <MenuItem value="ne">North-East</MenuItem>
+                </TextField>
+                <TextField
+                  variant="filled"
+                  label={
+                    <InfoLabel
+                      label="Row stride (every Nth line)"
+                      info="1 uses every line. 2 flies every second line (wider effective spacing)."
+                    />
+                  }
+                  InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={gridParams.row_stride}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    if (!Number.isFinite(value)) return;
+                    setGridParams((p) => ({
+                      ...p,
+                      row_stride: Math.min(20, Math.max(1, Math.round(value))),
+                    }));
+                  }}
+                  inputProps={{ min: 1, max: 20, step: 1 }}
+                />
+                <TextField
+                  variant="filled"
+                  label={
+                    <InfoLabel
+                      label="Row phase offset (m)"
+                      info="Shifts line placement to align passes with crop rows."
+                    />
+                  }
+                  InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={gridParams.row_phase_m}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    if (!Number.isFinite(value)) return;
+                    setGridParams((p) => ({
+                      ...p,
+                      row_phase_m: Math.max(0, value),
+                    }));
+                  }}
+                  inputProps={{ min: 0, max: 500, step: 0.5 }}
+                />
+                <TextField
+                  variant="filled"
+                  label={
+                    <InfoLabel
+                      label="Grid angle (°, blank = auto)"
+                      info="Leave blank to auto-align with terrain."
+                    />
+                  }
+                  InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                  type="number"
+                  size="small"
+                  fullWidth
+                  value={gridParams.grid_angle_deg ?? ""}
+                  onChange={(e) =>
+                    setGridParams((p) => ({
+                      ...p,
+                      grid_angle_deg:
+                        e.target.value === "" ? null : Number(e.target.value),
+                    }))
+                  }
+                  inputProps={{ min: 0, max: 179, step: 1 }}
+                />
+                {gridParams.pattern_mode === "crosshatch" && (
+                  <TextField
+                    variant="filled"
+                    label={
+                      <InfoLabel
+                        label="Crosshatch angle offset (°)"
+                        info="90° gives an orthogonal second pass."
+                      />
+                    }
+                    InputLabelProps={INFO_INPUT_LABEL_PROPS}
+                    type="number"
+                    size="small"
+                    fullWidth
+                    value={gridParams.crosshatch_angle_offset_deg}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (!Number.isFinite(value)) return;
+                      setGridParams((p) => ({
+                        ...p,
+                        crosshatch_angle_offset_deg: Math.min(179, Math.max(1, value)),
+                      }));
+                    }}
+                    inputProps={{ min: 1, max: 179, step: 1 }}
+                  />
+                )}
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={gridParams.slope_aware}
+                      onChange={(e) =>
+                        setGridParams((p) => ({
+                          ...p,
+                          slope_aware: e.target.checked,
+                        }))
+                      }
+                    />
+                  }
+                  label={<Typography variant="caption">Slope-aware angle</Typography>}
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={gridParams.terrain_follow}
+                      onChange={(e) =>
+                        setGridParams((p) => ({
+                          ...p,
+                          terrain_follow: e.target.checked,
+                        }))
+                      }
+                    />
+                  }
+                  label={
+                    <Typography variant="caption">Terrain following (AGL)</Typography>
+                  }
+                />
+                {gridParams.terrain_follow && (
+                  <TextField
+                    variant="filled"
+                    label="AGL height (m)"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    value={gridParams.agl_m}
+                    onChange={(e) =>
+                      setGridParams((p) => ({
+                        ...p,
+                        agl_m: Math.max(1, Number(e.target.value)),
+                      }))
+                    }
+                    inputProps={{ min: 1, max: 200, step: 1 }}
+                  />
+                )}
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+
           {!fieldBorder && (
             <Alert severity="info" sx={{ py: 0.5, gridColumn: "1 / -1" }}>
               {copy.missingFieldAlert}

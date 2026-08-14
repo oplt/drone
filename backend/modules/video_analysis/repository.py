@@ -9,7 +9,9 @@ from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.selectable import Select
 
+from backend.core.authz.visibility import org_or_owner_visibility, org_scoped_visibility
 from backend.core.config.runtime import settings
+from backend.shared.storage_objects import reconcile_staged_storage_objects
 from backend.modules.identity.models import User
 from backend.modules.video_analysis.models import (
     StorageObject,
@@ -51,9 +53,18 @@ class VideoAnalysisRepository:
         return video
 
     def _visible_video(self, user: User) -> ColumnElement[bool]:
-        if user.org_id is not None:
-            return VideoAsset.org_id == user.org_id
-        return VideoAsset.uploaded_by_user_id == user.id
+        return org_or_owner_visibility(
+            org_column=VideoAsset.org_id,
+            owner_column=VideoAsset.uploaded_by_user_id,
+            user_org_id=user.org_id,
+            user_id=user.id,
+        )
+
+    def _visible_detection(self, org_id: int | None) -> ColumnElement[bool]:
+        return org_scoped_visibility(
+            org_column=VideoDetection.org_id,
+            user_org_id=org_id,
+        )
 
     @staticmethod
     def _apply_detection_filters(
@@ -63,6 +74,10 @@ class VideoAnalysisRepository:
         label: str | None = None,
         since_ts: float | None = None,
         until_ts: float | None = None,
+        min_lon: float | None = None,
+        min_lat: float | None = None,
+        max_lon: float | None = None,
+        max_lat: float | None = None,
     ) -> Select:
         if min_confidence is not None:
             stmt = stmt.where(VideoDetection.confidence >= min_confidence)
@@ -72,6 +87,19 @@ class VideoAnalysisRepository:
             stmt = stmt.where(VideoDetection.timestamp_seconds >= since_ts)
         if until_ts is not None:
             stmt = stmt.where(VideoDetection.timestamp_seconds <= until_ts)
+        if any(value is not None for value in (min_lon, min_lat, max_lon, max_lat)):
+            stmt = stmt.where(
+                VideoDetection.lon.is_not(None),
+                VideoDetection.lat.is_not(None),
+            )
+            if min_lon is not None:
+                stmt = stmt.where(VideoDetection.lon >= min_lon)
+            if min_lat is not None:
+                stmt = stmt.where(VideoDetection.lat >= min_lat)
+            if max_lon is not None:
+                stmt = stmt.where(VideoDetection.lon <= max_lon)
+            if max_lat is not None:
+                stmt = stmt.where(VideoDetection.lat <= max_lat)
         return stmt
 
     async def get_video_for_user(self, video_id: str, user: User) -> VideoAsset | None:
@@ -140,13 +168,14 @@ class VideoAnalysisRepository:
         user_id: int | None,
     ) -> list[VideoAsset]:
         stmt = select(VideoAsset).where(VideoAsset.mission_id == mission_id)
-        if org_id is not None:
-            stmt = stmt.where(VideoAsset.org_id == org_id)
-        else:
-            stmt = stmt.where(
-                VideoAsset.org_id.is_(None),
-                VideoAsset.uploaded_by_user_id == user_id,
+        stmt = stmt.where(
+            org_or_owner_visibility(
+                org_column=VideoAsset.org_id,
+                owner_column=VideoAsset.uploaded_by_user_id,
+                user_org_id=org_id,
+                user_id=user_id or 0,
             )
+        )
         return list((await self.db.scalars(stmt.order_by(VideoAsset.created_at))).all())
 
     async def update_video_metadata(
@@ -194,6 +223,7 @@ class VideoAnalysisRepository:
             orchestration_key=orchestration_key,
             frame_stride_seconds=frame_stride_seconds,
             confidence_threshold=confidence_threshold,
+            capture_metadata_revision=video.capture_metadata_revision,
             status="queued",
         )
         self.db.add(job)
@@ -418,8 +448,21 @@ class VideoAnalysisRepository:
         current.lease_expires_at = None
         current.terminal_reason_code = "COMPLETED"
         current.terminal_stage = "completed"
+        current_video = None
         if video is not None:
-            video.status = "analyzed"
+            current_video = await self.db.scalar(
+                select(VideoAsset)
+                .where(VideoAsset.id == current.video_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+        if current_video is not None:
+            current_video.status = "analyzed"
+            if (
+                current.capture_metadata_revision
+                >= current_video.capture_metadata_revision
+            ):
+                current_video.reanalysis_required = False
         await self.db.commit()
         return True
 
@@ -580,10 +623,14 @@ class VideoAnalysisRepository:
         stmt = select(VideoAnalysisJob).join(
             VideoAsset, VideoAsset.id == VideoAnalysisJob.video_id
         ).where(VideoAnalysisJob.id.in_(job_ids))
-        if org_id is not None:
-            stmt = stmt.where(VideoAsset.org_id == org_id)
-        else:
-            stmt = stmt.where(VideoAsset.org_id.is_(None), VideoAsset.uploaded_by_user_id == user_id)
+        stmt = stmt.where(
+            org_or_owner_visibility(
+                org_column=VideoAsset.org_id,
+                owner_column=VideoAsset.uploaded_by_user_id,
+                user_org_id=org_id,
+                user_id=user_id or 0,
+            )
+        )
         return list((await self.db.scalars(stmt)).all())
 
     async def list_detections_by_job_ids(
@@ -592,14 +639,82 @@ class VideoAnalysisRepository:
         if not job_ids:
             return []
         stmt = select(VideoDetection).where(VideoDetection.job_id.in_(job_ids))
-        if org_id is not None:
-            stmt = stmt.where(VideoDetection.org_id == org_id)
-        else:
-            stmt = stmt.where(VideoDetection.org_id.is_(None))
+        stmt = stmt.where(self._visible_detection(org_id))
         stmt = stmt.order_by(
             VideoDetection.timestamp_seconds.asc(), VideoDetection.id.asc()
         )
         return list((await self.db.scalars(stmt)).all())
+
+    async def page_detections_by_job_ids(
+        self,
+        job_ids: list[str],
+        *,
+        org_id: int | None,
+        limit: int,
+        after: tuple[float, str] | None = None,
+        bbox: tuple[float, float, float, float] | None = None,
+        min_confidence: float | None = None,
+    ) -> tuple[list[VideoDetection], bool]:
+        if not job_ids:
+            return [], False
+        bounded_limit = max(1, min(int(limit), 5000))
+        stmt = select(VideoDetection).where(VideoDetection.job_id.in_(job_ids))
+        stmt = stmt.where(self._visible_detection(org_id))
+        filter_values = bbox or (None, None, None, None)
+        stmt = self._apply_detection_filters(
+            stmt,
+            min_confidence=min_confidence,
+            min_lon=filter_values[0],
+            min_lat=filter_values[1],
+            max_lon=filter_values[2],
+            max_lat=filter_values[3],
+        )
+        if after is not None:
+            timestamp, detection_id = after
+            stmt = stmt.where(
+                (VideoDetection.timestamp_seconds > timestamp)
+                | (
+                    (VideoDetection.timestamp_seconds == timestamp)
+                    & (VideoDetection.id > detection_id)
+                )
+            )
+        rows = list(
+            (
+                await self.db.scalars(
+                    stmt.order_by(
+                        VideoDetection.timestamp_seconds.asc(),
+                        VideoDetection.id.asc(),
+                    ).limit(bounded_limit + 1)
+                )
+            ).all()
+        )
+        return rows[:bounded_limit], len(rows) > bounded_limit
+
+    async def aggregate_class_counts_by_job_ids(
+        self,
+        job_ids: list[str],
+        *,
+        org_id: int | None,
+        bbox: tuple[float, float, float, float] | None = None,
+        min_confidence: float | None = None,
+    ) -> dict[str, int]:
+        if not job_ids:
+            return {}
+        stmt = select(
+            VideoDetection.label, func.count(VideoDetection.id)
+        ).where(VideoDetection.job_id.in_(job_ids))
+        stmt = stmt.where(self._visible_detection(org_id))
+        filter_values = bbox or (None, None, None, None)
+        stmt = self._apply_detection_filters(
+            stmt,
+            min_confidence=min_confidence,
+            min_lon=filter_values[0],
+            min_lat=filter_values[1],
+            max_lon=filter_values[2],
+            max_lat=filter_values[3],
+        )
+        rows = await self.db.execute(stmt.group_by(VideoDetection.label))
+        return {str(label): int(count) for label, count in rows.all()}
 
     async def list_detections_for_user(
         self, job_id: str, user: User, limit: int = 500
@@ -696,21 +811,11 @@ class VideoAnalysisRepository:
         )
 
     async def reconcile_staged_storage_objects(self, *, older_than_minutes: int) -> int:
-        cutoff = datetime.now(UTC) - timedelta(minutes=max(1, older_than_minutes))
-        rows = list(
-            (
-                await self.db.scalars(
-                    select(StorageObject).where(
-                        StorageObject.state == "staged",
-                        StorageObject.created_at < cutoff,
-                    )
-                )
-            ).all()
+        return await reconcile_staged_storage_objects(
+            self.db,
+            StorageObject,
+            older_than_minutes=older_than_minutes,
         )
-        for item in rows:
-            item.state = "orphan"
-        await self.db.commit()
-        return len(rows)
 
     async def summarize_detections(self, job_id: str, user: User) -> dict:
         visible = self._visible_video(user)

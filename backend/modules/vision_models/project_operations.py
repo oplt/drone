@@ -151,6 +151,8 @@ class ProjectOperations:
                     dataset_id=dataset.id,
                     storage_uri=source_image.storage_uri,
                     thumbnail_uri=source_image.thumbnail_uri,
+                    storage_object_id=source_image.storage_object_id,
+                    thumbnail_storage_object_id=source_image.thumbnail_storage_object_id,
                     source_type=source_image.source_type,
                     source_group=source_image.source_group,
                     source_video_id=source_image.source_video_id,

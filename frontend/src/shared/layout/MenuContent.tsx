@@ -5,6 +5,8 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Collapse from "@mui/material/Collapse";
 import Tooltip from "@mui/material/Tooltip";
@@ -25,6 +27,9 @@ import WarehouseRoundedIcon from "@mui/icons-material/WarehouseRounded";
 import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
+import MapRoundedIcon from "@mui/icons-material/MapRounded";
+import VideocamRoundedIcon from "@mui/icons-material/VideocamRounded";
+import SecurityRoundedIcon from "@mui/icons-material/SecurityRounded";
 import { Link, useLocation } from "react-router-dom";
 
 interface MenuChildItem {
@@ -33,10 +38,14 @@ interface MenuChildItem {
   path: string;
 }
 
-interface MenuItem {
+interface MenuItemDef {
   text: string;
   icon: ReactNode;
-  path: string;
+  path?: string;
+  /** When true, parent path matches only exactly (Operations hub). */
+  exact?: boolean;
+  /** Parent expands children only; never navigates. */
+  expandOnly?: boolean;
   children?: MenuChildItem[];
 }
 
@@ -45,17 +54,22 @@ interface MenuContentProps {
   userRole?: string;
 }
 
-const mainListItems: MenuItem[] = [
-  { text: "Operations", icon: <HomeRoundedIcon />, path: "/dashboard" },
+const mainListItems: MenuItemDef[] = [
+  { text: "Operations", icon: <HomeRoundedIcon />, path: "/dashboard", exact: true },
   {
     text: "Tasks",
     icon: <AssignmentRoundedIcon />,
-    path: "/dashboard/controlled",
+    expandOnly: true,
     children: [
       {
-        text: "Agriculture",
-        icon: <AgricultureIcon />,
+        text: "Field Survey",
+        icon: <MapRoundedIcon />,
         path: "/dashboard/field",
+      },
+      {
+        text: "Agriculture Fields",
+        icon: <AgricultureIcon />,
+        path: "/dashboard/agriculture/fields",
       },
       {
         text: "Vision Models",
@@ -63,8 +77,8 @@ const mainListItems: MenuItem[] = [
         path: "/dashboard/agriculture/vision-models",
       },
       {
-        text: "Property Patrol Mission",
-        icon: <VisibilityRoundedIcon />,
+        text: "Property Patrol",
+        icon: <SecurityRoundedIcon />,
         path: "/dashboard/property-patrol",
       },
       {
@@ -73,7 +87,7 @@ const mainListItems: MenuItem[] = [
         path: "/dashboard/warehouse",
       },
       {
-        text: "PhotoGrammetry",
+        text: "Photogrammetry",
         icon: <PhotoCameraRoundedIcon />,
         path: "/dashboard/photogrammetry",
       },
@@ -87,6 +101,11 @@ const mainListItems: MenuItem[] = [
         icon: <SportsEsportsRoundedIcon />,
         path: "/dashboard/controlled",
       },
+      {
+        text: "Video Analysis",
+        icon: <VideocamRoundedIcon />,
+        path: "/dashboard/video-analysis",
+      },
     ],
   },
   {
@@ -97,7 +116,7 @@ const mainListItems: MenuItem[] = [
   {
     text: "Observability",
     icon: <QueryStatsRoundedIcon />,
-    path: "/observability",
+    path: "/dashboard/observability",
   },
   {
     text: "Fleet",
@@ -111,7 +130,7 @@ const mainListItems: MenuItem[] = [
   },
 ];
 
-const secondaryListItems: MenuItem[] = [
+const secondaryListItems: MenuItemDef[] = [
   {
     text: "Account",
     icon: <ManageAccountsRoundedIcon />,
@@ -156,6 +175,14 @@ export default function MenuContent({
   userRole,
 }: MenuContentProps) {
   const location = useLocation();
+  const [tasksMenuAnchor, setTasksMenuAnchor] = useState<null | HTMLElement>(null);
+
+  const isSelected = (item: MenuItemDef, pathname: string) => {
+    if (!item.path) return false;
+    if (item.exact) return pathname === item.path;
+    return pathname === item.path || pathname.startsWith(`${item.path}/`);
+  };
+
   const isTaskRoute = (pathname: string) =>
     tasksChildren.some(
       (child) =>
@@ -199,22 +226,50 @@ export default function MenuContent({
         {mainListItems.map((item) => (
           <ListItem key={item.text} disablePadding sx={{ display: "block" }}>
             {item.children && collapsed ? (
-              withTooltip(
-                item.text,
-                <ListItemButton
-                  component={Link}
-                  to={item.path}
-                  selected={isTaskRoute(location.pathname)}
-                  sx={listButtonSx}
+              <>
+                {withTooltip(
+                  item.text,
+                  <ListItemButton
+                    aria-label={`${item.text} menu`}
+                    aria-haspopup="menu"
+                    aria-expanded={Boolean(tasksMenuAnchor)}
+                    selected={isTaskRoute(location.pathname)}
+                    onClick={(event) => setTasksMenuAnchor(event.currentTarget)}
+                    sx={listButtonSx}
+                  >
+                    <ListItemIcon sx={listIconSx}>{item.icon}</ListItemIcon>
+                  </ListItemButton>,
+                )}
+                <Menu
+                  anchorEl={tasksMenuAnchor}
+                  open={Boolean(tasksMenuAnchor)}
+                  onClose={() => setTasksMenuAnchor(null)}
+                  anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "left" }}
                 >
-                  <ListItemIcon sx={listIconSx}>{item.icon}</ListItemIcon>
-                </ListItemButton>,
-              )
+                  {item.children.map((child) => (
+                    <MenuItem
+                      key={child.text}
+                      component={Link}
+                      to={child.path}
+                      selected={
+                        location.pathname === child.path ||
+                        location.pathname.startsWith(`${child.path}/`)
+                      }
+                      onClick={() => setTasksMenuAnchor(null)}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>{child.icon}</ListItemIcon>
+                      <ListItemText primary={child.text} />
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
             ) : item.children ? (
               <>
                 <ListItemButton
                   onClick={handleTasksClick}
                   selected={isTaskRoute(location.pathname)}
+                  aria-expanded={openTasks}
                   sx={listButtonSx}
                 >
                   <ListItemIcon sx={listIconSx}>{item.icon}</ListItemIcon>
@@ -253,11 +308,8 @@ export default function MenuContent({
                 item.text,
                 <ListItemButton
                   component={Link}
-                  to={item.path}
-                  selected={
-                    location.pathname === item.path ||
-                    location.pathname.startsWith(`${item.path}/`)
-                  }
+                  to={item.path!}
+                  selected={isSelected(item, location.pathname)}
                   sx={listButtonSx}
                 >
                   <ListItemIcon sx={listIconSx}>{item.icon}</ListItemIcon>
@@ -291,7 +343,7 @@ export default function MenuContent({
               item.text,
               <ListItemButton
                 component={Link}
-                to={item.path}
+                to={item.path!}
                 selected={
                   location.pathname === item.path ||
                   location.pathname.startsWith(`${item.path}/`)

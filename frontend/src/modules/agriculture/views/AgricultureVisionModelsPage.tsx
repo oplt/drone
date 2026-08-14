@@ -21,6 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import { EvaluationDashboard } from "../components/EvaluationDashboard";
+import { AgricultureAccessibilityBoundary } from "../components/AgricultureAccessibilityBoundary";
 import { VisionDatasetWorkspace } from "../components/VisionDatasetWorkspace";
 import { VisionModelRegistry } from "../components/VisionModelRegistry";
 import { VisionProjectCreateDialog } from "../components/VisionProjectCreateDialog";
@@ -65,11 +66,12 @@ export default function AgricultureVisionModelsPage() {
   if (projects.isLoading)
     return <CircularProgress aria-label="Loading vision projects" />;
   return (
+    <AgricultureAccessibilityBoundary>
     <Stack spacing={3}>
       <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
         <Box>
           <Typography variant="overline" color="primary">Agriculture intelligence</Typography>
-          <Typography variant="h4" fontWeight={700}>Vision models</Typography>
+          <Typography variant="h4" fontWeight={600}>Vision models</Typography>
           <Typography color="text.secondary">
             Curate imagery, label objects, train, evaluate, and deploy crop-specific detectors.
           </Typography>
@@ -101,7 +103,7 @@ export default function AgricultureVisionModelsPage() {
                     setTab("dataset");
                   }}>
                     <CardContent>
-                      <Typography fontWeight={700}>{item.name}</Typography>
+                      <Typography fontWeight={600}>{item.name}</Typography>
                       <Typography variant="body2" color="text.secondary">
                         {item.crop} · {item.classes.length} classes
                       </Typography>
@@ -166,5 +168,6 @@ export default function AgricultureVisionModelsPage() {
       )}
       <VisionProjectCreateDialog open={createOpen} onClose={() => setCreateOpen(false)} />
     </Stack>
+    </AgricultureAccessibilityBoundary>
   );
 }

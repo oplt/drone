@@ -379,7 +379,6 @@ export function useWarehouseLiveVoxelMap(
             );
           },
         },
-        options.token,
       );
     };
 

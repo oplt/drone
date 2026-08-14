@@ -27,6 +27,28 @@ def test_production_security_rejects_development_defaults() -> None:
         validate_production_security(settings, bootstrap)
 
 
+def test_production_security_rejects_local_test_jwt_secret() -> None:
+    from backend.core.config.production import validate_production_security
+
+    settings = SimpleNamespace(
+        app_env="production",
+        jwt_secret="local-test-secret-change-me",
+        warehouse_live_map_ingest_token="production-token-value",
+        google_maps_api_key="production-maps-key",
+        raspberry_password="production-camera-password",
+        PHOTOGRAMMETRY_ASSET_SIGNING_SECRET="production-signing-secret",
+        storage_backend="local",
+        database_url="postgresql://app:production-pass@example.test/drone",
+        cookie_secure=True,
+        photogrammetry_public_static_assets=False,
+        agriculture_malware_scan_required=False,
+    )
+    bootstrap = SimpleNamespace(settings_vault_key="vault-key")
+
+    with pytest.raises(RuntimeError, match="JWT_SECRET"):
+        validate_production_security(settings, bootstrap)
+
+
 def test_production_security_allows_non_production() -> None:
     from backend.core.config.production import validate_production_security
 

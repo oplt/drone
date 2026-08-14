@@ -7,6 +7,7 @@ import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
 import PageLoader from "./PageLoader";
 import PermissionDenied from "./PermissionDenied";
+import { BulkActionBar } from "./BulkActionBar";
 
 describe("shared ui primitives", () => {
   it("PageLoader exposes loading status semantics", async () => {
@@ -55,5 +56,21 @@ describe("shared ui primitives", () => {
     expect(confirmButton).toHaveFocus();
     fireEvent.click(confirmButton);
     expect(onConfirm).toHaveBeenCalledOnce();
+  });
+
+  it("BulkActionBar hides until multi-select threshold", () => {
+    const { rerender } = render(
+      <BulkActionBar selectedCount={1}>
+        <button type="button">Merge</button>
+      </BulkActionBar>,
+    );
+    expect(screen.queryByRole("toolbar")).not.toBeInTheDocument();
+    rerender(
+      <BulkActionBar selectedCount={2}>
+        <button type="button">Merge</button>
+      </BulkActionBar>,
+    );
+    expect(screen.getByRole("toolbar", { name: "Bulk actions" })).toBeInTheDocument();
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
   });
 });

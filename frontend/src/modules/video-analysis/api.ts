@@ -29,10 +29,7 @@ export async function listMissionVideos(
   );
 }
 
-export function buildMissionVideoStreamUrl(
-  videoId: string,
-  _token?: string | null,
-): string {
+export function buildMissionVideoStreamUrl(videoId: string): string {
   return resolveApiUrl(`/video-analysis/videos/${videoId}/stream`);
 }
 

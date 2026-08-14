@@ -1,4 +1,7 @@
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Button,
   Chip,
@@ -10,8 +13,8 @@ import {
   Stack,
   TextField,
   Typography,
-  useMediaQuery,
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { selectDetectionEvidence } from "../../video-analysis/evidenceSelection";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -82,9 +85,7 @@ export function AgricultureTemporalWorkspace({
   const [geometry, setGeometry] = useState("{}");
   const [comparisonId, setComparisonId] = useState<string | null>(null);
   const [lastComparability, setLastComparability] = useState<Comparability | null>(null);
-  const prefersReducedMotion = useMediaQuery(
-    "(prefers-reduced-motion: reduce)",
-  );
+  const [wizardStep, setWizardStep] = useState(0);
   const rows = changes.data ?? EMPTY_ROWS;
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0] ?? null;
   const latestRunId = analysisRuns.data?.[0]?.id ?? null;
@@ -137,14 +138,6 @@ export function AgricultureTemporalWorkspace({
   );
 
   const activeReferenceFlightId = referenceFlightId || references[0]?.id || "";
-  useEffect(() => {
-    if (viewMode !== "blink" || prefersReducedMotion) return;
-    const timer = window.setInterval(
-      () => setBlinkCurrent((value) => !value),
-      1200,
-    );
-    return () => window.clearInterval(timer);
-  }, [prefersReducedMotion, viewMode]);
   useEffect(() => {
     if (selected)
       selectDetectionEvidence(selected.evidence_ids[0] ?? null);
@@ -217,6 +210,28 @@ export function AgricultureTemporalWorkspace({
           </Alert>
         ) : (
           <>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Chip
+                clickable
+                color={wizardStep === 0 ? "primary" : "default"}
+                label="1. Pick reference"
+                onClick={() => setWizardStep(0)}
+              />
+              <Chip
+                clickable
+                color={wizardStep === 1 ? "primary" : "default"}
+                label="2. Compare"
+                onClick={() => setWizardStep(1)}
+                disabled={!comparisonId}
+              />
+              <Chip
+                clickable
+                color={wizardStep === 2 ? "primary" : "default"}
+                label="3. Review"
+                onClick={() => setWizardStep(2)}
+                disabled={!comparisonId}
+              />
+            </Stack>
             <Stack
               direction={{ xs: "column", md: "row" }}
               spacing={1}
@@ -263,6 +278,7 @@ export function AgricultureTemporalWorkspace({
                       onSuccess: (result) => {
                         setComparisonId(result.id);
                         setLastComparability(result.comparability ?? null);
+                        setWizardStep(2);
                       },
                     },
                   )
@@ -278,9 +294,7 @@ export function AgricultureTemporalWorkspace({
                 inputProps={{ "aria-label": "Comparison view" }}
               >
                 <MenuItem value="split">Split</MenuItem>
-                <MenuItem value="blink" disabled={prefersReducedMotion}>
-                  Blink
-                </MenuItem>
+                <MenuItem value="blink">Toggle layers</MenuItem>
               </Select>
             </Stack>
             {selectedComparable ? (
@@ -298,6 +312,18 @@ export function AgricultureTemporalWorkspace({
                 ))}
               </Stack>
             ) : null}
+            {wizardStep === 0 ? (
+              <Alert severity="info">
+                Select a reference flight, then run Compare to continue.
+              </Alert>
+            ) : null}
+            {wizardStep === 1 && !comparisonId ? (
+              <Alert severity="info">
+                Run Compare flights to generate the change set, then review.
+              </Alert>
+            ) : null}
+            {wizardStep >= 1 && comparisonId ? (
+            <>
             {referenceBlocked ? (
               <Alert severity="warning">
                 Selected reference is not eligible for trustworthy comparison. Choose another flight or resolve blockers first.
@@ -400,9 +426,27 @@ export function AgricultureTemporalWorkspace({
                       </Stack>
                     </>
                   ) : (
-                    <Stack sx={{ flex: 1 }}>
+                    <Stack sx={{ flex: 1 }} spacing={1}>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          size="small"
+                          variant={blinkCurrent ? "contained" : "outlined"}
+                          aria-pressed={blinkCurrent}
+                          onClick={() => setBlinkCurrent(true)}
+                        >
+                          Current
+                        </Button>
+                        <Button
+                          size="small"
+                          variant={!blinkCurrent ? "contained" : "outlined"}
+                          aria-pressed={!blinkCurrent}
+                          onClick={() => setBlinkCurrent(false)}
+                        >
+                          Previous
+                        </Button>
+                      </Stack>
                       <Typography variant="caption">
-                        {blinkCurrent ? "Current" : "Previous"}
+                        Showing {blinkCurrent ? "current" : "previous"} layer
                       </Typography>
                       <AgricultureGeoJsonPreview
                         geojson={
@@ -416,9 +460,7 @@ export function AgricultureTemporalWorkspace({
                 </Stack>
                 <Typography variant="caption" color="text.secondary">
                   {viewMode === "blink"
-                    ? prefersReducedMotion
-                      ? "Blink disabled because reduced motion is enabled."
-                      : "Blink alternates current and previous layers every 1.2 seconds."
+                    ? "Toggle layers uses a static Current/Previous highlight (no auto-blink)."
                     : "Split compares current and previous geometries side by side."}
                 </Typography>
                 <Divider />
@@ -551,14 +593,28 @@ export function AgricultureTemporalWorkspace({
                       aria-label="Annotation severity"
                     />
                   </Stack>
-                  <TextField
-                    size="small"
-                    label="Polygon GeoJSON"
-                    multiline
-                    minRows={3}
-                    value={geometry}
-                    onChange={(event) => setGeometry(event.target.value)}
-                  />
+                  <Alert severity="info">
+                    Prefer map selection of the observation footprint. Raw
+                    geometry editing is optional for specialists.
+                  </Alert>
+                  <Accordion disableGutters>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="caption">
+                        Advanced: polygon GeoJSON
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <TextField
+                        size="small"
+                        label="Polygon GeoJSON"
+                        multiline
+                        minRows={3}
+                        fullWidth
+                        value={geometry}
+                        onChange={(event) => setGeometry(event.target.value)}
+                      />
+                    </AccordionDetails>
+                  </Accordion>
                   <TextField
                     size="small"
                     label="Notes"
@@ -581,6 +637,8 @@ export function AgricultureTemporalWorkspace({
                 </Stack>
               ) : null}
             </Stack>
+            </>
+            ) : null}
           </>
         )}
       </Stack>

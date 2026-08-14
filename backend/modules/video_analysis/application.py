@@ -201,10 +201,6 @@ class VideoAnalysisApplication:
             if existing is None or existing.video_id != video.id:
                 raise
             return existing
-        if video.reanalysis_required:
-            video.reanalysis_required = False
-            await db.commit()
-            await db.refresh(video)
         try:
             self.queue.enqueue(job_id=job.id)
         except VideoAnalysisQueueError as exc:
@@ -394,9 +390,16 @@ class VideoAnalysisApplication:
             video.capture_timezone = patch.capture_timezone
         if patch.sync_offset_seconds is not None:
             video.sync_offset_seconds = float(patch.sync_offset_seconds)
-        analyzed = await repo.video_has_analyzed_jobs(video.id)
-        if analyzed:
-            video.reanalysis_required = True
+        changed = before != {
+            "captured_at": video.captured_at.isoformat() if video.captured_at else None,
+            "capture_timezone": video.capture_timezone,
+            "sync_offset_seconds": video.sync_offset_seconds,
+            "capture_time_source": video.capture_time_source,
+        }
+        if changed:
+            video.capture_metadata_revision += 1
+            if await repo.video_has_analyzed_jobs(video.id):
+                video.reanalysis_required = True
         await db.commit()
         await db.refresh(video)
         emit_audit_event(

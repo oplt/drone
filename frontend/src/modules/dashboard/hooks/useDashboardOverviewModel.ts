@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAlertCenter } from "../../alerts";
-import { useTelemetryWebSocket } from "../../mission-runtime";
+import { deriveTelemetry, useTelemetryWebSocket } from "../../mission-runtime";
 import type { DashboardStatCard } from "../types";
+import type { DashboardAlertItem } from "../utils/dashboardAlerts";
 import {
   deltaLabelFromSeries,
   formatDateLabel,
@@ -12,25 +13,86 @@ import {
 } from "../utils/dashboardFormatters";
 import { useAnalyticsOverview } from "./useAnalyticsOverview";
 
-const toNumber = (value: unknown) =>
-  typeof value === "number" ? value : Number(value);
-
 export function useDashboardOverviewModel() {
-  const [nowSec] = useState(() => Math.round(Date.now() / 1000));
+  const [nowSec, setNowSec] = useState(() => Math.round(Date.now() / 1000));
   const { data, loading, error, refresh } = useAnalyticsOverview();
-  const { alerts: activeAlerts } = useAlertCenter();
+  const { alerts: activeAlerts, setDrawerOpen, loadError: alertsLoadError, refresh: refreshAlerts } =
+    useAlertCenter();
   const system = data?.system;
-  const { telemetry, isConnected } = useTelemetryWebSocket({
+  const { telemetry, isConnected, lastPacketAt } = useTelemetryWebSocket({
     enabled: Boolean(system?.mavlink_connected),
   });
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowSec(Math.round(Date.now() / 1000)), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const summary = data?.summary;
   const trends = data?.trends;
   const labels = (trends?.days ?? []).map(formatDateLabel);
-  const lastUpdateAge =
-    system?.last_update && system.last_update > 0
-      ? Math.max(0, Math.round(nowSec - system.last_update))
-      : null;
+  const derived = useMemo(() => deriveTelemetry(telemetry), [telemetry]);
+
+  const lastUpdateAge = useMemo(() => {
+    if (lastPacketAt != null) {
+      return Math.max(0, Math.round(nowSec - lastPacketAt / 1000));
+    }
+    if (system?.last_update && system.last_update > 0) {
+      return Math.max(0, Math.round(nowSec - system.last_update));
+    }
+    return null;
+  }, [lastPacketAt, nowSec, system]);
+
+  const openAlerts = useMemo(
+    () => setDrawerOpen.bind(null, true),
+    [setDrawerOpen],
+  );
+
+  const alertItems = useMemo<DashboardAlertItem[]>(() => {
+    if (activeAlerts.length > 0) {
+      return activeAlerts.slice(0, 6).map((item) => ({
+        id: String(item.id),
+        title: item.title,
+        message: item.message,
+        severity: item.severity,
+        triggeredAt: item.last_triggered_at,
+        onOpen: openAlerts,
+      }));
+    }
+
+    const fallback: DashboardAlertItem[] = [];
+    if (system && !system.telemetry_running) {
+      fallback.push({
+        id: "telemetry-offline",
+        title: "Telemetry stream offline",
+        message: "Backend telemetry broadcaster is not running.",
+        severity: "high",
+        triggeredAt: new Date().toISOString(),
+        onOpen: openAlerts,
+      });
+    }
+    if (derived.batteryPct !== null && derived.batteryPct < 30) {
+      fallback.push({
+        id: "battery-low",
+        title: "Battery health low",
+        message: `Reserve at ${derived.batteryPct}%.`,
+        severity: "critical",
+        triggeredAt: new Date().toISOString(),
+        onOpen: openAlerts,
+      });
+    }
+    if (system && !isConnected) {
+      fallback.push({
+        id: "link-disconnected",
+        title: "Live telemetry link disconnected",
+        message: "WebSocket telemetry is not connected.",
+        severity: "medium",
+        triggeredAt: new Date().toISOString(),
+        onOpen: openAlerts,
+      });
+    }
+    return fallback;
+  }, [activeAlerts, derived.batteryPct, isConnected, openAlerts, system]);
 
   const statCards = useMemo<DashboardStatCard[]>(() => {
     const flightCounts = trends?.flight_counts ?? [];
@@ -110,26 +172,6 @@ export function useDashboardOverviewModel() {
     [data?.recent_flights],
   );
 
-  const telemetryBattery = toNumber(
-    telemetry?.battery?.remaining ?? telemetry?.battery_remaining,
-  );
-  const batteryPct =
-    Number.isFinite(telemetryBattery) && telemetryBattery >= 0
-      ? telemetryBattery
-      : null;
-  const alertItems =
-    activeAlerts.length > 0
-      ? activeAlerts.slice(0, 4).map((item) => `${item.title}: ${item.message}`)
-      : ([
-          system && !system.telemetry_running
-            ? "Telemetry stream is offline."
-            : null,
-          batteryPct !== null && batteryPct < 30
-            ? `Battery health low (${Math.round(batteryPct)}%).`
-            : null,
-          system && !isConnected ? "Live telemetry link disconnected." : null,
-        ].filter(Boolean) as string[]);
-
   return {
     data,
     loading,
@@ -137,6 +179,9 @@ export function useDashboardOverviewModel() {
     refresh,
     activeAlerts,
     alertItems,
+    alertsLoadError,
+    refreshAlerts,
+    openAlertDrawer: openAlerts,
     system,
     summary,
     trends,
@@ -147,19 +192,19 @@ export function useDashboardOverviewModel() {
     lastUpdateAge,
     telemetry: {
       isConnected,
-      mode: String(telemetry?.mode ?? telemetry?.status?.mode ?? "UNKNOWN"),
-      altitudeM: toNumber(
-        telemetry?.position?.relative_alt ??
-          telemetry?.position?.relative_altitude,
-      ),
-      speedMps: toNumber(
-        telemetry?.status?.groundspeed ?? telemetry?.groundspeed,
-      ),
-      batteryPct,
-      satellites: toNumber(
-        telemetry?.gps?.satellites ?? telemetry?.gps?.satellite_count,
-      ),
-      hdop: toNumber(telemetry?.gps?.hdop),
+      mode: derived.modeShort !== "--" ? derived.modeShort : derived.mode,
+      altitudeM: derived.relAltM ?? Number.NaN,
+      speedMps: derived.groundSpeedMps ?? Number.NaN,
+      batteryPct: derived.batteryPct,
+      batteryShort: derived.batteryShort,
+      satellites: derived.sats ?? Number.NaN,
+      hdop: derived.hdop ?? Number.NaN,
+      gpsQualityScore: derived.gpsQualityScore,
+      gpsStrength: derived.gpsStrength,
+      gpsShort: derived.gpsShort,
+      speedShort: derived.speedShort,
+      altShort: derived.altShort,
+      modeShort: derived.modeShort,
     },
     formatNumber,
   };

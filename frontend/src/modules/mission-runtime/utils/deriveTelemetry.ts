@@ -13,16 +13,26 @@ const formatMaybeNumber = (v: any, digits = 1) =>
   typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : "--";
 
 export function deriveTelemetry(t: TelemetryLike) {
-  const batteryPctRaw =
+  const batteryRaw = toFiniteNumber(
     t?.battery?.percent ??
-    t?.battery?.percentage ??
-    t?.battery?.remaining ??
-    t?.battery_remaining ??
-    t?.batteryPercent ??
-    null;
-
+      t?.battery?.percentage ??
+      t?.battery?.remaining ??
+      t?.battery_remaining ??
+      t?.batteryPercent ??
+      null,
+  );
+  // Accept 0–1 fractions or 0–100 percentages from mixed backends.
   const batteryPct =
-    typeof batteryPctRaw === "number" && batteryPctRaw >= 0 ? batteryPctRaw : null;
+    batteryRaw === null || batteryRaw < 0
+      ? null
+      : batteryRaw > 0 && batteryRaw <= 1
+        ? batteryRaw * 100
+        : batteryRaw;
+
+  const batteryPctRounded =
+    typeof batteryPct === "number" && Number.isFinite(batteryPct)
+      ? Math.round(batteryPct)
+      : null;
 
   const groundSpeedRaw =
     t?.velocity?.ground ??
@@ -145,26 +155,80 @@ export function deriveTelemetry(t: TelemetryLike) {
     typeof groundSpeed === "number" ? `${formatMaybeNumber(groundSpeed, 1)} m/s` : "--";
   const altShort = typeof relAlt === "number" ? `${formatMaybeNumber(relAlt, 0)} m` : "--";
 
+  /**
+   * Optional GPS quality 0–100 for progress UI.
+   * Prefer fix type, then HDOP. Never invent quality from satellite count alone.
+   */
+  let gpsQualityScore: number | null = null;
+  if (fixType !== null) {
+    if (fixType >= 6) gpsQualityScore = 100;
+    else if (fixType >= 5) gpsQualityScore = 90;
+    else if (fixType >= 4) gpsQualityScore = 75;
+    else if (fixType >= 3) gpsQualityScore = 55;
+    else if (fixType >= 2) gpsQualityScore = 30;
+    else gpsQualityScore = 5;
+  } else if (typeof hdop === "number" && Number.isFinite(hdop) && hdop > 0) {
+    if (hdop <= 1) gpsQualityScore = 95;
+    else if (hdop <= 2) gpsQualityScore = 80;
+    else if (hdop <= 5) gpsQualityScore = 55;
+    else if (hdop <= 10) gpsQualityScore = 30;
+    else gpsQualityScore = 10;
+  }
+
   return {
+    batteryPct: batteryPctRounded,
     batteryHealth,
     batteryShort,
     gpsStrength,
     gpsShort,
+    gpsQualityScore,
     flightStatus,
     statusShort,
     speed: typeof groundSpeed === "number" ? `${formatMaybeNumber(groundSpeed, 1)} m/s` : "--",
     speedShort,
+    groundSpeedMps: groundSpeed,
     alt: typeof relAlt === "number" ? `${formatMaybeNumber(relAlt, 1)} m` : "--",
     altShort,
+    relAltM: relAlt,
     wind: typeof windSpeed === "number" ? `${formatMaybeNumber(windSpeed, 1)} m/s` : "--",
+    windSpeedMps: windSpeed,
     heading: typeof heading === "number" ? `${Math.round(heading)}°` : "--",
+    headingDeg: heading,
     mode: typeof mode === "string" ? mode : "--",
     modeShort,
     failsafe: failsafeState,
     failsafeShort,
+    failsafeActive,
     armed,
-    sats,
-    hdop,
+    sats: toFiniteNumber(sats),
+    hdop: toFiniteNumber(hdop),
     fixType,
   };
 }
+
+export type DerivedTelemetry = ReturnType<typeof deriveTelemetry>;
+
+/** Canonical display strings shared by Dashboard / Fleet / Command / HUD / chips. */
+export function telemetryDisplayStrings(derived: DerivedTelemetry) {
+  return {
+    batteryPct: derived.batteryPct,
+    batteryShort: derived.batteryShort,
+    batteryHealth: derived.batteryHealth,
+    gpsShort: derived.gpsShort,
+    gpsStrength: derived.gpsStrength,
+    modeShort: derived.modeShort,
+    speedShort: derived.speedShort,
+    altShort: derived.altShort,
+    wind: derived.wind,
+    statusShort: derived.statusShort,
+  };
+}
+
+/** Shared fixture for cross-surface contract tests. */
+export const TELEMETRY_CONTRACT_FIXTURE = {
+  battery: { percent: 77 },
+  gps: { fix_type: 6, satellites: 14, hdop: 0.8 },
+  status: { mode: "AUTO", groundspeed: 4.2, alt: 25.5, armed: true },
+  wind: { speed: 3.1 },
+  armed: true,
+} as const;

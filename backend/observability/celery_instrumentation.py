@@ -178,6 +178,8 @@ def instrument_celery(celery_app: Any) -> None:
             try:
                 lag = max(0.0, time.time() - float(enqueue_raw))
                 prometheus_metrics.queue_lag_seconds.labels(queue=queue).observe(lag)
+                if _agriculture_capacity(queue):
+                    prometheus_metrics.agriculture_queue_age_seconds.labels(queue=queue).observe(lag)
             except (TypeError, ValueError):
                 pass
 
@@ -309,9 +311,23 @@ def instrument_celery(celery_app: Any) -> None:
         einfo: Any,
         **other: Any,
     ) -> None:
+        from celery.exceptions import SoftTimeLimitExceeded
+
         request = other.get("sender")
         job_name = _task_name(request) if request else "unknown"
         queue = _task_queue(request) if request else "default"
+        if isinstance(exception, SoftTimeLimitExceeded):
+            prometheus_metrics.celery_soft_time_limit_total.labels(
+                job_name=job_name,
+                queue=queue,
+            ).inc()
+            prometheus_metrics.jobs_failed_total.labels(
+                job_name=job_name,
+                queue=queue,
+                error_type="soft_time_limit",
+            ).inc()
+            _log_job_event("job_soft_time_limit", request)
+            return
         error_type = normalize_error_type(exception)
         scheduler_name = _BEAT_SCHEDULER_NAMES.get(job_name)
         if scheduler_name:

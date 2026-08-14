@@ -5,6 +5,8 @@ import logging
 from backend.modules.patrol.vision.models import Detection, FramePacket
 from backend.modules.video_analysis.model_storage import ensure_model_file
 from backend.modules.video_analysis.schemas import BUILTIN_MODEL_NAMES, CUSTOM_MODEL_PREFIX
+from backend.modules.video_analysis.service.detector import _device_name, load_yolo_model
+from backend.modules.video_analysis.model_storage import resolve_model_artifact
 
 log = logging.getLogger(__name__)
 DEFAULT_ALLOWED_LABELS = frozenset(
@@ -61,7 +63,14 @@ class ObjectDetector:
             or self.model_path.startswith(CUSTOM_MODEL_PREFIX)
             else self.model_path
         )
-        self._model = YOLO(local_path)
+        artifact = resolve_model_artifact(self.model_path, model_path=local_path)
+        device = _device_name()
+        self._device = device
+        self._model = load_yolo_model(
+            str(local_path),
+            artifact_hash=artifact.artifact_hash,
+            device=device,
+        )
         return self._model
 
     def detect(self, packet: FramePacket) -> list[Detection]:
@@ -79,6 +88,7 @@ class ObjectDetector:
                 source=packet.image,
                 conf=self.conf,
                 iou=self.iou,
+                device=getattr(self, "_device", _device_name()),
                 verbose=False,
             )
 

@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.modules.warehouse.models import WarehouseMap
 from backend.modules.warehouse.repository.contracts import WarehouseRepositoryError
@@ -64,6 +65,31 @@ def _scope_for_owner(
 
 
 class WarehouseMapMixin:
+    async def assert_owned_warehouse_map(
+        self,
+        db: AsyncSession,
+        *,
+        warehouse_map_id: int,
+        owner_id: int,
+        org_id: int | None = None,
+        allow_org_access: bool = False,
+    ) -> bool:
+        """Return True when the map exists and is owned by the caller."""
+        scope = _scope_for_owner(
+            owner_id=owner_id,
+            org_id=org_id,
+            allow_org_access=allow_org_access,
+        )
+        row = (
+            await db.execute(
+                select(WarehouseMap.id).where(
+                    WarehouseMap.id == int(warehouse_map_id),
+                    scope,
+                )
+            )
+        ).scalar_one_or_none()
+        return row is not None
+
     async def get_owned_warehouse_map(
         self,
         db: AsyncSession,
@@ -80,7 +106,16 @@ class WarehouseMapMixin:
         )
         return (
             await db.execute(
-                select(WarehouseMap).where(WarehouseMap.id == int(warehouse_map_id), scope)
+                select(WarehouseMap)
+                .options(
+                    selectinload(WarehouseMap.models),
+                    selectinload(WarehouseMap.docks),
+                    selectinload(WarehouseMap.scan_targets),
+                    selectinload(WarehouseMap.coordinate_frames),
+                    selectinload(WarehouseMap.rack_templates),
+                    selectinload(WarehouseMap.inspection_missions),
+                )
+                .where(WarehouseMap.id == int(warehouse_map_id), scope)
             )
         ).scalar_one_or_none()
 
@@ -103,6 +138,11 @@ class WarehouseMapMixin:
             (
                 await db.execute(
                     select(WarehouseMap)
+                    .options(
+                        selectinload(WarehouseMap.models),
+                        selectinload(WarehouseMap.docks),
+                        selectinload(WarehouseMap.coordinate_frames),
+                    )
                     .where(scope)
                     .order_by(WarehouseMap.id.desc())
                     .offset(max(0, offset))

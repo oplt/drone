@@ -47,6 +47,10 @@ export function useMissionMapRuntime({
   const [mapZoom, setMapZoom] = useState(DEFAULT_MISSION_MAP_ZOOM);
   const [mapReady, setMapReady] = useState(false);
   const [cesiumViewMode, setCesiumViewMode] = useState<CesiumViewMode>("tilted");
+  const [followEnabled, setFollowEnabled] = useState(true);
+  const [selectedWaypointIndex, setSelectedWaypointIndex] = useState<number | null>(
+    null,
+  );
   const mapEngine = controlledMapEngine;
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_JAVASCRIPT_API_KEY as string;
@@ -129,6 +133,7 @@ export function useMissionMapRuntime({
     mapRef,
     droneCenter,
     wsConnected,
+    followEnabled,
     onInitialSnap: () => setMapZoom(18),
   });
 
@@ -150,6 +155,10 @@ export function useMissionMapRuntime({
     handleMapEngineChange,
     cesiumViewMode,
     setCesiumViewMode,
+    followEnabled,
+    setFollowEnabled,
+    selectedWaypointIndex,
+    setSelectedWaypointIndex,
     mapOptions,
     loadingLocation,
     isLoaded,

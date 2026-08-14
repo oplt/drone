@@ -8,7 +8,6 @@ import Select from '@mui/material/Select';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import Header from "../../../shared/layout/WorkflowHeader";
 import PageLayout, { PageSection } from "../../../shared/layout/PageLayout";
 import useAnalyticsOverview from "../../../modules/dashboard";
 import useTelemetryWebSocket from "../../../modules/mission-runtime";
@@ -110,7 +109,6 @@ export default function InsightsPage() {
 
   return (
     <>
-      <Header />
       <PageLayout
         eyebrow="Insights"
         title="Field intelligence and operating signals"

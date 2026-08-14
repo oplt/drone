@@ -4,6 +4,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 
+from backend.core.config.runtime import settings
+from backend.core.rate_limit import enforce_rate_limit
 from backend.core.database.session import get_db
 from backend.core.errors.public import public_error
 from backend.modules.agents.context_builders import (
@@ -59,6 +61,11 @@ async def run_agent_on_demand(
     db: Any = Depends(get_db),
     user: Any = Depends(require_user),
 ) -> AgentResult:
+    await enforce_rate_limit(
+        key=f"agents:run:{user.id}",
+        limit=settings.agents_rate_runs_per_window,
+        window_seconds=settings.api_rate_window_seconds,
+    )
     try:
         get(agent_id)
     except KeyError as exc:

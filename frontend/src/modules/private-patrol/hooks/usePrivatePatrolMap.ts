@@ -241,10 +241,11 @@ export function usePrivatePatrolMap({
 
   const pointMarkers = useMemo<GooglePointMarker[]>(() => {
     if (gridParams.task_type === "waypoint_patrol" && waypoints.length > 0) {
-      return waypoints.map((point) => ({
+      return waypoints.map((point, index) => ({
         point,
-        title: "Waypoint",
-        color: "#1976d2",
+        title: `Waypoint ${index + 1}`,
+        color: mapRuntime.selectedWaypointIndex === index ? "#ff6d00" : "#1976d2",
+        onClick: () => mapRuntime.setSelectedWaypointIndex(index),
       }));
     }
 
@@ -259,7 +260,13 @@ export function usePrivatePatrolMap({
     }
 
     return [];
-  }, [eventLocation, gridParams.event_triggered_enabled, gridParams.task_type, waypoints]);
+  }, [
+    eventLocation,
+    gridParams.event_triggered_enabled,
+    gridParams.task_type,
+    waypoints,
+    mapRuntime,
+  ]);
 
   useGooglePointMarkers({
     enabled: terraDrawMode === "static",
@@ -303,6 +310,10 @@ export function usePrivatePatrolMap({
     handleMapEngineChange: mapRuntime.handleMapEngineChange,
     cesiumViewMode: mapRuntime.cesiumViewMode,
     setCesiumViewMode: mapRuntime.setCesiumViewMode,
+    followEnabled: mapRuntime.followEnabled,
+    setFollowEnabled: mapRuntime.setFollowEnabled,
+    selectedWaypointIndex: mapRuntime.selectedWaypointIndex,
+    setSelectedWaypointIndex: mapRuntime.setSelectedWaypointIndex,
     mapZoom: effectiveMapZoom,
     mapCenter,
     fieldFocusRequest: fieldFocusViewport

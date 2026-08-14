@@ -6,6 +6,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import { radius } from "../theme/themePrimitives";
 
 export type PageMetric = {
   label: string;
@@ -87,13 +88,12 @@ export default function PageLayout({
                             disableHoverListener={!metric.tooltip}
                           >
                             <Paper
-                              variant="outlined"
+                              variant="opsPanel"
                               sx={{
                                 p: 2,
                                 height: "100%",
-                                borderRadius: 3,
                                 border: "none",
-                                backgroundColor: "grey.50",
+                                bgcolor: "surface.inset",
                               }}
                             >
                               <Stack spacing={0.5}>
@@ -142,6 +142,7 @@ export default function PageLayout({
   );
 }
 
+/** Ops panel recipe — bordered scanable section (DESIGN.md §10). */
 export function PageSection({
   title,
   description,
@@ -151,13 +152,11 @@ export function PageSection({
 }: PageSectionProps) {
   return (
     <Paper
-      variant="outlined"
+      variant="opsPanel"
       sx={[
         {
           p: { xs: 2.5, md: 3 },
-          borderRadius: 3,
-          border: "none",
-          backgroundColor: "background.paper",
+          borderRadius: radius.md,
         },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}

@@ -219,6 +219,7 @@ async def start_mission_for_user(
 
     orch.current_mission_name = payload.name
     orch.current_client_flight_id = client_flight_id
+    orch.current_org_id = user.org_id
     orch.current_mission_type = payload.mission_type.value
     orch.current_flight_environment = profile.environment.value
     orch.current_control_mode = profile.control_mode

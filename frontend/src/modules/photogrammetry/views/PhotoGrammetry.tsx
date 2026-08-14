@@ -31,6 +31,7 @@ export default function PhotoGrammetryPage() {
       subtitle="Build per-field digital twins (orthomosaic, elevation, and 3D mesh), then stream them into the tasking basemap."
       droneConnected={vm.droneConnected}
       wsConnected={vm.wsConnected}
+      telemetry={telemetry}
       errors={vm.errors}
       onDismissError={vm.dismissError}
       onClearErrors={vm.clearErrors}
@@ -42,6 +43,7 @@ export default function PhotoGrammetryPage() {
         apiKey={map.apiKey}
         loadError={map.loadError}
         mapId={map.mapId}
+        onSwitchEngine={map.handleMapEngineChange}
       />
 
       {vm.googleMapsReady ? (
@@ -128,6 +130,9 @@ export default function PhotoGrammetryPage() {
             alt={mission.alt}
             missionStatus={vm.missionStatus}
             activeFlightId={vm.activeFlightId}
+            wsConnected={vm.wsConnected}
+            selectedWaypointIndex={map.selectedWaypointIndex}
+            onSelectWaypoint={map.setSelectedWaypointIndex}
           />
         </>
       ) : null}

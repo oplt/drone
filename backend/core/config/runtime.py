@@ -268,10 +268,22 @@ class BootstrapSettings(BaseSettings):
     )
 
     database_url: str
+    database_pool_size: int = 10
+    database_max_overflow: int = 20
     settings_vault_key: str
 
 
 bootstrap = BootstrapSettings()
+
+
+def default_video_analysis_inference_batch_size() -> int:
+    """Use GPU batching when CUDA is available; keep CPU workers at 1."""
+    try:
+        import torch
+
+        return 8 if torch.cuda.is_available() else 1
+    except ImportError:
+        return 1
 
 
 class RuntimeSettings(BaseSettings):
@@ -568,6 +580,10 @@ class RuntimeSettings(BaseSettings):
     celery_agriculture_inference_time_limit_seconds: int = 1800
     celery_agriculture_inference_soft_time_limit_seconds: int = 1500
     celery_worker_max_tasks_per_child: int = 5
+    celery_default_task_time_limit_seconds: int = 30 * 60
+    celery_default_task_soft_time_limit_seconds: int = 25 * 60
+    celery_video_analysis_time_limit_seconds: int = 3600
+    celery_video_analysis_soft_time_limit_seconds: int = 3300
     celery_photogrammetry_time_limit_seconds: int = 6 * 60 * 60
     celery_photogrammetry_soft_time_limit_seconds: int = 5 * 60 * 60 + 30 * 60
     celery_enable_native_async_task: bool = False
@@ -721,8 +737,13 @@ class RuntimeSettings(BaseSettings):
     video_analysis_crop_min_confidence: float = Field(default=0.75, ge=0.0, le=1.0)
     video_analysis_staged_object_max_age_minutes: int = Field(default=30, ge=1)
     video_analysis_decode_stride_enabled: bool = False
-    video_analysis_inference_batch_size: int = Field(default=1, ge=1, le=32)
+    video_analysis_inference_batch_size: int | None = Field(default=None, ge=1, le=32)
     video_analysis_defer_low_confidence_crops: bool = True
+    api_rate_window_seconds: int = 60
+    video_analysis_rate_uploads_per_window: int = 30
+    video_analysis_rate_analyze_starts_per_window: int = 15
+    vision_rate_training_starts_per_window: int = 5
+    agents_rate_runs_per_window: int = 20
     agriculture_inference_poll_seconds: int = 15
     agriculture_inference_wait_timeout_seconds: int = 6 * 60 * 60
     agriculture_max_media_bytes: int = 1024 * 1024 * 1024
@@ -763,6 +784,10 @@ class RuntimeSettings(BaseSettings):
     def _default_celery_result_backend(self) -> RuntimeSettings:
         if not self.celery_result_backend:
             self.celery_result_backend = self.celery_broker_url
+        if self.video_analysis_inference_batch_size is None:
+            self.video_analysis_inference_batch_size = (
+                default_video_analysis_inference_batch_size()
+            )
         return self
 
 

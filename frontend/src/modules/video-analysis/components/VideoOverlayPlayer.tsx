@@ -69,7 +69,7 @@ export function VideoOverlayPlayer({ file, playbackUrl, detections, selected, on
               height: `${((d.y2 - d.y1) / videoSize.height) * 100}%`,
               border: '2px solid', borderColor: 'warning.main', pointerEvents: 'none'
             }}>
-              <Box sx={{ position: 'absolute', top: -24, left: 0, px: 0.75, bgcolor: 'warning.main', color: 'warning.contrastText', fontSize: 12, fontWeight: 700 }}>
+              <Box sx={{ position: 'absolute', top: -24, left: 0, px: 0.75, bgcolor: 'warning.main', color: 'warning.contrastText', fontSize: 12, fontWeight: 600 }}>
                 {d.label} {(d.confidence * 100).toFixed(0)}%
               </Box>
             </Box>

@@ -133,6 +133,95 @@ def _candidate_breakdown(target) -> dict[str, Any]:
     return dict(getattr(target, "confidence_breakdown", {}) or {})
 
 
+@dataclass(frozen=True)
+class LockedLayoutBinIndex:
+    layout_version_id: int
+    coordinate_frame_id: int
+    by_bin_id: dict[int, BinContext]
+    by_identity: dict[tuple[str, str, int, str], BinContext]
+
+
+def _bin_context_from_row(row) -> BinContext:
+    layout, aisle, rack, shelf, bin_row = row
+    return BinContext(
+        layout_version_id=int(layout.id),
+        coordinate_frame_id=int(layout.coordinate_frame_id),
+        bin_id=int(bin_row.id),
+        aisle_code=aisle.code,
+        rack_code=rack.code,
+        shelf_level=int(shelf.level),
+        bin_code=bin_row.code,
+    )
+
+
+async def load_locked_layout_bin_index(
+    db: AsyncSession,
+    *,
+    warehouse_map_id: int,
+) -> LockedLayoutBinIndex:
+    rows = (
+        await db.execute(
+            select(
+                WarehouseLayoutVersion,
+                WarehouseAisle,
+                WarehouseRack,
+                WarehouseShelf,
+                WarehouseBin,
+            )
+            .join(WarehouseAisle, WarehouseAisle.layout_version_id == WarehouseLayoutVersion.id)
+            .join(WarehouseRack, WarehouseRack.aisle_id == WarehouseAisle.id)
+            .join(WarehouseShelf, WarehouseShelf.rack_id == WarehouseRack.id)
+            .join(WarehouseBin, WarehouseBin.shelf_id == WarehouseShelf.id)
+            .where(
+                WarehouseLayoutVersion.warehouse_map_id == warehouse_map_id,
+                WarehouseLayoutVersion.status == "locked",
+            )
+        )
+    ).all()
+    if not rows:
+        raise HTTPException(409, "Bin does not exist in the locked warehouse layout")
+    first_layout, *_rest = rows[0]
+    by_bin_id: dict[int, BinContext] = {}
+    by_identity: dict[tuple[str, str, int, str], BinContext] = {}
+    for row in rows:
+        context = _bin_context_from_row(row)
+        by_bin_id[context.bin_id] = context
+        by_identity[
+            (context.aisle_code, context.rack_code, context.shelf_level, context.bin_code)
+        ] = context
+    return LockedLayoutBinIndex(
+        layout_version_id=int(first_layout.id),
+        coordinate_frame_id=int(first_layout.coordinate_frame_id),
+        by_bin_id=by_bin_id,
+        by_identity=by_identity,
+    )
+
+
+def resolve_bin_context_from_index(
+    index: LockedLayoutBinIndex,
+    *,
+    bin_id: int | None,
+    aisle_code: str,
+    rack_code: str | None,
+    shelf_level: int | None,
+    bin_code: str | None,
+) -> BinContext:
+    if bin_id is not None:
+        context = index.by_bin_id.get(int(bin_id))
+        if context is None:
+            raise HTTPException(409, "Bin does not exist in the locked warehouse layout")
+        return context
+    if rack_code is None or shelf_level is None or bin_code is None:
+        raise HTTPException(
+            422,
+            "Target requires bin_id or complete aisle/rack/shelf/bin identity",
+        )
+    context = index.by_identity.get((aisle_code, rack_code, int(shelf_level), bin_code))
+    if context is None:
+        raise HTTPException(409, "Bin does not exist in the locked warehouse layout")
+    return context
+
+
 async def resolve_bin_context(
     db: AsyncSession,
     *,
@@ -181,16 +270,7 @@ async def resolve_bin_context(
     ).one_or_none()
     if row is None:
         raise HTTPException(409, "Bin does not exist in the locked warehouse layout")
-    layout, aisle, rack, shelf, bin_row = row
-    return BinContext(
-        layout_version_id=int(layout.id),
-        coordinate_frame_id=int(layout.coordinate_frame_id),
-        bin_id=int(bin_row.id),
-        aisle_code=aisle.code,
-        rack_code=rack.code,
-        shelf_level=int(shelf.level),
-        bin_code=bin_row.code,
-    )
+    return _bin_context_from_row(row)
 
 
 async def create_extracted_layout(

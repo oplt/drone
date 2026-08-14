@@ -131,6 +131,7 @@ class RuntimeCoordinationMixin:
             mission_type=getattr(self, "current_mission_type", None),
             mission_task_type=getattr(self, "current_mission_task_type", None),
             preflight_run_id=getattr(self, "current_preflight_run_id", None),
+            org_id=getattr(self, "current_org_id", None),
         )
         return context if any(context.model_dump().values()) else None
 

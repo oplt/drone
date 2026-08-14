@@ -43,7 +43,7 @@ export function WarehouseDashboardCard({
           <Box sx={{ minWidth: 0 }}>
             <Typography
               variant="subtitle1"
-              sx={{ fontWeight: 700, fontSize: "1rem" }}
+              sx={{ fontWeight: 600, fontSize: "1rem" }}
             >
               {title}
             </Typography>
@@ -81,7 +81,7 @@ export function WarehouseEmptyState({
     >
       <SensorsRoundedIcon sx={{ color: "text.secondary", opacity: 0.7 }} />
       <Box>
-        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
           {title}
         </Typography>
         <Typography variant="caption" color="text.secondary">
@@ -144,7 +144,7 @@ export function WarehouseSystemStatusStrip({
             justifyContent="space-between"
             spacing={1}
           >
-            <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 0 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 0 }}>
               {item.value}
             </Typography>
             <WarehouseStatusBadge status={item.status} />

@@ -6,8 +6,16 @@ import type {
 } from "../components/AnnotationCanvas";
 import type { VisionClass } from "../visionTypes";
 
-function isTypingTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+export function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const contentEditableAttr = target.getAttribute("contenteditable");
+  if (contentEditableAttr != null && contentEditableAttr.toLowerCase() !== "false") {
+    return true;
+  }
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  return Boolean(target.closest("[contenteditable='true'], [role='textbox']"));
 }
 
 export function useLabelingShortcuts({

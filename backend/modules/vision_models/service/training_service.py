@@ -332,13 +332,37 @@ class VisionTrainingService:
                 if not weights_path.is_file() or weights_path.stat().st_size <= 0:
                     raise RuntimeError("Weights publish failed: empty or missing artifact")
                 checksum = hashlib.sha256(weights_path.read_bytes()).hexdigest()
-                artifact_uris: dict[str, str] = {}
+                artifact_records: dict[str, dict[str, str]] = {}
+                artifact_objects: list[VisionStorageObject] = []
                 for name, source in result.evaluation_artifacts.items():
                     target = model_root / f"{name}{source.suffix}"
                     shutil.copy2(source, target)
                     if not target.is_file() or target.stat().st_size <= 0:
                         raise RuntimeError(f"Evaluation artifact publish failed: {name}")
-                    artifact_uris[name] = self.storage.to_uri(target)
+                    artifact_uri = self.storage.to_uri(target)
+                    artifact_object = VisionStorageObject(
+                        checksum=hashlib.sha256(target.read_bytes()).hexdigest(),
+                        size=int(target.stat().st_size),
+                        mime=(
+                            "image/jpeg"
+                            if target.suffix.lower() in {".jpg", ".jpeg"}
+                            else "image/png"
+                            if target.suffix.lower() == ".png"
+                            else "application/octet-stream"
+                        ),
+                        owner_type="model_evaluation",
+                        owner_id=run.id,
+                        state="final",
+                        retention_policy="model_artifact",
+                        backend_key=artifact_uri.removeprefix("vision://"),
+                    )
+                    db.add(artifact_object)
+                    await db.flush()
+                    artifact_objects.append(artifact_object)
+                    artifact_records[name] = {
+                        "storage_object_id": artifact_object.id,
+                        "uri": artifact_uri,
+                    }
                 metadata = {
                     "training_run_id": run.id,
                     "dataset_id": dataset.id,
@@ -375,7 +399,7 @@ class VisionTrainingService:
                     weights_uri=weights_uri,
                     classes=[item.name for item in classes],
                     metrics=result.metrics,
-                    evaluation_artifacts=artifact_uris,
+                    evaluation_artifacts=artifact_records,
                     checksum=checksum,
                     storage_object_id=storage_object.id,
                     status="candidate",
@@ -383,6 +407,8 @@ class VisionTrainingService:
                 db.add(version)
                 await db.flush()
                 storage_object.owner_id = version.id
+                for artifact_object in artifact_objects:
+                    artifact_object.owner_id = version.id
                 run.status = "completed"
                 run.progress = 100.0
                 run.current_epoch = run.epochs

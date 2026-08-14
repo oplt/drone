@@ -12,6 +12,7 @@ async function getCurrentUser(signal?: AbortSignal): Promise<SessionUser> {
   return httpRequest<SessionUser>("/auth/me", {
     signal,
     skipUnauthorizedRedirect: true,
+    suppressErrorLogStatuses: [401],
   });
 }
 
@@ -20,6 +21,7 @@ export async function refreshSession(): Promise<boolean> {
     await httpRequest<void>("/auth/refresh", {
       method: "POST",
       skipUnauthorizedRedirect: true,
+      suppressErrorLogStatuses: [401],
     });
     return true;
   } catch {

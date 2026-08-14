@@ -277,6 +277,55 @@ Tesla's approach to elevation is essentially "none." The site avoids box-shadows
 - "Create a category card with full-bleed landscape photography, 12px border-radius, overflow hidden, and a white text label ('Sport Sedan') positioned in the top-left corner with no overlay gradient"
 - "Design a persistent bottom bar with a chat input ('Ask a Question' placeholder), a send icon, and a secondary CTA ('Schedule a Drive Today') with a teal icon, anchored to the viewport bottom on a white background"
 
+---
+
+## 10. Ops Console Addendum (mission / agriculture / fleet)
+
+Marketing Tesla restraint (`DESIGN.md` §§1–9) applies to landing/auth chrome and **theme tokens**. The authenticated operations console optimizes for situational awareness, safety, and fast decisions — not gallery whitespace.
+
+### Allowed (ops surfaces)
+
+- **Semantic status colors** (success / warning / error / info) for telemetry, alerts, link health, and mission lifecycle. Brand Electric Blue remains the primary *action* accent.
+- **Bordered panels and outlined Papers** for scanable density on multi-panel dashboards, maps, and review workspaces.
+- **Density tiers**: comfortable (default lists) and compact (HUDs, map overlays, DataGrids).
+- **Weights 400–600** for ops UI; reserve 700 only for critical numerals under stress.
+- **≤2 primary CTAs per stage** (not per entire page). Progressive disclosure (tabs/stages/accordions) is preferred over one infinite vertical stack.
+
+### Required patterns
+
+- Honest connection freshness (never hardcode “live”).
+- Shared `FeatureState` / `EmptyState` / `ErrorState` for loading–empty–error contracts.
+- Map legends whenever colored mission geometries appear.
+- Alert severity fidelity from API → dashboard → drawers.
+
+### Typography note
+
+Prefer licensed **Universal Sans** when available. Until then, ship **DM Sans** as the intentional geometric fallback (loaded in `frontend/index.html`; theme `fontFamily` prefers DM Sans first).
+
+### Surface recipes (Paper variants)
+
+| Recipe | Variant | Use when |
+|--------|---------|----------|
+| **Panel** | `opsPanel` | Ops dashboard sections, mission shells, empty states |
+| **Overlay** | `mapOverlay` | Frosted controls/legends on maps |
+| **Quiet** | `quiet` | Marketing/auth chrome that should dissolve into the canvas |
+
+Tokens: `palette.surface.canvas | raised | inset | overlay` — always dual-scheme (never raw `grey.50`).
+Radius scale: `radius.xs|sm|md` multipliers of `shape.borderRadius` (4 → 4/8/12px).
+
+### Accent vs semantic checklist
+
+1. Primary **actions** use brand Electric Blue (`palette.primary`).
+2. Status / severity use `palette.success|warning|error|info` only — never decorative green.
+3. Ops typography weights **400–600**; avoid 700/800 except critical HUD numerals.
+4. Prefer theme typography variants (`h3`, `body2`, …) over ad-hoc `fontFamily`.
+
+### Do not
+
+- Force marketing “no cards / no semantic green-red” onto mission-critical screens.
+- Place non-functional chrome (dead search, decorative date pickers, fake Live chips) in the ops shell.
+- Use light-only greys (`grey.50`) for ops surfaces in dark mode.
+
 ### Iteration Guide
 When refining existing screens generated with this design system:
 1. Focus on ONE component at a time — Tesla's system is so minimal that each element must be pixel-perfect

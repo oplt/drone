@@ -5,6 +5,8 @@ from fastapi.responses import FileResponse
 
 from backend.core.api_errors import map_domain_exception
 from backend.core.database.session import get_db
+from backend.core.config.runtime import settings
+from backend.core.rate_limit import enforce_rate_limit
 from backend.modules.identity.dependencies import (
     OrgUser,
     require_org_user,
@@ -95,6 +97,11 @@ async def upload_video(
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> VideoAssetOut:
+    await enforce_rate_limit(
+        key=f"video-analysis:upload:{org_user.user.id}",
+        limit=settings.video_analysis_rate_uploads_per_window,
+        window_seconds=settings.api_rate_window_seconds,
+    )
     try:
         with observed_span("video.upload", mission_id=mission_id, camera_name="upload"):
             return await application.upload_video(
@@ -117,6 +124,11 @@ async def analyze_video(
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> VideoAnalysisJobOut:
+    await enforce_rate_limit(
+        key=f"video-analysis:analyze:{org_user.user.id}",
+        limit=settings.video_analysis_rate_analyze_starts_per_window,
+        window_seconds=settings.api_rate_window_seconds,
+    )
     try:
         with observed_span(
             "video.analysis.start",

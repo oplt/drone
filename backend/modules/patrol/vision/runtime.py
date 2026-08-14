@@ -5,16 +5,41 @@ import logging
 from typing import Any
 
 from backend.modules.patrol.vision.config import ml_settings
-from backend.modules.patrol.vision.pipeline import DroneAnomalyPipeline
 
 log = logging.getLogger(__name__)
 
 
+def _idle_pipeline_status() -> dict[str, Any]:
+    return {
+        "running": False,
+        "stream_source": None,
+        "started_at": None,
+        "last_frame_at": None,
+        "last_error": None,
+        "frames_processed": 0,
+        "anomalies_emitted": 0,
+        "insufficient_telemetry_frames": 0,
+        "unknown_outcomes": 0,
+        "last_outcome": None,
+        "duplicate_suppressed": 0,
+        "track_limit_suppressed": 0,
+        "detections": [],
+        "active_ai_tasks": [],
+    }
+
+
 class MLRuntimeManager:
     def __init__(self) -> None:
-        self.pipeline = DroneAnomalyPipeline()
+        self._pipeline: Any | None = None
         self._task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
+
+    def _get_pipeline(self) -> Any:
+        if self._pipeline is None:
+            from backend.modules.patrol.vision.pipeline import DroneAnomalyPipeline
+
+            self._pipeline = DroneAnomalyPipeline()
+        return self._pipeline
 
     async def start(
         self,
@@ -27,16 +52,17 @@ class MLRuntimeManager:
                 if ai_tasks is not None:
                     self.set_active_ai_tasks(ai_tasks)
                 return self.status()
-            await self.pipeline.start(
+            await self._get_pipeline().start(
                 stream_source=stream_source,
                 ai_tasks=ai_tasks,
             )
-            self._task = self.pipeline._task
+            self._task = self._get_pipeline()._task
             return self.status()
 
     async def stop(self) -> dict[str, Any]:
         async with self._lock:
-            await self.pipeline.stop()
+            if self._pipeline is not None:
+                await self._pipeline.stop()
             self._task = None
             return self.status()
 
@@ -49,8 +75,11 @@ class MLRuntimeManager:
                 task_state = "done"
             else:
                 task_state = "running"
+        pipeline_status = (
+            self._get_pipeline().status() if self._pipeline is not None else _idle_pipeline_status()
+        )
         return {
-            **self.pipeline.status(),
+            **pipeline_status,
             "task_state": task_state,
             "config": {
                 "enabled": True,
@@ -62,11 +91,11 @@ class MLRuntimeManager:
         }
 
     def set_zones(self, zones: list[dict[str, Any]]) -> dict[str, Any]:
-        self.pipeline.set_zones(zones)
+        self._get_pipeline().set_zones(zones)
         return self.status()
 
     def set_active_ai_tasks(self, ai_tasks: list[str] | None) -> dict[str, Any]:
-        self.pipeline.set_active_ai_tasks(ai_tasks)
+        self._get_pipeline().set_active_ai_tasks(ai_tasks)
         return self.status()
 
 

@@ -174,7 +174,7 @@ class ModelVersion(Base):
     weights_uri: Mapped[str] = mapped_column(Text, nullable=False)
     classes: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     metrics: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
-    evaluation_artifacts: Mapped[dict[str, str]] = mapped_column(
+    evaluation_artifacts: Mapped[dict[str, Any]] = mapped_column(
         JSON, nullable=False, default=dict
     )
     checksum: Mapped[str] = mapped_column(String(64), nullable=False)

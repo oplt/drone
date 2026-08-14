@@ -16,6 +16,7 @@ import {
   MissionSurveyCameraSection,
   MapEngineSelectionOverlay,
   MissionMapBoundaryPrompt,
+  MissionMapLegend,
 } from "../../mission-workflow";
 import { MissionVideoPanel } from "../../mission-runtime";
 import { VideoAnalysisPanel } from "../../video-analysis";
@@ -49,6 +50,7 @@ export function PrivatePatrolMapColumn({
 
   return (
     <MissionSurveyCameraSection
+      layoutStorageKey="mission-layout:property-patrol"
       setupSubtitle="Property geofence and patrol parameters"
       video={
         <MissionVideoPanel
@@ -67,7 +69,6 @@ export function PrivatePatrolMapColumn({
           telemetry={vm.telemetry}
           missionLabel={vm.missionStatus?.mission_name ?? "Property Patrol Mission"}
           recordingStatus="Recording during flight"
-          autoEnableDetection={Boolean(vm.activeFlightId)}
           onVideoError={map.handleVideoError}
           onVideoLoad={map.handleVideoLoad}
           onRetry={map.handleVideoRetry}
@@ -109,6 +110,9 @@ export function PrivatePatrolMapColumn({
               exclusionZones,
               fieldTilesetUrl: vm.fieldTilesetUrl,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               headingDeg: typeof map.heading === "number" ? map.heading : null,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -130,6 +134,9 @@ export function PrivatePatrolMapColumn({
               plannedRoute: mission.cesiumPlannedRoute,
               exclusionZones,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               userCenter: map.userCenter,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -152,6 +159,9 @@ export function PrivatePatrolMapColumn({
               plannedRoute: mission.cesiumPlannedRoute,
               exclusionZones,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               userCenter: map.userCenter,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -173,6 +183,11 @@ export function PrivatePatrolMapColumn({
                   terraDrawMode={map.terraDrawMode}
                   terraDrawReady={map.terraDrawReady}
                   drawMode={mission.drawMode}
+                  tools={
+                    mission.isWaypointPatrol
+                      ? ["point", "linestring", "select"]
+                      : ["polygon", "circle", "select"]
+                  }
                   deleteDisabled={
                     map.mapEngine !== "google"
                       ? mission.drawMode === "none" &&
@@ -218,7 +233,17 @@ export function PrivatePatrolMapColumn({
                     );
                   }}
                 />
-                <MapEngineSelectionOverlay>
+                <MissionMapLegend
+                  items={[
+                    { label: "Geofence / boundary", color: "#9c27b0" },
+                    { label: "Patrol path", color: "#1976d2" },
+                    { label: "Event point", color: "#d32f2f" },
+                  ]}
+                />
+                <MapEngineSelectionOverlay
+                  followEnabled={map.followEnabled}
+                  onFollowEnabledChange={map.setFollowEnabled}
+                >
                   <CesiumViewControls
                     useCesium={map.useCesium}
                     onUseCesiumChange={(next) =>

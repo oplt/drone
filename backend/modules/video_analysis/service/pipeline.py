@@ -13,10 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config.runtime import settings
 from backend.core.database.session import Session
+from backend.observability.database import observed_db_session_scope
 from backend.infrastructure.runtime.blocking import run_blocking
 from backend.modules.agriculture.ports.telemetry import (
     list_mission_telemetry_for_georef,
 )
+from backend.modules.agriculture.georeferencing import NearestTelemetryMatcher
 from backend.modules.video_analysis.models import (
     StorageObject,
     VideoDetection,
@@ -28,7 +30,6 @@ from backend.modules.video_analysis.service.frame_extractor import (
     async_iter_frames,
     read_video_metadata_async,
 )
-from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
 from backend.modules.video_analysis.service.tracker import FrameTracker
 from backend.modules.vision_models.application import VisionApplication
 from backend.modules.vision_models.config import vision_settings
@@ -186,6 +187,7 @@ class OfflineVideoAnalysisPipeline:
             loaded_hash_setter = getattr(self.repo, "set_loaded_model_hash", None)
             if loaded_hash_setter is not None:
                 await loaded_hash_setter(job, loaded_model_hash)
+            await self.db.commit()
             telemetry_samples = (
                 await list_mission_telemetry_for_georef(
                     self.db, mission_id=video.mission_id
@@ -480,6 +482,7 @@ class OfflineVideoAnalysisPipeline:
                         progress=processed / estimated_total * 100.0,
                         expected_attempt=claimed_attempt,
                     )
+                    await self.db.commit()
                     stage_timings["persist"] += (
                         time.monotonic() - persist_started
                     ) * 1000.0
@@ -717,8 +720,15 @@ class OfflineVideoAnalysisPipeline:
 
 
 async def run_video_analysis_job(job_id: str) -> dict[str, str]:
-    async with Session() as db:
-        pipeline = OfflineVideoAnalysisPipeline(db)
-        await pipeline.run(job_id)
-        job = await pipeline.repo.get_job(job_id)
-    return {"job_id": job_id, "status": job.status if job is not None else "missing"}
+    """Run offline analysis with short DB sessions around CPU/GPU work.
+
+    Claim/prepare and finalize use sessions; the heavy inference loop releases the
+    pool checkout between heartbeat/flush batches via explicit commit.
+    """
+    async with observed_db_session_scope(scope="video_analysis.job"):
+        async with Session() as db:
+            pipeline = OfflineVideoAnalysisPipeline(db)
+            await pipeline.run(job_id)
+            job = await pipeline.repo.get_job(job_id)
+            status = job.status if job is not None else "missing"
+    return {"job_id": job_id, "status": status}

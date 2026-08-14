@@ -33,6 +33,10 @@ CELERY_AGRICULTURE_INFERENCE_SOFT_TIME_LIMIT_SECONDS = (
     settings.celery_agriculture_inference_soft_time_limit_seconds
 )
 CELERY_WORKER_MAX_TASKS_PER_CHILD = settings.celery_worker_max_tasks_per_child
+CELERY_DEFAULT_TASK_TIME_LIMIT_SECONDS = settings.celery_default_task_time_limit_seconds
+CELERY_DEFAULT_TASK_SOFT_TIME_LIMIT_SECONDS = (
+    settings.celery_default_task_soft_time_limit_seconds
+)
 CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS = settings.celery_photogrammetry_time_limit_seconds
 CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS = (
     settings.celery_photogrammetry_soft_time_limit_seconds
@@ -84,6 +88,9 @@ celery_app.conf.update(
         "vision_models.reconcile_stale_training_runs": {
             "queue": CELERY_VISION_TRAINING_QUEUE
         },
+        "vision_models.reconcile_staged_storage_objects": {
+            "queue": CELERY_VISION_TRAINING_QUEUE
+        },
         "agriculture.process_run": {"queue": CELERY_AGRICULTURE_INFERENCE_QUEUE},
         "agriculture.stage.ingest": {"queue": CELERY_AGRICULTURE_QUEUES["ingest"]},
         "agriculture.stage.quality": {"queue": CELERY_AGRICULTURE_QUEUES["quality"]},
@@ -104,6 +111,10 @@ celery_app.conf.update(
     },
     worker_max_tasks_per_child=CELERY_WORKER_MAX_TASKS_PER_CHILD,
     task_annotations={
+        "photogrammetry.process_job": {
+            "time_limit": CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS,
+            "soft_time_limit": CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS,
+        },
         "agriculture.process_run": {"rate_limit": "4/m"},
         "agriculture.stage.ingest": {"rate_limit": "120/m"},
         "agriculture.stage.quality": {"rate_limit": "12/m"},
@@ -115,8 +126,8 @@ celery_app.conf.update(
         "agriculture.stage.exports": {"rate_limit": "20/m"},
         "agriculture.retention_cleanup": {"rate_limit": "1/h"},
     },
-    task_time_limit=CELERY_PHOTOGRAMMETRY_TIME_LIMIT_SECONDS,
-    task_soft_time_limit=CELERY_PHOTOGRAMMETRY_SOFT_TIME_LIMIT_SECONDS,
+    task_time_limit=CELERY_DEFAULT_TASK_TIME_LIMIT_SECONDS,
+    task_soft_time_limit=CELERY_DEFAULT_TASK_SOFT_TIME_LIMIT_SECONDS,
 )
 
 celery_app.autodiscover_tasks(["backend.entrypoints.workers"])
@@ -153,6 +164,10 @@ celery_app.conf.beat_schedule = {
     "reconcile-stale-vision-training-runs": {
         "task": "vision_models.reconcile_stale_training_runs",
         "schedule": 60.0,
+    },
+    "reconcile-staged-vision-storage-objects": {
+        "task": "vision_models.reconcile_staged_storage_objects",
+        "schedule": 300.0,
     },
 }
 celery_app.conf.timezone = "UTC"

@@ -15,7 +15,6 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import Header from "../../../shared/layout/WorkflowHeader";
 import { Polyline, OverlayView } from "@react-google-maps/api";
 import { getToken } from "../../session";
 import DroneSvg from "../../../assets/Drone.svg?react";
@@ -688,7 +687,6 @@ const createTaskAndPlan = useCallback(async (type: "census" | "herd_sweep" | "se
 
   return (
     <>
-      <Header />
       <Paper sx={{ p: 2 }}>
         <Stack spacing={1.5}>
           <Typography variant="h6">Animal Farms</Typography>

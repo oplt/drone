@@ -74,6 +74,8 @@ async def detection_scale_db():
                     x2=1.0,
                     y2=1.0,
                     track_id=track_id,
+                    lat=50.0 + index / 10_000,
+                    lon=4.0 + index / 10_000,
                 )
             )
         session.add_all(detections)
@@ -192,3 +194,47 @@ async def test_page_detections_has_more_and_filters(detection_scale_db):
         filtered_total
     )
     assert all(set(bucket["class_counts"]) <= {"weed"} for bucket in weed_buckets)
+
+
+@pytest.mark.asyncio
+async def test_job_id_detection_pages_and_counts_are_bounded(detection_scale_db):
+    db, job_id = detection_scale_db
+    repo = VideoAnalysisRepository(db)
+    bbox = (4.0, 50.0, 4.05, 50.05)
+
+    first, has_more = await repo.page_detections_by_job_ids(
+        [job_id],
+        org_id=7,
+        limit=100,
+        bbox=bbox,
+        min_confidence=0.7,
+    )
+    assert len(first) == 100
+    assert has_more is True
+    assert all(
+        row.lat is not None
+        and row.lon is not None
+        and bbox[0] <= row.lon <= bbox[2]
+        and bbox[1] <= row.lat <= bbox[3]
+        and row.confidence >= 0.7
+        for row in first
+    )
+
+    cursor = (first[-1].timestamp_seconds, first[-1].id)
+    second, _ = await repo.page_detections_by_job_ids(
+        [job_id],
+        org_id=7,
+        limit=100,
+        after=cursor,
+        bbox=bbox,
+        min_confidence=0.7,
+    )
+    assert {row.id for row in first}.isdisjoint(row.id for row in second)
+
+    counts = await repo.aggregate_class_counts_by_job_ids(
+        [job_id],
+        org_id=7,
+        bbox=bbox,
+        min_confidence=0.7,
+    )
+    assert sum(counts.values()) > len(first)

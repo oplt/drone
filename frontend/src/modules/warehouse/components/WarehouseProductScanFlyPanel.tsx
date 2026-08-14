@@ -258,7 +258,7 @@ export function WarehouseProductScanFlyPanel({
             p: 1,
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
             Inspection Results
           </Typography>
           {results.map((result) => (

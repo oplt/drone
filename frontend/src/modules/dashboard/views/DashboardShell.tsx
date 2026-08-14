@@ -6,8 +6,9 @@ import {
   dataGridCustomizations,
   datePickersCustomizations,
 } from "../../../shared/theme/customizations";
-import { OperationsShell } from "../../../shared/layout";
-import { PageLoader } from "../../../shared/ui";
+import { OperationsShell, WorkflowHeader } from "../../../shared/layout";
+import { SystemLogsProvider } from "../../../shared/layout/SystemLogsProvider";
+import { PageLoader, RouteErrorBoundary } from "../../../shared/ui";
 
 const dashboardThemeComponents = {
   ...chartsCustomizations,
@@ -40,15 +41,21 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
   }
 
   return (
-    <OperationsShell
-      user={user}
-      onLogout={handleLogout}
-      disableCustomTheme={props.disableCustomTheme}
-      themeComponents={dashboardThemeComponents}
-    >
-      <AlertCenterProvider>
-        <Outlet />
-      </AlertCenterProvider>
-    </OperationsShell>
+    <AlertCenterProvider>
+      <SystemLogsProvider>
+        <OperationsShell
+          user={user}
+          onLogout={handleLogout}
+          disableCustomTheme={props.disableCustomTheme}
+          themeComponents={dashboardThemeComponents}
+        >
+          {/* Shared ops chrome: breadcrumbs, alerts, logs, honest link status */}
+          <WorkflowHeader />
+          <RouteErrorBoundary>
+            <Outlet />
+          </RouteErrorBoundary>
+        </OperationsShell>
+      </SystemLogsProvider>
+    </AlertCenterProvider>
   );
 }

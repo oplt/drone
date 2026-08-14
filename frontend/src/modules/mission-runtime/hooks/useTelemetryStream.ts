@@ -29,6 +29,8 @@ type SharedTelemetryState = {
   isConnected: boolean;
   error: string | null;
   reconnectAttempt: number;
+  /** Epoch ms of last telemetry packet (not pings/logs). */
+  lastPacketAt: number | null;
 };
 
 const state: SharedTelemetryState = {
@@ -36,16 +38,59 @@ const state: SharedTelemetryState = {
   isConnected: false,
   error: null,
   reconnectAttempt: 0,
+  lastPacketAt: null,
 };
 
 let socket: WebSocket | null = null;
 let reconnectTimer: number | null = null;
 let pingTimer: number | null = null;
 let closeTimer: number | null = null;
+/** Coalesce React state fan-out to ~10 Hz (not every sensor tick / RAF). */
+export const TELEMETRY_UI_NOTIFY_MIN_MS = 100;
+const UI_NOTIFY_MIN_MS = TELEMETRY_UI_NOTIFY_MIN_MS;
+let notifyRaf: number | null = null;
+let notifyThrottleTimer: number | null = null;
+let lastNotifyAt = 0;
+let pendingTelemetryCallback: TelemetrySnapshot | null = null;
 let attempt = 0;
 let explicitlyClosed = false;
 const subscribers = new Set<Subscriber>();
 let websocketFactory: ((url: string) => WebSocket) | null = null;
+
+function flushNotify() {
+  lastNotifyAt = Date.now();
+  if (notifyRaf != null) {
+    window.cancelAnimationFrame(notifyRaf);
+    notifyRaf = null;
+  }
+  if (notifyThrottleTimer != null) {
+    window.clearTimeout(notifyThrottleTimer);
+    notifyThrottleTimer = null;
+  }
+  const telemetryCb = pendingTelemetryCallback;
+  pendingTelemetryCallback = null;
+  if (telemetryCb) {
+    subscribers.forEach((subscriber) => subscriber.onTelemetry?.(telemetryCb));
+  }
+  notify();
+}
+
+function scheduleNotify() {
+  const elapsed = Date.now() - lastNotifyAt;
+  if (elapsed >= UI_NOTIFY_MIN_MS) {
+    if (notifyRaf != null) return;
+    notifyRaf = window.requestAnimationFrame(() => {
+      notifyRaf = null;
+      flushNotify();
+    });
+    return;
+  }
+  if (notifyThrottleTimer != null) return;
+  notifyThrottleTimer = window.setTimeout(() => {
+    notifyThrottleTimer = null;
+    flushNotify();
+  }, UI_NOTIFY_MIN_MS - elapsed);
+}
 
 export function setTelemetryWebSocketFactoryForTests(
   factory: ((url: string) => WebSocket) | null,
@@ -99,6 +144,44 @@ async function parseMessage(data: unknown): Promise<TelemetrySocketPayload> {
 function telemetryFromMessage(msg: TelemetrySocketPayload): TelemetrySnapshot | null {
   if (!isRecord(msg)) return null;
   if (msg.type === "telemetry") {
+    if (msg.protocol === "v1" && isRecord(msg.envelope)) {
+      const payload = (msg.envelope as Record<string, unknown>).payload;
+      if (isRecord(payload)) {
+        const position = isRecord(payload.position) ? payload.position : {};
+        const attitude = isRecord(payload.attitude) ? payload.attitude : {};
+        const battery = isRecord(payload.battery) ? payload.battery : {};
+        const gps = isRecord(payload.gps) ? payload.gps : {};
+        const link = isRecord(payload.link) ? payload.link : {};
+        const wind = isRecord(payload.wind) ? payload.wind : {};
+        const motion = isRecord(payload.motion) ? payload.motion : {};
+        return {
+          position: {
+            lat: position.lat ?? 0,
+            lon: position.lon ?? 0,
+            alt: position.alt_m ?? 0,
+            relative_alt: position.relative_alt_m ?? 0,
+          },
+          attitude: {
+            roll: attitude.roll_rad ?? 0,
+            pitch: attitude.pitch_rad ?? 0,
+            yaw: attitude.yaw_rad ?? 0,
+          },
+          battery: {
+            remaining: battery.remaining_pct ?? 0,
+            voltage: battery.voltage_v ?? 0,
+          },
+          gps,
+          link,
+          wind,
+          status: {
+            groundspeed: motion.groundspeed_mps ?? 0,
+            heading: motion.heading_deg ?? 0,
+          },
+          mode: payload.flight_mode,
+          armed: payload.armed,
+        } as TelemetrySnapshot;
+      }
+    }
     return isRecord(msg.data) ? (msg.data as TelemetrySnapshot) : null;
   }
   if (msg.type) {
@@ -142,7 +225,7 @@ function connectShared() {
       source: "websocket",
       message: "Telemetry websocket connected",
     });
-    notify();
+    scheduleNotify();
     if (pingTimer) window.clearInterval(pingTimer);
     pingTimer = window.setInterval(() => {
       if (socket?.readyState === WebSocket.OPEN) {
@@ -163,8 +246,9 @@ function connectShared() {
     const telemetry = telemetryFromMessage(msg);
     if (telemetry) {
       state.telemetry = telemetry;
-      subscribers.forEach((subscriber) => subscriber.onTelemetry?.(telemetry));
-      notify();
+      state.lastPacketAt = Date.now();
+      pendingTelemetryCallback = telemetry;
+      scheduleNotify();
     }
   };
 
@@ -176,13 +260,13 @@ function connectShared() {
       message: "Telemetry websocket connection error",
       details: { attempt: currentAttempt },
     });
-    notify();
+    scheduleNotify();
   };
 
   socket.onclose = (event) => {
     socket = null;
     state.isConnected = false;
-    notify();
+    scheduleNotify();
     if (pingTimer) window.clearInterval(pingTimer);
     pingTimer = null;
     if (explicitlyClosed || event.code === 1000 || event.code === 1008) return;
@@ -196,11 +280,11 @@ function connectShared() {
         message: "Telemetry websocket could not reconnect",
         details: { close_code: event.code, close_reason: event.reason },
       });
-      notify();
+      scheduleNotify();
       return;
     }
     state.reconnectAttempt = nextAttempt;
-    notify();
+    scheduleNotify();
     const delay = Math.min(
       1000 * Math.pow(2, Math.max(0, nextAttempt - 1)),
       30000,
@@ -211,6 +295,15 @@ function connectShared() {
 
 function disconnectShared({ clearTelemetry = false } = {}) {
   clearTimers();
+  if (notifyRaf != null) {
+    window.cancelAnimationFrame(notifyRaf);
+    notifyRaf = null;
+  }
+  if (notifyThrottleTimer != null) {
+    window.clearTimeout(notifyThrottleTimer);
+    notifyThrottleTimer = null;
+  }
+  pendingTelemetryCallback = null;
   explicitlyClosed = true;
   if (socket) {
     socket.onopen = null;
@@ -230,6 +323,7 @@ function disconnectShared({ clearTelemetry = false } = {}) {
   if (clearTelemetry) {
     state.telemetry = null;
     state.error = null;
+    state.lastPacketAt = null;
   }
   notify();
 }
@@ -288,6 +382,7 @@ export function useTelemetryStream(options: TelemetryWebSocketOptions = {}) {
     reconnect,
     disconnect,
     reconnectAttempt: snapshot.reconnectAttempt,
+    lastPacketAt: snapshot.lastPacketAt,
   };
 }
 

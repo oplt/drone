@@ -8,7 +8,7 @@ import Typography from "@mui/material/Typography";
 import type { ChipProps } from "@mui/material/Chip";
 import Chip from "@mui/material/Chip";
 import AppTheme from "../../../../shared/theme/AppTheme";
-import ColorModeSelect from "../../../../shared/theme/ColorModeSelect";
+import ColorModeIconDropdown from "../../../../shared/theme/ColorModeIconDropdown";
 
 type AuthShellProps = {
   disableCustomTheme?: boolean;
@@ -48,7 +48,9 @@ export default function AuthShell({
           backgroundColor: "background.default",
         }}
       >
-        <ColorModeSelect sx={{ position: "fixed", top: 16, right: 16, zIndex: 2 }} />
+        <ColorModeIconDropdown
+          sx={{ position: "fixed", top: 16, right: 16, zIndex: 2 }}
+        />
         <Box
           sx={{
             position: "relative",

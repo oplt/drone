@@ -42,6 +42,7 @@ export function MissionMapFrameFooter({
         p: 1.5,
         borderRadius: 2,
         flexShrink: 0,
+        pb: "calc(12px + env(safe-area-inset-bottom, 0px))",
       }}
     >
       <Stack

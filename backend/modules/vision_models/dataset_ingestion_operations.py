@@ -11,18 +11,23 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.infrastructure.runtime.blocking import run_blocking
+from backend.modules.agriculture.georeferencing import NearestTelemetryMatcher
 from backend.modules.agriculture.ports.telemetry import (
     list_mission_telemetry_for_georef,
 )
 from backend.modules.identity.models import User
-from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
+from backend.modules.video_analysis.contracts import video_analysis_port
 from backend.modules.vision_models.application_base import (
     VisionConflict,
     VisionNotFound,
     VisionValidationError,
 )
 from backend.modules.vision_models.config import vision_settings
-from backend.modules.vision_models.models import DatasetImage, DatasetVersion
+from backend.modules.vision_models.models import (
+    DatasetImage,
+    DatasetVersion,
+    VisionStorageObject,
+)
 from backend.modules.vision_models.repository import VisionRepository
 from backend.modules.vision_models.schemas import ExtractFramesRequest, ImageUploadResult
 from backend.modules.vision_models.service.dataset_service import (
@@ -40,6 +45,28 @@ logger = logging.getLogger(__name__)
 
 
 class DatasetIngestionOperations:
+    def _register_storage_object(
+        self,
+        db: AsyncSession,
+        *,
+        path: Path,
+        owner_type: str,
+        owner_id: str,
+        checksum: str | None = None,
+    ) -> VisionStorageObject:
+        item = VisionStorageObject(
+            checksum=checksum or hashlib.sha256(path.read_bytes()).hexdigest(),
+            size=int(path.stat().st_size),
+            mime="image/jpeg",
+            owner_type=owner_type,
+            owner_id=owner_id,
+            state="final",
+            retention_policy="dataset_media",
+            backend_key=self.storage.to_uri(path).removeprefix("vision://"),
+        )
+        db.add(item)
+        return item
+
     async def _refresh_dataset(self, db: AsyncSession, dataset: DatasetVersion) -> None:
         repo = VisionRepository(db)
         await db.flush()
@@ -213,10 +240,27 @@ class DatasetIngestionOperations:
             quality_reasons = prepared.metadata.get("quality", {}).get(
                 "rejection_reasons", []
             )
+            image_id = str(uuid4())
+            storage_object = self._register_storage_object(
+                db,
+                path=self.storage.resolve_uri(prepared.storage_uri),
+                owner_type="dataset_image",
+                owner_id=image_id,
+                checksum=prepared.sha256,
+            )
+            thumbnail_object = self._register_storage_object(
+                db,
+                path=self.storage.resolve_uri(prepared.thumbnail_uri),
+                owner_type="dataset_thumbnail",
+                owner_id=image_id,
+            )
             image = DatasetImage(
+                id=image_id,
                 dataset_id=dataset.id,
                 storage_uri=prepared.storage_uri,
                 thumbnail_uri=prepared.thumbnail_uri,
+                storage_object=storage_object,
+                thumbnail_storage_object=thumbnail_object,
                 source_type="upload",
                 source_group=source_group,
                 width=prepared.width,
@@ -278,9 +322,6 @@ class DatasetIngestionOperations:
         if dataset is None:
             raise VisionNotFound("Dataset not found")
         self._assert_mutable(dataset)
-        # Lazy import: VideoAnalysisApplication depends on VisionApplication.
-        from backend.modules.video_analysis.contracts import video_analysis_port
-
         video = await video_analysis_port.get_source_for_user(
             db, payload.video_id, user
         )
@@ -296,6 +337,14 @@ class DatasetIngestionOperations:
         )
         if imported:
             raise VisionConflict("This video is already part of the dataset")
+        try:
+            video_path = await video_analysis_port.resolve_source_media_path(
+                db,
+                video_id=video.id,
+                org_id=user.org_id,
+            )
+        except LookupError as exc:
+            raise VisionNotFound("Video source is unavailable") from exc
         max_frames = min(
             payload.max_frames or vision_settings.vision_max_extraction_frames,
             vision_settings.vision_max_extraction_frames,
@@ -309,7 +358,7 @@ class DatasetIngestionOperations:
         )
         result = await run_blocking(
             curate_video_frames,
-            video.storage_path,
+            video_path,
             output,
             interval_seconds=payload.interval_seconds,
             max_frames=max_frames,
@@ -349,11 +398,28 @@ class DatasetIngestionOperations:
             )
             content = path.read_bytes()
             geo = telemetry.match(frame.timestamp_seconds)
+            image_id = str(uuid4())
+            storage_object = self._register_storage_object(
+                db,
+                path=path,
+                owner_type="dataset_image",
+                owner_id=image_id,
+                checksum=hashlib.sha256(content).hexdigest(),
+            )
+            thumbnail_object = self._register_storage_object(
+                db,
+                path=thumbnail,
+                owner_type="dataset_thumbnail",
+                owner_id=image_id,
+            )
             db.add(
                 DatasetImage(
+                    id=image_id,
                     dataset_id=dataset.id,
                     storage_uri=self.storage.to_uri(path),
                     thumbnail_uri=self.storage.to_uri(thumbnail),
+                    storage_object=storage_object,
+                    thumbnail_storage_object=thumbnail_object,
                     source_type="video_frame",
                     source_group=f"video:{video.id}",
                     source_video_id=video.id,

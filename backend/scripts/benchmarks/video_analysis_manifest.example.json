@@ -88,7 +88,11 @@
       "peak_memory_mb": 1800,
       "selected_frames": [0, 30, 60, 90],
       "classes": ["weed", "crop"],
-      "class_counts": {"weed": 280, "crop": 140}
+      "class_counts": {"weed": 280, "crop": 140},
+      "detections": [
+        {"confidence": 0.91, "x1": 10, "y1": 20, "x2": 40, "y2": 60},
+        {"confidence": 0.77, "x1": 100, "y1": 120, "x2": 160, "y2": 180}
+      ]
     },
     "experiment": {
       "stage_timings_seconds": {
@@ -108,7 +112,11 @@
       "peak_memory_mb": 1750,
       "selected_frames": [0, 30, 60, 90],
       "classes": ["weed", "crop"],
-      "class_counts": {"weed": 280, "crop": 140}
+      "class_counts": {"weed": 280, "crop": 140},
+      "detections": [
+        {"confidence": 0.91, "x1": 10, "y1": 20, "x2": 40, "y2": 60},
+        {"confidence": 0.77, "x1": 100, "y1": 120, "x2": 160, "y2": 180}
+      ]
     }
   }
 }

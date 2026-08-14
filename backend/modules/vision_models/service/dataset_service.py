@@ -22,6 +22,7 @@ from backend.modules.vision_models.service.frame_curation import (
     assess_quality,
     average_hash,
     hash_distance,
+    prefix_probe_keys,
 )
 from backend.modules.vision_models.service.storage import VisionStorage
 
@@ -133,28 +134,36 @@ def count_cross_split_near_duplicates(images: list[DatasetImage]) -> int:
         and image.split in {"train", "val", "test"}
         and getattr(image, "perceptual_hash", None)
     ]
-    buckets: dict[str, list[DatasetImage]] = defaultdict(list)
+    buckets: dict[str, deque[DatasetImage]] = defaultdict(
+        lambda: deque(maxlen=HASH_BUCKET_LIMIT)
+    )
     for image in assigned:
         buckets[image.perceptual_hash[:HASH_PREFIX_LENGTH]].append(image)
 
     leakage = 0
     seen: set[tuple[str, str]] = set()
-    for members in buckets.values():
-        ordered = sorted(members, key=lambda item: item.id)
-        for index, left in enumerate(ordered):
-            for right in ordered[index + 1 : index + 1 + HASH_BUCKET_LIMIT]:
-                if left.split == right.split:
-                    continue
-                if (
-                    hash_distance(left.perceptual_hash, right.perceptual_hash)
-                    > MAX_HASH_DISTANCE
-                ):
-                    continue
-                pair = tuple(sorted((left.id, right.id)))
-                if pair in seen:
-                    continue
-                seen.add(pair)
-                leakage += 1
+    for left in sorted(assigned, key=lambda item: item.id):
+        candidates: dict[str, DatasetImage] = {}
+        for key in prefix_probe_keys(left.perceptual_hash):
+            for item in buckets[key]:
+                candidates.setdefault(item.id, item)
+                if len(candidates) >= HASH_BUCKET_LIMIT:
+                    break
+            if len(candidates) >= HASH_BUCKET_LIMIT:
+                break
+        for right in sorted(candidates.values(), key=lambda item: item.id):
+            if right.id <= left.id or left.split == right.split:
+                continue
+            if (
+                hash_distance(left.perceptual_hash, right.perceptual_hash)
+                > MAX_HASH_DISTANCE
+            ):
+                continue
+            pair = (left.id, right.id)
+            if pair in seen:
+                continue
+            seen.add(pair)
+            leakage += 1
     return leakage
 
 
@@ -181,7 +190,15 @@ def apply_dataset_near_duplicate_clustering(
         if not perceptual_hash:
             continue
         match = None
-        for previous in buckets[perceptual_hash[:HASH_PREFIX_LENGTH]]:
+        candidates = {}
+        for key in prefix_probe_keys(perceptual_hash):
+            for item in buckets[key]:
+                candidates.setdefault(item.id, item)
+                if len(candidates) >= HASH_BUCKET_LIMIT:
+                    break
+            if len(candidates) >= HASH_BUCKET_LIMIT:
+                break
+        for previous in candidates.values():
             comparison_count += 1
             if (
                 hash_distance(perceptual_hash, previous.perceptual_hash)
@@ -387,7 +404,14 @@ def build_yolo_dataset(
     for image in images:
         if not image.selected or image.split not in {"train", "val", "test"}:
             continue
-        source = storage.resolve_uri(image.storage_uri)
+        source = storage.resolve_registered(
+            backend_key=(
+                image.storage_object.backend_key
+                if image.storage_object is not None
+                else None
+            ),
+            legacy_uri=image.storage_uri,
+        )
         target_image = output_dir / "images" / image.split / f"{image.id}.jpg"
         shutil.copy2(source, target_image)
         label_rows: list[str] = []

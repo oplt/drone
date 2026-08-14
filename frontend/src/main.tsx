@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 import App from "./app/App.tsx";
 import { AppProviders } from "./app/providers/AppProviders.tsx";
 import "./output.css";
@@ -11,6 +12,7 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
+    <InitColorSchemeScript attribute="data-mui-color-scheme" defaultMode="system" />
     <AppProviders>
       <App />
     </AppProviders>

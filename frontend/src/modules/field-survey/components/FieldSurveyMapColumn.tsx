@@ -15,6 +15,7 @@ import {
   MissionSurveyCameraSection,
   MapEngineSelectionOverlay,
   MissionMapBoundaryPrompt,
+  MissionMapLegend,
 } from "../../mission-workflow";
 import { MissionVideoPanel } from "../../mission-runtime";
 import { VideoAnalysisPanel } from "../../video-analysis";
@@ -51,6 +52,7 @@ export function FieldSurveyMapColumn({
 
   return (
     <MissionSurveyCameraSection
+      layoutStorageKey="mission-layout:field-survey"
       setupSubtitle="Field boundary, grid parameters, and route preview"
       video={
         <MissionVideoPanel
@@ -109,6 +111,9 @@ export function FieldSurveyMapColumn({
               exclusionZones,
               fieldTilesetUrl: vm.fieldTilesetUrl,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               headingDeg: typeof map.heading === "number" ? map.heading : null,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -130,6 +135,9 @@ export function FieldSurveyMapColumn({
               plannedRoute: mission.cesiumPlannedRoute,
               exclusionZones,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               userCenter: map.userCenter,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -152,6 +160,9 @@ export function FieldSurveyMapColumn({
               plannedRoute: mission.cesiumPlannedRoute,
               exclusionZones,
               droneCenter: map.droneCenter,
+              followEnabled: map.followEnabled,
+              selectedWaypointIndex: map.selectedWaypointIndex,
+              onSelectWaypoint: map.setSelectedWaypointIndex,
               userCenter: map.userCenter,
               onPickLatLng: mission.handleCesiumPick,
               drawMode: mission.drawMode,
@@ -180,6 +191,7 @@ export function FieldSurveyMapColumn({
                   terraDrawMode={map.terraDrawMode}
                   terraDrawReady={map.terraDrawReady}
                   drawMode={mission.drawMode}
+                  tools={["polygon", "rectangle", "select"]}
                   deleteDisabled={
                     map.mapEngine !== "google"
                       ? mission.drawMode === "none" &&
@@ -208,7 +220,11 @@ export function FieldSurveyMapColumn({
                     );
                   }}
                 />
-                <MapEngineSelectionOverlay>
+                <MissionMapLegend />
+                <MapEngineSelectionOverlay
+                  followEnabled={map.followEnabled}
+                  onFollowEnabledChange={map.setFollowEnabled}
+                >
                   <CesiumViewControls
                     useCesium={map.useCesium}
                     onUseCesiumChange={(next) =>

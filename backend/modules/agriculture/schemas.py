@@ -1002,6 +1002,24 @@ class AgricultureFlightOut(BaseModel):
         from_attributes = True
 
 
+class LiveAdvisoryOut(BaseModel):
+    frame_index: int
+    timestamp_seconds: float
+    state: str
+    alerts: list[str]
+    geolocation: dict[str, float] | None = None
+    expires_at: float
+    sampler_hz: float
+    dropped_frames: int
+    source_of_truth: Literal["provisional_live"] = Field(
+        default="provisional_live",
+        description=(
+            "Heuristic live RGB advisory only. Post-flight analysis runs remain "
+            "the authoritative source for operator decisions."
+        ),
+    )
+
+
 class AgricultureTelemetryOut(BaseModel):
     inserted: int
     duplicates: int

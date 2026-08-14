@@ -1,0 +1,46 @@
+groups:
+  - name: platform-reliability
+    rules:
+      - alert: AgricultureQueueAgeHigh
+        expr: histogram_quantile(0.95, sum(rate(agriculture_queue_age_seconds_bucket[5m])) by (le, queue)) > 300
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Agriculture queue {{ $labels.queue }} p95 age exceeds 5 minutes"
+
+      - alert: AgricultureWorkersMissingWithBacklog
+        expr: |
+          (max(agriculture_queue_depth) by (queue) > 0)
+          and on (queue) (max(celery_workers_ready) by (queue) == 0)
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "Agriculture queue {{ $labels.queue }} has backlog but no ready workers"
+
+      - alert: CelerySoftTimeLimitExceeded
+        expr: sum(increase(celery_soft_time_limit_total[15m])) by (queue) > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: "Celery soft time limit hit on queue {{ $labels.queue }}"
+
+      - alert: EventLoopLagHigh
+        expr: event_loop_lag_seconds > 0.25
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "API event-loop lag exceeds 250ms budget"
+
+      - alert: TelemetryWebSocketAuthFailures
+        expr: sum(increase(websocket_auth_failures_total[10m])) by (reason) >= 5
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Repeated telemetry WebSocket auth failures ({{ $labels.reason }})"
+
+      - alert: TelemetryRedisFallbackHigh
+        expr: sum(increase(telemetry_redis_fallback_total[10m])) by (reason) >= 10
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Telemetry Redis fan-out degraded ({{ $labels.reason }})"

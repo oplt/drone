@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import Header from "../../../shared/layout/WorkflowHeader";
 import { IconButton, InputAdornment } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Avatar from "@mui/material/Avatar";
 import Skeleton from "@mui/material/Skeleton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker, useNavigate } from "react-router-dom";
 import { getToken } from "../../../modules/session";
 import {
   fetchAppSettings,
@@ -25,6 +25,7 @@ import { AiSettingsPanel } from "../components/AiSettingsPanel";
 import { OrgApiKeysPanel } from "../components/OrgApiKeysPanel";
 import { useCurrentUserProfile } from "../hooks/useCurrentUserProfile";
 import { useSettingsDirtyFlag } from "../hooks/useSettingsDirtyFlag";
+import { SaveIndicator } from "../../../shared/ui/SaveIndicator";
 import type {
   AISettings,
   SettingsDoc,
@@ -35,6 +36,7 @@ import { ActionIconButton, ActionIconLabel } from "../../../shared/ui/ActionIcon
 import {
   Alert,
   Box,
+  Button,
   Container,
   Divider,
   FormControlLabel,
@@ -285,12 +287,14 @@ function SecretField(props: React.ComponentProps<typeof TextField>) {
 
 export default function SettingsPage({ initialTab = "profile" }: { initialTab?: SettingsTabKey }) {
   const token = getToken();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const cachedSettings = queryClient.getQueryData<SettingsDoc>(SETTINGS_QUERY_KEY);
   const [tab, setTab] = useState(SETTINGS_TAB_INDEX[initialTab] ?? 0);
   const [err, setErr] = useState<string | null>(null);
   const [doc, setDoc] = useState<SettingsDoc>(cachedSettings ?? DEFAULTS);
   const { dirty, markDirty, markClean } = useSettingsDirtyFlag();
+  const blocker = useBlocker(dirty);
   const {
     user,
     userLoading,
@@ -386,6 +390,43 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
     }
   }
 
+  function discardSettings() {
+    const source = settingsQuery.data ?? cachedSettings ?? DEFAULTS;
+    setDoc(source);
+    markClean();
+    setErr(null);
+  }
+
+  useEffect(() => {
+    setTab(SETTINGS_TAB_INDEX[initialTab] ?? 0);
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    const leave = window.confirm(
+      "You have unsaved settings changes. Leave this page and discard them?",
+    );
+    if (leave) {
+      discardSettings();
+      blocker.proceed();
+    } else {
+      blocker.reset();
+    }
+    // discardSettings closes over latest doc helpers; blocker identity drives the prompt.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocker.state]);
+
+  const selectSettingsTab = (value: number) => {
+    setTab(value);
+    if (value === SETTINGS_TAB_INDEX.ai) {
+      navigate("/admin/settings/ai", { replace: true });
+    } else if (value === SETTINGS_TAB_INDEX.hardware) {
+      navigate("/admin/settings/hardware", { replace: true });
+    } else if (value === SETTINGS_TAB_INDEX.profile) {
+      navigate("/admin/settings", { replace: true });
+    }
+  };
+
   const update = (section: SettingsSection, field: string, value: unknown) => {
     const currentValue = (doc[section] as Record<string, unknown>)[field];
     if (Object.is(currentValue, value)) return;
@@ -444,12 +485,11 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
 
   return (
     <>
-      <Header />
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Paper variant="outlined" sx={{ p: 0 }}>
           <Tabs
             value={tab}
-            onChange={(_, value) => setTab(value)}
+            onChange={(_, value) => selectSettingsTab(value)}
             variant="scrollable"
             scrollButtons="auto"
             aria-label="Settings sections"
@@ -953,6 +993,48 @@ export default function SettingsPage({ initialTab = "profile" }: { initialTab?: 
           </Box>
         </Paper>
       </Container>
+      {dirty || saving ? (
+        <Paper
+          elevation={8}
+          role="status"
+          aria-live="polite"
+          sx={{
+            position: "sticky",
+            bottom: 0,
+            zIndex: (theme) => theme.zIndex.appBar,
+            mx: { xs: 0, md: 3 },
+            mb: 1,
+            px: 2,
+            py: 1.25,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            flexWrap: "wrap",
+            borderTop: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+          }}
+        >
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+            <SaveIndicator
+              state={saving ? "saving" : dirty ? "dirty" : "saved"}
+              labels={{ saved: "All changes saved", dirty: "Unsaved settings changes" }}
+            />
+            <Button size="small" onClick={discardSettings} disabled={saving || !dirty}>
+              Discard
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => void saveSettings()}
+              disabled={saving || loading || !dirty}
+            >
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </Stack>
+        </Paper>
+      ) : null}
     </>
   );
 }

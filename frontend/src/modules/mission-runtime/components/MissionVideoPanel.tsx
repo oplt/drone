@@ -135,6 +135,7 @@ export function MissionVideoPanel({
   const frame = (
     <Box
       className="mission-video-frame"
+      data-mission-video-frame=""
       sx={[
           {
             width: "100%",

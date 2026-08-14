@@ -43,6 +43,21 @@ class VisionStorage:
             raise VisionStorageError("Invalid vision artifact URI")
         return self._within_root(*relative.parts)
 
+    def resolve_backend_key(self, backend_key: str) -> Path:
+        relative = PurePosixPath(backend_key)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise VisionStorageError("Invalid vision storage key")
+        return self._within_root(*relative.parts)
+
+    def resolve_registered(
+        self, *, backend_key: str | None, legacy_uri: str | None
+    ) -> Path:
+        if backend_key:
+            return self.resolve_backend_key(backend_key)
+        if legacy_uri:
+            return self.resolve_uri(legacy_uri)
+        raise VisionStorageError("Vision artifact has no storage location")
+
     def remove_project(self, project_id: str) -> None:
         path = self.project_path(project_id)
         if path.exists():

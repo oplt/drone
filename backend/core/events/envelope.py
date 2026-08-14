@@ -122,6 +122,7 @@ class MissionContextV1(BaseModel):
     mission_type: str | None = None
     mission_task_type: str | None = None
     preflight_run_id: str | None = None
+    org_id: int | None = None
 
 
 def mission_context_from_runtime(runtime: Any | None) -> MissionContextV1 | None:
@@ -135,6 +136,7 @@ def mission_context_from_runtime(runtime: Any | None) -> MissionContextV1 | None
         mission_type=getattr(runtime, "mission_type", None),
         mission_task_type=mission_task_type,
         preflight_run_id=getattr(runtime, "preflight_run_id", None),
+        org_id=getattr(runtime, "org_id", None),
     )
     return context if any(context.model_dump().values()) else None
 
@@ -545,6 +547,9 @@ class TelemetryPayloadV1(BaseModel):
         }
 
 
+TelemetryWireProtocol = Literal["legacy", "v1"]
+
+
 class TelemetryEnvelopeV1(RuntimeEnvelopeBaseV1):
     kind: Literal["telemetry"] = "telemetry"
     payload: TelemetryPayloadV1
@@ -556,6 +561,22 @@ class TelemetryEnvelopeV1(RuntimeEnvelopeBaseV1):
                 timestamp_s=self.emitted_at.timestamp(),
             ),
         }
+
+    def to_v1_websocket_message(self) -> dict[str, Any]:
+        return {
+            "type": "telemetry",
+            "protocol": "v1",
+            "envelope": self.model_dump_jsonable(),
+        }
+
+    def to_websocket_message(
+        self,
+        *,
+        wire_protocol: TelemetryWireProtocol = "legacy",
+    ) -> dict[str, Any]:
+        if wire_protocol == "v1":
+            return self.to_v1_websocket_message()
+        return self.to_legacy_websocket_message()
 
 
 class FlightEventSeverityV1(str, Enum):

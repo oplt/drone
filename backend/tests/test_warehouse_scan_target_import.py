@@ -8,12 +8,15 @@ from backend.modules.warehouse.models import WarehouseScanTarget
 from backend.modules.warehouse.routers.scan_targets import import_warehouse_scan_targets
 from backend.modules.warehouse.schemas import WarehouseScanTargetImport
 from backend.modules.warehouse.service.frame_imports import normalize_scan_target_import
-from backend.modules.warehouse.service.layout import BinContext
+from backend.modules.warehouse.service.layout import BinContext, LockedLayoutBinIndex
 
 
 def _target(aisle_code: str) -> dict[str, object]:
     return {
         "aisle_code": aisle_code,
+        "rack_code": "R1",
+        "shelf_level": 1,
+        "bin_code": "B1",
         "target_point_local_json": {"x_m": 1, "y_m": 2, "z_m": 3},
         "scan_pose_local_json": {"x_m": 1, "y_m": 1, "z_m": 3},
     }
@@ -24,7 +27,7 @@ def test_import_reloads_rows_with_one_query_and_preserves_input_order(monkeypatc
         return object()
 
     monkeypatch.setattr(
-        "backend.modules.warehouse.routers.scan_targets.get_map_or_404",
+        "backend.modules.warehouse.routers.scan_targets.assert_map_or_404",
         allow_map,
     )
 
@@ -36,13 +39,20 @@ def test_import_reloads_rows_with_one_query_and_preserves_input_order(monkeypatc
         locked_frame,
     )
 
-    async def bin_context(*args, **kwargs) -> BinContext:
-        aisle = str(kwargs["aisle_code"])
-        return BinContext(9, 42, 1 if aisle == "A" else 2, aisle, "R1", 1, "B1")
+    async def bin_index(*args, **kwargs) -> LockedLayoutBinIndex:
+        by_bin_id = {
+            1: BinContext(9, 42, 1, "A", "R1", 1, "B1"),
+            2: BinContext(9, 42, 2, "B", "R1", 1, "B1"),
+        }
+        by_identity = {
+            (context.aisle_code, context.rack_code, context.shelf_level, context.bin_code): context
+            for context in by_bin_id.values()
+        }
+        return LockedLayoutBinIndex(9, 42, by_bin_id, by_identity)
 
     monkeypatch.setattr(
-        "backend.modules.warehouse.routers.scan_targets.resolve_bin_context",
-        bin_context,
+        "backend.modules.warehouse.routers.scan_targets.load_locked_layout_bin_index",
+        bin_index,
     )
     db = MagicMock()
     db.flush = AsyncMock()

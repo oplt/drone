@@ -15,6 +15,7 @@ export {
   useTelemetryStream,
   useTelemetryWebSocket,
   useTelemetryWebSocket as default,
+  TELEMETRY_UI_NOTIFY_MIN_MS,
 } from "./hooks/useTelemetryStream";
 export { useMissionCommands } from "./hooks/useMissionCommands";
 export { useMissionCommandMetrics } from "./hooks/useMissionCommandMetrics";
@@ -23,8 +24,14 @@ export { useAutoStartVideo } from "./hooks/useAutoStartVideo";
 export { useLiveObjectDetection } from "./hooks/useLiveObjectDetection";
 export { useMissionPreflightRows } from "./hooks/useMissionPreflightRows";
 
+export { useTelemetryLinkStatus } from "./hooks/useTelemetryLinkStatus";
+export type { TelemetryLinkPhase, TelemetryLinkStatus } from "./hooks/useTelemetryLinkStatus";
+export { deriveTelemetry, telemetryDisplayStrings, TELEMETRY_CONTRACT_FIXTURE } from "./utils/deriveTelemetry";
+export type { DerivedTelemetry } from "./utils/deriveTelemetry";
+
 export { MissionCommandPanel } from "./components/MissionCommandPanel";
 export { MissionPreflightPanel } from "./components/MissionPreflightPanel";
 export { MissionVideoPanel } from "./components/MissionVideoPanel";
 export { MissionStatusChips } from "./components/MissionStatusChips";
 export { TelemetryHud } from "./components/TelemetryHud";
+export { TelemetryReadout, TelemetryReadoutRow } from "./components/TelemetryReadout";

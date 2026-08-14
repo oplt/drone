@@ -4,6 +4,9 @@ import type { Shadows } from "@mui/material/styles";
 declare module '@mui/material/Paper' {
   interface PaperPropsVariantOverrides {
     highlighted: true;
+    opsPanel: true;
+    mapOverlay: true;
+    quiet: true;
   }
 }
 declare module '@mui/material/styles' {
@@ -26,6 +29,23 @@ declare module '@mui/material/styles' {
 
   interface Palette {
     baseShadow: string;
+    /** Ops surface tokens — light/dark safe (never raw grey.50). */
+    surface: {
+      canvas: string;
+      raised: string;
+      inset: string;
+      overlay: string;
+    };
+  }
+
+  interface PaletteOptions {
+    baseShadow?: string;
+    surface?: {
+      canvas?: string;
+      raised?: string;
+      inset?: string;
+      overlay?: string;
+    };
   }
 }
 
@@ -33,7 +53,9 @@ const defaultTheme = createTheme();
 
 const customShadows: Shadows = [...defaultTheme.shadows];
 
-/** Tesla-inspired design tokens (DESIGN.md) */
+/** Tesla-inspired design tokens (DESIGN.md §§1–9 marketing + §10 ops addendum).
+ * Marketing: restrained chrome. Ops console: semantic status colors + denser panels OK.
+ * Fonts: Universal Sans when licensed; DM Sans is the shipped geometric fallback. */
 export const tesla = {
   electricBlue: '#3E6AE1',
   white: '#FFFFFF',
@@ -45,12 +67,24 @@ export const tesla = {
   cloudGray: '#EEEEEE',
   paleSilver: '#D0D1D2',
   frostedGlass: 'rgba(255, 255, 255, 0.75)',
+  frostedGlassDark: 'rgba(23, 26, 32, 0.78)',
 };
 
+/** Prefer Universal Sans when licensed; DM Sans is loaded in index.html. */
 export const fontDisplay =
-  '"Universal Sans Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+  '"DM Sans", "Universal Sans Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
 export const fontText =
-  '"Universal Sans Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+  '"DM Sans", "Universal Sans Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+
+/**
+ * Radius multipliers for `sx={{ borderRadius: radius.md }}`.
+ * Multiplies `theme.shape.borderRadius` (4px): xs=4, sm=8, md=12.
+ */
+export const radius = {
+  xs: 1,
+  sm: 2,
+  md: 3,
+} as const;
 
 export const teslaTransition =
   'border-color 0.33s cubic-bezier(0.5, 0, 0, 0.75), background-color 0.33s cubic-bezier(0.5, 0, 0, 0.75), color 0.33s cubic-bezier(0.5, 0, 0, 0.75), box-shadow 0.25s cubic-bezier(0.5, 0, 0, 0.75)';
@@ -158,6 +192,12 @@ export const getDesignTokens = (mode: 'light' | 'dark') => {
       background: {
         default: mode === 'dark' ? tesla.carbonDark : tesla.white,
         paper: mode === 'dark' ? tesla.carbonDark : tesla.white,
+      },
+      surface: {
+        canvas: mode === 'dark' ? tesla.carbonDark : tesla.white,
+        raised: mode === 'dark' ? alpha(tesla.white, 0.04) : tesla.lightAsh,
+        inset: mode === 'dark' ? alpha(tesla.white, 0.06) : alpha(tesla.carbonDark, 0.04),
+        overlay: mode === 'dark' ? tesla.frostedGlassDark : tesla.frostedGlass,
       },
       text: {
         primary: mode === 'dark' ? tesla.white : tesla.carbonDark,
@@ -301,6 +341,12 @@ export const colorSchemes = {
         default: tesla.white,
         paper: tesla.white,
       },
+      surface: {
+        canvas: tesla.white,
+        raised: tesla.lightAsh,
+        inset: alpha(tesla.carbonDark, 0.04),
+        overlay: tesla.frostedGlass,
+      },
       text: {
         primary: tesla.carbonDark,
         secondary: tesla.graphite,
@@ -347,6 +393,12 @@ export const colorSchemes = {
       background: {
         default: tesla.carbonDark,
         paper: tesla.carbonDark,
+      },
+      surface: {
+        canvas: tesla.carbonDark,
+        raised: alpha(tesla.white, 0.04),
+        inset: alpha(tesla.white, 0.06),
+        overlay: tesla.frostedGlassDark,
       },
       text: {
         primary: tesla.white,

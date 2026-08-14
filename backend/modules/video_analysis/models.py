@@ -57,8 +57,11 @@ class VideoAsset(Base):
     )
     sync_offset_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     reanalysis_required: Mapped[bool] = mapped_column(nullable=False, default=False)
+    capture_metadata_revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="uploaded")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="uploaded", index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -74,6 +77,7 @@ class VideoAnalysisJob(Base):
     __table_args__ = (
         CheckConstraint("tracker_type IN ('bytetrack')", name="ck_video_analysis_tracker_type"),
         CheckConstraint("attempt >= 0", name="ck_video_analysis_job_attempt_nonnegative"),
+        Index("ix_video_analysis_jobs_status_lease", "status", "lease_expires_at"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -85,7 +89,7 @@ class VideoAnalysisJob(Base):
         ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="queued")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="queued", index=True)
     orchestration_key: Mapped[str | None] = mapped_column(
         String(160), nullable=True, unique=True, index=True
     )
@@ -118,6 +122,9 @@ class VideoAnalysisJob(Base):
     terminal_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     terminal_stage: Mapped[str | None] = mapped_column(String(64), nullable=True)
     stage_timings: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    capture_metadata_revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
 
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

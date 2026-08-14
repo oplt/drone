@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Button,
@@ -10,7 +10,7 @@ import type { VideoAsset } from "../types";
 import { usePatchCaptureMetadata } from "../hooks";
 
 type Props = {
-  video: VideoAsset | null;
+  video: VideoAsset;
   onUpdated?: (video: VideoAsset) => void;
 };
 
@@ -24,23 +24,13 @@ function toLocalInputValue(iso: string | null | undefined): string {
 
 export function CaptureMetadataEditor({ video, onUpdated }: Props) {
   const patch = usePatchCaptureMetadata();
-  const [capturedAt, setCapturedAt] = useState("");
-  const [timezone, setTimezone] = useState("");
-  const [syncOffset, setSyncOffset] = useState("0");
-
-  useEffect(() => {
-    if (!video) {
-      setCapturedAt("");
-      setTimezone("");
-      setSyncOffset("0");
-      return;
-    }
-    setCapturedAt(toLocalInputValue(video.captured_at));
-    setTimezone(video.capture_timezone ?? "");
-    setSyncOffset(String(video.sync_offset_seconds ?? 0));
-  }, [video]);
-
-  if (!video) return null;
+  const [capturedAt, setCapturedAt] = useState(() =>
+    toLocalInputValue(video.captured_at),
+  );
+  const [timezone, setTimezone] = useState(() => video.capture_timezone ?? "");
+  const [syncOffset, setSyncOffset] = useState(() =>
+    String(video.sync_offset_seconds ?? 0),
+  );
 
   const save = async () => {
     const body: {
@@ -52,8 +42,14 @@ export function CaptureMetadataEditor({ video, onUpdated }: Props) {
       body.captured_at = new Date(capturedAt).toISOString();
     }
     if (timezone.trim()) body.capture_timezone = timezone.trim();
-    const offset = Number(syncOffset);
-    if (Number.isFinite(offset)) body.sync_offset_seconds = offset;
+    const trimmedOffset = syncOffset.trim();
+    if (trimmedOffset !== "") {
+      const offset = Number(trimmedOffset);
+      if (!Number.isFinite(offset)) {
+        return;
+      }
+      body.sync_offset_seconds = offset;
+    }
     if (
       body.captured_at == null &&
       body.capture_timezone == null &&

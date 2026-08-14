@@ -237,10 +237,7 @@ function resolveWarehouseWebSocketBase(): string {
   return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/${apiBase}`;
 }
 
-export function resolveWarehouseLiveMapWebSocketUrl(
-  flightId: string,
-  _token?: string | null,
-): string {
+export function resolveWarehouseLiveMapWebSocketUrl(flightId: string): string {
   return `${resolveWarehouseWebSocketBase()}/warehouse/live-map/${encodeURIComponent(flightId)}/stream`;
 }
 
@@ -252,9 +249,8 @@ export function connectWarehouseLiveMap(
     onClose?: () => void;
     onError?: (event: Event) => void;
   },
-  token?: string | null,
 ): WebSocket {
-  const socket = new WebSocket(resolveWarehouseLiveMapWebSocketUrl(flightId, token));
+  const socket = new WebSocket(resolveWarehouseLiveMapWebSocketUrl(flightId));
   socket.addEventListener("open", () => handlers.onOpen?.());
   socket.addEventListener("close", () => handlers.onClose?.());
   socket.addEventListener("error", (event) => handlers.onError?.(event));

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.identity.models import User
-from backend.modules.video_analysis.application import VideoAnalysisApplication
 from backend.modules.video_analysis.models import (
     VideoAnalysisJob,
     VideoAsset,
@@ -23,7 +24,6 @@ class VideoSourceRef:
     mission_id: str | None
     field_id: int | None
     org_id: int | None
-    storage_path: str
     status: str
     fps: float | None
     created_at: datetime
@@ -74,7 +74,6 @@ def _source_ref(value: VideoAsset) -> VideoSourceRef:
         mission_id=value.mission_id,
         field_id=value.field_id,
         org_id=value.org_id,
-        storage_path=value.storage_path,
         status=value.status,
         fps=value.fps,
         created_at=value.created_at,
@@ -149,6 +148,20 @@ class VideoAnalysisPort:
         row = await VideoAnalysisRepository(db).get_video_for_user(video_id, user)
         return _source_ref(row) if row is not None else None
 
+    async def resolve_source_media_path(
+        self,
+        db: AsyncSession,
+        *,
+        video_id: str,
+        org_id: int | None,
+    ) -> str:
+        row = await VideoAnalysisRepository(db).get_video(video_id)
+        if row is None or row.org_id != org_id:
+            raise LookupError("Video source is not available in this scope")
+        if not Path(row.storage_path).is_file():
+            raise LookupError("Video source is not available on disk")
+        return row.storage_path
+
     async def start_or_reuse_job(
         self,
         db: AsyncSession,
@@ -158,6 +171,8 @@ class VideoAnalysisPort:
         user: User,
         orchestration_key: str,
     ) -> VideoJobRef:
+        from backend.modules.video_analysis.application import VideoAnalysisApplication
+
         job = await VideoAnalysisApplication().start_analysis(
             db,
             video_id=video_id,
@@ -186,11 +201,67 @@ class VideoAnalysisPort:
         *,
         job_ids: list[str],
         org_id: int | None,
+        limit: int = 5000,
+        cursor: tuple[float, str] | None = None,
+        bbox: tuple[float, float, float, float] | None = None,
+        min_confidence: float | None = None,
     ) -> list[VideoDetectionRef]:
-        rows = await VideoAnalysisRepository(db).list_detections_by_job_ids(
-            job_ids, org_id=org_id
+        """Return one bounded page; callers processing all rows should iterate pages."""
+        rows, _ = await VideoAnalysisRepository(db).page_detections_by_job_ids(
+            job_ids,
+            org_id=org_id,
+            limit=min(max(1, int(limit)), 5000),
+            after=cursor,
+            bbox=bbox,
+            min_confidence=min_confidence,
         )
         return [_detection_ref(row) for row in rows]
+
+    async def iter_detection_pages(
+        self,
+        db: AsyncSession,
+        *,
+        job_ids: list[str],
+        org_id: int | None,
+        page_size: int = 1000,
+        bbox: tuple[float, float, float, float] | None = None,
+        min_confidence: float | None = None,
+    ) -> AsyncIterator[list[VideoDetectionRef]]:
+        cursor: tuple[float, str] | None = None
+        while True:
+            rows, has_more = await VideoAnalysisRepository(
+                db
+            ).page_detections_by_job_ids(
+                job_ids,
+                org_id=org_id,
+                limit=min(max(1, int(page_size)), 5000),
+                after=cursor,
+                bbox=bbox,
+                min_confidence=min_confidence,
+            )
+            if not rows:
+                return
+            yield [_detection_ref(row) for row in rows]
+            if not has_more:
+                return
+            last = rows[-1]
+            cursor = (last.timestamp_seconds, last.id)
+
+    async def aggregate_detection_counts(
+        self,
+        db: AsyncSession,
+        *,
+        job_ids: list[str],
+        org_id: int | None,
+        bbox: tuple[float, float, float, float] | None = None,
+        min_confidence: float | None = None,
+    ) -> dict[str, int]:
+        return await VideoAnalysisRepository(db).aggregate_class_counts_by_job_ids(
+            job_ids,
+            org_id=org_id,
+            bbox=bbox,
+            min_confidence=min_confidence,
+        )
 
     async def cancel_jobs(
         self,

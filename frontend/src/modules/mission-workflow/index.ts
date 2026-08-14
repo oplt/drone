@@ -8,11 +8,15 @@ export type {
 } from "./hooks/useWorkflowFieldBoundary";
 export { MissionWorkflowShell } from "./components/MissionWorkflowShell";
 export { GoogleMapEngineAlerts } from "./components/GoogleMapEngineAlerts";
+export { MapEngineStatus } from "./components/MapEngineStatus";
+export type { MapEngineStatusProps } from "./components/MapEngineStatus";
 export { TaskControlFrame } from "./components/TaskControlFrame";
 export { MissionMapFrameFooter } from "./components/MissionMapFrameFooter";
 export { MissionSurveyCameraSection } from "./components/MissionSurveyCameraSection";
 export { MapEngineSelectionOverlay } from "./components/MapEngineSelectionOverlay";
 export { MapDrawToolsOverlay } from "./components/MapDrawToolsOverlay";
+export { MissionMapLegend } from "./components/MissionMapLegend";
+export type { MissionMapLegendItem } from "./components/MissionMapLegend";
 export { MapShapeActionPopover } from "./components/MapShapeActionPopover";
 export type { MapShapeActionVariant } from "./components/MapShapeActionPopover";
 export { MissionMapBoundaryPrompt } from "./components/MissionMapBoundaryPrompt";

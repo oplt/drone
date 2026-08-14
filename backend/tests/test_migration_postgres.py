@@ -26,16 +26,45 @@ def test_postgresql_postgis_and_request_path_indexes() -> None:
                             "SELECT indexname FROM pg_indexes "
                             "WHERE schemaname = 'public' AND indexname IN "
                             "('idx_mission_runtime_client_state', "
-                            "'idx_webhook_delivery_endpoint_status_created')"
+                            "'idx_webhook_delivery_endpoint_status_created', "
+                            "'uq_agri_active_capability_release')"
+                        )
+                    )
+                )
+                migration_states = set(
+                    await connection.scalars(
+                        text(
+                            "SELECT DISTINCT migration_state "
+                            "FROM agriculture_model_versions"
+                        )
+                    )
+                )
+                video_indexes = set(
+                    await connection.scalars(
+                        text(
+                            "SELECT indexname FROM pg_indexes "
+                            "WHERE schemaname = 'public' AND indexname IN "
+                            "('ix_video_analysis_jobs_status', "
+                            "'ix_video_analysis_jobs_status_lease', "
+                            "'ix_video_assets_status', "
+                            "'uq_agri_telemetry_receipt_flight_key')"
                         )
                     )
                 )
             assert postgis
-            assert revision == "i2j3k4l5m6n7"
+            assert revision == "l5m6n7o8p9q0"
             assert index_names == {
                 "idx_mission_runtime_client_state",
                 "idx_webhook_delivery_endpoint_status_created",
+                "uq_agri_active_capability_release",
             }
+            assert video_indexes == {
+                "ix_video_analysis_jobs_status",
+                "ix_video_analysis_jobs_status_lease",
+                "ix_video_assets_status",
+                "uq_agri_telemetry_receipt_flight_key",
+            }
+            assert migration_states <= {"linked", "quarantined", "legacy_unlinked"}
         finally:
             await engine.dispose()
 

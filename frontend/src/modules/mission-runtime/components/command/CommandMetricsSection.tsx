@@ -35,7 +35,11 @@ export function CommandMetricsSection({
       <StatRow label="GPS Strength" value={gpsStrength} />
       <StatRow
         label="Battery"
-        value={`${batteryCellDisplay} • ${batteryHealth}`}
+        value={
+          batteryCellDisplay !== "--"
+            ? `${batteryHealth} (${batteryCellDisplay})`
+            : batteryHealth
+        }
         valueSx={{ textAlign: "right" }}
       />
       <StatRow label="Link Quality" value={linkQuality} />

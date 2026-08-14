@@ -28,7 +28,7 @@
   "frontend/src/modules/mission-runtime/hooks/useAutoStartVideo.ts|@typescript-eslint/no-unused-vars": 2,
   "frontend/src/modules/mission-runtime/hooks/useDetectionFps.ts|react-hooks/set-state-in-effect": 1,
   "frontend/src/modules/mission-runtime/hooks/useMissionStatusPolling.ts|react-hooks/refs": 1,
-  "frontend/src/modules/mission-runtime/utils/deriveTelemetry.tsx|@typescript-eslint/no-explicit-any": 3,
+  "frontend/src/modules/mission-runtime/utils/deriveTelemetry.ts|@typescript-eslint/no-explicit-any": 3,
   "frontend/src/modules/mission-workflow/components/WorkflowTerraDrawBridge.tsx|react-hooks/refs": 1,
   "frontend/src/modules/mission-workflow/hooks/useWorkflowFieldBoundary.ts|react-hooks/refs": 1,
   "frontend/src/modules/observability/components/HealthStatusCard.tsx|react-refresh/only-export-components": 1,

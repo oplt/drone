@@ -32,6 +32,26 @@ class ProvisionalMappingEpoch:
 
 
 _EPOCHS: dict[int, ProvisionalMappingEpoch] = {}
+_EPOCH_TTL_S = 2 * 60 * 60
+
+
+def _evict_stale_epochs(now: float | None = None) -> None:
+    current = time.monotonic() if now is None else now
+    stale_ids = [
+        warehouse_map_id
+        for warehouse_map_id, epoch in _EPOCHS.items()
+        if current - epoch.last_update_monotonic > _EPOCH_TTL_S
+    ]
+    for warehouse_map_id in stale_ids:
+        _EPOCHS.pop(warehouse_map_id, None)
+
+
+def end_provisional_epoch(*, warehouse_map_id: int) -> None:
+    _EPOCHS.pop(int(warehouse_map_id), None)
+
+
+def clear_provisional_epochs() -> None:
+    _EPOCHS.clear()
 
 
 def map_candidate_status(status: str) -> ProvisionalEntityState:
@@ -45,6 +65,7 @@ def map_candidate_status(status: str) -> ProvisionalEntityState:
 
 
 def begin_provisional_epoch(*, warehouse_map_id: int, epoch_id: str) -> ProvisionalMappingEpoch:
+    _evict_stale_epochs()
     epoch = ProvisionalMappingEpoch(epoch_id=str(epoch_id))
     _EPOCHS[int(warehouse_map_id)] = epoch
     return epoch
@@ -56,6 +77,7 @@ def note_provisional_update(
     confidence: float,
     displacement_m: float = 0.0,
 ) -> ProvisionalMappingEpoch | None:
+    _evict_stale_epochs()
     epoch = _EPOCHS.get(int(warehouse_map_id))
     if epoch is None:
         return None
@@ -67,6 +89,7 @@ def note_provisional_update(
 
 
 def provisional_epoch_snapshot(warehouse_map_id: int) -> dict[str, Any] | None:
+    _evict_stale_epochs()
     epoch = _EPOCHS.get(int(warehouse_map_id))
     if epoch is None:
         return None

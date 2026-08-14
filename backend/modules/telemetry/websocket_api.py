@@ -1,4 +1,3 @@
-# routes_websocket.py
 import asyncio
 import logging
 import time
@@ -18,13 +17,40 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ws", tags=["websocket"])
 
 
+def _websocket_auth_failure_reason(error: str | None) -> str:
+    if not error:
+        return "unknown"
+    if "Query-string" in error:
+        return "query_string_token"
+    if error == "Missing authentication token":
+        return "missing_token"
+    if error == "Token expired":
+        return "token_expired"
+    if error in {"Invalid authentication token", "Invalid token"}:
+        return "invalid_token"
+    return "authorization_failed"
+
+
+def _record_websocket_auth_failure(reason: str) -> None:
+    from backend.observability import prometheus_metrics
+
+    prometheus_metrics.websocket_auth_failures_total.labels(reason=reason).inc()
+    metric_add("api_websocket_auth_failures", attrs={"reason": reason})
+
+
 async def _authenticate_websocket(websocket: WebSocket) -> tuple[User | None, str | None]:
     """
     Enforce auth for WebSocket connections.
     1. Try Authorization: Bearer header
     2. Try access_token cookie (browser WS upgrade sends cookies automatically)
+    Query-string tokens are rejected (leak via logs/proxies).
     Returns authenticated user or an error message.
     """
+    if websocket.query_params.get("token"):
+        reason = "query_string_token"
+        _record_websocket_auth_failure(reason)
+        return None, "Query-string tokens are not allowed; use Authorization header or cookie"
+
     token: str | None = None
 
     auth = websocket.headers.get("authorization")
@@ -35,32 +61,27 @@ async def _authenticate_websocket(websocket: WebSocket) -> tuple[User | None, st
         token = websocket.cookies.get("access_token")
 
     if not token:
-        token = websocket.query_params.get("token")
-
-    if not token:
+        _record_websocket_auth_failure("missing_token")
         return None, "Missing authentication token"
 
     try:
         async with Session() as db:
             user = await get_user_from_token(token, db)
             if not user:
+                _record_websocket_auth_failure("invalid_token")
                 return None, "Invalid authentication token"
             return user, None
     except jwt.ExpiredSignatureError:
+        _record_websocket_auth_failure("token_expired")
         return None, "Token expired"
     except JWTError as e:
         logger.warning(f"JWT validation error: {e}")
+        _record_websocket_auth_failure("invalid_token")
         return None, "Invalid token"
     except Exception as e:
         logger.error(f"Authorization error: {e}")
+        _record_websocket_auth_failure("authorization_failed")
         return None, "Authorization failed"
-
-
-async def _authorize_websocket(websocket: WebSocket) -> tuple[bool, str | None]:
-    user, error = await _authenticate_websocket(websocket)
-    if user is None:
-        return False, error
-    return True, str(user.id)
 
 
 @router.websocket("/telemetry")
@@ -68,26 +89,30 @@ async def websocket_telemetry(websocket: WebSocket):
     """
     Protected WebSocket endpoint for telemetry.
     Auth via Authorization header or access_token cookie — no query-string token.
+    Optional client messages: {"type":"subscribe","mission_runtime_id":"..."} to scope fan-out.
     """
     writer_task = None
 
-    is_authorized, user_id_or_error = await _authorize_websocket(websocket)
-
-    if not is_authorized:
-        logger.warning(f"Rejecting WebSocket connection: {user_id_or_error}")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=user_id_or_error)
+    user, auth_error = await _authenticate_websocket(websocket)
+    if user is None:
+        logger.warning(f"Rejecting WebSocket connection: {auth_error}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=auth_error)
         return
 
     try:
         await websocket.accept()
-        logger.info(f"✅ WebSocket connection accepted for user {user_id_or_error}")
+        logger.info("✅ WebSocket connection accepted for user %s org=%s", user.id, user.org_id)
     except Exception as e:
         logger.error(f"Failed to accept WebSocket: {e}")
         return
 
     try:
         with observed_span("api.websocket.connect", **{"websocket.channel": "telemetry"}):
-            writer_task = await telemetry_manager.connect(websocket)
+            writer_task = await telemetry_manager.connect(
+                websocket,
+                user_id=int(user.id),
+                org_id=int(user.org_id) if user.org_id is not None else None,
+            )
 
         while True:
             try:
@@ -99,6 +124,36 @@ async def websocket_telemetry(websocket: WebSocket):
                         metric_add("api_websocket_messages", attrs={"message_type": "pong"})
                     except Exception:
                         break
+                    continue
+
+                try:
+                    import orjson
+
+                    parsed = orjson.loads(message)
+                except Exception:
+                    parsed = None
+                if isinstance(parsed, dict) and parsed.get("type") == "subscribe":
+                    mission_runtime_id = parsed.get("mission_runtime_id")
+                    wire_protocol = parsed.get("protocol") or parsed.get("wire_protocol")
+                    telemetry_manager.set_client_subscription(
+                        websocket,
+                        mission_runtime_id=str(mission_runtime_id)
+                        if mission_runtime_id
+                        else None,
+                        wire_protocol=str(wire_protocol).lower()
+                        if isinstance(wire_protocol, str)
+                        else None,
+                    )
+                    try:
+                        await websocket.send_json(
+                            {
+                                "type": "subscribed",
+                                "mission_runtime_id": mission_runtime_id,
+                                "protocol": wire_protocol or "legacy",
+                            }
+                        )
+                    except Exception:
+                        break
 
             except TimeoutError:
                 try:
@@ -108,7 +163,7 @@ async def websocket_telemetry(websocket: WebSocket):
                     break
 
             except WebSocketDisconnect:
-                logger.info(f"WebSocket client disconnected for user {user_id_or_error}")
+                logger.info("WebSocket client disconnected for user %s", user.id)
                 break
 
             except Exception as e:

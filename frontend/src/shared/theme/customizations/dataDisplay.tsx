@@ -131,6 +131,12 @@ export const dataDisplayCustomizations: Components<Theme> = {
               [`& .${chipClasses.label}`]: {
                 color: '#4A9E5C',
               },
+              ...theme.applyStyles('dark', {
+                backgroundColor: alpha('#81C784', 0.22),
+                [`& .${chipClasses.label}`]: {
+                  color: '#C8E6C9',
+                },
+              }),
             },
           },
           {
@@ -140,6 +146,12 @@ export const dataDisplayCustomizations: Components<Theme> = {
               [`& .${chipClasses.label}`]: {
                 color: '#D71921',
               },
+              ...theme.applyStyles('dark', {
+                backgroundColor: alpha('#EF5350', 0.28),
+                [`& .${chipClasses.label}`]: {
+                  color: '#FFCDD2',
+                },
+              }),
             },
           },
           {
@@ -149,6 +161,27 @@ export const dataDisplayCustomizations: Components<Theme> = {
               [`& .${chipClasses.label}`]: {
                 color: '#D4A843',
               },
+              ...theme.applyStyles('dark', {
+                backgroundColor: alpha('#FFB74D', 0.28),
+                [`& .${chipClasses.label}`]: {
+                  color: '#FFE0B2',
+                },
+              }),
+            },
+          },
+          {
+            props: { color: 'info' },
+            style: {
+              backgroundColor: alpha('#0288D1', 0.12),
+              [`& .${chipClasses.label}`]: {
+                color: '#0277BD',
+              },
+              ...theme.applyStyles('dark', {
+                backgroundColor: alpha('#4FC3F7', 0.24),
+                [`& .${chipClasses.label}`]: {
+                  color: '#B3E5FC',
+                },
+              }),
             },
           },
           {
@@ -158,6 +191,12 @@ export const dataDisplayCustomizations: Components<Theme> = {
               [`& .${chipClasses.label}`]: {
                 color: brand[500],
               },
+              ...theme.applyStyles('dark', {
+                backgroundColor: alpha(brand[300], 0.24),
+                [`& .${chipClasses.label}`]: {
+                  color: brand[100],
+                },
+              }),
             },
           },
           {

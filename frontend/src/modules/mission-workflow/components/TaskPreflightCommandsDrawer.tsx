@@ -7,6 +7,7 @@ import {
   Stack,
   Tooltip,
   Typography,
+  useMediaQuery,
   useTheme,
 } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
@@ -52,11 +53,14 @@ export function TaskPreflightCommandsDrawer({
   paperSx,
 }: TaskPreflightCommandsDrawerProps) {
   const theme = useTheme();
+  const bottomSheet = useMediaQuery(theme.breakpoints.down("md"));
+  const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const tabOffsetY = edgeTabVerticalOffset(edgeTabIndex, edgeTabCount);
+  const drawerDuration = reduceMotion ? 0 : 200;
 
   const edgeTab =
     !open ? (
-      <Tooltip title={title} placement="left">
+      <Tooltip title={title} placement={bottomSheet ? "top" : "left"}>
         <Box
           component="button"
           type="button"
@@ -64,26 +68,18 @@ export function TaskPreflightCommandsDrawer({
           onClick={() => onOpenChange(true)}
           sx={{
             position: "fixed",
-            right: 0,
-            top: `calc(50% + ${tabOffsetY}px)`,
-            transform: "translateY(-50%)",
             zIndex: theme.zIndex.drawer + 2,
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
             gap: 0.5,
-            py: 1.25,
-            px: 0.75,
             border: "1px solid",
-            borderColor: "divider",
-            borderRight: "none",
-            borderTopLeftRadius: 12,
-            borderBottomLeftRadius: 12,
             bgcolor: "background.paper",
             color: "primary.main",
             cursor: "pointer",
             boxShadow: theme.shadows[4],
-            transition: "background-color 160ms ease, box-shadow 160ms ease",
+            transition: reduceMotion
+              ? "none"
+              : "background-color 160ms ease, box-shadow 160ms ease",
             "&:hover": {
               bgcolor: "action.hover",
               boxShadow: theme.shadows[8],
@@ -92,24 +88,54 @@ export function TaskPreflightCommandsDrawer({
               outline: `2px solid ${theme.palette.primary.main}`,
               outlineOffset: 2,
             },
+            ...(bottomSheet
+              ? {
+                  left: `calc(50% + ${tabOffsetY * 0.15}px)`,
+                  bottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
+                  top: "auto",
+                  right: "auto",
+                  transform: "translateX(-50%)",
+                  flexDirection: "row",
+                  py: 1,
+                  px: 1.5,
+                  borderRadius: 999,
+                  borderRight: "1px solid",
+                  borderColor: "divider",
+                }
+              : {
+                  right: 0,
+                  top: `calc(50% + ${tabOffsetY}px)`,
+                  transform: "translateY(-50%)",
+                  flexDirection: "column",
+                  py: 1.25,
+                  px: 0.75,
+                  borderRight: "none",
+                  borderColor: "divider",
+                  borderTopLeftRadius: 12,
+                  borderBottomLeftRadius: 12,
+                }),
           }}
+        >
+          {tabIcon ?? <FlightTakeoffRoundedIcon fontSize="small" />}
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              fontSize: "0.65rem",
+              lineHeight: 1.2,
+              ...(bottomSheet
+                ? {}
+                : {
+                    writingMode: "vertical-rl",
+                    transform: "rotate(180deg)",
+                  }),
+            }}
           >
-            {tabIcon ?? <FlightTakeoffRoundedIcon fontSize="small" />}
-            <Typography
-              variant="caption"
-              sx={{
-                writingMode: "vertical-rl",
-                transform: "rotate(180deg)",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                fontSize: "0.65rem",
-                lineHeight: 1.2,
-              }}
-            >
-              {tabLabel}
-            </Typography>
-          </Box>
-        </Tooltip>
+            {tabLabel}
+          </Typography>
+        </Box>
+      </Tooltip>
     ) : null;
 
   return (
@@ -119,22 +145,44 @@ export function TaskPreflightCommandsDrawer({
         : edgeTab}
 
       <Drawer
-        anchor="right"
+        anchor={bottomSheet ? "bottom" : "right"}
         open={open}
         onClose={() => onOpenChange(false)}
+        transitionDuration={drawerDuration}
         slotProps={{
-          backdrop: { sx: { bgcolor: "rgba(8, 12, 18, 0.42)" } },
+          backdrop: {
+            sx: {
+              bgcolor: "rgba(8, 12, 18, 0.42)",
+              transitionDuration: `${drawerDuration}ms`,
+            },
+          },
         }}
         PaperProps={{
           sx: [
             {
-              width: { xs: "min(100vw, 420px)", sm: 440, md: 460 },
-              borderLeft: "1px solid",
-              borderColor: "divider",
-              bgcolor: "background.paper",
-              backgroundImage: (t: Theme) =>
-                `linear-gradient(180deg, ${t.palette.primary.main}14 0%, transparent 28%)`,
+              transitionDuration: `${drawerDuration}ms`,
             },
+            bottomSheet
+              ? {
+                  width: "100%",
+                  maxHeight: "min(78vh, 720px)",
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+                  borderTop: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  pb: "env(safe-area-inset-bottom, 0px)",
+                  backgroundImage: (t: Theme) =>
+                    `linear-gradient(180deg, ${t.palette.primary.main}14 0%, transparent 28%)`,
+                }
+              : {
+                  width: { xs: "min(100vw, 420px)", sm: 440, md: 460 },
+                  borderLeft: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  backgroundImage: (t: Theme) =>
+                    `linear-gradient(180deg, ${t.palette.primary.main}14 0%, transparent 28%)`,
+                },
             ...(paperSx ? (Array.isArray(paperSx) ? paperSx : [paperSx]) : []),
           ],
         }}

@@ -16,7 +16,6 @@ import {
 import {
   Box,
   Button,
-  CircularProgress,
   Divider,
   IconButton,
   Menu,
@@ -27,6 +26,8 @@ import {
 } from "@mui/material";
 import type { AnnotationCanvasHandle, AnnotationTool } from "./AnnotationCanvas";
 import type { LabelingSaveState } from "../hooks/useLabelingPersistence";
+import { labelingSaveToIndicator } from "../../../shared/ui/saveIndicatorState";
+import { SaveIndicator } from "../../../shared/ui/SaveIndicator";
 
 export function LabelingHeader({
   title,
@@ -53,17 +54,25 @@ export function LabelingHeader({
         <Typography variant="h6">{title}</Typography>
         <Typography variant="caption" color="text.secondary">{reviewed} / {total} reviewed</Typography>
       </Box>
-      <Stack direction="row" alignItems="center" spacing={1} aria-live="polite">
-        {saveState === "saving" ? <CircularProgress size={16} /> : null}
-        {saveState === "saved" ? <CheckCircle color="success" fontSize="small" /> : null}
-        <Typography variant="body2">
-          {saveState === "saving" ? "Saving…" : saveState === "failed" ? "Save failed" : "Saved"}
-        </Typography>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <SaveIndicator state={labelingSaveToIndicator(saveState)} />
         <Tooltip title="Keyboard shortcuts">
-          <IconButton onClick={(event) => showHelp(event.currentTarget)}><HelpOutline /></IconButton>
+          <IconButton
+            aria-label="Show keyboard shortcuts"
+            aria-haspopup="menu"
+            onClick={(event) => showHelp(event.currentTarget)}
+          >
+            <HelpOutline />
+          </IconButton>
         </Tooltip>
         <Tooltip title={expanded ? "Exit expanded view" : "Expanded view"}>
-          <IconButton onClick={toggleExpanded}>{expanded ? <FullscreenExit /> : <Fullscreen />}</IconButton>
+          <IconButton
+            aria-label={expanded ? "Exit expanded view" : "Enter expanded view"}
+            aria-pressed={expanded}
+            onClick={toggleExpanded}
+          >
+            {expanded ? <FullscreenExit /> : <Fullscreen />}
+          </IconButton>
         </Tooltip>
         <Button onClick={close}>Close</Button>
       </Stack>
@@ -83,16 +92,69 @@ export function LabelingToolbar({
   setTool: (tool: AnnotationTool) => void;
 }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={0.5} px={1} py={0.5}>
-      <Tooltip title="Select (V)"><IconButton color={tool === "select" ? "primary" : "default"} onClick={() => setTool("select")}><TouchApp /></IconButton></Tooltip>
-      <Tooltip title="Draw box (B)"><IconButton color={tool === "draw" ? "primary" : "default"} onClick={() => setTool("draw")}><CropSquare /></IconButton></Tooltip>
-      <Tooltip title="Pan (hold Space)"><IconButton color={tool === "pan" ? "primary" : "default"} onClick={() => setTool("pan")}><PanTool /></IconButton></Tooltip>
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={0.5}
+      px={1}
+      py={0.5}
+      role="toolbar"
+      aria-label="Annotation tools"
+    >
+      <Tooltip title="Select (V)">
+        <IconButton
+          color={tool === "select" ? "primary" : "default"}
+          aria-label="Select tool (V)"
+          aria-pressed={tool === "select"}
+          onClick={() => setTool("select")}
+        >
+          <TouchApp />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Draw box (B)">
+        <IconButton
+          color={tool === "draw" ? "primary" : "default"}
+          aria-label="Draw box tool (B)"
+          aria-pressed={tool === "draw"}
+          onClick={() => setTool("draw")}
+        >
+          <CropSquare />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Pan (hold Space)">
+        <IconButton
+          color={tool === "pan" ? "primary" : "default"}
+          aria-label="Pan tool (hold Space)"
+          aria-pressed={tool === "pan"}
+          onClick={() => setTool("pan")}
+        >
+          <PanTool />
+        </IconButton>
+      </Tooltip>
       <Divider orientation="vertical" flexItem />
-      <Tooltip title="Zoom out"><IconButton onClick={() => canvas.current?.zoomOut()}><ZoomOut /></IconButton></Tooltip>
-      <Typography variant="body2" width={52} textAlign="center">{Math.round(zoom * 100)}%</Typography>
-      <Tooltip title="Zoom in"><IconButton onClick={() => canvas.current?.zoomIn()}><ZoomIn /></IconButton></Tooltip>
-      <Tooltip title="Fit image (F)"><IconButton onClick={() => canvas.current?.fit()}><FitScreen /></IconButton></Tooltip>
-      <Tooltip title="Reset view"><IconButton onClick={() => canvas.current?.fit()}><CenterFocusStrong /></IconButton></Tooltip>
+      <Tooltip title="Zoom out">
+        <IconButton aria-label="Zoom out" onClick={() => canvas.current?.zoomOut()}>
+          <ZoomOut />
+        </IconButton>
+      </Tooltip>
+      <Typography variant="body2" width={52} textAlign="center" aria-live="polite">
+        {Math.round(zoom * 100)}%
+      </Typography>
+      <Tooltip title="Zoom in">
+        <IconButton aria-label="Zoom in" onClick={() => canvas.current?.zoomIn()}>
+          <ZoomIn />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Fit image (F)">
+        <IconButton aria-label="Fit image (F)" onClick={() => canvas.current?.fit()}>
+          <FitScreen />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Reset view">
+        <IconButton aria-label="Reset view" onClick={() => canvas.current?.fit()}>
+          <CenterFocusStrong />
+        </IconButton>
+      </Tooltip>
     </Stack>
   );
 }
@@ -139,8 +201,24 @@ export function LabelingShortcutMenu({
     "Ctrl/Cmd+S Save · 1–9 Select class",
   ];
   return (
-    <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={close}>
-      {shortcuts.map((text) => <MenuItem key={text}>{text}</MenuItem>)}
+    <Menu
+      anchorEl={anchor}
+      open={Boolean(anchor)}
+      onClose={close}
+      MenuListProps={{
+        "aria-label": "Keyboard shortcuts",
+        autoFocusItem: true,
+        dense: true,
+      }}
+    >
+      {shortcuts.map((text) => (
+        <MenuItem key={text} disabled sx={{ opacity: "1 !important", color: "text.primary" }}>
+          {text}
+        </MenuItem>
+      ))}
+      <MenuItem onClick={close} autoFocus>
+        Close shortcuts
+      </MenuItem>
     </Menu>
   );
 }

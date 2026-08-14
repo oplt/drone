@@ -1,7 +1,10 @@
 import { alpha } from '@mui/material/styles';
 import type { Components } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
-import { tesla, teslaTransition } from '../themePrimitives';
+import { radius, shape, tesla, teslaTransition } from '../themePrimitives';
+
+const panelRadius = shape.borderRadius * radius.md;
+const overlayRadius = shape.borderRadius * radius.sm;
 
 /* eslint-disable import/prefer-default-export */
 export const surfacesCustomizations: Components<Theme> = {
@@ -24,12 +27,12 @@ export const surfacesCustomizations: Components<Theme> = {
           borderBottom: `1px solid ${(theme.vars || theme).palette.divider}`,
         },
         '&:first-of-type': {
-          borderTopLeftRadius: 4,
-          borderTopRightRadius: 4,
+          borderTopLeftRadius: theme.shape.borderRadius,
+          borderTopRightRadius: theme.shape.borderRadius,
         },
         '&:last-of-type': {
-          borderBottomLeftRadius: 4,
-          borderBottomRightRadius: 4,
+          borderBottomLeftRadius: theme.shape.borderRadius,
+          borderBottomRightRadius: theme.shape.borderRadius,
         },
       }),
     },
@@ -38,7 +41,7 @@ export const surfacesCustomizations: Components<Theme> = {
     styleOverrides: {
       root: ({ theme }) => ({
         border: 'none',
-        borderRadius: 4,
+        borderRadius: theme.shape.borderRadius,
         transition: teslaTransition,
         '&:hover': { backgroundColor: alpha(tesla.carbonDark, 0.04) },
         '&:focus-visible': { backgroundColor: 'transparent' },
@@ -62,6 +65,38 @@ export const surfacesCustomizations: Components<Theme> = {
         backgroundImage: 'none',
         borderRadius: (theme.vars || theme).shape.borderRadius,
         boxShadow: 'none',
+        variants: [
+          {
+            props: { variant: 'opsPanel' },
+            style: {
+              borderRadius: panelRadius,
+              border: '1px solid',
+              borderColor: (theme.vars || theme).palette.divider,
+              backgroundColor: (theme.vars || theme).palette.background.paper,
+              boxShadow: 'none',
+            },
+          },
+          {
+            props: { variant: 'mapOverlay' },
+            style: {
+              borderRadius: overlayRadius,
+              border: '1px solid',
+              borderColor: (theme.vars || theme).palette.divider,
+              backgroundColor: (theme.vars || theme).palette.surface.overlay,
+              backdropFilter: 'blur(4px)',
+              boxShadow: 'none',
+            },
+          },
+          {
+            props: { variant: 'quiet' },
+            style: {
+              borderRadius: panelRadius,
+              border: 'none',
+              backgroundColor: 'transparent',
+              boxShadow: 'none',
+            },
+          },
+        ],
       }),
     },
   },
@@ -73,19 +108,17 @@ export const surfacesCustomizations: Components<Theme> = {
           gap: 16,
           transition: teslaTransition,
           backgroundColor: (theme.vars || theme).palette.background.paper,
-          borderRadius: 12,
+          borderRadius: panelRadius,
           border: 'none',
           boxShadow: 'none',
           variants: [
             {
               props: { variant: 'outlined' },
               style: {
-                border: 'none',
-                backgroundColor: tesla.lightAsh,
+                border: '1px solid',
+                borderColor: (theme.vars || theme).palette.divider,
+                backgroundColor: (theme.vars || theme).palette.surface.raised,
                 boxShadow: 'none',
-                ...theme.applyStyles('dark', {
-                  backgroundColor: alpha(tesla.white, 0.04),
-                }),
               },
             },
           ],

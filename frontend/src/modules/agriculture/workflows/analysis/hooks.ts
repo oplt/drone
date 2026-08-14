@@ -142,7 +142,6 @@ export function useSplitAgricultureFinding() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: ({
-      runId,
       observationId,
       payload,
     }: {

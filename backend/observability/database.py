@@ -163,3 +163,35 @@ async def observed_db_operation(
                 span_cm.__exit__(None, None, None)
             except Exception:
                 pass
+
+
+@asynccontextmanager
+async def observed_db_session_scope(*, scope: str) -> AsyncGenerator[None, None]:
+    """Track long-lived async session checkout duration for pipeline spans."""
+
+    started = time.perf_counter()
+    span_cm: Any = None
+    try:
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer("drone.database")
+        span_cm = tracer.start_as_current_span(
+            "db.session",
+            attributes={"db.session.scope": scope},
+        )
+        span_cm.__enter__()
+        yield
+    finally:
+        elapsed = time.perf_counter() - started
+        prometheus_metrics.db_session_hold_duration_seconds.labels(scope=scope).observe(elapsed)
+        if span_cm is not None:
+            try:
+                from opentelemetry import trace
+
+                trace.get_current_span().set_attribute(
+                    "db.session.hold_duration_ms",
+                    elapsed * 1000.0,
+                )
+                span_cm.__exit__(None, None, None)
+            except Exception:
+                pass

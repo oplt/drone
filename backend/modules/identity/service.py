@@ -1,4 +1,3 @@
-# backend/auth/auth.py
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta

@@ -3,6 +3,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { ReactNode } from "react";
+import { radius } from "../theme/themePrimitives";
 
 export type EmptyStateProps = {
   title: string;
@@ -14,10 +15,10 @@ export type EmptyStateProps = {
 export default function EmptyState({ title, description, action, icon }: EmptyStateProps) {
   return (
     <Paper
-      variant="outlined"
+      variant="opsPanel"
       sx={{
         p: { xs: 3, md: 4 },
-        borderRadius: 3,
+        borderRadius: radius.md,
         textAlign: "center",
         width: "100%",
       }}

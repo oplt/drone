@@ -23,12 +23,20 @@ export function FeatureState({
   error = null,
   requestId = null,
   onRetry,
+  retryLabel = "Retry",
   empty,
   children,
-}: FeatureStateProps) {
+}: FeatureStateProps & { retryLabel?: string }) {
   if (loading && !stale) return <PageLoader title="Loading feature" />;
   if (error && !stale) {
-    return <ErrorState message={error} requestId={requestId} onRetry={onRetry} />;
+    return (
+      <ErrorState
+        message={error}
+        requestId={requestId}
+        onRetry={onRetry}
+        retryLabel={retryLabel}
+      />
+    );
   }
   if (empty) {
     return (

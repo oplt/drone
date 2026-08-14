@@ -27,7 +27,7 @@ from backend.modules.identity.dependencies import (
     require_org_write,
 )
 from backend.modules.warehouse.http_access import (
-    get_map_or_404,
+    assert_map_or_404,
 )
 from backend.modules.warehouse.http_helpers import (
     get_scan_target_or_404,
@@ -72,7 +72,11 @@ from backend.modules.warehouse.service.inspection_feedback import (
     persist_inspection_feedback,
     persist_layout_drift_report,
 )
-from backend.modules.warehouse.service.layout import resolve_bin_context
+from backend.modules.warehouse.service.layout import (
+    load_locked_layout_bin_index,
+    resolve_bin_context,
+    resolve_bin_context_from_index,
+)
 from backend.modules.warehouse.service.mission_revisions import (
     create_mission_revision_pins,
     is_legacy_mission,
@@ -113,7 +117,7 @@ async def list_warehouse_scan_targets(
     page_limit = clamp_page_limit(limit)
     page_offset = decode_offset_cursor(cursor) if cursor else offset
     _set_scan_target_cache_headers(response, offset=page_offset)
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     clauses = [WarehouseScanTarget.warehouse_map_id == warehouse_map_id]
     if active is not None:
         clauses.append(WarehouseScanTarget.active.is_(active))
@@ -161,7 +165,7 @@ async def create_warehouse_scan_target(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ) -> WarehouseScanTargetRead:
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     frame = await get_locked_coordinate_frame(db, warehouse_map_id)
     if payload.coordinate_frame_id is not None and payload.coordinate_frame_id != int(frame.id):
         raise HTTPException(
@@ -240,10 +244,11 @@ async def import_warehouse_scan_targets(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ) -> list[WarehouseScanTargetRead]:
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     frame = await get_locked_coordinate_frame(db, warehouse_map_id)
     if payload.coordinate_frame_id is not None and payload.coordinate_frame_id != int(frame.id):
         raise HTTPException(409, "Import coordinate revision is stale")
+    bin_index = await load_locked_layout_bin_index(db, warehouse_map_id=warehouse_map_id)
     rows: list[WarehouseScanTarget] = []
     try:
         for raw_target in payload.targets:
@@ -262,9 +267,8 @@ async def import_warehouse_scan_targets(
                     status_code=409,
                     detail="Imported target coordinate revision is stale",
                 )
-            location = await resolve_bin_context(
-                db,
-                warehouse_map_id=warehouse_map_id,
+            location = resolve_bin_context_from_index(
+                bin_index,
                 bin_id=target.bin_id,
                 aisle_code=target.aisle_code,
                 rack_code=target.rack_code,
@@ -368,7 +372,7 @@ async def get_warehouse_scan_target(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> WarehouseScanTargetRead:
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     row = await get_scan_target_or_404(
         db,
         warehouse_map_id=warehouse_map_id,
@@ -388,7 +392,7 @@ async def update_warehouse_scan_target(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ) -> WarehouseScanTargetRead:
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     row = await get_scan_target_or_404(
         db,
         warehouse_map_id=warehouse_map_id,
@@ -506,7 +510,7 @@ async def delete_warehouse_scan_target(
     db: AsyncSession = Depends(get_db),
     org_user: OrgUser = Depends(require_org_write),
 ) -> None:
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     row = await get_scan_target_or_404(
         db,
         warehouse_map_id=warehouse_map_id,
@@ -542,7 +546,7 @@ async def create_warehouse_inspection_mission(
     org_user: OrgUser = Depends(require_mission_exec),
 ) -> WarehouseInspectionMissionRead:
     warehouse_map_id = int(payload.warehouse_map_id)
-    await get_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=warehouse_map_id, user=org_user.user)
     coordinate_frame = await get_locked_coordinate_frame(db, warehouse_map_id)
     rows = (
         (
@@ -693,7 +697,7 @@ async def approve_warehouse_inspection_mission(
     mission = await db.get(WarehouseInspectionMission, mission_id)
     if mission is None:
         raise HTTPException(404, "Warehouse inspection mission not found")
-    await get_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
     expected = str(if_match or "").strip().removeprefix("W/").strip('"')
     if not expected or expected != str(mission.plan_checksum or ""):
         raise HTTPException(412, "Mission preview checksum mismatch")
@@ -723,7 +727,7 @@ async def get_warehouse_inspection_mission(
     ).scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="Warehouse inspection mission not found")
-    await get_map_or_404(db, warehouse_map_id=int(row.warehouse_map_id), user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=int(row.warehouse_map_id), user=org_user.user)
     return inspection_mission_out(row)
 
 
@@ -744,7 +748,7 @@ async def run_warehouse_inspection_mission_mock(
     ).scalar_one_or_none()
     if mission is None:
         raise HTTPException(status_code=404, detail="Warehouse inspection mission not found")
-    await get_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
     if mission.approval_status != "approved":
         raise HTTPException(409, "Mission preview must be approved before execution")
     checksum = hashlib.sha256(
@@ -895,7 +899,7 @@ async def list_warehouse_inspection_results(
     ).scalar_one_or_none()
     if mission is None:
         raise HTTPException(status_code=404, detail="Warehouse inspection mission not found")
-    await get_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
+    await assert_map_or_404(db, warehouse_map_id=int(mission.warehouse_map_id), user=org_user.user)
     total = int(
         (
             await db.execute(

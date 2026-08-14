@@ -5,9 +5,12 @@ import {
   AccordionSummary,
   Chip,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
+import { useState } from "react";
 import { useMissionCommands } from "../hooks/useMissionCommands";
 import type { MissionLifecycleSlice, MissionLifecycleState, MissionStatusPayload } from "../types";
 import { stateChipColor } from "./command/formatters";
@@ -42,6 +45,7 @@ export function MissionCommandPanel({
 }) {
   void apiBase;
   void getTokenFn;
+  const [secondaryTab, setSecondaryTab] = useState<"audit" | "ops">("audit");
 
   const lifecycle =
     missionStatus?.mission_lifecycle ??
@@ -108,7 +112,8 @@ export function MissionCommandPanel({
       </AccordionSummary>
 
       <AccordionDetails sx={{ px: 1, pb: 1, pt: 0.5 }}>
-        <Stack spacing={0.2}>
+        <Stack spacing={1}>
+          {/* Primary: telemetry strip + critical controls stay above fold */}
           <CommandMetricsSection telemetry={telemetry} droneConnected={droneConnected} />
           <CommandControlsSection
             flightId={flightId}
@@ -121,16 +126,32 @@ export function MissionCommandPanel({
               void issueCommand(command);
             }}
           />
-          <CommandAuditSection
-            recentAudit={recentAudit}
-            auditLoading={auditLoading}
-            auditError={auditError}
-          />
-          <MissionTimelineSection
-            recentTimeline={recentTimeline}
-            timelineError={timelineError}
-          />
-          <OpsHealthSection opsHealth={opsHealth} opsError={opsError} />
+
+          {/* Secondary: audit / ops health behind tabs */}
+          <Tabs
+            value={secondaryTab}
+            onChange={(_, next: "audit" | "ops") => setSecondaryTab(next)}
+            variant="fullWidth"
+            sx={{ minHeight: 36, borderBottom: 1, borderColor: "divider" }}
+          >
+            <Tab label="Audit" value="audit" sx={{ minHeight: 36, py: 0.5 }} />
+            <Tab label="Ops health" value="ops" sx={{ minHeight: 36, py: 0.5 }} />
+          </Tabs>
+          {secondaryTab === "audit" ? (
+            <Stack spacing={0.5}>
+              <CommandAuditSection
+                recentAudit={recentAudit}
+                auditLoading={auditLoading}
+                auditError={auditError}
+              />
+              <MissionTimelineSection
+                recentTimeline={recentTimeline}
+                timelineError={timelineError}
+              />
+            </Stack>
+          ) : (
+            <OpsHealthSection opsHealth={opsHealth} opsError={opsError} />
+          )}
         </Stack>
       </AccordionDetails>
     </Accordion>

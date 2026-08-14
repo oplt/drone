@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import hashlib
 from datetime import UTC, datetime, timedelta
 from time import monotonic, time
@@ -8,6 +7,7 @@ from time import monotonic, time
 from celery import Task
 
 from backend.core.retry import retry_delay_seconds
+from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import CELERY_AGRICULTURE_INFERENCE_QUEUE, CELERY_AGRICULTURE_INFERENCE_SOFT_TIME_LIMIT_SECONDS, CELERY_AGRICULTURE_INFERENCE_TIME_LIMIT_SECONDS, celery_app
 from backend.core.database.session import Session
 from backend.observability import prometheus_metrics
@@ -20,6 +20,8 @@ from backend.modules.agriculture.models import AgricultureMediaManifest, Agricul
 from backend.modules.agriculture.p5_models import AgricultureExportJob
 from backend.modules.agriculture.storage import agriculture_storage
 from backend.core.config.runtime import settings
+
+_worker_loop = WorkerLoopState()
 
 
 class AgricultureStageTask(Task):
@@ -61,7 +63,7 @@ class AgricultureStageTask(Task):
                 await db.commit()
 
         try:
-            asyncio.run(_write())
+            _worker_loop.run(_write())
         except Exception:
             # Worker failure reporting must never mask the original Celery error.
             pass
@@ -233,7 +235,7 @@ async def _checkpoint_stage(run_id: str, stage_name: str, input_checksum: str) -
 
 def _run_checkpoint(run_id: str, stage_name: str, input_checksum: str) -> dict[str, str]:
     with observed_span("agriculture.stage", run_id=run_id, stage=stage_name):
-        return asyncio.run(_checkpoint_stage(run_id, stage_name, input_checksum))
+        return _worker_loop.run(_checkpoint_stage(run_id, stage_name, input_checksum))
 
 
 @celery_app.task(base=AgricultureStageTask, name="agriculture.stage.ingest", time_limit=300, soft_time_limit=240)
@@ -305,10 +307,10 @@ async def _dead_letter(run_id: str, *, error: str, task_name: str) -> dict[str, 
         return {"run_id": run_id, "status": "dead_letter"}
 
 
-@celery_app.task(name="agriculture.dead_letter")
+@celery_app.task(name="agriculture.dead_letter", time_limit=120, soft_time_limit=90)
 def agriculture_dead_letter(run_id: str, error: str, task_name: str) -> dict[str, str]:
     prometheus_metrics.agriculture_dead_letters_total.labels(task=task_name).inc()
-    return asyncio.run(_dead_letter(run_id, error=error, task_name=task_name))
+    return _worker_loop.run(_dead_letter(run_id, error=error, task_name=task_name))
 
 
 @celery_app.task(bind=True, max_retries=2, name="agriculture.process_run", time_limit=CELERY_AGRICULTURE_INFERENCE_TIME_LIMIT_SECONDS, soft_time_limit=CELERY_AGRICULTURE_INFERENCE_SOFT_TIME_LIMIT_SECONDS)
@@ -327,7 +329,7 @@ def process_agriculture_run(self, run_id: str, force: bool = False, cluster_radi
     prometheus_metrics.agriculture_runs_started_total.labels(queue=queue_name).inc()
     try:
         with observed_span("agriculture.process_run", run_id=run_id, queue=queue_name, force=force):
-            result = asyncio.run(
+            result = _worker_loop.run(
                 _process(
                     run_id,
                     force=force,
@@ -397,6 +399,6 @@ def cleanup_agriculture_retention(self) -> dict[str, int]:
         return {"expired": deleted, "uploads_expired": len(upload_rows), "exports_expired": len(export_rows)}
 
     try:
-        return asyncio.run(_cleanup())
+        return _worker_loop.run(_cleanup())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=retry_delay_seconds(attempt=self.request.retries, max_seconds=300)) from exc

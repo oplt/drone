@@ -497,6 +497,58 @@ export function PrivatePatrolParamsSection({
 
                     {activeTab === "grid_surveillance" && (
                         <>
+                            <Stack
+                                direction="row"
+                                spacing={1}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ ...PARAM_FULL_ROW_SX, mb: 0.5 }}
+                                aria-label="Grid surveillance presets"
+                            >
+                                {(
+                                    [
+                                        {
+                                            label: "Wide area",
+                                            patch: {
+                                                grid_spacing_m: 25,
+                                                grid_row_stride: 1,
+                                                safety_inset_m: 2,
+                                                grid_pattern_mode: "boustrophedon" as const,
+                                            },
+                                        },
+                                        {
+                                            label: "Dense cover",
+                                            patch: {
+                                                grid_spacing_m: 12,
+                                                grid_row_stride: 1,
+                                                safety_inset_m: 3,
+                                                grid_pattern_mode: "crosshatch" as const,
+                                                grid_crosshatch_angle_offset_deg: 90,
+                                            },
+                                        },
+                                        {
+                                            label: "Quick scan",
+                                            patch: {
+                                                grid_spacing_m: 35,
+                                                grid_row_stride: 2,
+                                                safety_inset_m: 1,
+                                                grid_pattern_mode: "boustrophedon" as const,
+                                            },
+                                        },
+                                    ] as const
+                                ).map((preset) => (
+                                    <Chip
+                                        key={preset.label}
+                                        clickable
+                                        size="small"
+                                        label={preset.label}
+                                        onClick={() =>
+                                            setGridParams((p) => ({ ...p, ...preset.patch }))
+                                        }
+                                        sx={{ minHeight: 36 }}
+                                    />
+                                ))}
+                            </Stack>
                             {speedField}
                             {scheduleFields}
                             <TextField

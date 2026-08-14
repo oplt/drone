@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { ReactElement } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import type { HomeProps } from "../../modules/session/views/LandingPage";
 import { GuestRoute } from "./GuestRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
@@ -58,9 +58,6 @@ const WarehousePage = lazyWithStaleChunkReload(
 const AnimalFarmPage = lazyWithStaleChunkReload(
   () => import("../../modules/animal-farm"),
 );
-const PrivatePatrolPage = lazyWithStaleChunkReload(
-  () => import("../../modules/private-patrol"),
-);
 const PropertyPatrolPage = lazyWithStaleChunkReload(
   () => import("../../modules/property-patrol"),
 );
@@ -90,6 +87,17 @@ function renderMapRoute(element: ReactElement) {
     >
       <MapProviders>{renderLazyRoute(element)}</MapProviders>
     </Suspense>
+  );
+}
+
+/** Legacy debrief URL → ops shell route with console chrome. */
+function MissionTimelineLegacyRedirect() {
+  const { flightId } = useParams<{ flightId: string }>();
+  return (
+    <Navigate
+      to={`/dashboard/missions/${encodeURIComponent(flightId ?? "")}/timeline`}
+      replace
+    />
   );
 }
 
@@ -151,7 +159,7 @@ export function AppRouter() {
           />
           <Route
             path="privatepatrol"
-            element={renderMapRoute(<PrivatePatrolPage />)}
+            element={<Navigate to="/dashboard/property-patrol" replace />}
           />
           <Route
             path="property-patrol"
@@ -199,17 +207,19 @@ export function AppRouter() {
             path="observability"
             element={renderLazyRoute(<ObservabilityPage />)}
           />
+          <Route
+            path="missions/:flightId/timeline"
+            element={renderLazyRoute(<MissionTimeline />)}
+          />
         </Route>
         <Route
           path="/observability"
-          element={
-            <ProtectedRoute>
-              {renderLazyRoute(<DashboardShell />, true)}
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={renderLazyRoute(<ObservabilityPage />)} />
-        </Route>
+          element={<Navigate to="/dashboard/observability" replace />}
+        />
+        <Route
+          path="/missions/:flightId/timeline"
+          element={<MissionTimelineLegacyRedirect />}
+        />
         <Route
           path="/admin/settings"
           element={
@@ -224,18 +234,20 @@ export function AppRouter() {
               <AdminSettingsPage initialTab="profile" />,
             )}
           />
+          <Route
+            path="ai"
+            element={renderLazyRoute(<AdminSettingsPage initialTab="ai" />)}
+          />
+          <Route
+            path="hardware"
+            element={renderLazyRoute(
+              <AdminSettingsPage initialTab="hardware" />,
+            )}
+          />
         </Route>
         <Route
           path="/profile"
           element={<Navigate to="/admin/settings" replace />}
-        />
-        <Route
-          path="/missions/:flightId/timeline"
-          element={
-            <ProtectedRoute>
-              {renderLazyRoute(<MissionTimeline />)}
-            </ProtectedRoute>
-          }
         />
       </Routes>
     </BrowserRouter>

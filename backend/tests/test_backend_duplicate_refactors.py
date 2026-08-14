@@ -87,6 +87,52 @@ def test_worker_loop_state_reuses_only_its_own_open_loop() -> None:
         second_state.get_loop().close()
 
 
+def test_worker_loop_state_run_serializes_and_reuses_loop() -> None:
+    state = WorkerLoopState()
+
+    async def _value(n: int) -> int:
+        return n * 2
+
+    try:
+        assert state.run(_value(21)) == 42
+        assert state.run(_value(3)) == 6
+        assert state.get_loop() is state.get_loop()
+    finally:
+        state.get_loop().close()
+
+
+def test_worker_loop_state_run_serializes_concurrent_threads() -> None:
+    import threading
+
+    state = WorkerLoopState()
+    results: list[int] = []
+    errors: list[BaseException] = []
+
+    async def _slow_value(n: int) -> int:
+        import asyncio
+
+        await asyncio.sleep(0.05)
+        return n
+
+    def _worker(value: int) -> None:
+        try:
+            results.append(state.run(_slow_value(value)))
+        except BaseException as exc:  # pragma: no cover - failure path
+            errors.append(exc)
+
+    threads = [threading.Thread(target=_worker, args=(index,)) for index in range(4)]
+    try:
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=5.0)
+            assert not thread.is_alive()
+        assert errors == []
+        assert sorted(results) == [0, 1, 2, 3]
+    finally:
+        state.get_loop().close()
+
+
 def test_warehouse_query_values_preserve_defaults_bounds_and_errors() -> None:
     assert clamp_list_limit("invalid", default=50) == 50  # type: ignore[arg-type]
     assert clamp_list_limit(0, default=100) == 1

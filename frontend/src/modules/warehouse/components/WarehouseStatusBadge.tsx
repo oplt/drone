@@ -51,7 +51,7 @@ export function WarehouseStatusBadge({
       }
       label={children ?? STATUS_LABELS[status]}
       sx={{
-        fontWeight: 700,
+        fontWeight: 600,
         minHeight: size === "sm" ? 24 : 28,
         "& .MuiChip-label": { px: size === "sm" ? 0.9 : 1.1 },
       }}

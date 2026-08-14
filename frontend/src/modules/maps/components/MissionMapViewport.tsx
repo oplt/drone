@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { GoogleMap } from "@react-google-maps/api";
 import CesiumMap from "../adapters/CesiumMapLazy";
 import LeafletMap from "../adapters/LeafletMapLazy";
@@ -14,6 +14,17 @@ export type MissionMapEngine = "google" | "cesium" | "leaflet" | "maplibre";
 
 /** Default map engine for dashboard task workflows. */
 export const DEFAULT_MISSION_MAP_ENGINE: MissionMapEngine = "maplibre";
+
+function webglAvailable() {
+  try {
+    const canvas = document.createElement("canvas");
+    return Boolean(
+      canvas.getContext("webgl") || canvas.getContext("experimental-webgl"),
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function MissionMapViewport({
   loadingLocation,
@@ -29,6 +40,7 @@ export function MissionMapViewport({
   googleChildren,
   googleWrapperSx,
   googleOverlay,
+  onRequestEngineChange,
 }: {
   loadingLocation: boolean;
   isLoaded: boolean;
@@ -43,10 +55,12 @@ export function MissionMapViewport({
   googleChildren?: ReactNode;
   googleWrapperSx?: any;
   googleOverlay?: ReactNode;
+  onRequestEngineChange?: (engine: MissionMapEngine) => void;
 }) {
   const [internalEngine, setInternalEngine] = useState<MissionMapEngine>(
     useCesium ? "cesium" : DEFAULT_MISSION_MAP_ENGINE,
   );
+  const [cesiumWebglOk] = useState(() => webglAvailable());
 
   useEffect(() => {
     if (mapEngine) return;
@@ -151,6 +165,30 @@ export function MissionMapViewport({
   };
 
   if (selectedEngine === "cesium" && cesiumMapProps) {
+    if (!cesiumWebglOk) {
+      return (
+        <Alert severity="error" sx={{ m: 2 }}>
+          Cesium needs WebGL. This is an engine failure, not missing mission
+          data.
+          <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                onRequestEngineChange?.("maplibre");
+                window.dispatchEvent(
+                  new CustomEvent("mission-map-engine-change", {
+                    detail: "maplibre",
+                  }),
+                );
+              }}
+            >
+              Switch to MapLibre
+            </Button>
+          </Stack>
+        </Alert>
+      );
+    }
     return wrapWithOverlay(<CesiumMap {...cesiumMapProps} />);
   }
 

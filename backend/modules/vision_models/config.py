@@ -19,6 +19,7 @@ class VisionRuntimeSettings(BaseSettings):
     vision_max_active_training_runs_per_org: int = 1
     vision_training_lease_seconds: int = 180
     vision_training_heartbeat_interval_seconds: int = 30
+    vision_staged_object_max_age_minutes: int = 30
     vision_release_min_map50: float = 0.25
     vision_max_map50_regression: float = 0.05
     vision_require_curation_quality: bool = True

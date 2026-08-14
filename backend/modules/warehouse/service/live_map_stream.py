@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections import deque
+from contextlib import suppress
 from datetime import UTC, datetime
 from typing import Any, Literal
 
+import orjson
 from fastapi import WebSocket
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -15,6 +17,8 @@ from backend.observability.metrics import add as metric_add
 
 logger = logging.getLogger(__name__)
 LIVE_MAP_FRAMES = {ODOM_FRAME, WAREHOUSE_MAP_FRAME}
+REDIS_WAREHOUSE_LIVE_MAP_CHANNEL = "warehouse:live_map:broadcast"
+DEFAULT_WS_CONNECT_SNAPSHOT_MAX_UPDATES = 32
 
 
 def _canonical_live_frame(value: str) -> str:
@@ -268,6 +272,8 @@ class WarehouseLiveMapSnapshot(BaseModel):
     last_update_at: datetime | None = None
     updates: list[WarehouseLiveMapUpdate] = Field(default_factory=list)
     manifest: WarehouseLiveMapManifestSummary | None = None
+    total_buffered_updates: int = 0
+    snapshot_truncated: bool = False
 
 
 class WarehouseLiveMapStream:
@@ -279,12 +285,14 @@ class WarehouseLiveMapStream:
         send_timeout_s: float = 5.0,
         max_concurrent_sends: int = 64,
         max_consecutive_send_timeouts: int = 4,
+        connect_snapshot_max_updates: int = DEFAULT_WS_CONNECT_SNAPSHOT_MAX_UPDATES,
     ) -> None:
         self._updates: dict[str, deque[WarehouseLiveMapUpdate]] = {}
         self._clients: dict[str, set[WebSocket]] = {}
         self._finalized_jobs: dict[str, int] = {}
         self._max_updates_per_flight = max(1, int(max_updates_per_flight))
         self._max_flights = max(1, int(max_flights))
+        self._connect_snapshot_max_updates = max(1, int(connect_snapshot_max_updates))
         self._send_timeout_s = max(0.1, float(send_timeout_s))
         self._send_semaphore = asyncio.Semaphore(max(1, int(max_concurrent_sends)))
         self._max_consecutive_send_timeouts = max(1, int(max_consecutive_send_timeouts))
@@ -294,6 +302,111 @@ class WarehouseLiveMapStream:
         # reconnect snapshot. We only drop it after several consecutive timeouts.
         self._send_timeout_strikes: dict[WebSocket, int] = {}
         self._lock = asyncio.Lock()
+        self._redis = None
+        self._subscriber_task: asyncio.Task | None = None
+        self._shutting_down = False
+
+    async def initialize(self) -> None:
+        """Enable Redis pub/sub fan-out across API replicas when Redis is available."""
+        from backend.core.config.runtime import settings
+
+        try:
+            import redis.asyncio as aioredis
+
+            self._redis = await aioredis.from_url(settings.redis_url, decode_responses=False)
+            await self._redis.ping()
+            self._subscriber_task = asyncio.create_task(self._redis_subscriber())
+            logger.info(
+                "Warehouse live-map stream: Redis pub/sub enabled (channel=%s)",
+                REDIS_WAREHOUSE_LIVE_MAP_CHANNEL,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Warehouse live-map stream: Redis unavailable, process-local fan-out only: %s",
+                exc,
+            )
+            self._redis = None
+
+    async def shutdown(self) -> None:
+        self._shutting_down = True
+        task = self._subscriber_task
+        self._subscriber_task = None
+        if task is not None and not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        if self._redis is not None:
+            with suppress(Exception):
+                await self._redis.aclose()
+            self._redis = None
+
+    async def _redis_subscriber(self) -> None:
+        from backend.core.config.runtime import settings
+
+        r = None
+        pubsub = None
+        try:
+            import redis.asyncio as aioredis
+
+            r = await aioredis.from_url(settings.redis_url, decode_responses=False)
+            pubsub = r.pubsub()
+            await pubsub.subscribe(REDIS_WAREHOUSE_LIVE_MAP_CHANNEL)
+            async for message in pubsub.listen():
+                if message["type"] != "message":
+                    continue
+                try:
+                    parsed = orjson.loads(message["data"])
+                    flight_id = str((parsed.get("f") or {}).get("flight_id") or "")
+                    body = parsed.get("d")
+                    if not flight_id or not isinstance(body, dict):
+                        continue
+                except Exception:
+                    continue
+                async with self._lock:
+                    clients = tuple(self._clients.get(flight_id, set()))
+                if not clients:
+                    continue
+                results = await asyncio.gather(
+                    *(self._send_update(client, body) for client in clients),
+                    return_exceptions=True,
+                )
+                stale_clients = [
+                    item for item in results if item is not None and not isinstance(item, Exception)
+                ]
+                if stale_clients:
+                    async with self._lock:
+                        active = self._clients.get(flight_id)
+                        if active is not None:
+                            active.difference_update(stale_clients)  # type: ignore[arg-type]
+                            if not active:
+                                self._clients.pop(flight_id, None)
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:
+            if not self._shutting_down:
+                logger.error("Warehouse live-map Redis subscriber error: %s", exc)
+        finally:
+            if pubsub is not None:
+                with suppress(Exception):
+                    await pubsub.close()
+            if r is not None:
+                with suppress(Exception):
+                    await r.aclose()
+
+    async def _publish_redis(self, *, flight_id: str, payload: dict[str, Any]) -> None:
+        if self._redis is None:
+            return
+        try:
+            envelope = orjson.dumps(
+                {
+                    "v": 1,
+                    "f": {"flight_id": flight_id},
+                    "d": payload,
+                }
+            )
+            await self._redis.publish(REDIS_WAREHOUSE_LIVE_MAP_CHANNEL, envelope)
+        except Exception as exc:
+            logger.warning("Warehouse live-map Redis publish failed: %s", exc)
 
     async def _trim_flight_cache_locked(self) -> None:
         if len(self._updates) <= self._max_flights:
@@ -365,10 +478,11 @@ class WarehouseLiveMapStream:
             await self._trim_flight_cache_locked()
             clients = tuple(self._clients.get(update.flight_id, set()))
 
+        payload = update.model_dump(mode="json")
+        await self._publish_redis(flight_id=update.flight_id, payload=payload)
         if not clients:
             return update
 
-        payload = update.model_dump(mode="json")
         results = await asyncio.gather(
             *(self._send_update(client, payload) for client in clients),
             return_exceptions=True,
@@ -386,12 +500,17 @@ class WarehouseLiveMapStream:
         return update
 
     async def snapshot(
-        self, flight_id: str, *, max_updates: int | None = None
+        self,
+        flight_id: str,
+        *,
+        max_updates: int | None = None,
     ) -> WarehouseLiveMapSnapshot:
         async with self._lock:
             all_updates = list(self._updates.get(flight_id, ()))
             finalized_job_id = self._finalized_jobs.get(flight_id)
-        updates = all_updates[-max_updates:] if max_updates and max_updates > 0 else all_updates
+        total_buffered = len(all_updates)
+        effective_max = max_updates if max_updates and max_updates > 0 else total_buffered
+        updates = all_updates[-effective_max:] if effective_max else []
         last_update = all_updates[-1].timestamp if all_updates else None
         status: Literal["empty", "live", "stale", "finalized"] = "empty"
         if finalized_job_id is not None:
@@ -404,6 +523,8 @@ class WarehouseLiveMapStream:
             status=status,
             last_update_at=last_update,
             updates=updates,
+            total_buffered_updates=total_buffered,
+            snapshot_truncated=total_buffered > len(updates),
         )
 
     async def connect(self, flight_id: str, websocket: WebSocket) -> None:
@@ -411,7 +532,10 @@ class WarehouseLiveMapStream:
         async with self._lock:
             self._clients.setdefault(flight_id, set()).add(websocket)
         try:
-            snapshot = await self.snapshot(flight_id)
+            snapshot = await self.snapshot(
+                flight_id,
+                max_updates=self._connect_snapshot_max_updates,
+            )
             with observed_span(
                 "api.websocket.publish",
                 flight_id=flight_id,
@@ -455,6 +579,7 @@ class WarehouseLiveMapStream:
             if snapshot.last_update_at
             else None,
         }
+        await self._publish_redis(flight_id=flight_id, payload=payload)
         results = await asyncio.gather(
             *(self._send_update(client, payload) for client in clients),
             return_exceptions=True,

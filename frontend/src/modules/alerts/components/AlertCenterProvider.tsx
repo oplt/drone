@@ -17,6 +17,8 @@ type AlertCenterContextValue = {
   alerts: AlertItem[];
   openCount: number;
   loading: boolean;
+  /** Last failed fetch message; null when last load succeeded. */
+  loadError: string | null;
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
   refresh: () => Promise<void>;
@@ -26,10 +28,24 @@ type AlertCenterContextValue = {
 
 const AlertCenterContext = createContext<AlertCenterContextValue | null>(null);
 
+const SEVERITY_RANK: Record<string, number> = {
+  critical: 0,
+  error: 0,
+  high: 1,
+  medium: 2,
+  warning: 2,
+  low: 3,
+  info: 3,
+};
+
 const sortAlerts = (items: AlertItem[]) =>
-  [...items].sort(
-    (a, b) => new Date(b.last_triggered_at).getTime() - new Date(a.last_triggered_at).getTime(),
-  );
+  [...items].sort((a, b) => {
+    const bySev =
+      (SEVERITY_RANK[String(a.severity).toLowerCase()] ?? 4) -
+      (SEVERITY_RANK[String(b.severity).toLowerCase()] ?? 4);
+    if (bySev !== 0) return bySev;
+    return new Date(b.last_triggered_at).getTime() - new Date(a.last_triggered_at).getTime();
+  });
 
 const upsertAlert = (items: AlertItem[], incoming: AlertItem): AlertItem[] => {
   const next = items.filter((item) => item.id !== incoming.id);
@@ -54,6 +70,7 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [openCount, setOpenCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const token = getToken();
@@ -78,6 +95,9 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
     setLoading(true);
     try {
       await Promise.all([fetchAlerts(), fetchOpenCount()]);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }
@@ -113,10 +133,15 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
 
     setLoading(true);
     Promise.all([fetchAlerts(), fetchOpenCount()])
+      .then(() => {
+        if (!cancelled) setLoadError(null);
+      })
       .catch((error) => {
         if (!cancelled) {
+          const message = error instanceof Error ? error.message : String(error);
+          setLoadError(message);
           frontendLogger.warn("frontend", "Failed to initialize alert center", {
-            error: error instanceof Error ? error.message : String(error),
+            error: message,
           });
         }
       })
@@ -131,13 +156,19 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
     // made every dashboard instance hit both alert endpoints indefinitely.
     const refreshWhenVisible = () => {
       if (document.hidden || cancelled) return;
-      void Promise.all([fetchAlerts(), fetchOpenCount()]).catch((error) => {
-        if (!cancelled) {
-          frontendLogger.warn("frontend", "Failed to refresh alert center", {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      });
+      void Promise.all([fetchAlerts(), fetchOpenCount()])
+        .then(() => {
+          if (!cancelled) setLoadError(null);
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            const message = error instanceof Error ? error.message : String(error);
+            setLoadError(message);
+            frontendLogger.warn("frontend", "Failed to refresh alert center", {
+              error: message,
+            });
+          }
+        });
     };
     document.addEventListener("visibilitychange", refreshWhenVisible);
 
@@ -167,13 +198,23 @@ export function AlertCenterProvider({ children }: { children: React.ReactNode })
       alerts,
       openCount,
       loading,
+      loadError,
       drawerOpen,
       setDrawerOpen,
       refresh,
       acknowledgeAlert,
       resolveAlert,
     }),
-    [acknowledgeAlert, alerts, drawerOpen, loading, openCount, refresh, resolveAlert],
+    [
+      acknowledgeAlert,
+      alerts,
+      drawerOpen,
+      loadError,
+      loading,
+      openCount,
+      refresh,
+      resolveAlert,
+    ],
   );
 
   return <AlertCenterContext.Provider value={value}>{children}</AlertCenterContext.Provider>;

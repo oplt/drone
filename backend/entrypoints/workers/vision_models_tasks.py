@@ -6,9 +6,11 @@ from collections.abc import Coroutine
 from typing import Any
 
 from backend.core.config.runtime import setup_logging
+from backend.core.database.session import Session
 from backend.entrypoints.workers.async_loop import WorkerLoopState
 from backend.entrypoints.workers.celery_app import celery_app
 from backend.modules.vision_models.config import vision_settings
+from backend.modules.vision_models.repository import VisionRepository
 from backend.modules.vision_models.service.training_service import (
     VisionTrainingService,
     reconcile_stale_training_runs,
@@ -49,4 +51,20 @@ def train_vision_model(self, run_id: str) -> dict[str, str]:
 )
 def reconcile_stale_vision_training_runs() -> dict[str, int]:
     count = _run_on_worker_loop(reconcile_stale_training_runs())
+    return {"reconciled": int(count)}
+
+
+async def _reconcile_staged_storage_objects() -> int:
+    async with Session() as db:
+        return await VisionRepository(db).reconcile_staged_storage_objects(
+            older_than_minutes=vision_settings.vision_staged_object_max_age_minutes
+        )
+
+
+@celery_app.task(
+    name="vision_models.reconcile_staged_storage_objects",
+    queue=vision_settings.celery_vision_training_queue,
+)
+def reconcile_staged_vision_storage_objects() -> dict[str, int]:
+    count = _run_on_worker_loop(_reconcile_staged_storage_objects())
     return {"reconciled": int(count)}

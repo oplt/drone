@@ -39,14 +39,16 @@ export function HealthLayerSwitcher({
       component="section"
       aria-label="Health layer controls"
       direction={{ xs: "column", sm: "row" }}
-      spacing={1}
-      alignItems={{ sm: "center" }}
+      spacing={1.25}
+      alignItems={{ xs: "stretch", sm: "center" }}
+      sx={{ width: "100%" }}
     >
       <Select
         size="small"
         value={layer}
         onChange={(event) => onLayerChange(event.target.value)}
-        sx={{ minWidth: 210 }}
+        fullWidth
+        sx={{ minWidth: { sm: 210 }, maxWidth: { sm: 280 } }}
         inputProps={{ "aria-label": "Health layer" }}
       >
         {HEALTH_LAYERS.map((value) => (
@@ -55,30 +57,34 @@ export function HealthLayerSwitcher({
           </MenuItem>
         ))}
       </Select>
-      <Typography variant="caption">
-        Confidence {Math.round(confidence * 100)}%
-      </Typography>
-      <Slider
-        value={confidence}
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={(_, value) => onConfidenceChange(value as number)}
-        sx={{ width: 120 }}
-        aria-label="Confidence threshold"
-      />
-      <Typography variant="caption">
-        Severity {Math.round(severity * 100)}%
-      </Typography>
-      <Slider
-        value={severity}
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={(_, value) => onSeverityChange(value as number)}
-        sx={{ width: 120 }}
-        aria-label="Severity threshold"
-      />
+      <Stack spacing={0.5} sx={{ flex: 1, minWidth: { sm: 140 }, width: "100%" }}>
+        <Typography variant="caption">
+          Confidence {Math.round(confidence * 100)}%
+        </Typography>
+        <Slider
+          value={confidence}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={(_, value) => onConfidenceChange(value as number)}
+          sx={{ width: "100%", maxWidth: { sm: 160 }, mx: { xs: 0.5, sm: 0 } }}
+          aria-label="Confidence threshold"
+        />
+      </Stack>
+      <Stack spacing={0.5} sx={{ flex: 1, minWidth: { sm: 140 }, width: "100%" }}>
+        <Typography variant="caption">
+          Severity {Math.round(severity * 100)}%
+        </Typography>
+        <Slider
+          value={severity}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={(_, value) => onSeverityChange(value as number)}
+          sx={{ width: "100%", maxWidth: { sm: 160 }, mx: { xs: 0.5, sm: 0 } }}
+          aria-label="Severity threshold"
+        />
+      </Stack>
     </Stack>
   );
 }

@@ -1,0 +1,8 @@
+# Worker inference stack. Install after requirements-api.txt.
+torch==2.12.0
+torchvision==0.27.0
+ultralytics==8.4.57
+ultralytics-thop==2.0.19
+supervision==0.28.0
+sahi==0.11.36
+matplotlib==3.10.9

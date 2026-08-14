@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main, master]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +20,34 @@ jobs:
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
       PYTHONPATH: .
+      PYTHONNOUSERSITE: "1"
+      APP_ENV: test
+      DATABASE_URL: postgresql+asyncpg://drone:drone@localhost:5432/drone
+      SETTINGS_VAULT_KEY: BHmFE5e3ErYeWjVExeoWQooA3kDUO0Uh0bZOhZGH12c=
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/0
+      CELERY_RESULT_BACKEND: redis://localhost:6379/1
+      JWT_SECRET: local-test-secret-change-me
+      ADMIN_EMAILS: admin@example.com
+      DB_AUTO_CREATE: "0"
+      OBSERVABILITY_ENABLED: "false"
+      OTEL_TRACES_EXPORTER: none
+      OTEL_METRICS_EXPORTER: none
+      PROMETHEUS_METRICS_ENABLED: "false"
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: drone
+          POSTGRES_USER: drone
+          POSTGRES_PASSWORD: drone
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U drone -d drone"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
 
@@ -46,11 +75,18 @@ jobs:
       - name: Module port boundary guard
         run: python backend/scripts/check_module_ports.py
 
+      - name: Dependency cleanup gates
+        run: python backend/scripts/check_dependency_gates.py
+
       - name: P2 static gates
         run: python backend/scripts/check_p2_static_gates.py
 
       - name: P4 research gates
         run: python backend/scripts/check_p4_research_gates.py
+
+      - name: Alembic upgrade to head
+        run: |
+          python -m alembic -c backend/alembic.ini upgrade head
 
       - name: Focused pytest suites
         run: |
@@ -66,8 +102,19 @@ jobs:
             backend/tests/test_vision_storage_object.py \
             backend/tests/test_p4_research_gates.py \
             backend/tests/test_exp001_research_suite.py \
-            backend/tests/test_exp002_research_suite.py
-        # No Postgres service: skip heavy migration/integration suites here.
+            backend/tests/test_exp002_research_suite.py \
+            backend/tests/test_migration_postgres.py \
+            backend/tests/test_top10_ci_contracts.py \
+            backend/tests/test_compose_infrastructure.py \
+            backend/tests/test_telemetry_websocket.py \
+            backend/tests/test_telemetry_redis_fallback.py \
+            backend/tests/test_agriculture_live_advisory.py \
+            backend/tests/test_database_performance.py \
+            backend/tests/test_warehouse_query_budget.py \
+            backend/tests/test_video_analysis_benchmark_fixture.py \
+            backend/tests/test_observability_platform.py \
+            backend/tests/test_worker_async_concurrency.py \
+            backend/tests/test_dependency_cleanup.py
 
   frontend:
     name: Frontend gates
@@ -90,11 +137,72 @@ jobs:
       - name: Lint (CI baseline)
         run: npm run lint:ci
 
-      - name: Unit tests (agriculture field setup)
+      - name: Unit tests
         run: |
           npx vitest run \
+            src/shared/layout/TelemetryLinkChip.test.tsx \
+            src/shared/layout/MenuContent.test.tsx \
+            src/modules/dashboard/components/DashboardAlertsPanel.test.tsx \
+            src/modules/agriculture/components/LabelingWorkspacePage.test.tsx \
+            src/modules/video-analysis/VideoAnalysisPanel.test.tsx \
+            src/modules/agriculture/components/AgricultureReviewWorkspace.test.tsx \
+            src/modules/agriculture/components/AgricultureTemporalWorkspace.test.tsx \
+            src/modules/video-analysis/components/CaptureMetadataEditor.test.tsx \
+            src/modules/agriculture/components/HealthLayerSwitcher.test.tsx \
+            src/modules/mission-workflow/components/MissionMapLegend.test.tsx \
             src/modules/agriculture/components/AgricultureFieldSetupWizard.test.tsx \
-            src/modules/agriculture/components/AgricultureGeometryMapEditor.test.tsx
+            src/modules/agriculture/components/AgricultureGeometryMapEditor.test.tsx \
+            src/modules/video-analysis/api.test.ts \
+            src/modules/video-analysis/components/AnalysisControls.test.tsx \
+            src/modules/video-analysis/components/AnalysisStatus.test.tsx
+
+      - name: Telemetry UI budget
+        run: npm run check:telemetry-ui-budget
 
       - name: Production build
         run: npm run build
+
+  frontend-e2e:
+    name: Frontend e2e smoke (chromium)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npm run test:e2e:install:ci
+
+      - name: Ops smoke suite
+        run: npm run test:e2e:smoke
+
+  frontend-visual:
+    name: Frontend visual baselines (optional)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test:e2e:install:ci
+      - name: Capture/compare shell screenshots
+        run: npm run test:e2e:visual
+        env:
+          E2E_VISUAL: "1"

@@ -8,7 +8,12 @@ from sqlalchemy.sql.dml import Update
 
 from backend.modules.vision_models import training_operations
 from backend.modules.vision_models.application import VisionApplication, VisionNotFound
-from backend.modules.vision_models.models import ModelVersion, TrainingRun, VisionModel
+from backend.modules.vision_models.models import (
+    ModelVersion,
+    TrainingRun,
+    VisionModel,
+    VisionStorageObject,
+)
 from backend.modules.vision_models.schemas import TrainingRunCreate
 from backend.modules.vision_models.service import training_service
 from backend.modules.vision_models.service.storage import VisionStorage
@@ -67,6 +72,7 @@ class FakeTrainingDatabase:
         self.run = run
         self.model: VisionModel | None = None
         self.version: ModelVersion | None = None
+        self.storage_objects: dict[str, VisionStorageObject] = {}
         self.scalar_calls = 0
 
     async def __aenter__(self):
@@ -97,6 +103,9 @@ class FakeTrainingDatabase:
             value.id = value.id or "version-1"
             self.version = value
             self.run.model_version = value
+        if isinstance(value, VisionStorageObject):
+            value.id = value.id or f"storage-{len(self.storage_objects) + 1}"
+            self.storage_objects[value.id] = value
 
     async def flush(self):
         if self.model is not None and not self.model.id:
@@ -197,8 +206,9 @@ async def test_fake_training_persists_real_shaped_evaluation_and_artifacts(
     assert database.version is not None
     assert database.version.metrics["summary"]["map75"] == pytest.approx(0.71)
     assert database.version.metrics["per_image"][0]["fn"] == 2
-    artifact_uri = database.version.evaluation_artifacts["confusion_matrix"]
-    assert service.storage.resolve_uri(artifact_uri).read_bytes() == b"png"
+    artifact = database.version.evaluation_artifacts["confusion_matrix"]
+    assert artifact["storage_object_id"] in database.storage_objects
+    assert service.storage.resolve_uri(artifact["uri"]).read_bytes() == b"png"
 
 
 @pytest.mark.asyncio

@@ -94,7 +94,7 @@ export function AnalysisInferenceSection(props: AnalysisControlsProps) {
         title={props.starting ? "Queuing…" : "Run analysis"}
         color="secondary"
         loading={props.starting}
-        disabled={!props.video}
+        disabled={props.analyzeDisabled ?? !props.video}
         onClick={props.onAnalyze}
       />
     </Stack>

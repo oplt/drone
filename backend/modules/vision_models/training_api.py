@@ -4,6 +4,8 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
+from backend.core.config.runtime import settings
+from backend.core.rate_limit import enforce_rate_limit
 from backend.core.database.session import get_db
 from backend.modules.identity.dependencies import (
     OrgUser,
@@ -50,6 +52,11 @@ async def create_training_run(
     db=Depends(get_db),
     org_user: OrgUser = Depends(require_org_user),
 ) -> TrainingRunOut:
+    await enforce_rate_limit(
+        key=f"vision:training:{org_user.user.id}",
+        limit=settings.vision_rate_training_starts_per_window,
+        window_seconds=settings.api_rate_window_seconds,
+    )
     try:
         return await application.create_training_run(db, project_id, payload, org_user.user)
     except (

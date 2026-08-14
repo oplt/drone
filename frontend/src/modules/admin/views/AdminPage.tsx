@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
@@ -15,11 +15,14 @@ import {
   TableHead,
   TableRow,
   Tabs,
+  TextField,
   Typography,
   Stack,
   Alert,
 } from "@mui/material";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { ActionIconButton } from "../../../shared/ui/ActionIconButton";
+import { FeatureState } from "../../../shared/ui/FeatureState";
 import type { AdminRuntimeLogFile } from "../api/adminApi";
 import {
   downloadAdminDiagnosticsBundle,
@@ -103,7 +106,8 @@ type AdminWorkerHealthResponse = {
 
 function UsersTab() {
   const qc = useQueryClient();
-  const { data, isLoading, error } = useQuery({
+  const [search, setSearch] = useState("");
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => fetchAdminUsers<AdminUsersResponse>(),
   });
@@ -114,53 +118,104 @@ function UsersTab() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
   });
 
-  if (isLoading) return <CircularProgress />;
-  if (error) return <Alert severity="error">Failed to load users</Alert>;
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const users = data?.users ?? [];
+    if (!q) return users;
+    return users.filter((u) => {
+      const hay = `${u.id} ${u.email} ${u.full_name ?? ""} ${u.role} ${u.org_id ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [data?.users, search]);
+
+  const columns: GridColDef<AdminUser>[] = [
+    { field: "id", headerName: "ID", width: 80 },
+    { field: "email", headerName: "Email", flex: 1, minWidth: 180 },
+    {
+      field: "full_name",
+      headerName: "Full Name",
+      flex: 1,
+      minWidth: 140,
+      valueGetter: (_value, row) => row.full_name ?? "—",
+    },
+    {
+      field: "org_id",
+      headerName: "Org ID",
+      width: 100,
+      valueGetter: (_value, row) => row.org_id ?? "—",
+    },
+    {
+      field: "role",
+      headerName: "Role",
+      width: 160,
+      sortable: false,
+      renderCell: (params) => (
+        <FormControl size="small" variant="standard" sx={{ minWidth: 130 }}>
+          <Select
+            value={params.row.role}
+            onChange={(e) =>
+              updateRole.mutate({ userId: params.row.id, role: e.target.value })
+            }
+            disabled={updateRole.isPending}
+            disableUnderline
+          >
+            {ROLES.map((r) => (
+              <MenuItem key={r} value={r}>
+                {r}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      ),
+    },
+    {
+      field: "created_at",
+      headerName: "Created",
+      width: 180,
+      valueGetter: (_value, row) =>
+        row.created_at ? new Date(row.created_at).toLocaleDateString() : "—",
+    },
+  ];
 
   return (
-    <Table size="small">
-      <TableHead>
-        <TableRow>
-          <TableCell>ID</TableCell>
-          <TableCell>Email</TableCell>
-          <TableCell>Full Name</TableCell>
-          <TableCell>Org ID</TableCell>
-          <TableCell>Role</TableCell>
-          <TableCell>Created</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {(data?.users ?? []).map((u) => (
-          <TableRow key={u.id} hover>
-            <TableCell>{u.id}</TableCell>
-            <TableCell>{u.email}</TableCell>
-            <TableCell>{u.full_name ?? "—"}</TableCell>
-            <TableCell>{u.org_id ?? "—"}</TableCell>
-            <TableCell>
-              <FormControl size="small" variant="standard">
-                <Select
-                  value={u.role}
-                  onChange={(e) =>
-                    updateRole.mutate({ userId: u.id, role: e.target.value })
-                  }
-                  disabled={updateRole.isPending}
-                  disableUnderline
-                >
-                  {ROLES.map((r) => (
-                    <MenuItem key={r} value={r}>
-                      {r}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </TableCell>
-            <TableCell sx={{ fontSize: 11, color: "text.secondary" }}>
-              {new Date(u.created_at).toLocaleDateString()}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <Stack spacing={1.5}>
+      <TextField
+        size="small"
+        label="Search users"
+        placeholder="Email, name, role, org…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        sx={{ maxWidth: 360 }}
+        inputProps={{ "aria-label": "Search users" }}
+      />
+      <FeatureState
+        loading={isLoading}
+        error={error ? "Failed to load users" : null}
+        onRetry={() => void refetch()}
+        empty={
+          !isLoading && rows.length === 0
+            ? {
+                title: search.trim() ? "No matching users" : "No users",
+                description: search.trim()
+                  ? "Try a different search term."
+                  : "No users are registered yet.",
+              }
+            : undefined
+        }
+      >
+        <Box sx={{ height: 420, width: "100%" }}>
+          <DataGrid
+            rows={rows}
+            columns={columns}
+            getRowId={(row) => row.id}
+            disableRowSelectionOnClick
+            pageSizeOptions={[10, 25, 50]}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            density="compact"
+          />
+        </Box>
+      </FeatureState>
+    </Stack>
   );
 }
 

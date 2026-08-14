@@ -486,12 +486,16 @@ export default function MissionTimeline() {
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1100, mx: "auto" }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-        <Tooltip title="Back">
-          <IconButton aria-label="Back" onClick={() => navigate(-1)} size="small">
+        <Tooltip title="Back to Operations">
+          <IconButton
+            aria-label="Back to Operations"
+            onClick={() => navigate("/dashboard")}
+            size="small"
+          >
             <ArrowBackIcon />
           </IconButton>
         </Tooltip>
-        <Typography variant="h6" fontWeight={700}>
+        <Typography variant="h6" fontWeight={600}>
           Mission Timeline
         </Typography>
         {mission && (
@@ -522,7 +526,7 @@ export default function MissionTimeline() {
             />
           ) : mission ? (
             <Stack spacing={1}>
-              <Typography fontWeight={700} noWrap>
+              <Typography fontWeight={600} noWrap>
                 {mission.mission_name}
               </Typography>
               <Divider />

@@ -5,6 +5,11 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.authz.visibility import (
+    agriculture_flight_visibility,
+    org_scoped_record_visible,
+    profile_visible_to_user,
+)
 from backend.modules.agriculture.models import (
     AgricultureAnalysisRun,
     AgricultureAnalysisLayer,
@@ -24,9 +29,7 @@ class AgricultureRepository:
         profile = result.scalar_one_or_none()
         if profile is None:
             return None
-        if user.org_id is not None and profile.org_id not in {None, user.org_id}:
-            return None
-        if user.org_id is None and profile.org_id is not None:
+        if not profile_visible_to_user(profile, user):
             return None
         return profile
 
@@ -35,19 +38,21 @@ class AgricultureRepository:
         flight = result.scalar_one_or_none()
         if flight is None or user is None:
             return flight
-        if user.org_id is not None:
-            return flight if flight.org_id == user.org_id else None
-        return flight if flight.org_id is None else None
+        if not org_scoped_record_visible(record_org_id=flight.org_id, user_org_id=user.org_id):
+            return None
+        return flight
 
     async def get_flight_by_mission(self, db: AsyncSession, *, mission_id: str) -> AgricultureFlight | None:
         return await db.scalar(select(AgricultureFlight).where(AgricultureFlight.mission_id == mission_id))
 
     async def list_flights(self, db: AsyncSession, *, field_id: int, user, limit: int = 50) -> list[AgricultureFlight]:
         stmt = select(AgricultureFlight).where(AgricultureFlight.field_id == field_id)
-        if user.org_id is not None:
-            stmt = stmt.where(AgricultureFlight.org_id == user.org_id)
-        else:
-            stmt = stmt.where(AgricultureFlight.org_id.is_(None))
+        stmt = stmt.where(
+            agriculture_flight_visibility(
+                org_column=AgricultureFlight.org_id,
+                user_org_id=user.org_id,
+            )
+        )
         stmt = stmt.order_by(AgricultureFlight.created_at.desc()).limit(max(1, min(limit, 200)))
         return list((await db.scalars(stmt)).all())
 
@@ -119,10 +124,12 @@ class AgricultureRepository:
             AgricultureObservation.severity >= min_severity,
             AgricultureObservation.confidence >= min_confidence,
         )
-        if user.org_id is not None:
-            stmt = stmt.where(AgricultureFlight.org_id == user.org_id)
-        else:
-            stmt = stmt.where(AgricultureFlight.org_id.is_(None))
+        stmt = stmt.where(
+            agriculture_flight_visibility(
+                org_column=AgricultureFlight.org_id,
+                user_org_id=user.org_id,
+            )
+        )
         if observation_type:
             stmt = stmt.where(AgricultureObservation.observation_type == observation_type)
         if bbox:

@@ -1,4 +1,5 @@
 import { useColorScheme } from '@mui/material/styles';
+import Box from '@mui/material/Box';
 import MenuItem from '@mui/material/MenuItem';
 import Select from "@mui/material/Select";
 import type { SelectProps } from "@mui/material/Select";
@@ -7,7 +8,18 @@ import type { SelectProps } from "@mui/material/Select";
 export default function ColorModeSelect(props: SelectProps) {
   const { mode, setMode } = useColorScheme();
   if (!mode) {
-    return null;
+    return (
+      <Box
+        data-screenshot="toggle-mode"
+        sx={{
+          width: 120,
+          height: 40,
+          borderRadius: 1,
+          border: "1px solid",
+          borderColor: "divider",
+        }}
+      />
+    );
   }
   return (
     <Select

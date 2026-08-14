@@ -367,6 +367,7 @@ backend/.venv/
 /backend/certs
 /backend/storage
 /backend/video/recordings
+backend/backend/
 backend/storage/
 backend/storage/logs/
 backend/storage/redis/

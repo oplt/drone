@@ -37,9 +37,7 @@ Terminal states: completed, aborted, failed
 
 from __future__ import annotations
 
-# ---------------------------------------------------------------------------
-# State sets
-# ---------------------------------------------------------------------------
+from typing import Literal
 
 TERMINAL_STATES: frozenset[str] = frozenset({"completed", "aborted", "failed"})
 
@@ -143,3 +141,19 @@ def validate_transition(from_state: str, to_state: str) -> bool:
 def allowed_command_target(current_state: str, command: str) -> str | None:
     """Return the target state for *command* from *current_state*, or None if invalid."""
     return COMMAND_TRANSITIONS.get((current_state, command))
+
+
+MissionLifecycleState = Literal[
+    "planned",
+    "preflight",
+    "queued",
+    "arming",
+    "airborne",
+    "running",  # legacy alias for airborne
+    "paused",
+    "resumed",
+    "aborting",
+    "aborted",
+    "completed",
+    "failed",
+]

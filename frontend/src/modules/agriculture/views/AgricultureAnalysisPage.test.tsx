@@ -40,8 +40,10 @@ describe("AgricultureAnalysisPage", () => {
     expect(screen.getByText("Prioritized findings queue")).toBeInTheDocument();
     expect(screen.getByText("Findings map")).toBeInTheDocument();
     expect(screen.queryByText("Calibration")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "Technical details" }));
-    expect(screen.getByText("Calibration")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Advanced" }));
+    expect(screen.getByText("Governance details")).toBeInTheDocument();
     expect(screen.queryByText("Findings map")).not.toBeInTheDocument();
+    await user.click(screen.getByText("Calibration & model registry"));
+    expect(screen.getByText("Calibration")).toBeInTheDocument();
   });
 });

@@ -7,7 +7,9 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from backend.core.database.base import Base
 from backend.modules.agriculture import analysis_orchestration as orchestration_module
 from backend.modules.agriculture import api as agriculture_api
 from backend.modules.agriculture import field_context
@@ -16,6 +18,7 @@ from backend.modules.agriculture.analysis_orchestration import (
     AgricultureAnalysisOrchestration,
 )
 from backend.modules.agriculture.api import _parse_spatial_bbox
+from backend.modules.agriculture.routers import common as agriculture_api_common
 from backend.modules.agriculture.capabilities import (
     CAPABILITIES,
     AgricultureCapabilityReleaseService,
@@ -26,6 +29,7 @@ from backend.modules.agriculture.models import (
     AgricultureAnalysisVideoJob,
     AgricultureCapabilityRelease,
 )
+from backend.modules.agriculture.quality import telemetry_quality_summary
 from backend.modules.agriculture.repository import agriculture_repository
 from backend.modules.agriculture.schemas import (
     AnalysisRunIn,
@@ -37,6 +41,12 @@ from backend.modules.agriculture.schemas import (
 from backend.modules.video_analysis.contracts import VideoJobRef, VideoSourceRef
 from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.vision_models.contracts import VisionModelRelease
+from backend.modules.vision_models.models import (
+    ModelVersion,
+    VisionClass,
+    VisionModel,
+    VisionProject,
+)
 
 
 class _Rows:
@@ -56,7 +66,6 @@ async def test_readiness_catalog_handles_quality_without_a_model_and_explains_bl
         mission_id="mission-1",
         field_id=10,
         org_id=7,
-        storage_path="/tmp/mission.mp4",
         status="uploaded",
         fps=30.0,
         created_at=datetime.now(UTC),
@@ -164,6 +173,157 @@ async def test_capability_release_references_vision_without_copying_artifact_own
 
 
 @pytest.mark.asyncio
+async def test_active_capability_release_lookup_executes_against_database():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        await connection.run_sync(
+            lambda sync_connection: Base.metadata.create_all(
+                sync_connection,
+                tables=[
+                    VisionProject.__table__,
+                    VisionClass.__table__,
+                    VisionModel.__table__,
+                    ModelVersion.__table__,
+                    AgricultureCapabilityRelease.__table__,
+                ],
+            )
+        )
+    session_factory = async_sessionmaker(
+        engine,
+        expire_on_commit=False,
+        class_=AsyncSession,
+    )
+    try:
+        async with session_factory() as db:
+            project = VisionProject(
+                id="project-release-lookup",
+                org_id=7,
+                created_by_user_id=3,
+                name="Weed project",
+                crop="tomato",
+                capability_id="weed_detection",
+                task_type="detection",
+                status="active",
+            )
+            model = VisionModel(
+                id="model-release-lookup",
+                org_id=7,
+                project_id=project.id,
+                name="Weed detector",
+                crop="tomato",
+                task_type="detection",
+            )
+            version = ModelVersion(
+                id="version-release-lookup",
+                model_id=model.id,
+                training_run_id="training-release-lookup",
+                dataset_id="dataset-release-lookup",
+                version=1,
+                architecture="yolo26n.pt",
+                weights_uri="vision://projects/project-release-lookup/models/v1/best.pt",
+                classes=["weed"],
+                metrics={"map50": 0.7},
+                evaluation_artifacts={},
+                checksum="a" * 64,
+                status="production",
+            )
+            release = AgricultureCapabilityRelease(
+                id="release-lookup",
+                scope_key=scope_key(org_id=7, user_id=3),
+                org_id=7,
+                created_by_user_id=3,
+                approved_by_user_id=3,
+                capability_id="weed_detection",
+                vision_model_version_id=version.id,
+                status="active",
+                sensor_type="rgb",
+                crop_types=["tomato"],
+                inference_profile={"confidence_threshold": 0.35},
+                thresholds={},
+            )
+            other_project = VisionProject(
+                id="project-release-other-org",
+                org_id=8,
+                created_by_user_id=4,
+                name="Other weed project",
+                crop="corn",
+                capability_id="weed_detection",
+                task_type="detection",
+                status="active",
+            )
+            other_model = VisionModel(
+                id="model-release-other-org",
+                org_id=8,
+                project_id=other_project.id,
+                name="Other weed detector",
+                crop="corn",
+                task_type="detection",
+            )
+            other_version = ModelVersion(
+                id="version-release-other-org",
+                model_id=other_model.id,
+                training_run_id="training-release-other-org",
+                dataset_id="dataset-release-other-org",
+                version=1,
+                architecture="yolo26n.pt",
+                weights_uri="vision://projects/project-release-other-org/models/v1/best.pt",
+                classes=["weed"],
+                metrics={"map50": 0.8},
+                evaluation_artifacts={},
+                checksum="b" * 64,
+                status="production",
+            )
+            other_release = AgricultureCapabilityRelease(
+                id="release-other-org",
+                scope_key=scope_key(org_id=8, user_id=4),
+                org_id=8,
+                created_by_user_id=4,
+                approved_by_user_id=4,
+                capability_id="weed_detection",
+                vision_model_version_id=other_version.id,
+                status="active",
+                sensor_type="rgb",
+                crop_types=["corn"],
+                inference_profile={"confidence_threshold": 0.5},
+                thresholds={},
+            )
+            db.add_all(
+                [
+                    project,
+                    model,
+                    version,
+                    release,
+                    other_project,
+                    other_model,
+                    other_version,
+                    other_release,
+                ]
+            )
+            await db.commit()
+
+            snapshots = await AgricultureCapabilityReleaseService().active_release_snapshots(
+                db,
+                org_id=7,
+                user_id=3,
+                capability_ids=["weed_detection"],
+            )
+
+            assert snapshots["weed_detection"]["release_id"] == release.id
+            assert snapshots["weed_detection"]["vision_model_version_id"] == version.id
+            assert snapshots["weed_detection"]["model_checksum"] == "a" * 64
+            assert snapshots["weed_detection"]["inference_profile"] == {
+                "confidence_threshold": 0.35
+            }
+            assert all(
+                snapshot["vision_model_version_id"] != other_version.id
+                for snapshot in snapshots.values()
+            )
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
 async def test_orchestration_reuses_only_an_exact_completed_inference_contract(
     monkeypatch,
 ):
@@ -211,7 +371,6 @@ async def test_orchestration_reuses_only_an_exact_completed_inference_contract(
         mission_id="mission-1",
         field_id=10,
         org_id=7,
-        storage_path="/tmp/mission.mp4",
         status="analyzed",
         fps=30.0,
         created_at=datetime.now(UTC),
@@ -272,6 +431,104 @@ async def test_orchestration_reuses_only_an_exact_completed_inference_contract(
     assert links[0].video_job_id == "job-old"
     assert links[0].inference_snapshot["reused_completed_job"] is True
     assert links[0].inference_snapshot["reused_from_run_id"] == "run-old"
+
+
+@pytest.mark.asyncio
+async def test_orchestration_fails_run_when_one_required_video_job_fails(monkeypatch):
+    link_ok = SimpleNamespace(
+        video_job_id="job-ok",
+        inference_snapshot={},
+    )
+    link_failed = SimpleNamespace(
+        video_job_id="job-failed",
+        inference_snapshot={},
+    )
+    stage = SimpleNamespace(
+        status="queued",
+        progress=0.0,
+        metrics={},
+        error=None,
+        finished_at=None,
+    )
+    run = SimpleNamespace(
+        id="run-1",
+        model_versions={"weed_detection": {"version_id": "version-1"}},
+        requested_by_user_id=3,
+        status="running",
+        error=None,
+        finished_at=None,
+        audit_json={},
+        progress=10.0,
+    )
+
+    async def list_jobs(*_args, **_kwargs):
+        return [
+            VideoJobRef(
+                id="job-ok",
+                video_id="video-1",
+                status="completed",
+                model_version_id="version-1",
+                model_version="registered:version-1:checksum",
+                source_checksum="a" * 64,
+                progress=100.0,
+                error=None,
+                terminal_reason_code="COMPLETED",
+            ),
+            VideoJobRef(
+                id="job-failed",
+                video_id="video-2",
+                status="failed",
+                model_version_id="version-1",
+                model_version="registered:version-1:checksum",
+                source_checksum=None,
+                progress=20.0,
+                error="inference failed",
+                terminal_reason_code="INFERENCE_FAILED",
+            ),
+        ]
+
+    monkeypatch.setattr(
+        orchestration_module.video_analysis_port,
+        "list_jobs",
+        list_jobs,
+    )
+
+    class Database:
+        committed = False
+
+        async def scalars(self, _statement):
+            return _Rows([link_ok, link_failed])
+
+        async def scalar(self, _statement):
+            return stage
+
+        async def commit(self):
+            self.committed = True
+
+    db = Database()
+    state, job_ids = await AgricultureAnalysisOrchestration().prerequisite_state(
+        db,
+        run=run,
+        flight=SimpleNamespace(org_id=7),
+    )
+
+    assert state == "failed"
+    assert job_ids == ["job-failed", "job-ok"]
+    assert run.status == "failed"
+    assert stage.status == "failed"
+    assert stage.metrics["failed_job_ids"] == ["job-failed"]
+    assert stage.metrics["terminal_reasons"] == {
+        "job-failed": "INFERENCE_FAILED"
+    }
+    assert db.committed is True
+
+
+def test_missing_telemetry_is_an_explicit_blocked_quality_result():
+    assert telemetry_quality_summary([]) == {
+        "status": "blocked",
+        "reason": "telemetry_missing",
+        "sample_count": 0,
+    }
 
 
 @pytest.mark.asyncio
@@ -343,6 +600,64 @@ async def test_old_video_attempt_cannot_complete_a_newer_claim():
     assert db.rolled_back is True
 
 
+@pytest.mark.asyncio
+async def test_cancelled_video_job_cannot_be_completed_by_inflight_worker():
+    current = SimpleNamespace(id="job-1", status="cancelled", attempt=1)
+
+    class Database:
+        rolled_back = False
+
+        async def scalar(self, _statement):
+            return current
+
+        async def rollback(self):
+            self.rolled_back = True
+
+    db = Database()
+    completed = await VideoAnalysisRepository(db).mark_job_completed(
+        SimpleNamespace(id="job-1"),
+        expected_attempt=1,
+    )
+
+    assert completed is False
+    assert current.status == "cancelled"
+    assert db.rolled_back is True
+
+
+@pytest.mark.asyncio
+async def test_duplicate_worker_attempt_cannot_flush_detections():
+    class Result:
+        rowcount = 0
+
+    class Database:
+        rolled_back = False
+        committed = False
+
+        def add_all(self, _values):
+            return None
+
+        async def execute(self, _statement):
+            return Result()
+
+        async def rollback(self):
+            self.rolled_back = True
+
+        async def commit(self):
+            self.committed = True
+
+    db = Database()
+    persisted = await VideoAnalysisRepository(db).flush_batch(
+        [],
+        job=SimpleNamespace(id="job-1", heartbeat_at=None),
+        progress=50,
+        expected_attempt=1,
+    )
+
+    assert persisted is False
+    assert db.rolled_back is True
+    assert db.committed is False
+
+
 def test_p0_migration_preserves_legacy_rows_and_adds_reversible_contracts():
     migration = (
         Path(__file__).resolve().parents[1]
@@ -391,6 +706,9 @@ async def test_repaired_upload_telemetry_and_field_zone_paths_execute(
             self.added = []
 
         async def scalar(self, _statement):
+            self._scalar_calls = getattr(self, "_scalar_calls", 0) + 1
+            if self._scalar_calls in {1, 3}:
+                return None
             return flight
 
         def add(self, value):
@@ -404,8 +722,8 @@ async def test_repaired_upload_telemetry_and_field_zone_paths_execute(
                 value.created_at = datetime.now(UTC)
 
     db = Database()
-    monkeypatch.setattr(agriculture_api, "_owned_flight", owned_flight)
-    monkeypatch.setattr(agriculture_api, "enforce_rate_limit", no_rate_limit)
+    monkeypatch.setattr(agriculture_api_common, "_owned_flight", owned_flight)
+    monkeypatch.setattr(agriculture_api_common, "enforce_rate_limit", no_rate_limit)
     monkeypatch.setattr(
         agriculture_api.agriculture_service, "ingest_telemetry", no_telemetry
     )
@@ -513,8 +831,8 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
     async def no_rate_limit(**_kwargs):
         return None
 
-    monkeypatch.setattr(agriculture_api, "_owned_flight", owned_flight)
-    monkeypatch.setattr(agriculture_api, "enforce_rate_limit", no_rate_limit)
+    monkeypatch.setattr(agriculture_api_common, "_owned_flight", owned_flight)
+    monkeypatch.setattr(agriculture_api_common, "enforce_rate_limit", no_rate_limit)
 
     class InventoryDatabase:
         async def scalars(self, _statement):
@@ -551,9 +869,9 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
         ),
     )
     agriculture_api._live_processors.clear()
-    monkeypatch.setattr(agriculture_api, "decode_rgb_frame", lambda _data: object())
+    monkeypatch.setattr(agriculture_api_common, "decode_rgb_frame", lambda _data: object())
     monkeypatch.setattr(
-        agriculture_api, "LiveAgricultureProcessor", lambda **_kwargs: processor
+        agriculture_api_common, "LiveAgricultureProcessor", lambda **_kwargs: processor
     )
     advisory = await agriculture_api.live_advisory(
         flight.id,
@@ -561,10 +879,9 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
         1.0,
         None,
         None,
-        SimpleNamespace(),
-        org_user,
+        flight,
     )
-    assert advisory["state"] == "clear"
+    assert advisory.state == "clear"
 
     async def create_frame_manifest(*_args, **_kwargs):
         return {"flight_id": flight.id, "inserted": 1}
@@ -628,7 +945,7 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
             return None
 
     db = RouteDatabase()
-    monkeypatch.setattr(agriculture_api, "_media_inventory", ready_inventory)
+    monkeypatch.setattr(agriculture_api_common, "_media_inventory", ready_inventory)
     monkeypatch.setattr(
         agriculture_api.agriculture_repository, "get_run_by_key", no_existing
     )
@@ -648,7 +965,7 @@ async def test_repaired_media_advisory_manifest_analysis_and_export_routes_execu
     monkeypatch.setattr(
         agriculture_api.agriculture_service, "create_analysis_run", create_run
     )
-    monkeypatch.setattr(agriculture_api, "emit_audit_event", lambda **_kwargs: None)
+    monkeypatch.setattr(agriculture_api_common, "emit_audit_event", lambda **_kwargs: None)
     created = await agriculture_api.create_analysis_run(
         flight.id,
         AnalysisRunIn(idempotency_key="analysis-key-1", requested_analyses=["quality"]),

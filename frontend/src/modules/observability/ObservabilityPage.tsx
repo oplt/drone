@@ -18,7 +18,6 @@ import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import VideocamRoundedIcon from "@mui/icons-material/VideocamRounded";
 import { useSearchParams } from "react-router-dom";
 import { dashboardKeys } from "../../app/config/queryKeys";
-import Header from "../../shared/layout/WorkflowHeader";
 import PageLayout, { PageSection } from "../../shared/layout/PageLayout";
 import { useCurrentUser } from "../session";
 import {
@@ -206,7 +205,6 @@ export default function ObservabilityPage() {
 
   return (
     <>
-      <Header />
       <PageLayout
         title="Observability"
         description="Inspect platform health, logs, metrics, and traces."

@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Checkbox,
+  Drawer,
   FormControl,
   FormControlLabel,
   InputLabel,
@@ -11,6 +12,7 @@ import {
   Select,
   Slider,
   Stack,
+  Switch,
   Tab,
   Tabs,
   Typography,
@@ -115,6 +117,8 @@ export function WarehouseLiveVoxelMapViewer({
   const [layerPointBudget, setLayerPointBudget] = useState(
     DEFAULT_LAYER_POINT_BUDGET,
   );
+  const [highDensity, setHighDensity] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [liveMapConfig, setLiveMapConfig] = useState(DEFAULT_LIVE_MAP_CONFIG);
   const [configError, setConfigError] = useState<string | null>(null);
   const layerDefaultsFlightRef = useRef<string | null>(null);
@@ -141,16 +145,22 @@ export function WarehouseLiveVoxelMapViewer({
   }, [state.token]);
 
   useEffect(() => {
-    setLayerPointBudget((current) => ({
-      ...current,
-      rgbdColored: liveMapConfig.frontend.max_points_per_layer,
-      nvbloxColor: liveMapConfig.frontend.max_points_per_layer,
-      nvbloxEsdf: Math.floor(liveMapConfig.frontend.max_points_per_layer * 0.5),
-      nvbloxTsdf: Math.floor(liveMapConfig.frontend.max_points_per_layer * 0.5),
-      mid360LiDAR: Math.floor(liveMapConfig.frontend.max_points_per_layer * 0.35),
+    if (!highDensity) {
+      setLayerPointBudget(DEFAULT_LAYER_POINT_BUDGET);
+      return;
+    }
+    const max = liveMapConfig.frontend.max_points_per_layer;
+    setLayerPointBudget({
+      ...DEFAULT_LAYER_POINT_BUDGET,
+      rgbdColored: max,
+      rgbdDepth: max,
+      nvbloxColor: max,
+      nvbloxEsdf: Math.floor(max * 0.5),
+      nvbloxTsdf: Math.floor(max * 0.5),
+      mid360LiDAR: Math.floor(max * 0.35),
       nvbloxMesh: 1,
-    }));
-  }, [liveMapConfig.frontend.max_points_per_layer]);
+    });
+  }, [highDensity, liveMapConfig.frontend.max_points_per_layer]);
 
   const resolvedFlightId =
     flightId ?? state.latestUpdate?.flight_id ?? null;
@@ -312,43 +322,21 @@ export function WarehouseLiveVoxelMapViewer({
           layers were not available when the scan was finalized.
         </Alert>
       )}
-      <WarehouseLiveVoxelHeader
-        state={state}
-        cachedBytes={cachedBytes}
-        streamPaused={streamPaused}
-      />
-      <WarehouseMappingHealthPanel
-        status={mappingStatus}
-        liveHealth={state.health}
-        mappingStackStatus={mappingStackStatus}
-      />
-
-      <WarehouseLiveVoxelMetrics
-        state={state}
-        mappingStackStatus={mappingStackStatus}
-        pointsByLayer={pointsByLayer}
-        cachedBytes={cachedBytes}
-        renderStats={renderStats}
-      />
-      <Typography variant="caption" color="text.secondary">
-        Mode: {mapMode} · flight: {flightId ?? state.latestUpdate?.flight_id ?? "—"}
-        {scannedMapId != null ? ` · scan #${scannedMapId}` : ""} · manifest:{" "}
-        {state.manifest ? "disk" : "live"} · chunks{" "}
-        {cachedChunks.length}/{manifestChunkTotal || state.chunks.length} loaded ·
-        points {visiblePointTotal.toLocaleString()}/
-        {manifestPointTotal.toLocaleString()} visible
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        Downloads: {downloadedChunkIds.size} complete, {inFlightChunkIds.size} in
-        flight
-        {visiblePendingChunkCount > 0
-          ? ` · ${visiblePendingChunkCount} visible chunk(s) queued`
-          : ""}
-      </Typography>
-
-
 
       <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+        <Button size="small" variant="outlined" onClick={() => setDiagnosticsOpen(true)}>
+          Diagnostics
+        </Button>
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={highDensity}
+              onChange={(_event, checked) => setHighDensity(checked)}
+            />
+          }
+          label="High density"
+        />
         {onReloadReplay && (
           <Button size="small" variant="outlined" onClick={onReloadReplay}>
             Refresh map from disk
@@ -546,6 +534,9 @@ export function WarehouseLiveVoxelMapViewer({
           <Stack spacing={0.75}>
             <Typography variant="caption" color="text.secondary">
               Max points per layer
+              {highDensity
+                ? ` (high density up to ${liveMapConfig.frontend.max_points_per_layer.toLocaleString()})`
+                : " (safe defaults — enable High density for config max)"}
             </Typography>
             {MAP_INSPECTION_LAYER_KEYS.map((key) => (
               <WarehouseLayerBudgetSlider
@@ -574,6 +565,50 @@ export function WarehouseLiveVoxelMapViewer({
           coordinateState={state.coordinateState}
         />
       ) : null}
+
+      <Drawer
+        anchor="right"
+        open={diagnosticsOpen}
+        onClose={() => setDiagnosticsOpen(false)}
+        PaperProps={{ sx: { width: { xs: "100%", sm: 420 }, p: 2 } }}
+      >
+        <Stack spacing={1.25}>
+          <Typography variant="h6">Map diagnostics</Typography>
+          <WarehouseLiveVoxelHeader
+            state={state}
+            cachedBytes={cachedBytes}
+            streamPaused={streamPaused}
+          />
+          <WarehouseMappingHealthPanel
+            status={mappingStatus}
+            liveHealth={state.health}
+            mappingStackStatus={mappingStackStatus}
+          />
+          <WarehouseLiveVoxelMetrics
+            state={state}
+            mappingStackStatus={mappingStackStatus}
+            pointsByLayer={pointsByLayer}
+            cachedBytes={cachedBytes}
+            renderStats={renderStats}
+          />
+          <Typography variant="caption" color="text.secondary">
+            Mode: {mapMode} · flight: {flightId ?? state.latestUpdate?.flight_id ?? "—"}
+            {scannedMapId != null ? ` · scan #${scannedMapId}` : ""} · manifest:{" "}
+            {state.manifest ? "disk" : "live"} · chunks{" "}
+            {cachedChunks.length}/{manifestChunkTotal || state.chunks.length} loaded ·
+            points {visiblePointTotal.toLocaleString()}/
+            {manifestPointTotal.toLocaleString()} visible
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Downloads: {downloadedChunkIds.size} complete, {inFlightChunkIds.size} in
+            flight
+            {visiblePendingChunkCount > 0
+              ? ` · ${visiblePendingChunkCount} visible chunk(s) queued`
+              : ""}
+          </Typography>
+          <Button onClick={() => setDiagnosticsOpen(false)}>Close</Button>
+        </Stack>
+      </Drawer>
     </Stack>
   );
 }

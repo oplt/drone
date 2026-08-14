@@ -20,6 +20,31 @@ VIDEO_ANALYSIS_ORM_OR_REPO = frozenset(
     }
 )
 
+BLOCKING_VEHICLE_MODULES = frozenset(
+    {
+        "backend.infrastructure.vehicle.mavlink_client",
+        "backend.infrastructure.vehicle",
+        "backend.infrastructure.runtime.adapters",
+    }
+)
+
+RUN_BLOCKING_MODULE = "backend.infrastructure.runtime.blocking"
+
+
+def _is_async_route_module(relative: str) -> bool:
+    if relative.endswith("/api.py") or relative.endswith("/websocket_api.py"):
+        return True
+    if "/api/" in relative and relative.endswith(".py"):
+        return True
+    return "/routers/" in relative and relative.endswith(".py")
+
+
+def _imports_run_blocking(path: Path) -> bool:
+    return any(
+        imported == RUN_BLOCKING_MODULE or imported.startswith(f"{RUN_BLOCKING_MODULE}.")
+        for _, imported in _imports(path)
+    )
+
 
 @dataclass(frozen=True, slots=True)
 class Violation:
@@ -51,6 +76,12 @@ def _is_video_analysis_orm_or_repo(module: str) -> bool:
         return False
     return module in VIDEO_ANALYSIS_ORM_OR_REPO or module.startswith(
         "backend.modules.video_analysis.models."
+    )
+
+
+def _is_video_analysis_service(module: str) -> bool:
+    return module == "backend.modules.video_analysis.service" or module.startswith(
+        "backend.modules.video_analysis.service."
     )
 
 
@@ -88,6 +119,17 @@ def collect_violations(modules_root: Path = MODULES_ROOT) -> list[Violation]:
                     "Vision must consume Video via "
                     "backend.modules.video_analysis.contracts, not ORM/repositories"
                 )
+            elif "/vision_models/" in relative and _is_video_analysis_service(imported):
+                reason = (
+                    "Vision must consume Video through "
+                    "backend.modules.video_analysis.contracts, not service internals"
+                )
+            elif _is_async_route_module(relative) and imported in BLOCKING_VEHICLE_MODULES:
+                if not _imports_run_blocking(path):
+                    reason = (
+                        "Async route modules must not import blocking vehicle adapters "
+                        "without backend.infrastructure.runtime.blocking.run_blocking"
+                    )
             if reason:
                 violations.append(Violation(relative, line, imported, reason))
     return violations

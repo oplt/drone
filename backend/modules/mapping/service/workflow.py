@@ -21,6 +21,7 @@ from backend.modules.mapping.ports import (
     MappingProcessorPort,
     MappingStoragePort,
 )
+from backend.modules.mapping.state import assert_mapping_job_transition
 from backend.modules.mapping.service.field_derivation import (
     derive_field_ring_from_bbox_wgs84,
     ring_to_polygon_wkt,
@@ -103,6 +104,7 @@ class PhotogrammetryService:
                         params["uploaded_images"] = uploaded_images
                         params["uploaded_count"] = len(uploaded_images)
                         job.params = params
+                        assert_mapping_job_transition(job.status, "uploading")
                         job.status = "uploading"
                         await db.commit()
                         logger.info(
@@ -116,9 +118,11 @@ class PhotogrammetryService:
                             "Upload images or use input_source='drone_sync'."
                         )
 
+                assert_mapping_job_transition(job.status, "processing")
                 job.status = "processing"
                 job.progress = 1
                 job.started_at = datetime.now(UTC)
+                assert_mapping_job_transition(model.status, "processing")
                 model.status = "processing"
                 await db.commit()
                 logger.info(
@@ -411,10 +415,12 @@ class PhotogrammetryService:
             job = await db.get(MappingJob, job_id)
             model = await db.get(FieldModel, model_id)
             if job:
+                assert_mapping_job_transition(job.status, "ready")
                 job.status = "ready"
                 job.progress = 100
                 job.finished_at = datetime.now(UTC)
             if model:
+                assert_mapping_job_transition(model.status, "ready")
                 model.status = "ready"
             if job:
                 await self.notifications.enqueue(
@@ -432,6 +438,7 @@ class PhotogrammetryService:
             job = await db.get(MappingJob, job_id)
             if not job:
                 return
+            assert_mapping_job_transition(job.status, "failed")
             job.status = "failed"
             job.error = error
             job.finished_at = datetime.now(UTC)

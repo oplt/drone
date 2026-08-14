@@ -11,7 +11,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from backend.core.config.runtime import settings
-from backend.core.tokens import safe_token
+from backend.modules.warehouse.planning.scan_geometry import (
+    WarehouseExecutionFrame,
+    active_mapping_startup_timing,
+    angle_delta_deg as _angle_delta_deg,
+    begin_mapping_startup_timing as _begin_mapping_startup_timing,
+    dedupe_preserving_order as _dedupe_preserving_order,
+    interpolate_yaw_deg as _interpolate_yaw_deg,
+    normalize_angle_deg as _normalize_angle_deg,
+    note_mapping_startup as _note_mapping_startup,
+    safe_token_value as _safe_token,
+)
 from backend.infrastructure.runtime.blocking import run_blocking
 from backend.infrastructure.camera.runtime import shared_video_runtime
 from backend.infrastructure.vehicle.frame_conversion import local_ned_position_to_enu
@@ -38,11 +48,6 @@ from backend.modules.warehouse.service.bridge_flow import resolve_warehouse_brid
 from backend.modules.warehouse.service.capture import WarehouseCaptureSessionService
 from backend.modules.warehouse.service.mapping import WarehouseScanMappingService
 from backend.modules.warehouse.service.runtime_safety import WarehouseRuntimeSafetyTracker
-from backend.modules.warehouse.service.startup_timing_hooks import (
-    active_mapping_startup_timing_safe,
-    begin_mapping_startup_safe,
-    note_mapping_startup_safe,
-)
 from backend.modules.warehouse.service.video import (
     warehouse_video_recording_enabled,
     warehouse_video_skip_reason,
@@ -53,69 +58,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-def _safe_token(raw: object) -> str:
-    return safe_token(raw)
-
-
-def _normalize_angle_deg(value: float) -> float:
-    normalized = float(value) % 360.0
-    if normalized > 180.0:
-        normalized -= 360.0
-    return normalized
-
-
-def _angle_delta_deg(start_deg: float, end_deg: float) -> float:
-    return _normalize_angle_deg(float(end_deg) - float(start_deg))
-
-
-def _interpolate_yaw_deg(start_deg: float | None, end_deg: float | None, t: float) -> float | None:
-    if start_deg is None and end_deg is None:
-        return None
-    if start_deg is None:
-        return _normalize_angle_deg(float(end_deg))  # type: ignore[arg-type]
-    if end_deg is None:
-        return _normalize_angle_deg(float(start_deg))
-    return _normalize_angle_deg(float(start_deg) + (_angle_delta_deg(float(start_deg), float(end_deg)) * float(t)))
-
-
-def _dedupe_preserving_order(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
-
 
 def build_warehouse_perception_port() -> WarehousePerceptionPort:
     from backend.infrastructure.warehouse.perception import build_warehouse_perception_port
 
     return build_warehouse_perception_port()
-
-
-def _begin_mapping_startup_timing(*, mission_start_monotonic: float) -> None:
-    begin_mapping_startup_safe(mission_start_monotonic=mission_start_monotonic)
-
-
-def _note_mapping_startup(mark: str) -> None:
-    note_mapping_startup_safe(mark)
-
-
-def _active_mapping_startup_timing():
-    return active_mapping_startup_timing_safe()
-
-
-@dataclass(frozen=True)
-class WarehouseExecutionFrame:
-    """
-    ENU offset between the planner origin and live odom measured at takeoff.
-    """
-
-    x_offset_m: float
-    y_offset_m: float
-    z_offset_m: float
 
 
 @dataclass

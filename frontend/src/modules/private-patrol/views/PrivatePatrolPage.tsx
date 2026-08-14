@@ -26,6 +26,7 @@ export default function PrivatePatrolPage() {
       subtitle="Persistent surveillance missions for property security with perimeter patrol, key-point verification, grid area coverage, and event-triggered response workflows."
       droneConnected={vm.droneConnected}
       wsConnected={vm.wsConnected}
+      telemetry={telemetry}
       errors={vm.errors}
       onDismissError={vm.dismissError}
       onClearErrors={vm.clearErrors}
@@ -35,6 +36,7 @@ export default function PrivatePatrolPage() {
         apiKey={map.apiKey}
         loadError={map.loadError}
         mapId={map.mapId}
+        onSwitchEngine={map.handleMapEngineChange}
       />
 
       {vm.googleMapsReady ? (

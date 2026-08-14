@@ -748,7 +748,7 @@ export function WarehouseLiveVoxelScene({
   }, [state.chunks]);
 
   return (
-      <Box sx={{ height: 520, bgcolor: "#071113", position: "relative" }}>
+      <Box sx={{ height: "min(78vh, 920px)", minHeight: "60vh", bgcolor: "#071113", position: "relative" }}>
         <Canvas
             data-testid="warehouse-live-voxel-map"
             camera={{

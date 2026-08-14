@@ -406,7 +406,7 @@ export function WarehouseCoordinateSetupPanel({
             p: 1.5,
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
             Auto-detect warehouse plan
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

@@ -1,22 +1,25 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
 from backend.modules.agriculture.contracts import MissionTelemetrySample
-from backend.modules.agriculture.georeferencing import interpolate_pose
+from backend.modules.agriculture.georeferencing import (
+    NearestTelemetryMatcher,
+    interpolate_pose,
+)
 from backend.modules.video_analysis.application import VideoAnalysisApplication
+from backend.modules.video_analysis.contracts import VideoAnalysisPort
 from backend.modules.video_analysis.models import StorageObject
 from backend.modules.video_analysis.repository import VideoAnalysisRepository
 from backend.modules.video_analysis.schemas import (
+    AnalyzeVideoRequest,
     VideoCaptureMetadataPatch,
     VideoDetectionOut,
 )
-from backend.modules.video_analysis.service.geo import NearestTelemetryMatcher
 from backend.tests.test_p1_operable_workflow import _detection
 
 
@@ -75,6 +78,46 @@ def test_evidence_content_path_dual_reads_relative_and_absolute(tmp_path, monkey
     assert app._resolve_storage_path(relative) == tmp_path / relative
     assert app._resolve_storage_path(str(absolute)) == absolute
     assert app._resolve_storage_path("missing/crop.jpg") is None
+
+
+@pytest.mark.asyncio
+async def test_video_source_path_rejects_missing_storage_file(tmp_path, monkeypatch):
+    storage_path = tmp_path / "missing.mp4"
+    monkeypatch.setattr(
+        VideoAnalysisRepository,
+        "get_video",
+        AsyncMock(
+            return_value=SimpleNamespace(org_id=7, storage_path=str(storage_path))
+        ),
+    )
+
+    with pytest.raises(LookupError, match="not available on disk"):
+        await VideoAnalysisPort().resolve_source_media_path(
+            SimpleNamespace(),
+            video_id="video-1",
+            org_id=7,
+        )
+
+
+@pytest.mark.asyncio
+async def test_video_source_path_returns_existing_storage_file(tmp_path, monkeypatch):
+    storage_path = tmp_path / "video.mp4"
+    storage_path.write_bytes(b"video")
+    monkeypatch.setattr(
+        VideoAnalysisRepository,
+        "get_video",
+        AsyncMock(
+            return_value=SimpleNamespace(org_id=7, storage_path=str(storage_path))
+        ),
+    )
+
+    resolved = await VideoAnalysisPort().resolve_source_media_path(
+        SimpleNamespace(),
+        video_id="video-1",
+        org_id=7,
+    )
+
+    assert resolved == str(storage_path)
 
 
 def test_telemetry_match_includes_sample_ids_and_method():
@@ -142,6 +185,7 @@ async def test_capture_metadata_patch_sets_reanalysis_required(monkeypatch):
         sync_offset_seconds=0.0,
         capture_time_source="upload_time",
         reanalysis_required=False,
+        capture_metadata_revision=0,
     )
     db = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
     repo = SimpleNamespace(
@@ -173,4 +217,100 @@ async def test_capture_metadata_patch_sets_reanalysis_required(monkeypatch):
     assert result.capture_time_source == "operator"
     assert result.sync_offset_seconds == 2.5
     assert result.reanalysis_required is True
+    assert result.capture_metadata_revision == 1
     assert audits[0]["event_name"] == "video_capture_metadata_updated"
+
+
+@pytest.mark.asyncio
+async def test_start_analysis_does_not_clear_reanalysis_required(monkeypatch):
+    video = SimpleNamespace(
+        id="video-1",
+        org_id=7,
+        reanalysis_required=True,
+        capture_metadata_revision=3,
+    )
+    job = SimpleNamespace(id="job-1")
+    repo = SimpleNamespace(
+        get_video_for_user=AsyncMock(return_value=video),
+        create_job=AsyncMock(return_value=job),
+    )
+    monkeypatch.setattr(
+        "backend.modules.video_analysis.application.VideoAnalysisRepository",
+        lambda _db: repo,
+    )
+    queue = SimpleNamespace(enqueue=lambda **_kwargs: None)
+
+    result = await VideoAnalysisApplication(queue=queue).start_analysis(
+        SimpleNamespace(),
+        video_id=video.id,
+        request=AnalyzeVideoRequest(),
+        user=SimpleNamespace(id=7, org_id=7),
+    )
+
+    assert result is job
+    assert video.reanalysis_required is True
+
+
+@pytest.mark.asyncio
+async def test_matching_capture_revision_clears_reanalysis_on_completion():
+    job = SimpleNamespace(
+        id="job-1",
+        video_id="video-1",
+        status="running",
+        attempt=1,
+        capture_metadata_revision=4,
+    )
+    video = SimpleNamespace(
+        id="video-1",
+        status="analyzing",
+        capture_metadata_revision=4,
+        reanalysis_required=True,
+    )
+    rows = iter((job, video))
+    db = SimpleNamespace(
+        scalar=AsyncMock(side_effect=lambda _stmt: next(rows)),
+        commit=AsyncMock(),
+        rollback=AsyncMock(),
+    )
+
+    completed = await VideoAnalysisRepository(db).mark_job_completed(
+        job,
+        video=video,
+        expected_attempt=1,
+    )
+
+    assert completed is True
+    assert video.reanalysis_required is False
+    assert video.status == "analyzed"
+
+
+@pytest.mark.asyncio
+async def test_stale_capture_revision_preserves_reanalysis_on_completion():
+    job = SimpleNamespace(
+        id="job-1",
+        video_id="video-1",
+        status="running",
+        attempt=1,
+        capture_metadata_revision=3,
+    )
+    video = SimpleNamespace(
+        id="video-1",
+        status="analyzing",
+        capture_metadata_revision=4,
+        reanalysis_required=True,
+    )
+    rows = iter((job, video))
+    db = SimpleNamespace(
+        scalar=AsyncMock(side_effect=lambda _stmt: next(rows)),
+        commit=AsyncMock(),
+        rollback=AsyncMock(),
+    )
+
+    completed = await VideoAnalysisRepository(db).mark_job_completed(
+        job,
+        video=video,
+        expected_attempt=1,
+    )
+
+    assert completed is True
+    assert video.reanalysis_required is True

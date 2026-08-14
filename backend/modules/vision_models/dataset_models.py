@@ -23,7 +23,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.core.database.base import Base
 
 if TYPE_CHECKING:
-    from backend.modules.vision_models.training_models import TrainingRun, VisionModel
+    from backend.modules.vision_models.training_models import (
+        TrainingRun,
+        VisionModel,
+        VisionStorageObject,
+    )
 
 
 def new_uuid() -> str:
@@ -167,6 +171,16 @@ class DatasetImage(Base):
     )
     storage_uri: Mapped[str] = mapped_column(Text, nullable=False)
     thumbnail_uri: Mapped[str | None] = mapped_column(Text, nullable=True)
+    storage_object_id: Mapped[str | None] = mapped_column(
+        ForeignKey("vision_storage_objects.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    thumbnail_storage_object_id: Mapped[str | None] = mapped_column(
+        ForeignKey("vision_storage_objects.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     source_type: Mapped[str] = mapped_column(String(32), nullable=False, default="upload")
     source_group: Mapped[str] = mapped_column(String(160), nullable=False)
     source_video_id: Mapped[str | None] = mapped_column(
@@ -202,6 +216,12 @@ class DatasetImage(Base):
     )
 
     dataset: Mapped[DatasetVersion] = relationship(back_populates="images")
+    storage_object: Mapped[VisionStorageObject | None] = relationship(
+        "VisionStorageObject", foreign_keys=[storage_object_id]
+    )
+    thumbnail_storage_object: Mapped[VisionStorageObject | None] = relationship(
+        "VisionStorageObject", foreign_keys=[thumbnail_storage_object_id]
+    )
     annotations: Mapped[list[Annotation]] = relationship(
         back_populates="image", cascade="all, delete-orphan", lazy="selectin"
     )
@@ -234,7 +254,7 @@ class Annotation(Base):
     source: Mapped[str] = mapped_column(String(16), nullable=False, default="manual")
     segmentation: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     created_by_user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

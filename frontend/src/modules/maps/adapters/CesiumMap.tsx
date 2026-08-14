@@ -16,7 +16,8 @@ import {
   normalizeLonLatRing,
   zoomToHeightMeters,
 } from "../utils/cesiumCameraGeometry";
-import droneIconUrl from "../../../assets/Drone.svg?url"; import { frontendLogger } from "../../../shared/logging";
+import droneIconUrl from "../../../assets/Drone.svg?url";
+import { frontendLogger } from "../../../shared/logging";
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = { lat: number; lon: number; alt: number };
@@ -48,6 +49,10 @@ type Props = {
   useWorldTerrain?: boolean;
   focusRing?: LonLat[] | null;
   focusRequestToken?: number;
+  /** When false, pause Follow/FPV/Orbit auto-tracking so operator can explore. */
+  followEnabled?: boolean;
+  selectedWaypointIndex?: number | null;
+  onSelectWaypoint?: (index: number) => void;
 };
 const EMPTY_ZONES: LonLat[][] = [];
 
@@ -68,6 +73,9 @@ export default function CesiumMap({
   drawnBoundarySelected = false,
   plannedRoute = null,
   exclusionZones = EMPTY_ZONES,
+  followEnabled = true,
+  selectedWaypointIndex = null,
+  onSelectWaypoint,
   fieldTilesetUrl = null,
   planningAltitudeM = 25,
   lockCameraToPlanningAltitude = false,
@@ -110,6 +118,7 @@ export default function CesiumMap({
   const onFieldBoundaryClickRef = useRef<Props["onFieldBoundaryClick"]>(
     onFieldBoundaryClick,
   );
+  const onSelectWaypointRef = useRef<Props["onSelectWaypoint"]>(onSelectWaypoint);
   const lastCameraSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -135,6 +144,10 @@ export default function CesiumMap({
   useEffect(() => {
     onFieldBoundaryClickRef.current = onFieldBoundaryClick;
   }, [onFieldBoundaryClick]);
+
+  useEffect(() => {
+    onSelectWaypointRef.current = onSelectWaypoint;
+  }, [onSelectWaypoint]);
 
   useEffect(() => {
     fieldTilesetUrlRef.current = fieldTilesetUrl;
@@ -352,12 +365,20 @@ export default function CesiumMap({
         if (drawModeRef.current !== "none") return;
 
         const picked = viewer.scene.pick(movement.position);
-        if (
-          picked?.id &&
-          picked.id === fieldBoundaryEntityRef.current
-        ) {
-          onFieldBoundaryClickRef.current?.();
-          return;
+        if (picked?.id) {
+          const rawIndex = picked.id.properties?.waypointIndex;
+          const waypointIndex =
+            typeof rawIndex === "number"
+              ? rawIndex
+              : rawIndex?.getValue?.(CesiumModule.JulianDate.now());
+          if (typeof waypointIndex === "number") {
+            onSelectWaypointRef.current?.(waypointIndex);
+            return;
+          }
+          if (picked.id === fieldBoundaryEntityRef.current) {
+            onFieldBoundaryClickRef.current?.();
+            return;
+          }
         }
 
         if (!onPickLatLngRef.current) return;
@@ -573,10 +594,19 @@ export default function CesiumMap({
       plannedRouteEntityRef.current = null;
     }
 
-    wp.forEach((p) => {
+    wp.forEach((p, index) => {
+      const selected = selectedWaypointIndex === index;
       const ent = viewer.entities.add({
         position: CesiumModule.Cartesian3.fromDegrees(p.lng, p.lat),
-        point: { pixelSize: 10 },
+        point: {
+          pixelSize: selected ? 16 : 10,
+          color: CesiumModule.Color.fromCssColorString(
+            selected ? "#ff6d00" : "#1976d2",
+          ),
+          outlineColor: CesiumModule.Color.WHITE,
+          outlineWidth: selected ? 2 : 1,
+        },
+        properties: { waypointIndex: index },
       });
       waypointEntityRefs.current.push(ent);
     });
@@ -617,7 +647,7 @@ export default function CesiumMap({
 
   useEffect(() => {
     drawEntities();
-  }, [drawMode, waypoints, fieldBoundary, plannedRoute, exclusionZones, drawnBoundarySelected]);
+  }, [drawMode, waypoints, fieldBoundary, plannedRoute, exclusionZones, drawnBoundarySelected, selectedWaypointIndex]);
 
   useEffect(() => {
     updateDroneEntity();
@@ -1091,6 +1121,10 @@ export default function CesiumMap({
     }
 
     if (viewMode === "follow") {
+      if (!followEnabled) {
+        viewer.trackedEntity = undefined;
+        return;
+      }
       lastCameraSignatureRef.current = null;
       if (droneEntityRef.current) {
         viewer.trackedEntity = droneEntityRef.current;
@@ -1192,11 +1226,19 @@ export default function CesiumMap({
     };
 
     if (viewMode === "fpv") {
+      if (!followEnabled) {
+        viewer.trackedEntity = undefined;
+        return;
+      }
       lastCameraSignatureRef.current = null;
       tickFPV();
       return;
     }
     if (viewMode === "orbit") {
+      if (!followEnabled) {
+        viewer.trackedEntity = undefined;
+        return;
+      }
       lastCameraSignatureRef.current = null;
       tickOrbit();
       return;
@@ -1220,7 +1262,22 @@ export default function CesiumMap({
     planningAltitudeM,
     lockCameraToPlanningAltitude,
     focusRequestToken,
+    followEnabled,
   ]);
+
+  useEffect(() => {
+    if (selectedWaypointIndex == null) return;
+    const wp = waypoints[selectedWaypointIndex];
+    if (!wp) return;
+    const viewer = viewerRef.current;
+    const CesiumModule = CesiumRef.current;
+    if (!viewer || !CesiumModule) return;
+    viewer.trackedEntity = undefined;
+    viewer.camera.flyTo({
+      destination: CesiumModule.Cartesian3.fromDegrees(wp.lon, wp.lat, 400),
+      duration: 0.5,
+    });
+  }, [selectedWaypointIndex, waypoints]);
 
   useEffect(() => {
     if (focusRequestToken == null) return;

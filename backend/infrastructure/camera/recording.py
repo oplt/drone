@@ -1,9 +1,13 @@
 import time
+from collections.abc import Generator
+from contextlib import contextmanager
+from typing import Any
 
 import cv2
 import numpy as np
 import paramiko
 import requests
+from requests import Response
 
 from backend.core.config.runtime import settings
 
@@ -14,6 +18,37 @@ SSH_KEY_PATH = settings.ssh_key_path
 REMOTE_PY_SCRIPT = settings.raspberry_streaming_script_path
 PI_PORT = 5000
 STREAM_URL = f"http://{PI_HOST}:{PI_PORT}/video_feed"
+
+_DEFAULT_CONNECT_TIMEOUT_S = 5.0
+_DEFAULT_READ_TIMEOUT_S = 30.0
+
+
+def _configure_ssh_client(ssh: paramiko.SSHClient) -> None:
+    """Use known_hosts in production; allow auto-add only for local/dev."""
+    ssh.load_system_host_keys()
+    if str(getattr(settings, "app_env", "local")).lower() in {"prod", "production"}:
+        ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
+    else:
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+
+@contextmanager
+def _open_http_stream(
+    url: str,
+    *,
+    connect_timeout_s: float = _DEFAULT_CONNECT_TIMEOUT_S,
+    read_timeout_s: float = _DEFAULT_READ_TIMEOUT_S,
+) -> Generator[Response, None, None]:
+    response = requests.get(
+        url,
+        stream=True,
+        timeout=(connect_timeout_s, read_timeout_s),
+    )
+    try:
+        yield response
+    finally:
+        response.close()
+
 
 # ---------- SSH PART: START SERVER ON PI ----------
 
@@ -29,8 +64,7 @@ def start_streaming_server_via_ssh():
 
     print(f"[INFO] Connecting to {PI_HOST} via SSH as {PI_USER}...")
     ssh = paramiko.SSHClient()
-    ssh.load_system_host_keys()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    _configure_ssh_client(ssh)
 
     ssh.connect(
         hostname=PI_HOST,
@@ -54,11 +88,10 @@ def wait_for_stream(url, timeout=30):
 
     while time.time() - start < timeout:
         try:
-            r = requests.get(url, stream=True, timeout=3)
-            if r.status_code == 200:
-                print("[INFO] Stream is up!")
-                r.close()
-                return True
+            with _open_http_stream(url, connect_timeout_s=3.0, read_timeout_s=3.0) as response:
+                if response.status_code == 200:
+                    print("[INFO] Stream is up!")
+                    return True
         except requests.RequestException:
             pass
 
@@ -72,27 +105,38 @@ def wait_for_stream(url, timeout=30):
 # ---------- MJPEG CLIENT PART (similar to your original) ----------
 
 
-def mjpeg_stream(url):
+def mjpeg_stream(
+    url: str,
+    *,
+    connect_timeout_s: float = _DEFAULT_CONNECT_TIMEOUT_S,
+    read_timeout_s: float = _DEFAULT_READ_TIMEOUT_S,
+) -> Generator[Any, None, None]:
     """
     Generator that yields individual JPEG frames from an MJPEG HTTP stream.
+
+    Closes the underlying HTTP response when iteration ends or the generator is closed.
     """
-    stream = requests.get(url, stream=True)
-    bytes_buf = b""
+    with _open_http_stream(
+        url,
+        connect_timeout_s=connect_timeout_s,
+        read_timeout_s=read_timeout_s,
+    ) as stream:
+        bytes_buf = b""
 
-    for chunk in stream.iter_content(chunk_size=1024):
-        if not chunk:
-            continue
-        bytes_buf += chunk
+        for chunk in stream.iter_content(chunk_size=1024):
+            if not chunk:
+                continue
+            bytes_buf += chunk
 
-        a = bytes_buf.find(b"\xff\xd8")  # JPEG start
-        b = bytes_buf.find(b"\xff\xd9")  # JPEG end
-        if a != -1 and b != -1 and b > a:
-            jpg = bytes_buf[a : b + 2]
-            bytes_buf = bytes_buf[b + 2 :]
+            start = bytes_buf.find(b"\xff\xd8")  # JPEG start
+            end = bytes_buf.find(b"\xff\xd9")  # JPEG end
+            if start != -1 and end != -1 and end > start:
+                jpg = bytes_buf[start : end + 2]
+                bytes_buf = bytes_buf[end + 2 :]
 
-            img = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-            if img is not None:
-                yield img
+                img = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
+                if img is not None:
+                    yield img
 
 
 if __name__ == "__main__":

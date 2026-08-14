@@ -1,0 +1,21 @@
+# Optional GPU device reservations for inference-heavy Celery workers.
+# CPU-only hosts can omit this file; workers still run without NVIDIA devices.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+
+x-gpu-device-request: &gpu-device-request
+  device_requests:
+    - driver: nvidia
+      count: 1
+      capabilities: [gpu]
+
+services:
+  worker-video:
+    <<: *gpu-device-request
+
+  worker-vision:
+    <<: *gpu-device-request
+
+  worker-agriculture-inference:
+    <<: *gpu-device-request

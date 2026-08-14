@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from backend.modules.identity.models import UserRole
+from backend.modules.agriculture.capabilities import (
+    AgricultureCapabilityReleaseService,
+    default_inference_profile,
+)
 from backend.modules.vision_models import training_operations
 from backend.modules.vision_models.application import VisionApplication
+from backend.modules.vision_models.contracts import VisionModelRelease
 from backend.modules.vision_models.release_policy import (
     POLICY_VERSION,
     evaluate_release,
@@ -46,6 +51,86 @@ def test_evaluate_release_success_freezes_inference_contract():
     assert result.inference_contract["model_checksum"] == "a" * 64
     assert result.inference_contract["dataset_checksum"] == "b" * 64
     assert result.inference_contract["evaluation_metrics"]["map50"] == 0.8
+    assert result.inference_contract["confidence_threshold"] == 0.35
+    assert result.inference_contract["frame_stride_seconds"] == 1.0
+    assert result.inference_contract["small_object_mode"] is False
+    assert result.inference_contract["tracking_enabled"] is False
+    assert result.inference_contract["tracker_type"] == "bytetrack"
+
+
+def test_evaluate_release_freezes_explicit_inference_profile():
+    result = evaluate_release(
+        **_base_kwargs(
+            confidence_threshold=0.55,
+            frame_stride_seconds=0.25,
+            small_object_mode=True,
+            tracking_enabled=True,
+            tracker_type="botsort",
+        )
+    )
+    assert result.inference_contract["confidence_threshold"] == 0.55
+    assert result.inference_contract["frame_stride_seconds"] == 0.25
+    assert result.inference_contract["small_object_mode"] is True
+    assert result.inference_contract["tracking_enabled"] is True
+    assert result.inference_contract["tracker_type"] == "botsort"
+
+
+@pytest.mark.parametrize(
+    ("capability_id", "map50", "recall", "eligible"),
+    [
+        ("stand_count", 0.30, 0.50, True),
+        ("stand_count", 0.30, 0.49, False),
+        ("weed_detection", 0.34, 0.80, False),
+        ("crop_health", 0.27, 0.80, False),
+        ("object_detection", 0.30, 0.10, True),
+    ],
+)
+def test_capability_metric_floors(capability_id, map50, recall, eligible):
+    result = evaluate_release(
+        **_base_kwargs(
+            capability_id=capability_id,
+            metrics={"summary": {"map50": map50, "recall": recall}},
+        )
+    )
+    assert result.eligible is eligible
+
+
+@pytest.mark.asyncio
+async def test_capability_activation_prefers_frozen_profile():
+    frozen_profile = {
+        "confidence_threshold": 0.6,
+        "frame_stride_seconds": 0.5,
+        "small_object_mode": True,
+        "tracking_enabled": True,
+        "tracker_type": "botsort",
+    }
+    version = VisionModelRelease(
+        version_id="version-1",
+        status="production",
+        model_id="model-1",
+        model_name="detector",
+        model_version=1,
+        model_checksum="a" * 64,
+        dataset_id="dataset-1",
+        crop="wheat",
+        classes=("weed",),
+        evaluation_metrics={
+            "deployment_audit": [{"inference_contract": frozen_profile}]
+        },
+        capability_id="object_detection",
+        project_org_id=7,
+        project_created_by_user_id=9,
+    )
+    db = SimpleNamespace(
+        scalar=AsyncMock(return_value=None),
+        add=Mock(),
+        flush=AsyncMock(),
+    )
+    release = await AgricultureCapabilityReleaseService().activate_for_model_version(
+        db, version=version, org_id=7, user_id=9
+    )
+    assert release.inference_profile == frozen_profile
+    assert release.inference_profile != default_inference_profile("object_detection")
 
 
 def test_evaluate_release_blocks_low_map50():

@@ -28,6 +28,7 @@ from backend.modules.vision_models.models import (
     ModelVersion,
     TrainingRun,
     VisionProject,
+    VisionStorageObject,
 )
 from backend.modules.vision_models.release_policy import evaluate_release
 from backend.modules.vision_models.release_read_port import model_release_from_orm
@@ -506,10 +507,26 @@ class TrainingOperations:
         version = await VisionRepository(db).get_model_version(version_id, user)
         if version is None:
             raise VisionNotFound("Model version not found")
-        uri = version.evaluation_artifacts.get(name)
-        if not uri:
+        artifact = version.evaluation_artifacts.get(name)
+        if not artifact:
             raise VisionNotFound("Evaluation artifact not found")
-        path = self.storage.resolve_uri(uri)
+        storage_object = None
+        uri = artifact if isinstance(artifact, str) else None
+        if isinstance(artifact, dict):
+            uri_value = artifact.get("uri")
+            uri = uri_value if isinstance(uri_value, str) else None
+            storage_object_id = artifact.get("storage_object_id")
+            if isinstance(storage_object_id, str):
+                storage_object = await db.get(VisionStorageObject, storage_object_id)
+        try:
+            path = self.storage.resolve_registered(
+                backend_key=(
+                    storage_object.backend_key if storage_object is not None else None
+                ),
+                legacy_uri=uri,
+            )
+        except VisionStorageError as exc:
+            raise VisionNotFound("Evaluation artifact not found") from exc
         if not path.is_file():
             raise VisionNotFound("Evaluation artifact not found")
         return path
@@ -529,7 +546,17 @@ class TrainingOperations:
         if version is None or (require_production and version.status != "production"):
             raise VisionNotFound("Registered model version is not available")
         try:
-            path = self.storage.resolve_uri(version.weights_uri)
+            storage_object = (
+                await db.get(VisionStorageObject, version.storage_object_id)
+                if version.storage_object_id
+                else None
+            )
+            path = self.storage.resolve_registered(
+                backend_key=(
+                    storage_object.backend_key if storage_object is not None else None
+                ),
+                legacy_uri=version.weights_uri,
+            )
         except VisionStorageError as exc:
             raise VisionNotFound("Registered model artifact is unavailable") from exc
         if not path.is_file():

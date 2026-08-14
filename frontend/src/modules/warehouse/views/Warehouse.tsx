@@ -14,11 +14,12 @@ import {
   Tab,
   Tabs,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import ExploreRoundedIcon from "@mui/icons-material/ExploreRounded";
 import ChecklistRoundedIcon from "@mui/icons-material/ChecklistRounded";
-import Header from "../../../shared/layout/WorkflowHeader";
 import { ApiError } from "../../../shared/api/apiError";
 import { ErrorAlerts } from "../../../shared/ui/ErrorAlerts";
 import { useNotice } from "../../../shared/ui/NoticeContext";
@@ -137,6 +138,11 @@ export default function WarehousePage() {
   const warehouseSetupDrawer = useTaskPreflightCommandsDrawer();
   const warehouseChecksDrawer = useTaskPreflightCommandsDrawer();
   const warehouseMissionDrawer = useTaskPreflightCommandsDrawer();
+  const theme = useTheme();
+  const mobileLayout = useMediaQuery(theme.breakpoints.down("md"));
+  const [mobileTab, setMobileTab] = useState<"status" | "scene" | "config">(
+    "scene",
+  );
 
   const closeOtherWarehouseDrawers = useCallback(
     (except: "setup" | "checks" | "mission") => {
@@ -1033,7 +1039,6 @@ export default function WarehousePage() {
 
   return (
     <>
-      <Header />
       <Paper
         sx={{
           width: "100%",
@@ -1054,7 +1059,7 @@ export default function WarehousePage() {
           <Box>
             <Typography
               variant="h5"
-              sx={{ fontWeight: 800, fontSize: { xs: "1.3rem", md: "1.5rem" } }}
+              sx={{ fontWeight: 600, fontSize: { xs: "1.3rem", md: "1.5rem" } }}
             >
               Warehouse Operations
             </Typography>
@@ -1088,26 +1093,58 @@ export default function WarehousePage() {
           onClearAll={clearErrors}
         />
 
-        <Stack sx={{ minWidth: 0, width: "100%" }} spacing={2}>
-          <MissionVideoPanel
-            title="Warehouse Camera"
-            imgAlt="Warehouse camera stream"
-            disconnectedMessage="Waiting for mission video stream"
-            frameHeight={600}
-            frameSx={{ minHeight: 600, height: 600 }}
-            apiBase={apiBase}
-            streamKey={streamKey}
-            videoToken={videoToken}
-            startingVideo={startingVideo}
-            videoError={videoError}
-            videoRetryCount={videoRetryCount}
-            droneConnected={droneConnected}
-            telemetry={telemetry}
-            onVideoError={handleVideoError}
-            onVideoLoad={handleVideoLoad}
-            onRetry={retryVideo}
-          />
+        {mobileLayout ? (
+          <Tabs
+            value={mobileTab}
+            onChange={(_, value: "status" | "scene" | "config") =>
+              setMobileTab(value)
+            }
+            variant="fullWidth"
+            sx={{ mb: 1.5 }}
+            aria-label="Warehouse mobile sections"
+          >
+            <Tab value="status" label="Status" />
+            <Tab value="scene" label="Scene" />
+            <Tab value="config" label="Config" />
+          </Tabs>
+        ) : null}
 
+        <Stack
+          sx={{
+            minWidth: 0,
+            width: "100%",
+            display:
+              !mobileLayout || mobileTab === "status" || mobileTab === "scene"
+                ? "flex"
+                : "none",
+          }}
+          spacing={2}
+        >
+          {!mobileLayout || mobileTab === "status" ? (
+            <MissionVideoPanel
+              title="Warehouse Camera"
+              imgAlt="Warehouse camera stream"
+              disconnectedMessage="Waiting for mission video stream"
+              frameHeight={mobileLayout ? 280 : 600}
+              frameSx={{
+                minHeight: mobileLayout ? 280 : 600,
+                height: mobileLayout ? 280 : 600,
+              }}
+              apiBase={apiBase}
+              streamKey={streamKey}
+              videoToken={videoToken}
+              startingVideo={startingVideo}
+              videoError={videoError}
+              videoRetryCount={videoRetryCount}
+              droneConnected={droneConnected}
+              telemetry={telemetry}
+              onVideoError={handleVideoError}
+              onVideoLoad={handleVideoLoad}
+              onRetry={retryVideo}
+            />
+          ) : null}
+
+          {!mobileLayout || mobileTab === "scene" ? (
           <WarehouseViewerSection
             sectionRef={viewerSectionRef}
             selectorProps={{
@@ -1178,7 +1215,70 @@ export default function WarehousePage() {
                 : liveVoxelMap.streamPaused,
             }}
           />
+          ) : null}
         </Stack>
+
+        {mobileLayout && mobileTab === "config" ? (
+          <Stack spacing={1.5} sx={{ pb: "env(safe-area-inset-bottom, 0px)" }}>
+            <Typography variant="body2" color="text.secondary">
+              Open setup, checks, or mission controls. On phone these open as
+              bottom sheets so the scene stays usable.
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => handleWarehouseSetupOpenChange(true)}
+                sx={{
+                  px: 1.5,
+                  py: 1,
+                  minHeight: 44,
+                  borderRadius: 1,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  cursor: "pointer",
+                }}
+              >
+                Setup
+              </Box>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => handleWarehouseChecksOpenChange(true)}
+                sx={{
+                  px: 1.5,
+                  py: 1,
+                  minHeight: 44,
+                  borderRadius: 1,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  cursor: "pointer",
+                }}
+              >
+                Checks
+              </Box>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => handleWarehouseMissionOpenChange(true)}
+                sx={{
+                  px: 1.5,
+                  py: 1,
+                  minHeight: 44,
+                  borderRadius: 1,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  cursor: "pointer",
+                }}
+              >
+                Mission
+              </Box>
+            </Stack>
+          </Stack>
+        ) : null}
       </Paper>
 
       <TaskPreflightCommandsDrawer

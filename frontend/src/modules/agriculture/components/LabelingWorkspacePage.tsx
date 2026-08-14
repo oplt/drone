@@ -12,6 +12,7 @@ import {
   LabelingShortcutMenu,
   LabelingToolbar,
 } from "./LabelingControls";
+import { LabelingConflictDialog } from "./LabelingConflictDialog";
 import { LabelingClassPanel, LabelingImageStrip } from "./LabelingPanels";
 import { useLabelingPersistence } from "../hooks/useLabelingPersistence";
 import { useLabelingShortcuts } from "../hooks/useLabelingShortcuts";
@@ -21,9 +22,11 @@ import {
   useVisionProjects,
 } from "../hooks/useVisionModels";
 import { resolveVisionMediaUrl } from "../visionApi";
+import { AgricultureAccessibilityBoundary } from "./AgricultureAccessibilityBoundary";
 
 const PAGE_SIZE = 200;
 
+/** Focused labeling IDE. Ops shell WorkflowHeader stays mounted above for alert/log access. */
 export function LabelingWorkspacePage() {
   const { datasetId = "" } = useParams();
   const navigate = useNavigate();
@@ -94,12 +97,154 @@ export function LabelingWorkspacePage() {
     setActiveClassId: setPreferredClassId,
   });
 
-  if (compactWarning)
-    return <Alert severity="info">Image annotation needs a tablet or laptop-sized display.</Alert>;
+  if (compactWarning) {
+    const items = images.data?.items ?? [];
+    const reviewImage = items[activeIndex] ?? null;
+    const markReviewed = async () => {
+      if (!reviewImage) return;
+      await labeling.persist(labeling.annotations, !labeling.reviewed);
+      await images.refetch();
+    };
+    return (
+      <AgricultureAccessibilityBoundary component="div">
+      <Stack spacing={2} sx={{ p: 2, pb: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
+        <Alert severity="info">
+          Drawing annotations needs a tablet or laptop. On phone you can review
+          frames and mark them reviewed, then continue labeling on a larger display.
+        </Alert>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Button
+            variant="outlined"
+            onClick={() => navigate("/dashboard/agriculture/vision-models")}
+          >
+            Back to vision projects
+          </Button>
+          <Button
+            variant="text"
+            href={`/dashboard/agriculture/vision-models/datasets/${datasetId}/label`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open labeling on desktop
+          </Button>
+        </Stack>
+        {dataset.isLoading || images.isLoading ? (
+          <CircularProgress aria-label="Loading review queue" />
+        ) : items.length === 0 ? (
+          <Alert severity="warning">No images in this dataset yet.</Alert>
+        ) : (
+          <Stack spacing={2}>
+            {reviewImage ? (
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Stack spacing={1.5}>
+                  <Box
+                    component="img"
+                    src={resolveVisionMediaUrl(reviewImage.content_url)}
+                    alt={`Frame ${pageOffset + activeIndex + 1}`}
+                    sx={{
+                      width: "100%",
+                      maxHeight: 280,
+                      objectFit: "contain",
+                      borderRadius: 1,
+                      bgcolor: "action.hover",
+                    }}
+                  />
+                  <Typography variant="subtitle2">
+                    Frame {pageOffset + activeIndex + 1} of {images.data?.total ?? items.length}
+                    {labeling.reviewed ? " · reviewed" : " · pending review"}
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={activeIndex <= 0}
+                      onClick={() => setActiveIndex((value) => Math.max(0, value - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={activeIndex >= items.length - 1}
+                      onClick={() =>
+                        setActiveIndex((value) => Math.min(items.length - 1, value + 1))
+                      }
+                    >
+                      Next
+                    </Button>
+                    <Button
+                      size="small"
+                      variant={labeling.reviewed ? "outlined" : "contained"}
+                      color={labeling.reviewed ? "success" : "primary"}
+                      disabled={labeling.saveState === "saving"}
+                      onClick={() => void markReviewed()}
+                      sx={{ ml: "auto", minHeight: 44 }}
+                    >
+                      {labeling.reviewed ? "Reviewed" : "Mark reviewed"}
+                    </Button>
+                  </Stack>
+                  {labeling.saveError ? (
+                    <Alert severity="error">{labeling.saveError}</Alert>
+                  ) : null}
+                </Stack>
+              </Paper>
+            ) : null}
+            <Typography variant="caption" color="text.secondary">
+              Review queue (tap to select)
+            </Typography>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ overflowX: "auto", pb: 0.5 }}
+              component="ul"
+              aria-label="Dataset review queue"
+            >
+              {items.slice(0, 40).map((item, index) => (
+                <Box
+                  key={item.id}
+                  component="li"
+                  sx={{ listStyle: "none", m: 0, p: 0 }}
+                >
+                  <Button
+                    onClick={() => setActiveIndex(index)}
+                    aria-pressed={index === activeIndex}
+                    aria-label={`Select frame ${pageOffset + index + 1}`}
+                    sx={{
+                      p: 0.5,
+                      minWidth: 72,
+                      border: "2px solid",
+                      borderColor: index === activeIndex ? "primary.main" : "divider",
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src={resolveVisionMediaUrl(item.content_url)}
+                      alt=""
+                      sx={{ width: 64, height: 64, objectFit: "cover", borderRadius: 0.75 }}
+                    />
+                  </Button>
+                </Box>
+              ))}
+            </Stack>
+          </Stack>
+        )}
+      </Stack>
+      </AgricultureAccessibilityBoundary>
+    );
+  }
   if (dataset.isLoading || images.isLoading || projects.isLoading)
-    return <CircularProgress aria-label="Loading labeling workspace" />;
+    return (
+      <AgricultureAccessibilityBoundary component="div">
+        <CircularProgress aria-label="Loading labeling workspace" />
+      </AgricultureAccessibilityBoundary>
+    );
   if (!activeImage || !project || !dataset.data || !images.data)
-    return <Alert severity="warning">This dataset has no images available for labeling.</Alert>;
+    return (
+      <AgricultureAccessibilityBoundary component="div">
+        <Alert severity="warning">This dataset has no images available for labeling.</Alert>
+      </AgricultureAccessibilityBoundary>
+    );
 
   const selected = labeling.annotations.find((item) => item.id === labeling.selectedId);
   const position = pageOffset + activeIndex;
@@ -107,6 +252,7 @@ export function LabelingWorkspacePage() {
     ? { position: "fixed" as const, inset: 0, zIndex: theme.zIndex.modal + 1, p: 1 }
     : { height: "calc(100vh - 112px)" };
   return (
+    <AgricultureAccessibilityBoundary component="div">
     <Paper sx={{ ...workspacePosition, bgcolor: "background.default", overflow: "hidden" }}>
       <Stack height="100%">
         <LabelingHeader
@@ -119,27 +265,16 @@ export function LabelingWorkspacePage() {
           showHelp={setHelpAnchor}
           close={() => void labeling.awaitSaves().then((saved) => saved && navigate("/dashboard/agriculture/vision-models"))}
         />
-        {labeling.conflict ? (
-          <Alert severity="warning">
-            <Stack spacing={1}>
-              <Typography variant="body2">{labeling.saveError}</Typography>
-              <Typography variant="caption">
-                Your draft used revision {labeling.conflict.expectedRevision}; the server is now revision {labeling.conflict.currentRevision}.
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Button size="small" onClick={() => void reloadServerAnnotations()}>
-                  Reload server version
-                </Button>
-                <Button size="small" onClick={labeling.downloadLocalCopy}>
-                  Download local copy
-                </Button>
-                <Button size="small" color="warning" variant="contained" onClick={() => void labeling.overwriteConflict()}>
-                  Overwrite with my draft
-                </Button>
-              </Stack>
-            </Stack>
-          </Alert>
-        ) : labeling.saveError ? (
+        <LabelingConflictDialog
+          open={Boolean(labeling.conflict)}
+          message={labeling.saveError}
+          expectedRevision={labeling.conflict?.expectedRevision ?? 0}
+          currentRevision={labeling.conflict?.currentRevision ?? 0}
+          onReload={() => void reloadServerAnnotations()}
+          onDownload={labeling.downloadLocalCopy}
+          onOverwrite={() => void labeling.overwriteConflict()}
+        />
+        {!labeling.conflict && labeling.saveError ? (
           <Alert
             severity="error"
             action={<Button size="small" onClick={() => void labeling.retry()}>Retry save</Button>}
@@ -197,5 +332,6 @@ export function LabelingWorkspacePage() {
       </Stack>
       <LabelingShortcutMenu anchor={helpAnchor} close={() => setHelpAnchor(null)} />
     </Paper>
+    </AgricultureAccessibilityBoundary>
   );
 }

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Iterable
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.agriculture.models import AgricultureCapabilityRelease
@@ -133,7 +133,48 @@ def default_inference_profile(capability_id: str) -> dict[str, Any]:
     }
 
 
+def _frozen_inference_profile(version: VisionModelRelease) -> dict[str, Any] | None:
+    audits = version.evaluation_metrics.get("deployment_audit")
+    if not isinstance(audits, list):
+        return None
+    for audit in reversed(audits):
+        if not isinstance(audit, dict):
+            continue
+        contract = audit.get("inference_contract")
+        if not isinstance(contract, dict):
+            continue
+        keys = (
+            "confidence_threshold",
+            "frame_stride_seconds",
+            "small_object_mode",
+            "tracking_enabled",
+            "tracker_type",
+        )
+        if all(key in contract for key in keys):
+            return {key: contract[key] for key in keys}
+    return None
+
+
 class AgricultureCapabilityReleaseService:
+    @staticmethod
+    async def _lock_release_scope(
+        db: AsyncSession,
+        *,
+        release_scope: str,
+        capability_id: str,
+    ) -> None:
+        """Serialize first activation as well as replacement for one release scope."""
+        get_bind = getattr(db, "get_bind", None)
+        if get_bind is None:
+            return
+        bind = get_bind()
+        if getattr(getattr(bind, "dialect", None), "name", None) != "postgresql":
+            return
+        lock_key = f"agriculture-capability-release:{release_scope}:{capability_id}"
+        await db.execute(
+            select(func.pg_advisory_xact_lock(func.hashtextextended(lock_key, 0)))
+        )
+
     async def activate_for_model_version(
         self,
         db: AsyncSession,
@@ -159,6 +200,11 @@ class AgricultureCapabilityReleaseService:
             raise ValueError("Vision model does not belong to this release scope")
 
         release_scope = scope_key(org_id=org_id, user_id=user_id)
+        await self._lock_release_scope(
+            db,
+            release_scope=release_scope,
+            capability_id=capability_id,
+        )
         existing = await db.scalar(
             select(AgricultureCapabilityRelease)
             .where(
@@ -172,6 +218,10 @@ class AgricultureCapabilityReleaseService:
             existing.sensor_type = capability.required_sensor
             existing.crop_types = [version.crop]
             existing.approved_by_user_id = user_id
+            existing.inference_profile = (
+                _frozen_inference_profile(version)
+                or default_inference_profile(capability_id)
+            )
             return existing
         if existing is not None:
             existing.status = "retired"
@@ -187,7 +237,10 @@ class AgricultureCapabilityReleaseService:
             status="active",
             sensor_type=capability.required_sensor,
             crop_types=[version.crop],
-            inference_profile=default_inference_profile(capability_id),
+            inference_profile=(
+                _frozen_inference_profile(version)
+                or default_inference_profile(capability_id)
+            ),
             thresholds={},
         )
         db.add(release)

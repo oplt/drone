@@ -914,6 +914,7 @@ async def shutdown_warehouse_mapping_stack() -> None:
     from backend.modules.warehouse.service.live_map_bridge import (
         stop_warehouse_live_map_bridge,
     )
+    from backend.modules.warehouse.service.provisional_mapping import clear_provisional_epochs
 
     with observed_span(
         "mapping.stack.stop",
@@ -934,6 +935,7 @@ async def shutdown_warehouse_mapping_stack() -> None:
             )
         await _stop_mapping_stack_process()
         await _kill_stale_nvblox_processes()
+        clear_provisional_epochs()
 
     if _background_tasks:
         for task in tuple(_background_tasks):

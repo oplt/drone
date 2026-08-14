@@ -149,6 +149,7 @@ def _restore_orchestrator_context(orchestrator: Any, row: Any) -> None:
     orchestrator.current_mission_type = row.mission_type
     orchestrator.current_mission_task_type = row.mission_task_type
     orchestrator.current_preflight_run_id = row.preflight_run_uuid
+    orchestrator.current_org_id = getattr(row, "org_id", None)
     if row.flight_id is not None:
         orchestrator._flight_id = row.flight_id
 
@@ -157,6 +158,7 @@ def _clear_orchestrator_context(orchestrator: Any, client_flight_id: str) -> Non
     """Clear orchestrator context only if it still holds the recovered mission."""
     if getattr(orchestrator, "current_client_flight_id", None) == client_flight_id:
         orchestrator.current_client_flight_id = None
+        orchestrator.current_org_id = None
         orchestrator.current_mission_name = None
         orchestrator.current_mission_type = None
         orchestrator.current_mission_task_type = None

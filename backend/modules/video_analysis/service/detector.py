@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Lock
+from threading import Event, Lock
 from typing import Any, Protocol
 
 import cv2
@@ -13,6 +15,7 @@ from backend.modules.video_analysis.model_storage import (
     resolve_model_artifact,
 )
 from backend.modules.vision_models.config import vision_settings
+from backend.observability import prometheus_metrics
 
 
 @dataclass(frozen=True)
@@ -34,8 +37,14 @@ class FrameDetector(Protocol):
     def predict(self, image_bgr: np.ndarray) -> list[FrameDetection]: ...
 
 
-_MODEL_CACHE: dict[tuple[str, str, tuple[tuple[str, Any], ...]], Any] = {}
+_MODEL_CACHE: OrderedDict[tuple[str, str, tuple[tuple[str, Any], ...]], Any] = OrderedDict()
 _MODEL_CACHE_LOCK = Lock()
+_MODEL_CACHE_MAX = 8
+_MODEL_LOAD_WAITERS: dict[tuple[str, str, tuple[tuple[str, Any], ...]], dict[str, Any]] = {}
+
+
+def _update_cache_metrics() -> None:
+    prometheus_metrics.video_yolo_cache_entries.set(len(_MODEL_CACHE))
 
 
 def _resolved_model_path(model_name: str, model_path: str | Path | None) -> Path:
@@ -55,6 +64,64 @@ def _device_name() -> str:
         return "cpu"
 
 
+def _get_or_load_model_cache(
+    cache_key: tuple[str, str, tuple[tuple[str, Any], ...]],
+    loader: Callable[[], Any],
+) -> Any:
+    """Singleflight + LRU cache for heavyweight vision model instances."""
+    with _MODEL_CACHE_LOCK:
+        cached = _MODEL_CACHE.get(cache_key)
+        if cached is not None:
+            _MODEL_CACHE.move_to_end(cache_key)
+            _update_cache_metrics()
+            return cached
+        waiter = _MODEL_LOAD_WAITERS.get(cache_key)
+        if waiter is None:
+            event = Event()
+            _MODEL_LOAD_WAITERS[cache_key] = {"event": event, "model": None, "error": None}
+            is_loader = True
+        else:
+            is_loader = False
+            event = waiter["event"]
+
+    if not is_loader:
+        event.wait(timeout=300)
+        with _MODEL_CACHE_LOCK:
+            waiter = _MODEL_LOAD_WAITERS.get(cache_key) or {}
+            if waiter.get("error") is not None:
+                raise waiter["error"]
+            cached = _MODEL_CACHE.get(cache_key) or waiter.get("model")
+            if cached is None:
+                raise RuntimeError("YOLO model load failed without error")
+            return cached
+
+    try:
+        loaded = loader()
+    except Exception as exc:
+        with _MODEL_CACHE_LOCK:
+            waiter = _MODEL_LOAD_WAITERS.pop(cache_key, None)
+            if waiter is not None:
+                waiter["error"] = exc
+                waiter["event"].set()
+        raise
+
+    with _MODEL_CACHE_LOCK:
+        existing = _MODEL_CACHE.get(cache_key)
+        if existing is not None:
+            loaded = existing
+        else:
+            _MODEL_CACHE[cache_key] = loaded
+            while len(_MODEL_CACHE) > _MODEL_CACHE_MAX:
+                _MODEL_CACHE.popitem(last=False)
+                prometheus_metrics.video_yolo_cache_evictions_total.inc()
+        waiter = _MODEL_LOAD_WAITERS.pop(cache_key, None)
+        if waiter is not None:
+            waiter["model"] = loaded
+            waiter["event"].set()
+        _update_cache_metrics()
+        return loaded
+
+
 def load_yolo_model(
     model_path: str,
     *,
@@ -62,23 +129,20 @@ def load_yolo_model(
     device: str,
     load_options: tuple[tuple[str, Any], ...] = (),
 ) -> Any:
-    """Load once per immutable artifact, target device, and loading options."""
+    """Load once per immutable artifact, target device, and loading options (singleflight)."""
     cache_key = (artifact_hash, device, load_options)
-    with _MODEL_CACHE_LOCK:
-        cached = _MODEL_CACHE.get(cache_key)
-        if cached is not None:
-            return cached
-    try:
-        from ultralytics import YOLO
 
-        loaded = YOLO(model_path)
-    except ImportError as exc:
-        raise RuntimeError(
-            "YOLO runtime dependencies are unavailable in the analysis worker. "
-            "Install requirements.txt in the Python environment running Celery."
-        ) from exc
-    with _MODEL_CACHE_LOCK:
-        return _MODEL_CACHE.setdefault(cache_key, loaded)
+    def _loader() -> Any:
+        try:
+            from ultralytics import YOLO
+        except ImportError as exc:
+            raise RuntimeError(
+                "YOLO runtime dependencies are unavailable in the analysis worker. "
+                "Install requirements.txt in the Python environment running Celery."
+            ) from exc
+        return YOLO(model_path)
+
+    return _get_or_load_model_cache(cache_key, _loader)
 
 
 def _detections_from_result(
@@ -228,17 +292,17 @@ class SahiYoloFrameDetector:
             ("small_object_mode", True),
         )
         cache_key = (self.loaded_model_hash, self.device, load_options)
-        with _MODEL_CACHE_LOCK:
-            self.model = _MODEL_CACHE.get(cache_key)
-        if self.model is None:
-            loaded = AutoDetectionModel.from_pretrained(
+        model_path = self.model_path
+
+        def _loader() -> Any:
+            return AutoDetectionModel.from_pretrained(
                 model_type="ultralytics",
-                model_path=str(self.model_path),
+                model_path=str(model_path),
                 confidence_threshold=confidence_threshold,
                 device=self.device,
             )
-            with _MODEL_CACHE_LOCK:
-                self.model = _MODEL_CACHE.setdefault(cache_key, loaded)
+
+        self.model = _get_or_load_model_cache(cache_key, _loader)
 
     def predict(self, image_bgr: np.ndarray) -> list[FrameDetection]:
         try:

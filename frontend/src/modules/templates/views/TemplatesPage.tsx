@@ -25,6 +25,7 @@ import {
   toggleTemplate,
   triggerTemplate,
 } from '../api/templatesApi';
+import { isValidCronExpression } from '../../../shared/forms/opsValidation';
 import type { MissionTemplate } from '../types';
 
 const MISSION_TYPES = [
@@ -53,6 +54,10 @@ function CreateTemplateDialog({
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
+    if (!isValidCronExpression(cron)) {
+      setError('Cron must be a 5-field expression (minute hour day month weekday), or leave blank.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -100,9 +105,17 @@ function CreateTemplateDialog({
             label="Schedule (cron expression, optional)"
             placeholder="e.g. 0 6 * * 1 — every Monday at 06:00"
             value={cron}
-            onChange={(e) => setCron(e.target.value)}
+            onChange={(e) => {
+              setCron(e.target.value);
+              if (error) setError('');
+            }}
             fullWidth
-            helperText="Leave blank for manual-only templates"
+            error={Boolean(cron.trim() && !isValidCronExpression(cron))}
+            helperText={
+              cron.trim() && !isValidCronExpression(cron)
+                ? 'Use 5 fields: minute hour day-of-month month day-of-week'
+                : 'Leave blank for manual-only templates'
+            }
           />
           {error && <Typography color="error" variant="body2">{error}</Typography>}
         </Stack>
@@ -114,7 +127,7 @@ function CreateTemplateDialog({
           title={saving ? "Creating…" : "Create"}
           color="primary"
           loading={saving}
-          disabled={saving || !name.trim()}
+          disabled={saving || !name.trim() || Boolean(cron.trim() && !isValidCronExpression(cron))}
           onClick={handleSubmit}
         />
       </DialogActions>

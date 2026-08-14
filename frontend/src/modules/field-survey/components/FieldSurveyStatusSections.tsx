@@ -27,6 +27,9 @@ export function FieldSurveyStatusSections({
   wsConnected,
   agricultureEvent,
   agricultureEventSequenceGap,
+  selectedWaypointIndex = null,
+  onSelectWaypoint,
+  lastPacketAgeSec = null,
 }: {
   waypoints: Waypoint[];
   alt: number;
@@ -37,13 +40,25 @@ export function FieldSurveyStatusSections({
   wsConnected: boolean;
   agricultureEvent: AgricultureEvent | null;
   agricultureEventSequenceGap: boolean;
+  selectedWaypointIndex?: number | null;
+  onSelectWaypoint?: (index: number) => void;
+  lastPacketAgeSec?: number | null;
 }) {
   return (
     <>
-      <MissionWaypointList waypoints={waypoints} fallbackAltitude={alt} />
+      <MissionWaypointList
+        waypoints={waypoints}
+        fallbackAltitude={alt}
+        selectedIndex={selectedWaypointIndex}
+        onSelect={onSelectWaypoint}
+      />
 
       {missionStatus && (activeFlightId || waypoints.length > 0) && (
-        <MissionFlightStatusPanel missionStatus={missionStatus} />
+        <MissionFlightStatusPanel
+          missionStatus={missionStatus}
+          wsConnected={wsConnected}
+          lastPacketAgeSec={lastPacketAgeSec}
+        />
       )}
 
       {trackedMissionId && (

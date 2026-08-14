@@ -215,12 +215,13 @@ export function useFieldSurveyMap({
 
   const waypointMarkers = useMemo<GooglePointMarker[]>(
     () =>
-      waypoints.map((point) => ({
+      waypoints.map((point, index) => ({
         point,
-        title: "Waypoint",
-        color: "#1976d2",
+        title: `Waypoint ${index + 1}`,
+        color: mapRuntime.selectedWaypointIndex === index ? "#ff6d00" : "#1976d2",
+        onClick: () => mapRuntime.setSelectedWaypointIndex(index),
       })),
-    [waypoints],
+    [waypoints, mapRuntime],
   );
 
   useGooglePointMarkers({
@@ -231,6 +232,13 @@ export function useFieldSurveyMap({
     markersRef: mapRuntime.waypointMarkersRef,
     markers: waypointMarkers,
   });
+
+  useEffect(() => {
+    if (mapRuntime.selectedWaypointIndex == null || !mapRef.current) return;
+    const wp = waypoints[mapRuntime.selectedWaypointIndex];
+    if (!wp) return;
+    mapRef.current.panTo({ lat: wp.lat, lng: wp.lon });
+  }, [mapRuntime.selectedWaypointIndex, mapRef, waypoints]);
 
   useEffect(() => {
     if (!selectedField) return;
@@ -265,6 +273,10 @@ export function useFieldSurveyMap({
     handleMapEngineChange: mapRuntime.handleMapEngineChange,
     cesiumViewMode: mapRuntime.cesiumViewMode,
     setCesiumViewMode: mapRuntime.setCesiumViewMode,
+    followEnabled: mapRuntime.followEnabled,
+    setFollowEnabled: mapRuntime.setFollowEnabled,
+    selectedWaypointIndex: mapRuntime.selectedWaypointIndex,
+    setSelectedWaypointIndex: mapRuntime.setSelectedWaypointIndex,
     mapZoom: effectiveMapZoom,
     mapCenter,
     fieldFocusRequest: fieldFocusViewport

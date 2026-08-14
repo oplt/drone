@@ -2,8 +2,9 @@ import {
   Alert,
   Button,
   Chip,
-  CircularProgress,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from "@mui/material";
 import { useState } from "react";
@@ -31,6 +32,9 @@ import { AgricultureLiveMap } from "./AgricultureLiveMap";
 import { useBrowserOnline } from "../hooks/useBrowserOnline";
 import { AgricultureCapabilitySelector } from "./AgricultureCapabilitySelector";
 import { AgricultureJourneyStepper } from "./AgricultureJourneyStepper";
+import { FeatureState } from "../../../shared/ui/FeatureState";
+
+type LiveStage = "live" | "media" | "analysis";
 
 export function AgricultureLiveStatusPanel({
   flightId,
@@ -56,6 +60,7 @@ export function AgricultureLiveStatusPanel({
     flightId: string;
     runId: string;
   } | null>(null);
+  const [stage, setStage] = useState<LiveStage>("live");
   const createRun = useCreateAgricultureAnalysisRun();
   const processRun = useProcessAgricultureAnalysisRun();
   const runtime = useMissionRuntime({ onError: () => undefined, alwaysConnect: active });
@@ -81,36 +86,25 @@ export function AgricultureLiveStatusPanel({
   const analysisQuality = useAgricultureAnalysisQuality(runId);
   if (!flightId)
     return (
-      <Alert severity="info">
-        Save field, configure agriculture profile, then start flight.
-      </Alert>
+      <FeatureState
+        empty={{
+          title: "No active agriculture flight",
+          description: "Save field, configure agriculture profile, then start flight.",
+        }}
+      >
+        {null}
+      </FeatureState>
     );
   if (flight.isLoading)
-    return (
-      <Stack
-        role="status"
-        aria-live="polite"
-        direction="row"
-        spacing={1}
-        alignItems="center"
-      >
-        <CircularProgress size={18} />
-        <Typography variant="body2">Loading agriculture flight…</Typography>
-      </Stack>
-    );
+    return <FeatureState loading>{null}</FeatureState>;
   if (flight.isError && !flight.data)
     return (
-      <Alert
-        severity="warning"
-        action={
-          <Button size="small" onClick={() => void flight.refetch()}>
-            Retry
-          </Button>
-        }
+      <FeatureState
+        error="Agriculture flight state unavailable. Live telemetry remains active; polling will retry."
+        onRetry={() => void flight.refetch()}
       >
-        Agriculture flight state unavailable. Live telemetry remains active;
-        polling will retry.
-      </Alert>
+        {null}
+      </FeatureState>
     );
   const q = (quality.data?.quality ?? {}) as Record<string, unknown>;
   const c = (coverage.data?.coverage ?? {}) as Record<string, unknown>;
@@ -206,57 +200,91 @@ export function AgricultureLiveStatusPanel({
           online={browserOnline && runtime.connection === "online"}
           sequence={recoveredRuntimeEvents.data?.latest_sequence}
         />
-        <AgricultureLiveMap telemetry={runtime.telemetry} connection={runtime.connection} />
-        {recoveredRuntimeEvents.data?.events.length ? (
-          <Stack component="section" aria-labelledby="agri-runtime-events-heading" spacing={0.5}>
-            <Typography id="agri-runtime-events-heading" variant="subtitle2">Live event log</Typography>
-            {recoveredRuntimeEvents.data.events.slice(-8).reverse().map((item, index) => (
-              <Typography key={`${String(item.sequence)}-${index}`} variant="caption" role="status">
-                #{String(item.sequence)} · {String(item.event_type ?? "runtime event")} · {String(item.state ?? "unknown")}
-              </Typography>
-            ))}
+        <Tabs
+          value={stage}
+          onChange={(_event, value: LiveStage) => setStage(value)}
+          variant="scrollable"
+          allowScrollButtonsMobile
+          sx={{ borderBottom: 1, borderColor: "divider", minHeight: 36 }}
+          aria-label="Agriculture flight stages"
+        >
+          <Tab label="Live" value="live" sx={{ minHeight: 36 }} />
+          <Tab label="Media" value="media" sx={{ minHeight: 36 }} />
+          <Tab label="Analysis" value="analysis" sx={{ minHeight: 36 }} />
+        </Tabs>
+        {stage === "live" ? (
+          <Stack spacing={1}>
+            <AgricultureLiveMap
+              telemetry={runtime.telemetry}
+              connection={runtime.connection}
+              fieldId={flight.data?.field_id}
+            />
+            {recoveredRuntimeEvents.data?.events.length ? (
+              <Stack component="section" aria-labelledby="agri-runtime-events-heading" spacing={0.5}>
+                <Typography id="agri-runtime-events-heading" variant="subtitle2">Live event log</Typography>
+                {recoveredRuntimeEvents.data.events.slice(-8).reverse().map((item, index) => (
+                  <Typography key={`${String(item.sequence)}-${index}`} variant="caption" role="status">
+                    #{String(item.sequence)} · {String(item.event_type ?? "runtime event")} · {String(item.state ?? "unknown")}
+                  </Typography>
+                ))}
+              </Stack>
+            ) : null}
+            <FlightQualityPanel quality={q} coverage={c} />
+            <MissionCommandPanel
+              telemetry={runtime.telemetry}
+              droneConnected={runtime.droneConnected}
+              missionStatus={runtime.missionStatus}
+              activeFlightId={flightId}
+              title="Agriculture flight controls"
+            />
           </Stack>
         ) : null}
-        <FlightQualityPanel quality={q} coverage={c} />
-        <MissionCommandPanel
-          telemetry={runtime.telemetry}
-          droneConnected={runtime.droneConnected}
-          missionStatus={runtime.missionStatus}
-          activeFlightId={flightId}
-          title="Agriculture flight controls"
-        />
-        <AgricultureMediaInventoryPanel flightId={flightId} />
-        <AgricultureUploadPanel flightId={flightId} />
-        {!active && !runId ? (
-          <AgricultureCapabilitySelector
-            readiness={readiness.data}
-            selected={selectedCapabilities}
-            loading={readiness.isLoading}
-            error={readiness.isError}
-            pending={createRun.isPending || processRun.isPending}
-            onSelected={(values) =>
-              setCapabilitySelection({
-                flightId: readiness.data?.flight_id ?? flightId,
-                values,
-              })
-            }
-            onRetry={() => void readiness.refetch()}
-            onStart={() => void startPostFlight()}
-          />
+        {stage === "media" ? (
+          <Stack spacing={1}>
+            <AgricultureMediaInventoryPanel flightId={flightId} />
+            <AgricultureUploadPanel flightId={flightId} />
+          </Stack>
         ) : null}
-        {createRun.error || processRun.error ? (
-          <Alert severity="error">
-            Post-flight analysis could not start. Retry after the recording is
-            finalized.
-          </Alert>
-        ) : null}
-        {runs.data?.[0] ? (
-          <AnalysisRunProgress
-            status={runs.data[0].status}
-            progress={runs.data[0].progress}
-            error={runs.data[0].error}
-            stages={analysisQuality.data?.stages ?? []}
-          />
+        {stage === "analysis" ? (
+          <Stack spacing={1}>
+            {!active && !runId ? (
+              <AgricultureCapabilitySelector
+                readiness={readiness.data}
+                selected={selectedCapabilities}
+                loading={readiness.isLoading}
+                error={readiness.isError}
+                pending={createRun.isPending || processRun.isPending}
+                onSelected={(values) =>
+                  setCapabilitySelection({
+                    flightId: readiness.data?.flight_id ?? flightId,
+                    values,
+                  })
+                }
+                onRetry={() => void readiness.refetch()}
+                onStart={() => void startPostFlight()}
+              />
+            ) : (
+              <Alert severity="info">
+                {active
+                  ? "Finish the flight before starting post-flight analysis."
+                  : "Analysis already started for this flight."}
+              </Alert>
+            )}
+            {createRun.error || processRun.error ? (
+              <Alert severity="error">
+                Post-flight analysis could not start. Retry after the recording is
+                finalized.
+              </Alert>
+            ) : null}
+            {runs.data?.[0] ? (
+              <AnalysisRunProgress
+                status={runs.data[0].status}
+                progress={runs.data[0].progress}
+                error={runs.data[0].error}
+                stages={analysisQuality.data?.stages ?? []}
+              />
+            ) : null}
+          </Stack>
         ) : null}
       </Stack>
     </AgricultureAccessibilityBoundary>

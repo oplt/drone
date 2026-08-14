@@ -31,6 +31,8 @@ def refresh_queue_depth_metrics(broker_url: str | None = None) -> None:
                 depth = int(client.llen(queue) or 0)
                 prometheus_metrics.queue_depth.labels(queue=queue).set(depth)
                 prometheus_metrics.redis_queue_depth.labels(queue_name=queue).set(depth)
+                if queue.startswith("agriculture-"):
+                    prometheus_metrics.agriculture_queue_depth.labels(queue=queue).set(depth)
         finally:
             client.close()
     except Exception as exc:

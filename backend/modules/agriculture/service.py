@@ -454,6 +454,7 @@ class AgricultureService:
                 user_id=run.requested_by_user_id,
             )
             telemetry_rows = await agriculture_repository.list_telemetry(db, flight_id=flight.id)
+            await db.commit()
             quality_rows, quality_summary, vision_summary = await run_blocking(self._sample_video_quality, videos, run.id, flight.id, boundary="media", operation="agriculture_quality", timeout_s=300.0)
             telemetry_summary = telemetry_quality_summary(telemetry_rows)
             profile_snapshot = flight.profile_snapshot or {}

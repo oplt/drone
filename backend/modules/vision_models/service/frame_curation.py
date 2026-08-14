@@ -7,7 +7,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from backend.modules.video_analysis.service.frame_extractor import (
+from backend.shared.media_frames import (
     iter_frames,
     read_video_metadata,
 )
@@ -85,6 +85,25 @@ def hash_distance(left: str, right: str) -> int:
     return (int(left, 16) ^ int(right, 16)).bit_count()
 
 
+def prefix_probe_keys(
+    perceptual_hash: str,
+    *,
+    prefix_len: int = HASH_PREFIX_LENGTH,
+    max_bit_dist: int = MAX_HASH_DISTANCE,
+) -> list[str]:
+    """Return the exact hash prefix followed by nearby prefixes in Hamming space."""
+    prefix = perceptual_hash[:prefix_len].lower()
+    query = int(prefix, 16)
+    bit_count = prefix_len * 4
+    keys = [prefix]
+    keys.extend(
+        f"{candidate:0{prefix_len}x}"
+        for candidate in range(1 << bit_count)
+        if candidate != query and (candidate ^ query).bit_count() <= max_bit_dist
+    )
+    return keys
+
+
 def assess_quality(image_bgr: np.ndarray) -> FrameQuality:
     height, width = image_bgr.shape[:2]
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
@@ -145,10 +164,15 @@ def curate_video_frames(
             quality_rejected += 1
             rejected.append({**base, "reason": "quality"})
             continue
-        comparison_candidates = {
-            item[0]: item[1]
-            for item in (*recent, *buckets[perceptual_hash[:HASH_PREFIX_LENGTH]])
-        }
+        comparison_candidates = {item[0]: item[1] for item in recent}
+        for key in prefix_probe_keys(perceptual_hash):
+            for item in buckets[key]:
+                if item[0] not in comparison_candidates:
+                    comparison_candidates[item[0]] = item[1]
+                if len(comparison_candidates) >= TEMPORAL_HASH_WINDOW + HASH_BUCKET_LIMIT:
+                    break
+            if len(comparison_candidates) >= TEMPORAL_HASH_WINDOW + HASH_BUCKET_LIMIT:
+                break
         duplicate_of: int | None = None
         for previous_index, previous_hash in comparison_candidates.items():
             comparison_count += 1

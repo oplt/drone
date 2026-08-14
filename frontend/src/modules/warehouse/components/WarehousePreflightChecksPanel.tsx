@@ -76,7 +76,7 @@ export function WarehousePreflightChecksPanel({
           >
             <Typography
               variant="h6"
-              sx={{ fontWeight: 800, fontSize: "1.1rem" }}
+              sx={{ fontWeight: 600, fontSize: "1.1rem" }}
             >
               {preflight?.ready_to_fly ? "Ready to fly" : "Not ready to fly"}
             </Typography>
@@ -108,7 +108,7 @@ export function WarehousePreflightChecksPanel({
             alignItems="center"
             justifyContent="space-between"
           >
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {passed} / {total} checks passed
             </Typography>
             <Typography

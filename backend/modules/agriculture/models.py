@@ -127,6 +127,31 @@ class AgricultureTelemetrySample(Base):
     )
 
 
+class AgricultureTelemetryReceipt(Base):
+    """Durable telemetry batch idempotency receipts (replaces JSON manifest map)."""
+
+    __tablename__ = "agriculture_telemetry_receipts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
+    flight_id: Mapped[str] = mapped_column(
+        ForeignKey("agriculture_flights.id", ondelete="CASCADE"), index=True
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(160), nullable=False)
+    payload_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    result_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "flight_id",
+            "idempotency_key",
+            name="uq_agri_telemetry_receipt_flight_key",
+        ),
+    )
+
+
 class AgricultureRuntimeEvent(Base):
     """Durable, ordered agriculture runtime stream used by reconnecting clients."""
 
@@ -165,7 +190,7 @@ class AgricultureMediaManifest(Base):
     duration_seconds: Mapped[float | None] = mapped_column(Float)
     camera_serial: Mapped[str | None] = mapped_column(String(128))
     calibration_id: Mapped[str | None] = mapped_column(
-        ForeignKey("agriculture_camera_calibrations.id", ondelete="SET NULL")
+        ForeignKey("agriculture_camera_calibrations.id", ondelete="SET NULL"), index=True
     )
     capture_start_utc: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     capture_end_utc: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -207,7 +232,9 @@ class AgricultureUploadSession(Base):
     checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="uploading", index=True)
-    media_id: Mapped[str | None] = mapped_column(ForeignKey("agriculture_media_manifests.id", ondelete="SET NULL"))
+    media_id: Mapped[str | None] = mapped_column(
+        ForeignKey("agriculture_media_manifests.id", ondelete="SET NULL"), index=True
+    )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -251,8 +278,12 @@ class AgricultureFrameLineage(Base):
     source_checksum: Mapped[str | None] = mapped_column(String(128))
     sampling_config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     pose_interpolation_status: Mapped[str] = mapped_column(String(24), nullable=False, default="unresolved")
-    telemetry_sample_before_id: Mapped[int | None] = mapped_column(ForeignKey("agriculture_telemetry_samples.id", ondelete="SET NULL"))
-    telemetry_sample_after_id: Mapped[int | None] = mapped_column(ForeignKey("agriculture_telemetry_samples.id", ondelete="SET NULL"))
+    telemetry_sample_before_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agriculture_telemetry_samples.id", ondelete="SET NULL"), index=True
+    )
+    telemetry_sample_after_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agriculture_telemetry_samples.id", ondelete="SET NULL"), index=True
+    )
     georef_status: Mapped[str] = mapped_column(String(24), nullable=False, default="unresolved")
     georef_error_m: Mapped[float | None] = mapped_column(Float)
     gsd_cm: Mapped[float | None] = mapped_column(Float)

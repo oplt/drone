@@ -34,6 +34,7 @@ class VideoAssetOut(BaseModel):
     capture_time_uncertainty_seconds: float | None = None
     sync_offset_seconds: float = 0.0
     reanalysis_required: bool = False
+    capture_metadata_revision: int = 0
     status: str
     created_at: datetime
 
@@ -118,6 +119,7 @@ class VideoAnalysisJobOut(BaseModel):
     terminal_reason_code: str | None = None
     terminal_stage: str | None = None
     stage_timings: dict[str, float] = Field(default_factory=dict)
+    capture_metadata_revision: int = 0
     started_at: datetime | None = None
     finished_at: datetime | None = None
     created_at: datetime

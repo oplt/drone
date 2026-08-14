@@ -40,7 +40,7 @@ export function WarehouseViewerSection({
         }}
       >
         <Stack spacing={1}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
             Previous Scan Results
           </Typography>
           <WarehouseScanResultsSelector {...selectorProps} />

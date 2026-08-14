@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import Select, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from backend.core.authz.visibility import org_or_owner_visibility
+from backend.shared.storage_objects import reconcile_staged_storage_objects
 from backend.modules.identity.models import User
 from backend.modules.vision_models.models import (
     DatasetImage,
@@ -12,6 +16,7 @@ from backend.modules.vision_models.models import (
     TrainingRun,
     VisionModel,
     VisionProject,
+    VisionStorageObject,
 )
 
 
@@ -19,17 +24,36 @@ class VisionRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    async def reconcile_staged_storage_objects(
+        self, *, older_than_minutes: int
+    ) -> int:
+        return await reconcile_staged_storage_objects(
+            self.db,
+            VisionStorageObject,
+            older_than_minutes=older_than_minutes,
+        )
+
     @staticmethod
     def project_visible_to(user: User):
-        if user.org_id is not None:
-            return VisionProject.org_id == user.org_id
-        return VisionProject.created_by_user_id == user.id
+        return org_or_owner_visibility(
+            org_column=VisionProject.org_id,
+            owner_column=VisionProject.created_by_user_id,
+            user_org_id=user.org_id,
+            user_id=user.id,
+        )
 
     @staticmethod
     def project_visible_to_scope(org_id: int | None, user_id: int | None = None):
         if org_id is not None:
             return VisionProject.org_id == org_id
-        return VisionProject.created_by_user_id == user_id
+        if user_id is not None:
+            return org_or_owner_visibility(
+                org_column=VisionProject.org_id,
+                owner_column=VisionProject.created_by_user_id,
+                user_org_id=None,
+                user_id=user_id,
+            )
+        return VisionProject.created_by_user_id.is_(None)
 
     def project_query(self, user: User) -> Select[tuple[VisionProject]]:
         return (
@@ -86,7 +110,11 @@ class VisionRepository:
             select(DatasetImage)
             .join(DatasetVersion)
             .join(VisionProject)
-            .options(selectinload(DatasetImage.annotations))
+            .options(
+                selectinload(DatasetImage.annotations),
+                selectinload(DatasetImage.storage_object),
+                selectinload(DatasetImage.thumbnail_storage_object),
+            )
             .where(
                 DatasetImage.dataset_id == dataset_id,
                 self.project_visible_to(user),
@@ -105,6 +133,8 @@ class VisionRepository:
             .options(
                 selectinload(DatasetImage.annotations),
                 selectinload(DatasetImage.dataset).selectinload(DatasetVersion.project),
+                selectinload(DatasetImage.storage_object),
+                selectinload(DatasetImage.thumbnail_storage_object),
             )
             .where(DatasetImage.id == image_id, self.project_visible_to(user))
         )
@@ -128,7 +158,11 @@ class VisionRepository:
     async def all_dataset_images(self, dataset_id: str) -> list[DatasetImage]:
         result = await self.db.execute(
             select(DatasetImage)
-            .options(selectinload(DatasetImage.annotations))
+            .options(
+                selectinload(DatasetImage.annotations),
+                selectinload(DatasetImage.storage_object),
+                selectinload(DatasetImage.thumbnail_storage_object),
+            )
             .where(DatasetImage.dataset_id == dataset_id)
             .order_by(DatasetImage.created_at, DatasetImage.id)
         )
@@ -169,6 +203,7 @@ class VisionRepository:
             .options(
                 selectinload(ModelVersion.model).selectinload(VisionModel.project),
                 selectinload(ModelVersion.training_run),
+                selectinload(ModelVersion.storage_object),
             )
             .where(ModelVersion.id == version_id, self.project_visible_to(user))
         )

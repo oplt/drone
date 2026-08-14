@@ -76,6 +76,7 @@ export function AnalysisSourceSection(props: AnalysisControlsProps) {
       />
       {props.video && !props.file ? (
         <CaptureMetadataEditor
+          key={props.video.id}
           video={props.video}
           onUpdated={props.onVideoUpdated}
         />

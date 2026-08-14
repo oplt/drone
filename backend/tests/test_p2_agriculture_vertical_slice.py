@@ -65,7 +65,6 @@ async def test_create_run_ensure_jobs_and_aggregate_fake_detections(monkeypatch)
         mission_id="mission-1",
         field_id=7,
         org_id=3,
-        storage_path="/fixtures/flight.mp4",
         status="uploaded",
         fps=30,
         created_at=datetime.now(UTC),

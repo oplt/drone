@@ -54,6 +54,7 @@ def _stage_report(
         "selected_frames": list(extra.get("selected_frames", [])),
         "classes": list(extra.get("classes", [])),
         "class_counts": dict(extra.get("class_counts", {})),
+        "detections": list(extra.get("detections", [])),
     }
 
 
@@ -107,12 +108,127 @@ def compare_runs(baseline: dict[str, Any], experiment: dict[str, Any]) -> dict[s
     }
 
 
+def _detections(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = payload.get("detections")
+    if isinstance(rows, list):
+        return [dict(row) for row in rows if isinstance(row, dict)]
+    return []
+
+
+def _confidence_parity(
+    baseline: dict[str, Any],
+    experiment: dict[str, Any],
+    tolerance: float,
+) -> dict[str, Any]:
+    left = _detections(baseline)
+    right = _detections(experiment)
+    if not left and not right:
+        return {
+            "passed": True,
+            "required": True,
+            "compared": 0,
+            "tolerance": tolerance,
+            "note": "no per-detection confidence samples provided",
+        }
+    if len(left) != len(right):
+        return {
+            "passed": False,
+            "required": True,
+            "compared": 0,
+            "tolerance": tolerance,
+            "note": "detection list lengths differ",
+        }
+    max_delta = 0.0
+    for index, (base, exp) in enumerate(zip(left, right, strict=True)):
+        try:
+            delta = abs(float(base["confidence"]) - float(exp["confidence"]))
+        except (KeyError, TypeError, ValueError):
+            return {
+                "passed": False,
+                "required": True,
+                "compared": index,
+                "tolerance": tolerance,
+                "note": "missing or invalid confidence",
+            }
+        max_delta = max(max_delta, delta)
+        if delta > tolerance:
+            return {
+                "passed": False,
+                "required": True,
+                "compared": index + 1,
+                "max_delta": max_delta,
+                "tolerance": tolerance,
+            }
+    return {
+        "passed": True,
+        "required": True,
+        "compared": len(left),
+        "max_delta": max_delta,
+        "tolerance": tolerance,
+    }
+
+
+def _box_parity(
+    baseline: dict[str, Any],
+    experiment: dict[str, Any],
+    tolerance: float,
+) -> dict[str, Any]:
+    left = _detections(baseline)
+    right = _detections(experiment)
+    if not left and not right:
+        return {
+            "passed": True,
+            "required": True,
+            "compared": 0,
+            "tolerance": tolerance,
+            "note": "no per-detection boxes provided",
+        }
+    if len(left) != len(right):
+        return {
+            "passed": False,
+            "required": True,
+            "compared": 0,
+            "tolerance": tolerance,
+            "note": "detection list lengths differ",
+        }
+    max_delta = 0.0
+    for index, (base, exp) in enumerate(zip(left, right, strict=True)):
+        try:
+            box_l = [float(base[key]) for key in ("x1", "y1", "x2", "y2")]
+            box_r = [float(exp[key]) for key in ("x1", "y1", "x2", "y2")]
+        except (KeyError, TypeError, ValueError):
+            return {
+                "passed": False,
+                "required": True,
+                "compared": index,
+                "tolerance": tolerance,
+                "note": "missing or invalid box",
+            }
+        delta = max(abs(a - b) for a, b in zip(box_l, box_r, strict=True))
+        max_delta = max(max_delta, delta)
+        if delta > tolerance:
+            return {
+                "passed": False,
+                "required": True,
+                "compared": index + 1,
+                "max_delta": max_delta,
+                "tolerance": tolerance,
+            }
+    return {
+        "passed": True,
+        "required": True,
+        "compared": len(left),
+        "max_delta": max_delta,
+        "tolerance": tolerance,
+    }
+
+
 def parity_check(
     baseline: dict[str, Any],
     experiment: dict[str, Any],
     tolerances: dict[str, Any],
 ) -> dict[str, Any]:
-    """Stub parity gates for frames/classes/counts (extend with box/confidence later)."""
+    """Parity gates for frames/classes/counts and per-detection confidence/boxes."""
     frames_ok = list(baseline.get("selected_frames") or []) == list(
         experiment.get("selected_frames") or []
     )
@@ -128,23 +244,15 @@ def parity_check(
     require_frames = bool(tolerances.get("frames_must_match", True))
     require_classes = bool(tolerances.get("classes_must_match", True))
     require_counts = bool(tolerances.get("detection_count_must_match", True))
+    confidence_tol = float(tolerances.get("confidence", 1e-5))
+    box_tol = float(tolerances.get("box", 1e-5))
     checks = {
         "frames": {"passed": frames_ok, "required": require_frames},
         "classes": {"passed": classes_ok, "required": require_classes},
         "detection_count": {"passed": counts_ok, "required": require_counts},
         "class_counts": {"passed": class_counts_ok, "required": require_counts},
-        "confidence_tolerance": {
-            "passed": True,
-            "required": False,
-            "note": "stub; compare per-detection confidence within tolerance when live runs exist",
-            "tolerance": tolerances.get("confidence", 1e-5),
-        },
-        "box_tolerance": {
-            "passed": True,
-            "required": False,
-            "note": "stub; compare per-detection boxes within tolerance when live runs exist",
-            "tolerance": tolerances.get("box", 1e-5),
-        },
+        "confidence_tolerance": _confidence_parity(baseline, experiment, confidence_tol),
+        "box_tolerance": _box_parity(baseline, experiment, box_tol),
     }
     failed_required = [
         name

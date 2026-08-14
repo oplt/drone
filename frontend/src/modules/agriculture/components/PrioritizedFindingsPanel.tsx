@@ -1,5 +1,4 @@
 import {
-  Alert,
   Button,
   Checkbox,
   Chip,
@@ -20,6 +19,8 @@ import {
 import type { RankedFinding } from "../types";
 import { AgricultureGeoJsonPreview } from "./AgricultureGeoJsonPreview";
 import { ObservationReviewDrawer } from "./ObservationReviewDrawer";
+import { BulkActionBar } from "../../../shared/ui/BulkActionBar";
+import { FeatureState } from "../../../shared/ui/FeatureState";
 
 const OUTCOME_OPTIONS = [
   "confirmed_present",
@@ -84,11 +85,19 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
           {findings.data ? ` · policy ${findings.data.policy_version}` : ""}
         </Typography>
       </div>
-      {findings.isLoading ? <Typography variant="caption">Loading prioritized findings…</Typography> : null}
-      {findings.isError ? <Alert severity="error">Unable to load prioritized findings.</Alert> : null}
-      {!findings.isLoading && !items.length ? (
-        <Alert severity="info">No ranked findings for this run yet.</Alert>
-      ) : null}
+      <FeatureState
+        loading={findings.isLoading}
+        error={findings.isError ? "Unable to load prioritized findings." : null}
+        onRetry={() => void findings.refetch()}
+        empty={
+          !findings.isLoading && !items.length
+            ? {
+                title: "No ranked findings",
+                description: "No ranked findings for this run yet.",
+              }
+            : undefined
+        }
+      >
       <AgricultureGeoJsonPreview
         geojson={hotspots}
         selectedId={selectedId}
@@ -194,7 +203,11 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
             <Button
               size="small"
               variant="outlined"
-              disabled={split.isPending}
+              disabled={
+                mergeSelection.length < 2 ||
+                !mergeSelection.includes(selected.observation_id) ||
+                split.isPending
+              }
               onClick={() => {
                 const evidence = (selected.evidence_ids || []).map(String);
                 const mid = Math.max(1, Math.ceil(evidence.length / 2));
@@ -259,11 +272,12 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
                 merged_into_id: selected.merged_into_id,
                 member_observation_ids: selected.member_observation_ids,
               }}
+              onClose={() => setShowReview(false)}
             />
           ) : null}
         </Stack>
       ) : null}
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
+      <BulkActionBar selectedCount={mergeSelection.length} label="Findings bulk actions">
         <TextField
           select
           size="small"
@@ -272,11 +286,13 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
           onChange={(event) => setPrimaryId(event.target.value)}
           sx={{ minWidth: 200 }}
         >
-          {items.map((item) => (
-            <MenuItem key={item.observation_id} value={item.observation_id}>
-              #{item.rank} {item.observation_type}
-            </MenuItem>
-          ))}
+          {items
+            .filter((item) => mergeSelection.includes(item.observation_id))
+            .map((item) => (
+              <MenuItem key={item.observation_id} value={item.observation_id}>
+                #{item.rank} {item.observation_type}
+              </MenuItem>
+            ))}
         </TextField>
         <Button
           size="small"
@@ -300,7 +316,8 @@ export function PrioritizedFindingsPanel({ runId }: { runId: string }) {
         >
           Merge selected into primary
         </Button>
-      </Stack>
+      </BulkActionBar>
+      </FeatureState>
     </Stack>
   );
 }

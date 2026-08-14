@@ -4,12 +4,14 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  Drawer,
   Paper,
   Stack,
   Typography,
 } from "@mui/material";
 import { selectDetectionEvidence } from "../../video-analysis/evidenceSelection";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   useAgricultureAnalysisQuality,
   useAgricultureLayer,
@@ -38,10 +40,13 @@ export function AgricultureReviewWorkspace({
 }: {
   runId: string | null;
 }) {
-  const [layer, setLayer] = useState("all");
-  const [threshold, setThreshold] = useState(0.35);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const layer = searchParams.get("layer") || "all";
+  const parsedConfidence = Number(searchParams.get("confidence") ?? "0.35");
+  const threshold = Number.isFinite(parsedConfidence) ? parsedConfidence : 0.35;
   const [minSeverity, setMinSeverity] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const quality = useAgricultureAnalysisQuality(runId);
   const [pageCursors, setPageCursors] = useState<Array<string | undefined>>([
     undefined,
@@ -70,6 +75,19 @@ export function AgricultureReviewWorkspace({
     [layer, minSeverity, observations.data?.items],
   );
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0] ?? null;
+  const virtualized = rows.length > 100;
+  const visibleRows = virtualized ? rows.slice(0, 100) : rows;
+
+  const setLayer = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("layer", next);
+    setSearchParams(params, { replace: true });
+  };
+  const setThreshold = (next: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("confidence", String(next));
+    setSearchParams(params, { replace: true });
+  };
 
   useEffect(() => {
     // Reset pagination whenever the confidence filter changes.
@@ -81,6 +99,15 @@ export function AgricultureReviewWorkspace({
     if (selected?.evidence_ids.length)
       selectDetectionEvidence(selected.evidence_ids[0]);
   }, [selected]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
 
   if (!runId)
     return (
@@ -278,8 +305,8 @@ export function AgricultureReviewWorkspace({
                   m: 0,
                 }}
               >
-                {rows.length ? (
-                  rows.map((row) => (
+                {visibleRows.length ? (
+                  visibleRows.map((row) => (
                     <li key={row.id}>
                       <Button
                         fullWidth
@@ -291,7 +318,10 @@ export function AgricultureReviewWorkspace({
                             ? "success"
                             : "primary"
                         }
-                        onClick={() => setSelectedId(row.id)}
+                        onClick={() => {
+                          setSelectedId(row.id);
+                          setDrawerOpen(true);
+                        }}
                         aria-label={`Review ${row.observation_type.replaceAll("_", " ")}`}
                         sx={{
                           justifyContent: "space-between",
@@ -314,7 +344,23 @@ export function AgricultureReviewWorkspace({
                   </Alert>
                 )}
               </Stack>
-              <ObservationReviewDrawer observation={selected} />
+              {virtualized ? (
+                <Typography variant="caption" color="text.secondary">
+                  Showing first 100 of {rows.length} matches. Narrow layer or
+                  confidence, or use paging below.
+                </Typography>
+              ) : null}
+              <Drawer
+                anchor="right"
+                open={drawerOpen && Boolean(selected)}
+                onClose={() => setDrawerOpen(false)}
+                PaperProps={{ sx: { width: { xs: "100%", sm: 420 }, p: 2 } }}
+              >
+                <ObservationReviewDrawer
+                  observation={selected}
+                  onClose={() => setDrawerOpen(false)}
+                />
+              </Drawer>
             </Stack>
           )
         ) : null}

@@ -46,6 +46,12 @@ class AgentContext(BaseModel):
     phase: AgentPhase
     question: str | None = None
     structured_payload: dict[str, Any] = Field(default_factory=dict)
+    idempotency_key: str | None = Field(
+        default=None,
+        min_length=8,
+        max_length=160,
+        description="Optional stable key to dedupe Celery agent runs.",
+    )
 
 
 class AgentResult(BaseModel):

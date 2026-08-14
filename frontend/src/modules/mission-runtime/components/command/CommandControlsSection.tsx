@@ -47,7 +47,7 @@ export function CommandControlsSection({
             <Tooltip title="View mission timeline">
               <IconButton
                 size="small"
-                onClick={() => navigate(`/missions/${flightId}/timeline`)}
+                onClick={() => navigate(`/dashboard/missions/${flightId}/timeline`)}
                 aria-label="View mission timeline"
               >
                 <TimelineIcon fontSize="small" />
